@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Data Flow Chart</title>
+    <style type="text/css">
+        header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .filter-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px; /* Optional: adds some space between the checkboxes */
+            margin-right: 20px; /* Add a right margin */
+
+        }
+        #mynetwork {
+            width: 90%;
+            height: 90vh;
+            border: 1px solid lightgray;
+        }
+        .container {
+        display: flex;
+        justify-content: center; /* Center horizontally */
+        align-items: center; /* Center vertically */
+        height: 100vh; /* Adjust if needed */
+        flex-direction: column; /* Stack elements vertically */
+
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            display: none;
+        }
+
+        .loading-text {
+            font-size: 24px;
+        }
+
+        .row {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            height: 30px; /* Match the height of the search bar */
+            line-height: 5px; /* Center the text vertically */
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+        #searchSelect {
+            width: 200px;
+            height: 40px;
+            padding: 0 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+    
+    </style>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+
+
+</head>
+
+<body>
+    <header>Data Lineage</header>
+    <div class="container">
+        <div class="row">
+            <div class="column">     
+                <div id="filterContainer" class="filter-container"></div>
+                <div id="dbFilterContainer" class="filter-container"></div>
+            </div>
+            <div class="search-container">
+            <select id="searchSelect" onchange="searchNode()">
+                <!-- Options will be added here dynamically -->
+            </select>
+            <button class="button" id="resetButton" onclick="resetNetwork()">Reset</button>
+            </div>
+        </div>
+        <div class="row">      
+            <div id="mynetwork"></div>
+            <div class="overlay" id="overlay">
+                <div class="loading-text">Loading...</div>
+            </div>
+        </div>
+    </div>
+</body>
+    <!-- scrip that will use the variable initialized in the data.js file -->
+    <script type="text/javascript" src="data.js">
+</script>
+    <script type="text/javascript">
+        const nodes = [];
+        const edges = [];
+
+        function color_picker(type) {
+            if (type === 'U ') {
+                return '#19F625';
+            } else if (type === 'V ') {
+                return '#25F5F5';
+            } else {
+                return '#F5F525';
+            }
+        }
+        function level_picker(database, schema, type) {
+            const schemaLevels = {
+                'shared': {
+                    'show': { 'V ': 14, 'U ': 13, 'P ': 12 },
+                    'mid': { 'V ': 11, 'U ': 10, 'P ': 9 },
+                    'base': { 'V ': 5, 'U ': 4, 'P ': 3 },
+                },
+                'ods1stage': {
+                    'etl': { 'V ': 8, 'U ': 7, 'P ': 6 },
+                    'raw': { 'V ': 8, 'U ': 7, 'P ': 6 },
+                },
+                'snowflake': {
+                    'etl': { 'V ': 2, 'U ': 1, 'P ': 0 },
+                    'raw': { 'V ': -1, 'U ': -2, 'P ': -3 },
+                    'rawfile': { 'V ': -1, 'U ': -2, 'P ': -3 }
+                }
+            };
+
+            if (!database || !schema || !type) {
+                return -4; // Default level if database, schema or type is null
+            }
+
+            if (['etl', 'raw', 'rawfile'].includes(schema.toLowerCase())) {
+                return schemaLevels[database.toLowerCase()] && schemaLevels[database.toLowerCase()][schema.toLowerCase()] ? schemaLevels[database.toLowerCase()][schema.toLowerCase()][type] : -7;
+            } else {
+                return schemaLevels['shared'][schema.toLowerCase()] ? schemaLevels['shared'][schema.toLowerCase()][type] : -7;
+            }
+        }
+
+
+        // Add stored procedures, tables, and views as nodes
+        data.forEach((entity) => {
+            const nodeId = entity.schema_name.toLowerCase() + '.' + entity.entity_name.toLowerCase();
+
+            // Check if the node already exists
+            const existingNode = nodes.find((node) => node.id === nodeId);
+
+            if (!existingNode) {
+                const node = {
+                    id: nodeId,
+                    label: nodeId,
+                    color: color_picker(entity.type),
+                    level:level_picker(entity.database_name.toLowerCase(),entity.schema_name.toLowerCase(),entity.type),
+                    shape:'box',
+                    database: entity.database_name.toLowerCase()
+                };
+                nodes.push(node);
+            }
+        });
+
+        // Create edges based on the relationships
+        data.forEach((entity) => {
+            entity.list_of_references.forEach((reference) => {
+                const nodeId = reference.schema_name.toLowerCase() + '.' + reference.entity_name.toLowerCase();
+                // Check if the node already exists
+                const existingNode = nodes.find((node) => node.id === nodeId);
+
+                if (!existingNode) {
+                    const node = {
+                        id: nodeId,
+                        label: nodeId,
+                        color: color_picker(reference.type),
+                        level:level_picker(entity.database_name.toLowerCase(),reference.schema_name.toLowerCase(),reference.type),
+                        shape:'box',
+                        database: entity.database_name.toLowerCase()
+                    };
+                    nodes.push(node);
+                }
+                const edge = {
+                    from: entity.schema_name.toLowerCase() + '.' + entity.entity_name.toLowerCase(),
+                    to: reference.schema_name.toLowerCase() + '.' + reference.entity_name.toLowerCase(),
+                };
+                edges.push(edge);
+            });
+        });
+
+        // Create a network visualization
+        const container = document.getElementById("mynetwork");
+        const graphData = {
+            nodes: nodes,
+            edges: edges
+        };
+
+        const options = {
+            layout: {
+                hierarchical: {
+                    direction: "LR",
+                    levelSeparation: 300,
+                    nodeSpacing: 50,
+                    treeSpacing: 1000,
+                    blockShifting: true,
+                    edgeMinimization: true,
+                    parentCentralization: true,
+                    sortMethod: "directed",
+                }
+            },
+            physics:{
+                enabled: true,
+                hierarchicalRepulsion: {
+                    avoidOverlap: 1,
+                    nodeDistance: 200
+                }
+            }
+        };
+        const searchSelect = document.getElementById('searchSelect');
+
+        nodes.forEach(node => {
+            const option = document.createElement('option');
+            option.value = node.id;
+            option.text = node.label;
+            searchSelect.appendChild(option);
+        });
+
+        const network = new vis.Network(container, graphData, options);
+
+        function searchNode() {
+            const clickedNodeId = document.getElementById("searchSelect").value.toLowerCase();
+            console.log(clickedNodeId);
+
+            const clickedNodeEdges = edges.filter(edge => edge.from === clickedNodeId || edge.to === clickedNodeId);
+
+            // Create a new edges dataset with only the edges associated with the clicked node
+            const filteredEdges = new vis.DataSet(clickedNodeEdges);
+
+            // Extract the IDs of the nodes mentioned in the filtered edges
+            const filteredNodeIds = Array.from(new Set([...filteredEdges.get().map(edge => edge.from), ...filteredEdges.get().map(edge => edge.to)]));
+
+            // Filter the nodes array to keep only the nodes mentioned in the filtered edges
+            const filteredNodes = nodes.filter(node => filteredNodeIds.includes(node.id));
+
+            // Update the network with the filtered nodes and edges
+            network.setData({
+                nodes: filteredNodes,
+                edges: filteredEdges
+            });
+        }
+        function resetNetwork() {
+            console.log('reloading...')
+            document.getElementById("overlay").style.display = "flex"; // Show loading overlay
+            
+            network.setOptions({ physics: {enabled:true} }); // disable physics after 3 seconds
+            network.setData(graphData);
+            const checkboxes = document.querySelectorAll('#filterContainer input[type=checkbox], #dbFilterContainer input[type=checkbox]');
+                checkboxes.forEach(checkbox => checkbox.checked = true);
+            setTimeout(() => {
+                document.getElementById("overlay").style.display = "none";
+                network.setOptions({ physics:false }); // disable physics after 3 seconds
+            }, 10000);
+        }
+
+        $(document).ready(function() {
+            $('#searchSelect').select2();
+        });
+
+        network.on("selectNode", function (event) {
+            const clickedNodeId = event.nodes[0]; // Get the ID of the clicked node
+            console.log(clickedNodeId);                    
+             
+            const clickedNodeEdges = edges.filter(edge => edge.from === clickedNodeId || edge.to === clickedNodeId);
+
+            // Create a new edges dataset with only the edges associated with the clicked node
+            const filteredEdges = new vis.DataSet(clickedNodeEdges);
+
+            // Extract the IDs of the nodes mentioned in the filtered edges
+            const filteredNodeIds = Array.from(new Set([...filteredEdges.get().map(edge => edge.from), ...filteredEdges.get().map(edge => edge.to)]));
+
+            // Filter the nodes array to keep only the nodes mentioned in the filtered edges
+            const filteredNodes = nodes.filter(node => filteredNodeIds.includes(node.id));
+
+            // Update the network with the filtered nodes and edges
+            network.setData({
+                nodes: filteredNodes,
+                edges: filteredEdges
+            });
+        });
+
+        const schemaNames = [...new Set(data.map(entity => entity.schema_name.toLowerCase()))];
+
+        // Create a checkbox for each schema name
+        const filterContainer = document.getElementById('filterContainer');
+        schemaNames.forEach(schemaName => {
+            // const div = document.createElement('div');
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = schemaName;
+            checkbox.checked = true;
+            checkbox.onchange = filterData;
+            label.textContent = schemaName;
+            label.appendChild(checkbox);
+            // div.appendChild(label);
+            filterContainer.appendChild(label);
+        });
+
+        const databaseNames = [...new Set(data.map(entity => entity.database_name.toLowerCase()))];
+        console.log(databaseNames);
+        // Create a checkbox for each database name
+        const dbFilterContainer = document.getElementById('dbFilterContainer');
+        databaseNames.forEach(databaseName => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = databaseName;
+            checkbox.checked = true;
+            checkbox.onchange = filterData;
+            if (databaseName.toLowerCase() === 'snowflake') {
+                label.textContent = databaseName.toUpperCase()+'_DB';
+            } else {
+                label.textContent = databaseName.toUpperCase();
+            }
+            label.appendChild(checkbox);
+            dbFilterContainer.appendChild(label);
+        });
+
+        function filterData() {
+            // Get a list of checked schema names
+            const checkedSchemas = Array.from(filterContainer.getElementsByTagName('input'))
+                .filter(input => input.checked)
+                .map(input => input.value);
+            
+            const checkedDatabases = Array.from(dbFilterContainer.getElementsByTagName('input'))
+                .filter(input => input.checked)
+                .map(input => input.value);
+
+            const filteredNodes = nodes.filter(node => checkedSchemas.includes(node.id.split('.')[0]) && checkedDatabases.includes(node.database));
+            const filteredNodeIds = filteredNodes.map(node => node.id);
+
+            const filteredEdges = edges.filter(edge => filteredNodeIds.includes(edge.from) || filteredNodeIds.includes(edge.to));
+
+            // Update the network with the filtered nodes and edges
+            network.setOptions({ physics:true }); // disable physics after 3 seconds
+
+            network.setData({
+                nodes: filteredNodes,
+                edges: filteredEdges
+            });
+            setTimeout(function() {
+                network.setOptions({ physics:false }); // disable physics after 3 seconds
+            }, 5000);
+
+        }
+
+        setTimeout(function() {
+            network.setOptions({ physics:false }); // disable physics after 3 seconds
+        }, 5000);
+
+    </script>
+</html>
