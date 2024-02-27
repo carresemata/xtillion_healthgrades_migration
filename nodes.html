@@ -4,6 +4,23 @@
 <head>
     <title>Data Flow Chart</title>
     <style type="text/css">
+        #legend {
+            font-size: 12px;
+            color: #888;
+        }
+        #legend ul {
+            list-style: none;
+        }
+        #legend ul li {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        #legend ul li span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+        }
         header {
             position: absolute;
             top: 0;
@@ -112,6 +129,13 @@
                 <!-- Options will be added here dynamically -->
             </select>
             <button class="button" id="resetButton" onclick="resetNetwork()">Reset</button>
+            </div>
+            <div id="legend">
+                <ul>
+                    <li><span style="background-color: #19F625;"></span> Table</li>
+                    <li><span style="background-color: #25F5F5;"></span> View</li>
+                    <li><span style="background-color: #F5F525;"></span> Procedure</li>
+                </ul>
             </div>
         </div>
         <div class="row">      
