@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # Load the CSV file: df with the database, schema and table names for ods1stage
-df = pd.read_csv('/Users/carrese/Desktop/snowstorm-healthgrades/python/code/tables_ods1_stage.csv')
+df = pd.read_csv('tables_ods1_stage.csv')
 
 # Get the unique database names
 databases = df['database_name'].unique().tolist()
