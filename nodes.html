@@ -194,6 +194,7 @@
 
         // Add stored procedures, tables, and views as nodes
         data.forEach((entity) => {
+
             const nodeId = entity.schema_name.toLowerCase() + '.' + entity.entity_name.toLowerCase();
 
             // Check if the node already exists
@@ -215,6 +216,7 @@
         // Create edges based on the relationships
         data.forEach((entity) => {
             entity.list_of_references.forEach((reference) => {
+
                 const nodeId = reference.schema_name.toLowerCase() + '.' + reference.entity_name.toLowerCase();
                 // Check if the node already exists
                 const existingNode = nodes.find((node) => node.id === nodeId);
@@ -279,7 +281,6 @@
 
         function searchNode() {
             const clickedNodeId = document.getElementById("searchSelect").value.toLowerCase();
-            console.log(clickedNodeId);
 
             const clickedNodeEdges = edges.filter(edge => edge.from === clickedNodeId || edge.to === clickedNodeId);
 
@@ -299,7 +300,6 @@
             });
         }
         function resetNetwork() {
-            console.log('reloading...')
             document.getElementById("overlay").style.display = "flex"; // Show loading overlay
             
             network.setOptions({ physics: {enabled:true} }); // disable physics after 3 seconds
@@ -318,7 +318,6 @@
 
         network.on("selectNode", function (event) {
             const clickedNodeId = event.nodes[0]; // Get the ID of the clicked node
-            console.log(clickedNodeId);                    
              
             const clickedNodeEdges = edges.filter(edge => edge.from === clickedNodeId || edge.to === clickedNodeId);
 
@@ -339,6 +338,10 @@
         });
 
         const schemaNames = [...new Set(data.map(entity => entity.schema_name.toLowerCase()))];
+        schemaNames.push('raw');
+        const schemaNames2 = [...new Set(data.map(entity => entity.list_of_references.map(reference => reference.schema_name.toLowerCase())).flat())];
+
+        const union = [...new Set([...schemaNames, ...schemaNames2])];
 
         // Create a checkbox for each schema name
         const filterContainer = document.getElementById('filterContainer');
