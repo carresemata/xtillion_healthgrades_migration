@@ -26,10 +26,15 @@ for database in databases:
     os.makedirs(database, exist_ok=True)
     os.chdir(database)
 
+    # OPTIONAL: Create a directory called tables to store all the tables for the current database
+    os.makedirs('tables', exist_ok=True)
+    os.chdir('tables')
+
     # Loop over the schemas for the current database and create a directory for each one
     for schema in schemas:
         os.makedirs(schema, exist_ok=True)
         os.chdir(schema)
+
 
         # Loop over tables for the current schema and create a directory for each one
         for table in tables[schema]:
