@@ -14,13 +14,17 @@ def check_tables():
         for table in os.listdir():
             os.chdir(table)
 
-            # Check the number of files in the table directory
-            if len(os.listdir()) == 3:
-                print(f'"{table}" has started the spu translation.')
+            # Check if the spu_translated file is not empty
+            if os.path.getsize(f'spu_translated_{table}.sql') != 0:
+                print(f'"{table}": translation started.')
 
-            # Check if the spu_original file is empty
+            # Check if the spu_original file is empty (not parsed)
             if os.path.getsize(f'spu_original_{table}.sql') == 0:
-                print(f'"{table}" has not parsed original spus.')
+                print(f'"{table}": parsing not started.')
+
+            # Check if spu_orginial is not empty and spu_translated is empty (not translated)
+            if os.path.getsize(f'spu_original_{table}.sql') != 0 and os.path.getsize(f'spu_translated_{table}.sql') == 0:
+                print(f'"{table}": parsing started but translation not started.')
 
             os.chdir('..')
 
