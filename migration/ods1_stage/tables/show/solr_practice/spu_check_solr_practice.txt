@@ -1,2 +1,2 @@
 hack.spuSOLRpractice DONE
-show.spuRemovePracticeWithNoProvider DONE
+show.spuRemovePracticeWithNoProvider DONE 

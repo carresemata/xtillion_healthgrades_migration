@@ -33,4 +33,4 @@ LEFT JOIN
                         GROUP BY c.PracticeID          
  
             ) a1      ON p.PracticeID = a1.PracticeID
-WHERE ISNULL(a1.PhysicianCount,0) = 0
+WHERE ISNULL(a1.PhysicianCount,0) = 0 
