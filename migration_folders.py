@@ -42,8 +42,8 @@ for database in databases:
             os.chdir(table)
 
             # Create SQL and TXT files for each table
-            open(f'{table}.sql', 'a').close()
-            open(f'{table}.txt', 'a').close()
+            open(f'spu_original_{table}.sql', 'a').close()
+            open(f'spu_check_{table}.txt', 'a').close()
 
             os.chdir('..')
 
