@@ -1,0 +1,3 @@
+etl_spuMergeProviderCertificationSpecialty
+FastPass_spuMergeProviderToCertificationSpecialty
+etl_spuMergeProviderBridgeCalcsAndRanks

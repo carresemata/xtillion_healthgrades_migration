@@ -1,0 +1,219 @@
+database,schema,table,stored_procedures
+snowflake,fast_pass,entity_to_medical_term,"['RawFile_spuMergeEntityToMedicalTerm', 'RawFile_spuMergeEntityToMedicalTerm']"
+snowflake,fast_pass,provider_delta,"['RawFile_spuMergeEntityToMedicalTerm', 'FastPass_spuMergeProviderToHealthInsurance', 'FastPass_spuMergeProviderToStatus', 'FastPass_spuMergeProviderToOffice', 'FastPass_spuMergeProviderToProviderType', 'RawFile_spuMergeEntityToMedicalTerm', 'FastPass_spuMergeProviderToHealthInsurance', 'FastPass_spuMergeProviderToStatus', 'FastPass_spuMergeProviderToOffice', 'FastPass_spuMergeProviderToProviderType', 'FastPass_spuDeleteProviderFacilityDesignations', 'etl_spuProviderDeltaLoads', 'FastPass_spuMergeProviderToAboutMe', 'FastPass_spuMergeProviderToFacility', 'FastPass_spuMergeProviderToSpecialty', 'FastPass_spuMergeProviderToEducationInstitution', 'FastPass_spuMergeProviderToCertificationSpecialty', 'FastPass_spuMergeProvider', 'FastPass_spuMergeProviderLicense', 'FastPass_spuMergeProviderToDegree', 'FastPass_spuMergeProviderToLanguage', 'FastPass_spuMergeProviderToTelehealth']"
+db_metrics,dbo,process_status,"['RawFile_spuMergeEntityToMedicalTerm', 'etl_spuMergeProviderFacility', 'etl_spuMergeProviderSpecialty', 'RawFile_spuProviderToProviderType', 'RawFile_spuProviderToDegree', 'FastPass_spuMergeOfficeToHours', 'FastPass_spuDeDuplicateOffices', 'RawFile_spuClientProductEntityRelationship', 'etl_spuMergeProviderSubStatus', 'etl_spuMergeProviderTraining', 'etl_spuMergeProviderOffice', 'FastPass_spuMergeProviderToHealthInsurance', 'FastPass_spuPreProcess', 'etl_spuMergeProviderIdentification', 'FastPass_spuMergeProviderToStatus', 'FastPass_spuMergeProviderToProviderType', 'RawFile_spuMergeProviderEducationInstitution', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderClinicalFocus', 'etl_spuMergeProviderAppointmentAvailability', 'RawFile_spuMergeEntityToMedicalTerm', 'etl_spuMergeProviderSurveySuppression', 'etl_spuMergeProviderFacility', 'etl_spuMergeProviderSpecialty', 'RawFile_spuProviderToProviderType', 'RawFile_spuProviderToDegree', 'FastPass_spuMergeOfficeToHours', 'FastPass_spuDeDuplicateOffices', 'RawFile_spuClientProductEntityRelationship', 'etl_spuMergeProviderSubStatus', 'etl_spuMergeProviderTraining', 'etl_spuMergeProviderOffice', 'FastPass_spuMergeProviderToHealthInsurance', 'FastPass_spuPreProcess', 'etl_spuMergeProviderIdentification', 'FastPass_spuMergeProviderToStatus', 'FastPass_spuMergeProviderToProviderType', 'RawFile_spuMergeProviderEducationInstitution', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderClinicalFocus', 'etl_spuMergeOfficeHours', 'etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderAppointmentAvailability', 'FastPass_spuDeleteClientProductEntityRelationship', 'etl_spuMergeProviderURL', 'FastPass_spuDeleteProviderFacilityDesignations', 'RawFile_spuOfficeToPhone', 'etl_spuMergeProviderCustomerProductDisplayPartner', 'etl_spuMergeProviderFacilityCustomerProduct', 'etl_spuMergePractice', 'FastPass_spuMergePractice', 'FastPass_spuMergeProviderToAboutMe', 'etl_spuMergeProviderMedia', 'etl_spuMergePracticeOfficeCustomerProduct', 'FastPass_spuMergeProviderToFacility', 'etl_spuMergeProviderHealthInsurance', 'RawFile_spuProviderToOffice', 'FastPass_spuMergeProviderToSpecialty', 'etl_spuMergePracticeCustomerProduct', 'Hack_spuCustomerProductReplace', 'RawFile_spuProviderToStatus', 'FastPass_spuMergeProviderToEducationInstitution', 'etl_spuMergeProviderIdentifier', 'FastPass_spuMergeOfficeToAddress', 'RawFile_spuProviderToAboutMe', 'FastPass_spuMergeProviderToCertificationSpecialty', 'etl_spuMergeProviderImage', 'util_spuGetErrorInfo', 'RawFile_spuPreProcessing', 'etl_spuMergeProviderDegree', 'FastPass_spuMergeProvider', 'etl_spuMergeCityStatePostalCode', 'FastPass_spuMergeProviderLicense', 'RawFile_spuProviderToFacility', 'etl_spuMergeProviderTelehealth', 'FastPass_spuMergeProviderToDegree', 'RawFile_spuMergeProvider', 'FastPass_spuMergeProviderToLanguage', 'etl_spuMergeProviderProviderSubType', 'RawFile_spuProviderToTelehealth', 'RawFile_spuProviderToSpecialty', 'FastPass_spuMergeProviderToTelehealth', 'etl_spuMergeOfficeSyndication', 'etl_spuMergeProviderProviderType', 'etl_spuMergeProviderAppointmentAvailabilityStatement', 'RawFile_spuMergeProviderLanguage', 'etl_spuMergeProviderLicense', 'etl_spuMergeProviderVideo', 'util_spuGetErrorInfo']"
+snowflake,raw,entity_merge_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+snowflake,raw,provider_profile_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'Hack_spuCustomerProductReplace', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,provider_profile_processing_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuRenameTablesForProcessing', 'etl_spuMergeProviderOfficeCustomerProduct']"
+snowflake,raw,provider_profile_processing_condition_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+snowflake,raw,provider_profile_processing_procedure_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+snowflake,raw,provider_profile_processing_health_insurance_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+snowflake,raw,office_profile_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'Hack_spuCustomerProductReplace', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,office_profile_processing_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,practice_profile_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'Hack_spuCustomerProductReplace', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,practice_profile_processing_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,facility_profile_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'Hack_spuCustomerProductReplace', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,facility_profile_processing_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+snowflake,raw,customer_product_profile_processing,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing', 'FastPass_spuDeleteFromMDM']"
+snowflake,raw,customer_product_profile_processing_de_dup,"['etl_spuRenameTablesForProcessing', 'etl_spuRenameTablesForProcessing']"
+ods1_stage,base,provider_survey_suppression,"['etl_spuMergeProviderSurveySuppression', 'etl_spuMergeProviderSurveySuppression']"
+ods1_stage,base,provider_to_facility,"['etl_spuMergeProviderFacility', 'etl_spuMergeProviderFacility', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'FastPass_spuMergeProviderToFacility']"
+snowflake,util,profisee_to_reltio_output_comparison,"['etl_spuMergeProviderFacility', 'etl_spuMergeOfficeAddress', 'etl_spuMergeProviderSpecialty', 'etl_spuMergeProviderMalpractice', 'etl_spuMergeProviderSubStatus', 'etl_spuMergeProviderSanction', 'etl_spuMergeProviderTraining', 'etl_spuMergeProviderOffice', 'etl_spuMergeProviderIdentification', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderClinicalFocus', 'etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderAppointmentAvailability', 'etl_spuMergeProviderSurveySuppression', 'etl_spuMergeProviderFacility', 'etl_spuMergeProviderSpecialty', 'etl_spuMergeProviderSubStatus', 'etl_spuMergeProviderSanction', 'etl_spuMergeProviderTraining', 'etl_spuMergeProviderOffice', 'etl_spuMergeProviderIdentification', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderClinicalFocus', 'etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderAppointmentAvailability', 'etl_spuMergeProviderEmail', 'etl_spuMergeProviderCertificationSpecialty', 'etl_spuMergeProviderFacilityCustomerProduct', 'etl_spuMergePractice', 'etl_spuMergeProviderMAPCustomerProduct', 'etl_spuMergeProviderMedia', 'etl_spuMergePracticeOfficeCustomerProduct', 'etl_spuMergeProviderIdentifier', 'etl_spuMergeProviderImage', 'etl_spuMergeProvider', 'etl_spuMergeProviderTelehealth', 'etl_spuMergeProviderProcedure', 'etl_spuMergeProviderProviderSubType', 'etl_spuMergeProviderProviderType', 'etl_spuMergeProviderAppointmentAvailabilityStatement', 'etl_spuMergeProviderVideo']"
+ods1_stage,base,address,"['etl_spuMergeOfficeAddress', 'ODSFix_spuOfficeDuplicateSuiteAddress', 'etl_spuMergeOfficeAddress', 'ODSFix_spuOfficeDuplicateSuiteAddress', 'RawFile_spuMergeOfficePractice', 'FastPass_spuMergeAddress', 'etl_spuMergeFacilityAddress']"
+ods1_stage,base,office_to_address,"['etl_spuMergeOfficeAddress', 'etl_spuMergeOfficeAddress', 'FastPass_spuMergeOfficeToAddress']"
+ods1_stage,base,provider_to_specialty,"['etl_spuMergeProviderSpecialty', 'etl_spuMergeProviderSpecialty', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'FastPass_spuMergeProviderToSpecialty']"
+snowflake,fast_pass,provider_to_provider_type,"['RawFile_spuProviderToProviderType', 'RawFile_spuProviderToProviderType']"
+ods1_stage,base,provider_malpractice,"['etl_spuMergeProviderMalpractice', 'etl_spuMergeProviderMalpractice', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'FastPass_spuMergeProviderLicense']"
+ods1_stage,base,partner_to_entity,"['etl_spuMergeProviderOASCustomerProduct', 'etl_spuMergeProviderOASCustomerProduct']"
+snowflake,fast_pass,provider_to_degree,"['RawFile_spuProviderToDegree', 'RawFile_spuProviderToDegree']"
+ods1_stage,base,office_hours,"['FastPass_spuMergeOfficeToHours', 'etl_spuMergeOfficeHours', 'FastPass_spuMergeOfficeToHours', 'etl_spuMergeOfficeHours']"
+snowflake,fastpass,provider_to_office,"['FastPass_spuDeDuplicateOffices', 'FastPass_spuDeDuplicateOffices']"
+ods1_stage,etl,provider_priority_load,"['FastPass_spuDeDuplicateOffices', 'CallTracking_MAPProvisioinedLines', 'FastPass_spuDeDuplicateOffices', 'CallTracking_MAPProvisioinedLines', 'FastPass_spuDeleteClientProductEntityRelationship', 'etl_spuMergeCustomerProductImage', 'etl_spuProviderDeltaLoads', 'etl_spuMergeFacilityImage', 'RawFile_spuMergeProvider', 'etl_spuBaseTableLoads', 'hack_spuMAPFreeze']"
+ods1_stage,base,client_product_to_entity,"['etl_spuMergeProviderCustomerProduct', 'etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderCustomerProduct', 'etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeFacilityCustomerProduct', 'etl_spuMergePracticeCustomerProduct', 'RawFile_spuClientProductToEntity']"
+ods1_stage,base,client_entity_opt,"['etl_spuMergeProviderCustomerProduct', 'etl_spuMergeProviderCustomerProduct']"
+ods1_stage,base,provider_to_customer_to_product_to_feature,"['etl_spuMergeProviderCustomerProduct', 'etl_spuMergeProviderCustomerProduct']"
+ods1_stage,base,client_product_entity_relationship,"['etl_spuMergeProviderCustomerProduct', 'RawFile_spuClientProductEntityRelationship', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderCustomerProduct', 'RawFile_spuClientProductEntityRelationship', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderFacilityCustomerProduct', 'etl_spuMergePracticeOfficeCustomerProduct', 'etl_spuMergePracticeCustomerProduct']"
+snowflake,fast_pass,office,"['FastPass_spuMergeOffice', 'FastPass_spuMergeOffice', 'RawFile_spuMergeOfficePractice']"
+ods1_stage,base,office,"['FastPass_spuMergeOffice', 'FastPass_spuMergeOffice', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeOffice']"
+snowflake,standardized,client_product_entity_relationship,"['RawFile_spuClientProductEntityRelationship', 'RawFile_spuClientProductEntityRelationship', 'FastPass_spuDeleteClientProductEntityRelationship']"
+ods1_stage,base,client_to_product,"['etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'ODSFix_spuClientProductActiveFlag', 'RawFile_spuClientProductToEntity']"
+ods1_stage,base,client,"['etl_spuMergeCustomerProduct', 'etl_spuMergeCustomerProduct', 'RawFile_spuClientProductToEntity']"
+ods1_stage,base,client_product_entity_to_phone,"['etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeFacilityCustomerProduct']"
+ods1_stage,base,client_product_entity_to_display_partner_phone,"['etl_spuMergeCustomerProduct', 'etl_spuMergeCustomerProduct', 'etl_spuMergeFacilityCustomerProduct']"
+ods1_stage,base,client_entity_to_client_feature,"['etl_spuMergeCustomerProduct', 'etl_spuMergeCustomerProduct']"
+ods1_stage,base,client_feature_to_client_feature_value,['etl_spuMergeCustomerProduct']
+ods1_stage,base,partner,"['etl_spuMergeCustomerProduct', 'etl_spuMergeCustomerProduct']"
+ods1_stage,base,client_product_to_partner,"['etl_spuMergeCustomerProduct', 'etl_spuMergeCustomerProduct']"
+ods1_stage,base,provider_to_education_institution,"['etl_spuMergeProviderEducationInstitution', 'etl_spuMergeProviderEducationInstitution', 'FastPass_spuMergeProviderToEducationInstitution']"
+ods1_stage,base,education_institution,"['etl_spuMergeProviderEducationInstitution', 'RawFile_spuMergeProviderEducationInstitution', 'etl_spuMergeProviderEducationInstitution', 'RawFile_spuMergeProviderEducationInstitution', 'FastPass_spuMergeProviderToEducationInstitution']"
+ods1_stage,base,provider_to_sub_status,"['etl_spuMergeProviderSubStatus', 'FastPass_spuMergeProviderToStatus', 'etl_spuMergeProviderSubStatus', 'FastPass_spuMergeProviderToStatus']"
+ods1_stage,base,provider_sanction,"['etl_spuMergeProviderSanction', 'etl_spuMergeProviderSanction', 'etl_spuMergeProviderBridgeCalcsAndRanks']"
+ods1_stage,base,provider_to_map_customer_product,"['CallTracking_MAPProvisioinedLines', 'CallTracking_MAPProvisioinedLines', 'Hack_MissingTrackingLines', 'etl_spuMergeProviderMAPCustomerProduct']"
+ods1_stage,base,provider_office_syndication,"['CallTracking_MAPProvisioinedLines', 'CallTracking_MAPProvisioinedLines', 'etl_spuMergeProviderMAPCustomerProduct']"
+ods1_stage,base,provider_training,"['etl_spuMergeProviderTraining', 'etl_spuMergeProviderTraining']"
+ods1_stage,base,provider_to_office,"['etl_spuMergeProviderOffice', 'FastPass_spuMergeProviderToOffice', 'etl_spuMergeProviderOffice', 'FastPass_spuMergeProviderToOffice', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'ODSFix_spuProviderOfficeRank']"
+ods1_stage,base,provider_to_health_insurance,"['FastPass_spuMergeProviderToHealthInsurance', 'FastPass_spuMergeProviderToHealthInsurance', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderHealthInsurance']"
+snowflake,fastpass,practice,"['FastPass_spuPreProcess', 'FastPass_spuPreProcess']"
+snowflake,fastpass,office,"['FastPass_spuPreProcess', 'FastPass_spuPreProcess']"
+snowflake,fastpass,office_to_address,"['FastPass_spuPreProcess', 'FastPass_spuPreProcess']"
+ods1_stage,base,provider_identification,"['etl_spuMergeProviderIdentification', 'etl_spuMergeProviderIdentification']"
+ods1_stage,base,provider_to_language,"['etl_spuMergeProviderLanguage', 'etl_spuMergeProviderLanguage', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'FastPass_spuMergeProviderToLanguage']"
+snowflake,fast_pass,provider_to_office,"['FastPass_spuMergeProviderToOffice', 'FastPass_spuMergeProviderToOffice']"
+ods1_stage,base,provider_to_provider_type,"['FastPass_spuMergeProviderToProviderType', 'FastPass_spuMergeProviderToProviderType', 'etl_spuMergeProviderProviderType']"
+snowflake,fastpass,provider_to_education_institution,"['RawFile_spuMergeProviderEducationInstitution', 'RawFile_spuMergeProviderEducationInstitution']"
+ods1_stage,base,provider,"['etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderIdentifier', 'RawFile_spuPreProcessing', 'etl_spuMergeProvider', 'FastPass_spuMergeProvider', 'RawFile_spuMergeProvider', 'etl_spuDeleteOrphanedProviders']"
+ods1_stage,base,relationship_type,"['etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct']"
+ods1_stage,show,provider_source_update,"['FastPass_spuProviderSourceUpdate', 'FastPass_spuProviderSourceUpdate']"
+ods1_stage,base,provider_to_clinical_focus,"['etl_spuMergeProviderClinicalFocus', 'etl_spuMergeProviderClinicalFocus']"
+snowflake,etl,provider_delta,"['etl_spuMergeOfficeHours', 'etl_spuMergeOfficeHours', 'etl_spuProviderDeltaLoads', 'etl_spuMergeOffice', 'etl_spuMergePractice', 'etl_spuInsertDeltas', 'etl_spuBaseTableLoads']"
+ods1_stage,base,provider_to_about_me,"['etl_spuMergeProviderAboutMe', 'etl_spuMergeProviderAboutMe', 'FastPass_spuMergeProviderToAboutMe', 'etl_spuMergeProviderBridgeCalcsAndRanks']"
+ods1_stage,base,provider_to_appointment_availability,"['etl_spuMergeProviderAppointmentAvailability', 'etl_spuMergeProviderAppointmentAvailability', 'etl_spuMergeProviderBridgeCalcsAndRanks']"
+snowflake,etl,provider_delta_processing,"['etl_spuRenameDeltaTablesForProcessing', 'etl_spuRenameDeltaTablesForProcessing', 'etl_spuInsertDeltas', 'Mid_spuProviderIsInClientMarketRefresh', 'Base_spuSetBatchStatusForPDCDeltas']"
+snowflake,etl,office_delta_processing,"['etl_spuRenameDeltaTablesForProcessing', 'etl_spuRenameDeltaTablesForProcessing']"
+ods1_stage,base,phone,"['etl_spuMergeCustomerProduct', 'etl_spuMergeProviderOfficeCustomerProduct', 'etl_spuMergeFacilityCustomerProduct', 'RawFile_spuOfficeToPhone', 'etl_spuMergeOfficePhone', 'FastPass_spuMergeOfficeToPhone']"
+ods1_stage,base,phone_type,['etl_spuMergeProviderOfficeCustomerProduct']
+ods1stage,base,client_product_entity_relationship,"['FastPass_spuDeleteClientProductEntityRelationship', 'hack_BJCAndOthersDesignateFacilities', 'Base_spuProviderSponsorshipAndOASCleanup']"
+ods1stage,base,client_product_to_entity,"['FastPass_spuDeleteClientProductEntityRelationship', 'Base_spuProviderSponsorshipAndOASCleanup']"
+ods1stage,base,market_share_to_client_product_entity,['FastPass_spuDeleteClientProductEntityRelationship']
+ods1stage,base,client_product_entity_to_phone,['FastPass_spuDeleteClientProductEntityRelationship']
+ods1stage,base,client_product_entity_to_url,['FastPass_spuDeleteClientProductEntityRelationship']
+ods1stage,base,client_product_entity_to_image,['FastPass_spuDeleteClientProductEntityRelationship']
+snowflake,standardized,client_product_to_entity,"['FastPass_spuDeleteClientProductEntityRelationship', 'RawFile_spuClientProductToEntity']"
+snowflake,fast_pass,provider_designation_priority,"['FastPass_spuDeleteClientProductEntityRelationship', 'RawFile_spuPreProcessing']"
+snowflake,fast_pass,remove_provider_from_client,"['FastPass_spuDeleteClientProductEntityRelationship', 'RawFile_spuPreProcessing']"
+ods1_stage,base,provider_email,['etl_spuMergeProviderEmail']
+ods1_stage,base,provider_url,['etl_spuMergeProviderURL']
+ods1_stage,base,client_product_entity_to_image,['etl_spuMergeFacilityCustomerProduct']
+ods1_stage,base,client_product_entity_to_url,['etl_spuMergeFacilityCustomerProduct']
+ods1_stage,base,image,['etl_spuMergeFacilityCustomerProduct']
+ods1_stage,base,url,['etl_spuMergeFacilityCustomerProduct']
+ods1_stage,base,facility,"['etl_spuMergeFacilityCustomerProduct', 'RawFile_spuPreProcessing']"
+ods1_stage,base,client_product_image,['etl_spuMergeCustomerProductImage']
+ods1_stage,base,provider_to_certification_specialty,"['etl_spuMergeProviderCertificationSpecialty', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'FastPass_spuMergeProviderToCertificationSpecialty']"
+ods1_stage,base,office_to_phone,"['RawFile_spuOfficeToPhone', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeOfficePhone', 'FastPass_spuMergeOfficeToPhone']"
+snowflake,fastpass,office_to_phone,['RawFile_spuOfficeToPhone']
+ods1_stage,base,facility_hours,['etl_spuMergeFacilityHours']
+ods1_stage,base,provider_to_client_product_to_display_partner,['etl_spuMergeProviderCustomerProductDisplayPartner']
+ods1_stage,base,practice,"['etl_spuMergePractice', 'FastPass_spuMergePractice']"
+ods1_stage,base,entity_to_medical_term,"['etl_spuMergeProviderCondition', 'etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderProcedure', 'FastPass_spuMergeEntityToMedicalTerm', 'etl_spuBaseTableLoads']"
+ods1_stage,base,provider_attribute_metadata,['etl_spuMergeProviderBridgeCalcsAndRanks']
+ods1_stage,base,provider_appointment_availability_statement,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderAppointmentAvailabilityStatement']"
+ods1_stage,base,provider_to_degree,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderDegree', 'FastPass_spuMergeProviderToDegree']"
+ods1_stage,base,provider_media,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderMedia']"
+ods1_stage,base,provider_image,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderImage']"
+ods1_stage,base,provider_to_organization,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderOrganization']"
+ods1_stage,base,provider_video,"['etl_spuMergeProviderBridgeCalcsAndRanks', 'etl_spuMergeProviderVideo']"
+ods1_stage,show,provider_attribute_metadata,['etl_spuMergeProviderBridgeCalcsAndRanks']
+ods1_stage,base,city_state_postal_code,"['RawFile_spuMergeOfficePractice', 'FastPass_spuMergeAddress', 'etl_spuMergeFacilityAddress', 'etl_spuMergeCityStatePostalCode']"
+snowflake,fast_pass,office_to_address,['RawFile_spuMergeOfficePractice']
+snowflake,fast_pass,practice,['RawFile_spuMergeOfficePractice']
+snowflake,raw_file,client_data,"['RawFile_spuMergeOfficePractice', 'RawFile_spuPreProcessing']"
+ods1_stage,base,health_insurance_plan_to_plan_type,['etl_spuMergeProviderHealthInsurance']
+[_snowflake],[_fast_pass],office_to_address,['FastPass_spuMergeAddress']
+snowflake,fastpass,providertooffice,['RawFile_spuProviderToOffice']
+ods1_stage,base,market_share_to_client_product_entity,['etl_spuMergePracticeCustomerProduct']
+snowflake,fast_pass,provider_to_sub_status,['RawFile_spuProviderToStatus']
+snowflake,raw,provider_profile,"['FastPass_spuDeleteFromMDM', 'etl_spuBaseTableLoads']"
+snowflake,raw,provider_profile_processing_dedup,['FastPass_spuDeleteFromMDM']
+snowflake,rawfile,client_data,['RawFile_spuProviderToAboutMe']
+snowflake,fast_pass,provider_to_about_me,['RawFile_spuProviderToAboutMe']
+snowflake,fast_pass,config_source_priority,['RawFile_spuPreProcessing']
+snowflake,ref,facility_data,['RawFile_spuPreProcessing']
+ods1_stage,base,facility_to_address,['etl_spuMergeFacilityAddress']
+ods1_stage,base,degree,['etl_spuMergeProviderDegree']
+snowflake,fast_pass,provider,"['FastPass_spuMergeProvider', 'RawFile_spuMergeProvider']"
+ods1_stage,base,facility_to_facility_type,['etl_spuMergeFacilityToFacilityType']
+ods1_stage,base,facility_image,['etl_spuMergeFacilityImage']
+ods1_stage,base,provider_license,"['FastPass_spuMergeProviderLicense', 'etl_spuMergeProviderLicense']"
+snowflake,fast_pass,provider_to_facility,['RawFile_spuProviderToFacility']
+ods1_stage,base,provider_to_telehealth_method,"['etl_spuMergeProviderTelehealth', 'FastPass_spuMergeProviderToTelehealth']"
+ods1_stage,base,telehealth_method,"['etl_spuMergeProviderTelehealth', 'FastPass_spuMergeProviderToTelehealth']"
+ods1_stage,base,provider_to_provider_sub_type,['etl_spuMergeProviderProviderSubType']
+snowflake,fast_pass,provider_to_telehealth,['RawFile_spuProviderToTelehealth']
+db_metrics,dbo,process_status_archive,['etl_spuBaseTableLoads']
+snowflake,raw,office_profile,['etl_spuBaseTableLoads']
+snowflake,raw,practice_profile,['etl_spuBaseTableLoads']
+snowflake,raw,facility_profile,['etl_spuBaseTableLoads']
+snowflake,raw,customer_product_profile,['etl_spuBaseTableLoads']
+snowflake,fast_pass,provider_to_specialty,['RawFile_spuProviderToSpecialty']
+snowflake,fast_pass,office_to_phone,['FastPass_spuMergeOfficeToPhone']
+snowflake,fast_pass,office_delta,['FastPass_spuMergeOfficeToPhone']
+ods1_stage,base,telehealth_method_type,['FastPass_spuMergeProviderToTelehealth']
+ods1_stage,base,office_syndication,['etl_spuMergeOfficeSyndication']
+ods1_stage,base,provider_last_update_date,['etl_spuMergeProviderLastUpdateDate']
+snowflake,fastpass,provider_to_language,['RawFile_spuMergeProviderLanguage']
+ods1stage,base,provider_to_display_specialty,['Base_spuCalculateProviderDisplaySpecialty']
+ods1stage,mid,provider_malpractice,['Mid_spuProviderMalpracticeRefresh']
+ods1stage,mid,provider_sponsorship,"['Mid_spuProviderSponsorshipRefresh', 'hack_spuDeleteNullFacilityCodes', 'hack_spuRemoveBadURLS']"
+ods1stage,mid,provider,['Mid_spuProviderRefresh']
+ods1stage,show,solr_provider,"['Mid_spuSuppressSurveyFlag', 'Show_spuUpdateSOLRProviderClientCertificationXml', 'Show_spuApplyProviderStatusBusinessRules', 'etl_spuMidProviderEntityRefresh', 'hack_spuMAPFreeze', 'Mid_spuProviderIsInClientMarketRefresh', 'Show_spuSOLRProviderGenerateFromMid', 'hack_spuRemoveSuspecProviders', 'etl_spuCheckFinalResults']"
+ods1stage,mid,line_of_service,"['Mid_spuLineOfServiceRefresh', 'etl_spuMidNonProviderEntityRefresh']"
+ods1stage,show,solr_autosuggest_ref_data,['Show_spuSOLRAutosuggestRefData']
+ods1stage,show,solr_practice,"['Show_spuSOLRPracticeGenerateFromMid', 'Show_spuSOLRPracticeGenerateFromMid', 'hack_spuSOLRPractice']"
+ods1stage,show,vwu_practice_index,"['Show_spuSOLRPracticeGenerateFromMid', 'Show_vwuPracticeIndex']"
+ods1stage,mid,provider_condition,['Mid_spuProviderConditionRefresh']
+ods1stage,base,market,['Mid_spuInsertRequestedMarketLocationsMissingFromODS2']
+ods1stage,show,solr_line_of_service_delta,"['Show_spuSOLRLineOfServiceDeltaRefresh', 'Show_spuSOLRLineOfServiceGenerateFromMid']"
+ods1stage,mid,facility,"['etl_spuMidFacilityEntityRefresh', 'Mid_spuFacilityRefresh']"
+ods1stage,show,solr_facility_delta,['etl_spuMidFacilityEntityRefresh']
+ods1stage,show,solr_facility,['etl_spuMidFacilityEntityRefresh']
+ods1stage,show,solr_provider_delta__powered_by_healthgrades,['Show_spuUpdateSOLRProviderClientCertificationXml']
+ods1stage,show,solr_treatment_entry_level,['Show_spuSOLRTreatmentEntryLevel']
+ods1stage,show,solr_practice_delta,"['Show_spuSOLRPracticeDeltaRefresh', 'hack_spuSOLRPractice']"
+ods1stage,xfr,solr_practice_delta,['Show_spuSOLRPracticeDeltaRefresh']
+ods1stage,base,provider_to_facility,['Base_spuBackfillProviderToFacilityHack']
+ods1_stage,mid,provider_sponsorship,['hack_WriteMDLite']
+ods1stage,base,vwu_pdc_employed_provider_phone,['Base_vwuPDCEmployedProviderPhone']
+ods1_stage,mid,provider,['etl_spuDeleteOrphanedProviders']
+ods1_stage,show,provider,['etl_spuDeleteOrphanedProviders']
+ods1stage,mid,provider_health_insurance,['Mid_spuProviderHealthInsuranceRefresh']
+ods1stage,base,facility_to_facility_type,['hack_spuCleanUpDuplicateIncorrectFacilityToFacilityType']
+ods1stage,mid,provider_specialty,['Mid_spuProviderSpecialtyRefresh']
+ods1stage,show,solr_provider_delta,"['etl_spuMidProviderEntityRefresh', 'Show_spuSOLRProviderDeltaRefresh']"
+ods1stage,base,city_state_postal_code,['etl_spuMidProviderEntityRefresh']
+ods1stage,mid,provider_practice_office,"['etl_spuMidProviderEntityRefresh', 'Mid_spuProviderPracticeOfficeRefresh']"
+ods1stage,show,solr_provider_address,"['etl_spuMidProviderEntityRefresh', 'Show_spuSOLRProviderDeltaRefresh', 'hack_spuRemoveSuspecProviders', 'Show_spuSOLRProviderAddressGenerateFromMid']"
+ods1stage,xfr,solr_provider_delta,['etl_spuMidProviderEntityRefresh']
+ods1stage,base,is_searchable_suppress_general_suppression_rule,['Base_spuCalculateIsSearchableGeneralSuppression']
+ods1stage,base,provider_to_specialty,['Base_spuCalculateIsSearchableGeneralSuppression']
+ods1stage,mid,office_specialty,['Mid_spuOfficeSpecialtyRefresh']
+ods1stage,mid,partner_entity,"['Mid_spuPartnerEntityRefresh', 'Base_spuProviderSponsorshipAndOASCleanup']"
+ods1stage,base,partner_to_entity,"['Mid_spuPartnerEntityRefresh', 'Base_spuProviderSponsorshipAndOASCleanup']"
+ods1stage,mid,provider_recognition,['Mid_spuProviderRecognitionRefresh']
+ods1stage,show,solr_provider_redirect,"['Show_spuSOLRProviderDeltaRefresh', 'Show_spuSOLRProviderRedirect']"
+ods1stage,show,solr_provider__freeze,['hack_spuMAPFreeze']
+ods1_stage,show,solr_provider,['hack_spuTheGreatMidShowODS1StageEDPHackSet']
+ods1stage,mid,provider_sanction,['Mid_spuProviderSanctionRefresh']
+ods1stage,mid,practice_sponsorship,['Mid_spuPracticeSponsorshipRefresh']
+ods1stage,base,provider,['hack_spuCarePhilosophyFix']
+ods1stage,show,vwu_practicing_specialty_to_group_specialty_primary,['Show_vwuPracticingSpecialtyToGroupSpecialtyPrimary']
+ods1stage,mid,geographic_area,"['Mid_spuGeographicAreaRefresh', 'etl_spuMidNonProviderEntityRefresh']"
+ods1stage,mid,provider_specialty_facility_service_line_rating,['Mid_spuProviderSpecialtyFacilityServiceLineRatingRefresh']
+ods1stage,mid,practice,['Mid_spuPracticeRefresh']
+ods1stage,base,provider_specialty_z_score,['Base_spuProviderSpecialtyZScore']
+ods1stage,mid,provider_metric_summary,['Mid_spuProviderMetricSummaryRefreshHack']
+ods1stage,show,solr_geographic_area,['Show_spuSOLRGeographicAreaGenerateFromMid']
+ods1stage,show,solr_geographic_area_delta,"['Show_spuSOLRGeographicAreaGenerateFromMid', 'Show_spuSOLRGeographicAreaDeltaRefresh']"
+ods1stage,base,url,['hack_URLTableMatchToFacilityURL']
+ods1stage,base,client_product_to_call_center,['Base_spuDefaultPDCCallCenterRelationship']
+transit,xfr,client_entity_opt,['Base_spuProviderSponsorshipAndOASCleanup']
+ods1stage,e_mail_alerts,provider_sanctions_mal_practice,['Base_spuProviderSponsorshipAndOASCleanup']
+ods1stage,mid,provider_facility,['Mid_spuProviderFacilityRefresh']
+ods1stage,checks,product_provider_counts,['etl_spuCheckFinalResults']
+ods1stage,checks,client_to_product_provider,['etl_spuCheckFinalResults']
+ods1stage,checks,product_provider_counts_oas,['etl_spuCheckFinalResults']
+ods1stage,checks,product_provider_counts_survey,['etl_spuCheckFinalResults']
+ods1stage,checks,practice_counts,['etl_spuCheckFinalResults']
+ods1stage,show,vwu_provider_index,['etl_spuCheckFinalResults']
+ods1stage,show,solr_line_of_service,['Show_spuSOLRLineOfServiceGenerateFromMid']
+ods1stage,xfr,solrp_ractice_delta,['etl_spuMidNonProviderEntityRefresh']
+ods1stage,base,call_center,['Base_spuCallCenterIntCodeHack']
+ods1stage,mid,provider_language,['Mid_spuProviderLanguageRefresh']
+ods1stage,mid,provider_procedure,['Mid_spuProviderProcedureRefresh']
+ods1stage,base,vwu_provider_specialty,['Base_vwuProviderSpecialty']
+ods1stage,mid,provider_license,['Mid_spuProviderLicenseRefresh']
+ods1stage,mid,provider_education,['Mid_spuProviderEducationRefresh']
+ods1stage,base,providers_with_sponsorship_issues,['Mid_spuRecordPostRulesEngineDataIssues']
+ods1stage,base,provider_to_audit_id,['etl_spuPopulateProviderToAuditIDFromProfisee']
+ods1stage,mid,provider_affiliation,['Mid_spuProviderAffiliationRefresh']
+ods1stage,mid,client_market,['hack_spuRemoveBadURLS']
