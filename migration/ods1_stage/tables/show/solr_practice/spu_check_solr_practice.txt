@@ -1,2 +1,3 @@
-hack.spuSOLRpractice DONE
-show.spuRemovePracticeWithNoProvider DONE 
+hack_spuSOLRPractice DONE
+Show_spuSOLRPracticeGenerateFromMid
+SHOW.SPUREMOVEPRACTICEWITHNOPROVIDER DONE
