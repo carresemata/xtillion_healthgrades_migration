@@ -193,9 +193,9 @@ FROM
 WHERE 
     ActionCode = 1 AND PracticeID NOT IN (SELECT PracticeID FROM Mid.PracticeSponsorship);
 
-
+/*
 -- ActionCode Update
---- Declare and set all variables
+-- - Declare and set all variables
 SET min = 1;
 SET WHEREClause = '';
 SET sql = 'UPDATE TempPracticeSponsorship TempPracSpon' ||
@@ -219,6 +219,7 @@ WHILE $min <= $max
             END;
         SET min = min + 1;
     END;
+    */
 
 
 --- Action 2: Update data in TempPracticeSponsorship where ActionCode is 2 (This is substituting the dynamic SQL in SQL Server, the loop)
@@ -237,6 +238,20 @@ WHERE
     OR MD5(IFNULL(tempPracSpon.ClientCode::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ClientCode::VARCHAR, ''))
     OR MD5(IFNULL(tempPracSpon.ClientName::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ClientName::VARCHAR, ''));
 
+-- Update Mid.PracticeSponsorship where ActionCode is 2 from TempPracticeSponsorship
+UPDATE PracSpon
+SET PracSpon.ProductDescription = tempPracSpon.ProductDescription,
+    PracSpon.ProductGroupCode = tempPracSpon.ProductGroupCode,
+    PracSpon.ProductGroupDescription = tempPracSpon.ProductGroupDescription,
+    PracSpon.ClientToProductID = tempPracSpon.ClientToProductID,
+    PracSpon.ClientCode = tempPracSpon.ClientCode,
+    PracSpon.ClientName = tempPracSpon.ClientName
+FROM Mid.PracticeSponsorship AS PracSpon
+JOIN TempPracticeSponsorship AS tempPracSpon ON 
+    PracSpon.PracticeID = tempPracSpon.PracticeID AND 
+    PracSpon.PracticeCode = tempPracSpon.PracticeCode 
+WHERE tempPracSpon.ActionCode = 2;
+
 
 
 -- Update data in Mid.PracticeSponsorship where ActionCode is 2
@@ -252,3 +267,18 @@ FROM
         midPracSpon.ClientCode = tempPracSpon.ClientCode
 WHERE 
     tempPracSpon.PracticeID IS NULL;
+
+
+	/*
+		DELTAS FOR SOLR HERE
+		
+
+	EXEC [hack].[WriteMDLite]	
+END TRY
+BEGIN CATCH
+    SET @ErrorMessage = 'Error in procedure Mid.spuPracticeSponsorshipRefresh, line ' + convert(VARCHAR(20), error_line()) + ': ' + error_message()
+    RAISERROR(@ErrorMessage, 18, 1)
+END CATCH
+GO
+
+*/
