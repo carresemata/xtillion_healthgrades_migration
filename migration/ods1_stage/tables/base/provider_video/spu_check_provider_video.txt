@@ -1,2 +1,0 @@
-etl_spuMergeProviderVideo
-etl_spuMergeProviderBridgeCalcsAndRanks

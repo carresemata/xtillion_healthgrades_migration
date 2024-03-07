@@ -1,2 +1,0 @@
-etl_spuMergeFacilityCustomerProduct
-etl_spuMergeCustomerProduct
