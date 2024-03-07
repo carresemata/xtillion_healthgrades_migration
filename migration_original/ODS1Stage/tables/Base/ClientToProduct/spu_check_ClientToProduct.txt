@@ -1,0 +1,4 @@
+RawFile_spuClientProductToEntity
+ODSFix_spuClientProductActiveFlag
+etl_spuMergeCustomerProduct
+etl_spuMergeProviderOfficeCustomerProduct
