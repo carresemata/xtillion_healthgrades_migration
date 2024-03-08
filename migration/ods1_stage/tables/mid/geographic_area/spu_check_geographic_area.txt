@@ -1,2 +1,0 @@
-etl_spuMidNonProviderEntityRefresh
-Mid_spuGeographicAreaRefresh

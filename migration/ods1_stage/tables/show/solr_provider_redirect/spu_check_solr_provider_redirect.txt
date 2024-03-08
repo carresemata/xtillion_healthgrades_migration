@@ -1,2 +1,0 @@
-Show_spuSOLRProviderDeltaRefresh
-Show_spuSOLRProviderRedirect

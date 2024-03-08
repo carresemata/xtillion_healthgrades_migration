@@ -1,6 +1,0 @@
-etl_spuMergeFacilityCustomerProduct
-FastPass_spuMergeOfficeToPhone
-etl_spuMergeOfficePhone
-etl_spuMergeProviderOfficeCustomerProduct
-etl_spuMergeCustomerProduct
-RawFile_spuOfficeToPhone

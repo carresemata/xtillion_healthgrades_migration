@@ -1,2 +1,0 @@
-etl_spuMergeProviderAppointmentAvailabilityStatement
-etl_spuMergeProviderBridgeCalcsAndRanks

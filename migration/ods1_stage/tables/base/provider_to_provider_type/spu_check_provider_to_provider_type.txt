@@ -1,2 +1,0 @@
-FastPass_spuMergeProviderToProviderType
-etl_spuMergeProviderProviderType

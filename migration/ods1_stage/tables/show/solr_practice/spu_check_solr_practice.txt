@@ -1,3 +1,0 @@
-hack_spuSOLRPractice DONE
-Show_spuSOLRPracticeGenerateFromMid
-SHOW.SPUREMOVEPRACTICEWITHNOPROVIDER DONE
