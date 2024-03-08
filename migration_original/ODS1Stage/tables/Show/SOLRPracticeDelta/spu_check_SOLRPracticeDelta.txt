@@ -1,0 +1,2 @@
+hack_spuSOLRPractice
+Show_spuSOLRPracticeDeltaRefresh
