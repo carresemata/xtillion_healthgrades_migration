@@ -42,9 +42,9 @@ WITH cte_practice_batch AS (
         p.PracticeCode
     FROM
         Base.ProviderToOffice AS pto
-        // IF @IsDeltaProcessing = 1:
+        -- IF @IsDeltaProcessing = 1:
             JOIN Raw.ProviderDeltaProcessing AS delta ON delta.ProviderID = pto.ProviderID
-        // END OF IF
+        -- END OF IF
         JOIN Base.Office AS o ON pto.OfficeID = o.OfficeID
         JOIN Base.Practice AS p ON p.PracticeID = o.PracticeID
     GROUP BY
