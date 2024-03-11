@@ -11,159 +11,202 @@ WITH CTE_PracticeBatch AS (
 */
 
 WITH CTE_PracticeBatch AS (
-    SELECT DISTINCT e.PracticeID
+    SELECT DISTINCT 
+        O.PracticeID
     -- We havent decided where this information is gonna live in snowlfake platform
-    FROM Snowflake.etl.ProviderDeltaProcessing as a -- !!!!!!!!!!!!
-        JOIN Base.ProviderToOffice AS d on d.ProviderID = a.ProviderID
-        JOIN Base.Office AS e on e.OfficeID = d.OfficeID
-    ORDER BY e.PracticeID
+    FROM Snowflake.etl.ProviderDeltaProcessing as PDP -- !!!!!!!!!!!!
+        JOIN Base.ProviderToOffice AS PTO on PTO.ProviderID = PDP.ProviderID
+        JOIN Base.Office AS O on O.OfficeID = PTO.OfficeID
+    ORDER BY O.PracticeID
 ),
 
 CTE_Service AS (
-    SELECT  b.PhoneNumber, a.OfficeID
-    FROM    Base.OfficeToPhone a
-        JOIN Base.Phone b ON (a.PhoneID = b.PhoneID)
-        JOIN Base.PhoneType c ON a.PhoneTypeID = c.PhoneTypeID AND PhoneTypeCode = 'Service'
+    SELECT 
+        P.PhoneNumber, 
+        OTP.OfficeID
+    FROM  Base.OfficeToPhone OTP
+        JOIN Base.Phone P ON OTP.PhoneID = P.PhoneID
+        JOIN Base.PhoneType PT ON OTP.PhoneTypeID = PT.PhoneTypeID 
+        AND PhoneTypeCode = 'Service'
 ),
 
 CTE_Fax AS (
-    SELECT  b.PhoneNumber, a.OfficeID
-    FROM    Base.OfficeToPhone a
-        JOIN Base.Phone b ON (a.PhoneID = b.PhoneID)
-        JOIN Base.PhoneType c ON a.PhoneTypeID = c.PhoneTypeID AND PhoneTypeCode = 'Fax'
+    SELECT  
+        P.PhoneNumber, 
+        OTP.OfficeID
+    FROM    Base.OfficeToPhone OTP
+        JOIN Base.Phone P ON OTP.PhoneID = P.PhoneID
+        JOIN Base.PhoneType PT ON OTP.PhoneTypeID = PT.PhoneTypeID 
+        AND PhoneTypeCode = 'Fax'
 ),
 
 
 CTE_ProviderToPractice AS (
-    SELECT  DISTINCT a.ProviderID, c.PracticeID
-    FROM    Base.ProviderToOffice AS a
-        JOIN Base.Office AS b ON b.OfficeID = a.OfficeID
-        JOIN Base.Practice AS c ON c.PracticeID = b.PracticeID
+    SELECT  DISTINCT 
+        PTO.ProviderID, 
+        P.PracticeID
+    FROM    Base.ProviderToOffice AS PTO
+        JOIN Base.Office AS O ON O.OfficeID = PTO.OfficeID
+        JOIN Base.Practice AS P ON P.PracticeID = O.PracticeID
 ),
 CTE_PhysicianCount AS (
-    SELECT PracticeID, COUNT(*) AS PhysicianCount
+    SELECT 
+        PracticeID, 
+        COUNT(*) AS PhysicianCount
     FROM CTE_ProviderToPractice
     GROUP BY PracticeID
 ),
 --build a temp table of practices with at least one dentist at one of their office
 CTE_PracticesWithDentists AS (
-    SELECT pb.PracticeID 
-    FROM CTE_PracticeBatch AS pb 
-        JOIN ODS1Stage.base.Office AS o ON o.PracticeID = pb.PracticeID
-        JOIN ODS1Stage.base.ProviderToOffice AS po ON po.OfficeID = o.OfficeID
-        JOIN ODS1Stage.base.ProviderToProviderType AS ppt ON ppt.ProviderID = po.ProviderID 
-        JOIN ODS1Stage.base.ProviderType AS pt ON pt.ProviderTypeID = ppt.ProviderTypeID
-    WHERE pt.ProviderTypeCode = 'DENT'
+    SELECT 
+        PB.PracticeID 
+    FROM CTE_PracticeBatch AS PB 
+        JOIN ODS1Stage.base.Office AS O ON O.PracticeID = PB.PracticeID
+        JOIN ODS1Stage.base.ProviderToOffice AS PO ON PO.OfficeID = O.OfficeID
+        JOIN ODS1Stage.base.ProviderToProviderType AS PPT ON PPT.ProviderID = PO.ProviderID 
+        JOIN ODS1Stage.base.ProviderType AS PT ON PT.ProviderTypeID = PPT.ProviderTypeID
+    WHERE PT.ProviderTypeCode = 'DENT'
 ),
 CTE_PROVTOOFF AS (
-    SELECT u.ParentID, x.OfficeID, x.OfficeCode, x.OfficeName, y.PracticeID, y.PracticeCode, y.PracticeName,w.ClientProductToEntityID                           
-    FROM Base.ClientProductEntityRelationship u 
-        JOIN Base.RelationshipType v ON u.RelationshipTypeID = v.RelationshipTypeID
-        JOIN Base.ClientProductToEntity w ON w.ClientProductToEntityID = u.ChildID
-        JOIN Base.Office x ON w.EntityID = x.OfficeID 
-        JOIN Base.Practice y ON x.PracticeID = y.PracticeID
-    WHERE  v.RelationshipTypeCode = 'PROVTOOFF'   
+    SELECT 
+        CPER.ParentID, 
+        O.OfficeID, 
+        O.OfficeCode, 
+        O.OfficeName, 
+        P.PracticeID, 
+        P.PracticeCode, 
+        P.PracticeName,
+        CPTE.ClientProductToEntityID                           
+    FROM Base.ClientProductEntityRelationship AS CPER 
+        JOIN Base.RelationshipType RT ON CPER.RelationshipTypeID = RT.RelationshipTypeID
+        JOIN Base.ClientProductToEntity CPTE ON CPTE.ClientProductToEntityID = CPER.ChildID
+        JOIN Base.Office O ON CPTE.EntityID = O.OfficeID 
+        JOIN Base.Practice P ON O.PracticeID = P.PracticeID
+    WHERE  RT.RelationshipTypeCode = 'PROVTOOFF'   
 ),
 CTE_OfficeCode_1 AS (
-        SELECT x1.OfficeCode 
-        FROM Base.Office x1 
-        WHERE x1.OfficeCode IN ( 'OOO5XB5','OOO82BH','Y3GT4X','YBD8MY','YBD8V7','OOJQPVR','OOJQQB2','YCFH2F','YCFHK7','OOO38H7','YBV56C','OOJVW28','OOJQPWJ','OOS4S2S','OOJTJTQ','YBV5LG','OOO8HQ3')
+        SELECT O.OfficeCode 
+        FROM Base.Office AS O 
+        WHERE O.OfficeCode IN ( 'OOO5XB5',
+                                'OOO82BH',
+                                'Y3GT4X',
+                                'YBD8MY',
+                                'YBD8V7',
+                                'OOJQPVR',
+                                'OOJQQB2',
+                                'YCFH2F',
+                                'YCFHK7',
+                                'OOO38H7',
+                                'YBV56C',
+                                'OOJVW28',
+                                'OOJQPWJ',
+                                'OOS4S2S',
+                                'OOJTJTQ',
+                                'YBV5LG',
+                                'OOO8HQ3')
 ),
 CTE_OfficeCode_2 AS (
-        SELECT g.OfficeCode
-        FROM   Base.ClientToProduct a
-            JOIN Base.Client b ON a.ClientID = b.ClientID
-            JOIN Base.Product c ON a.ProductID = c.ProductID AND c.ProductCode = 'PDCPRAC'
-            JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID AND pg.ProductGroupCode = 'PDC'
-            JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
-            JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'PROV'
-            JOIN base.Provider AS pb ON d.EntityID = pb.ProviderID --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
-            JOIN Base.Provider f ON d.EntityID = f.ProviderID
-            JOIN CTE_PROVTOOFF AS g ON d.ClientProductToEntityID = g.ParentID
-        WHERE  a.ActiveFlag = 1
+        SELECT 
+            CTE.OfficeCode
+        FROM   Base.ClientToProduct AS CTP
+            JOIN Base.Client AS C ON CTP.ClientID = C.ClientID
+            JOIN Base.Product AS P ON CTP.ProductID = P.ProductID AND c.ProductCode = 'PDCPRAC'
+            JOIN Base.ProductGroup AS PG ON P.ProductGroupID = PG.ProductGroupID 
+                AND PG.ProductGroupCode = 'PDC'
+            JOIN Base.ClientProductToEntity AS CPTE ON CTP.ClientToProductID = CPTE.ClientToProductID
+            JOIN Base.EntityType AS ET ON CPTE.EntityTypeID = ET.EntityTypeID 
+                AND ET.EntityTypeCode = 'PROV'
+            JOIN base.Provider AS P ON CPTE.EntityID = P.ProviderID --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
+            JOIN Base.Provider AS BP ON CPTE.EntityID = BP.ProviderID
+            JOIN CTE_PROVTOOFF AS CTE ON CPTE.ClientProductToEntityID = CTE.ParentID
+        WHERE  CTP.ActiveFlag = 1
 ),
 CTE_OfficeCode_3 AS (
-        SELECT o.OfficeCode 
-        FROM   Base.ClientToProduct a
-            JOIN Base.Client b ON a.ClientID = b.ClientID
-            JOIN Base.Product c ON a.ProductID = c.ProductID AND c.ProductCode <> 'PDCPRAC'
-            JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID AND pg.ProductGroupCode = 'PDC'
-            JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
-            JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'PROV'
-            JOIN Base.Provider f ON d.EntityID = f.ProviderID
-            JOIN Base.ProviderToOffice pto ON pto.ProviderID = f.ProviderID
-            JOIN Base.Office o ON o.officeID = pto.OfficeID
-        WHERE  a.ActiveFlag = 1
+        SELECT 
+            O.OfficeCode 
+        FROM Base.ClientToProduct AS CTP
+            JOIN Base.Client AS C ON CTP.ClientID = CTP.ClientID
+            JOIN Base.Product AS P ON CTP.ProductID = P.ProductID 
+            AND c.ProductCode <> 'PDCPRAC'
+            JOIN Base.ProductGroup AS PG ON P.ProductGroupID = PG.ProductGroupID 
+                AND PG.ProductGroupCode = 'PDC'
+            JOIN Base.ClientProductToEntity AS CPTE ON CTP.ClientToProductID = CPTE.ClientToProductID
+            JOIN Base.EntityType AS ET ON CPTE.EntityTypeID = ET.EntityTypeID 
+                AND ET.EntityTypeCode = 'PROV'
+            JOIN Base.Provider AS BP ON CPTE.EntityID = BP.ProviderID
+            JOIN Base.ProviderToOffice AS PTO ON PTO.ProviderID = BP.ProviderID
+            JOIN Base.Office AS O ON O.officeID = PTO.OfficeID
+        WHERE  CTP.ActiveFlag = 1
 ),
 CTE_ColumnUpdates AS (
         SELECT  
             COULUM_NAME AS name, 
             ROW_NUMBER() OVER (ORDER BY name) AS recId
         FROM INFORMATION_SCHEMA.COLUMNS  
-        WHERE TABLE_NAME = 'TempPracticeSponsorship' AND 
-        name NOT IN ('PracticeCode', 'ProductCode', 'ActionCode')
+        WHERE TABLE_NAME = 'TempPracticeSponsorship' 
+        AND name NOT IN ('PracticeCode', 'ProductCode', 'ActionCode')
 ),
 
 
 CREATE OR REPLACE TEMPORARY TABLE TempPractice AS (
     SELECT  DISTINCT 
-        a.PracticeID,
-        a.PracticeCode,
-        TRIM(a.PracticeName) AS PracticeName,
-        a.YearPracticeEstablished,
-        a.NPI, 
-        a.PracticeWebsite,
-        a.PracticeDescription,
-        a.PracticeLogo,
-        a.PracticeMedicalDirector,
-        a.PracticeSoftware,
-        a.PracticeTIN,
-        b.OfficeID,
-        b.OfficeCode,
-        TRIM(b.OfficeName) AS officename,
-        d.AddressTypeCode,
-        e.AddressLine1 || IFNULL( || ' ' || e.Suite,'') AS AddressLine1,
-        e.AddressLine2,
-        e.AddressLine3,
-        e.AddressLine4,
-        j.City, 
-        j.State, 
-        j.PostalCode AS ZipCode,
-        j.County,
-        k.NationName AS Nation,
-        e.Latitude,e.Longitude,
-        f.PhoneNumber AS FullPhone,
-        z.PhoneNumber AS FullFax,
-        b.HasBillingStaff,
-        b.HasHandicapAccess,
-        b.HasLabServicesOnSite,
-        b.HasPharmacyOnSite,
-        b.HasXrayOnSite,
-        b.IsSurgeryCenter,
-        b.HasSurgeryOnSite,
-        b.AverageDailyPatientVolume,
+        P.PracticeID,
+        P.PracticeCode,
+        TRIM(P.PracticeName) AS PracticeName,
+        P.YearPracticeEstablished,
+        P.NPI, 
+        P.PracticeWebsite,
+        P.PracticeDescription,
+        P.PracticeLogo,
+        P.PracticeMedicalDirector,
+        P.PracticeSoftware,
+        P.PracticeTIN,
+        O.OfficeID,
+        O.OfficeCode,
+        TRIM(O.OfficeName) AS officename,
+        BAT.AddressTypeCode,
+        A.AddressLine1 || IFNULL( || ' ' || A.Suite,'') AS AddressLine1,
+        A.AddressLine2,
+        A.AddressLine3,
+        A.AddressLine4,
+        CSPC.City, 
+        CSPC.State, 
+        CSPC.PostalCode AS ZipCode,
+        CSPC.County,
+        N.NationName AS Nation,
+        A.Latitude,e.Longitude,
+        CTE_S.PhoneNumber AS FullPhone,
+        CTE_F.PhoneNumber AS FullFax,
+        O.HasBillingStaff,
+        O.HasHandicapAccess,
+        O.HasLabServicesOnSite,
+        O.HasPharmacyOnSite,
+        O.HasXrayOnSite,
+        O.IsSurgeryCenter,
+        O.HasSurgeryOnSite,
+        O.AverageDailyPatientVolume,
         NULL AS PhysicianCount,
-        b.OfficeCoordinatorName,
-        b.ParkingInformation,
-        b.PaymentPolicy,
-        b.LegacyKey AS LegacyKeyOffice,
-        a.LegacyKey AS LegacyKeyPractice,
-        b.OfficeRank,
-        e.CityStatePostalCodeID,
+        O.OfficeCoordinatorName,
+        O.ParkingInformation,
+        O.PaymentPolicy,
+        O.LegacyKey AS LegacyKeyOffice,
+        P.LegacyKey AS LegacyKeyPractice,
+        O.OfficeRank,
+        A.CityStatePostalCodeID,
         0,
         REPLACE(
             REPLACE(
-                replace('/group-directory/'||LOWER(j.State)||'-'|| LOWER(
-                    REPLACE(c1.StateName,' ','-'))||'/'||
-        lower(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-                j.City,
+                REPLACE('/group-directory/'||LOWER(CSPC.State)||'-'|| LOWER(
+                    REPLACE(S.StateName,' ','-'))||'/'||
+        LOWER(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+                CSPC.City,
                 ' - ',' '),
                 '&','-'),
                 ' ','-'),
@@ -171,47 +214,47 @@ CREATE OR REPLACE TEMPORARY TABLE TempPractice AS (
                 '''',''),
                 '.',''),
                 '--','-')) || '/' || 
-        lower(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-            replace(
-                TRIM(a.PracticeName),
+        LOWER(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+            REPLACE(
+                TRIM(P.PracticeName),
                 ' - ',' '),
                 '&','-'),
                 ' ','-'),
@@ -251,104 +294,101 @@ CREATE OR REPLACE TEMPORARY TABLE TempPractice AS (
                 '.',''),
                 '---','-'),
                 '--','-')) || 
-                '-' || LOWER(b.OfficeCode) ,'--','-'),char(13),''), char(10),'') AS OfficeURL
-    FROM CTE_PracticeBatch as pb  --When not migrating a batch, this is all offices in Base.Office. Otherwise it is just the offices for the providers in the batch
-        JOIN Base.Practice AS a on a.PracticeID = pb.PracticeID
-        JOIN Base.Office AS b ON a.PracticeID = b.PracticeID
-        JOIN Base.OfficeToAddress AS c ON b.OfficeID = c.OfficeID
-        JOIN Base.ProviderToOffice po on b.OfficeID = po.OfficeID
-        LEFT JOIN Base.AddressType AS d  ON d.AddressTypeID = c.AddressTypeID
-        JOIN Base.Address AS e ON e.AddressID = c.AddressID
-        JOIN Base.CityStatePostalCode AS j ON e.CityStatePostalCodeID = j.CityStatePostalCodeID
-        JOIN Base.Nation k ON IFNULL(J.NationID,'00415355-0000-0000-0000-000000000000') = k.NationID
-        JOIN Base.State c1 ON c1.state = j.state
-        LEFT JOIN CTE_Service AS  f ON (f.OfficeID = b.OfficeID)
-        LEFT JOIN CTE_Fax AS z  ON (z.OfficeID = b.OfficeID)
+                '-' || LOWER(O.OfficeCode) ,'--','-'),char(13),''), char(10),'') AS OfficeURL
+    FROM CTE_PracticeBatch as PB  --When not migrating a batch, this is all offices in Base.Office. Otherwise it is just the offices for the providers in the batch
+        JOIN Base.Practice AS P on P.PracticeID = PB.PracticeID
+        JOIN Base.Office AS O ON P.PracticeID = O.PracticeID
+        JOIN Base.OfficeToAddress AS OTA ON O.OfficeID = OTA.OfficeID
+        JOIN Base.ProviderToOffice PTO on O.OfficeID = PTO.OfficeID
+        LEFT JOIN Base.AddressType AS BAT  ON BAT.AddressTypeID = OTA.AddressTypeID
+        JOIN Base.Address AS A ON A.AddressID = OTA.AddressID
+        JOIN Base.CityStatePostalCode AS CSPC ON A.CityStatePostalCodeID = CSPC.CityStatePostalCodeID
+        JOIN Base.Nation N ON IFNULL(J.NationID,'00415355-0000-0000-0000-000000000000') = N.NationID
+        JOIN Base.State S ON S.state = CSPC.state
+        LEFT JOIN CTE_Service AS  CTE_S ON CTE_S.OfficeID = O.OfficeID
+        LEFT JOIN CTE_Fax AS CTE_F  ON CTE_F.OfficeID = O.OfficeID
 )
 
 --UPDATE the PhysicianCount based on DISTINCT providers at the Practice level
-UPDATE a 
-SET a.PhysicianCount = b.PhysicianCount
-FROM TempPractice AS a
-JOIN CTE_PhysicianCount AS b ON b.PracticeID = a.PracticeID
+UPDATE TP 
+SET TP.PhysicianCount = CTE_PC.PhysicianCount
+FROM TempPractice AS TP
+JOIN CTE_PhysicianCount AS CTE_PC ON CTE_PC.PracticeID = TP.PracticeID
 
-UPDATE A
+UPDATE TP
 SET HasDentist = 1
-FROM TempPractice AS A
-JOIN CTE_PracticesWithDentists AS B ON A.PracticeID = B.PracticeID
+FROM TempPractice AS TP
+JOIN CTE_PracticesWithDentists AS CTE_PWD ON TP.PracticeID = CTE_PWD.PracticeID
 
-UPDATE prac
-SET prac.GoogleScriptBlock = '{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"' || prac.OfficeURL || '","name":"' || prac.PracticeName || '","address": {"@@type": "PostalAddress","streetAddress":"' || prac.AddressLine1 || '","addressLocality":"' || prac.City || '","addressRegion":"' || prac.State || '","postalCode":"' || prac.ZipCode || '","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"' || CAST(prac.Latitude AS VARCHAR(MAX)) || '","longitude":"' || CAST(prac.Longitude AS VARCHAR(MAX)) || '"},"telephone":"' || IFNULL(prac.FullPhone,'') || '","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/' || prac.OfficeCode || '","url":"/groupgoogleform"}}'
+UPDATE TP
+SET TP.GoogleScriptBlock = '{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"' || TP.OfficeURL || '","name":"' || TP.PracticeName || '","address": {"@@type": "PostalAddress","streetAddress":"' || TP.AddressLine1 || '","addressLocality":"' || TP.City || '","addressRegion":"' || TP.State || '","postalCode":"' || TP.ZipCode || '","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"' || CAST(TP.Latitude AS VARCHAR(MAX)) || '","longitude":"' || CAST(TP.Longitude AS VARCHAR(MAX)) || '"},"telephone":"' || IFNULL(TP.FullPhone,'') || '","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/' || TP.OfficeCode || '","url":"/groupgoogleform"}}'
 --select prac.GoogleScriptBlock, '{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"'+prac.OfficeURL+'","name":"'+prac.PracticeName+'","address": {"@@type": "PostalAddress","streetAddress":"'+prac.AddressLine1+'","addressLocality":"'+prac.City+'","addressRegion":"'+prac.State+'","postalCode":"'+prac.ZipCode+'","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"'+CAST(prac.Latitude AS VARCHAR(MAX))+'","longitude":"'+CAST(prac.Longitude AS VARCHAR(MAX))+'"},"telephone":"'+ISNULL(prac.FullPhone,'')+'","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/'+prac.OfficeCode+'","url":"/groupgoogleform"}}'
-FROM   TempPractice AS prac
+FROM   TempPractice AS TP
 JOIN (
         SELECT * FROM CTE_OfficeCode_1
-        --AND x1.OfficeCode = prac.OfficeCode
         UNION
         SELECT * FROM CTE_OfficeCode_2
-            --AND g.OfficeCode = prac.OfficeCode
         UNION
         SELECT * FROM CTE_OfficeCode_3
-            --AND o.OfficeCode = prac.OfficeCode
-    ) x ON x.OfficeCode = prac.OfficeCode
+    ) X ON X.OfficeCode = TP.OfficeCode
 
 
-UPDATE  a
-SET     a.ActionCode = 1
+UPDATE  TP
+SET     TP.ActionCode = 1
 --SELECT *
-FROM    TempPractice a
-    LEFT JOIN Mid.Practice b ON (a.PracticeID = b.PracticeID and a.OfficeID = b.OfficeID)
-WHERE   b.PracticeID IS NULL 
+FROM    TempPractice AS TP
+LEFT JOIN Mid.Practice AS MP ON TP.PracticeID = MP.PracticeID and TP.OfficeID = MP.OfficeID
+WHERE   MP.PracticeID IS NULL 
 
-UPDATE A
-SET A.ActionCode = 2
-FROM TempPractice A
-JOIN Mid.Practice B ON A.PracticeID = B.PracticeID AND A.OfficeID = B.OfficeID
+UPDATE TP
+SET TP.ActionCode = 2
+FROM TempPractice AS TP
+JOIN Mid.Practice AS MP ON TP.PracticeID = MP.PracticeID AND TP.OfficeID = MP.OfficeID
 WHERE
-    MD5(IFNULL(A.PracticeName::VARCHAR,''))<>MD5(IFNULL(B.PracticeName::VARCHAR,'')) OR
-    MD5(IFNULL(A.YearPracticeEstablished::VARCHAR,''))<>MD5(IFNULL(B.YearPracticeEstablished::VARCHAR,'')) OR
-    MD5(IFNULL(A.NPI::VARCHAR,''))<>MD5(IFNULL(B.NPI::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeWebsite::VARCHAR,''))<>MD5(IFNULL(B.PracticeWebsite::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeDescription::VARCHAR,''))<>MD5(IFNULL(B.PracticeDescription::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeLogo::VARCHAR,''))<>MD5(IFNULL(B.PracticeLogo::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeMedicalDirector::VARaHAR,''))<>MD5(IFNULL(B.PracticeMedicalDirector::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeSoftware::VARCHAR,''))<>MD5(IFNULL(B.PracticeSoftware::VARCHAR,'')) OR
-    MD5(IFNULL(A.PracticeTIN::VARCHAR,''))<>MD5(IFNULL(B.PracticeTIN::VARCHAR,'')) OR
-    MD5(IFNULL(A.OfficeID::VARCHAR,''))<>MD5(IFNULL(B.OfficeID::VARCHAR,'')) OR
-    MD5(IFNULL(A.OfficeCode::VARCHAR,''))<>MD5(IFNULL(B.OfficeCode::VARCHAR,'')) OR
-    MD5(IFNULL(A.officename::VARCHAR,''))<>MD5(IFNULL(B.officename::VARCHAR,'')) OR
-    MD5(IFNULL(A.AddressTypeCode::VARCHAR,''))<>MD5(IFNULL(B.AddressTypeCode::VARCHAR,'')) OR
-    MD5(IFNULL(A.AddressLine1::VARCHAR,''))<>MD5(IFNULL(B.AddressLine1::VARCHAR,'')) OR
-    MD5(IFNULL(A.AddressLine2::VARCHAR,''))<>MD5(IFNULL(B.AddressLine2::VARCHAR,'')) OR
-    MD5(IFNULL(A.AddressLine3::VARCHAR,''))<>MD5(IFNULL(B.AddressLine3::VARCHAR,'')) OR
-    MD5(IFNULL(A.AddressLine4::VARCHAR,''))<>MD5(IFNULL(B.AddressLine4::VARCHAR,'')) OR
-    MD5(IFNULL(A.City::VARCHAR,''))<>MD5(IFNULL(B.City::VARCHAR,'')) OR
-    MD5(IFNULL(A.State::VARCHAR,''))<>MD5(IFNULL(B.State::VARCHAR,'')) OR
-    MD5(IFNULL(A.ZipCode::VARCHAR,''))<>MD5(IFNULL(B.ZipCode::VARCHAR,'')) OR
-    MD5(IFNULL(A.County::VARCHAR,''))<>MD5(IFNULL(B.County::VARCHAR,'')) OR
-    MD5(IFNULL(A.Nation::VARCHAR,''))<>MD5(IFNULL(B.Nation::VARCHAR,'')) OR
-    MD5(IFNULL(A.Latitude::VARCHAR,''))<>MD5(IFNULL(B.Latitude::VARCHAR,'')) OR
-    MD5(IFNULL(A.Longitude::VARCHAR,''))<>MD5(IFNULL(B.Longitude::VARCHAR,'')) OR
-    MD5(IFNULL(A.FullPhone::VARCHAR,''))<>MD5(IFNULL(B.FullPhone::VARCHAR,'')) OR
-    MD5(IFNULL(A.FullFax::VARCHAR,''))<>MD5(IFNULL(B.FullFax::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasBillingStaff::VARCHAR,''))<>MD5(IFNULL(B.HasBillingStaff::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasHandicapAccess::VARCHAR,''))<>MD5(IFNULL(B.HasHandicapAccess::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasLabServicesOnSite::VARCHAR,''))<>MD5(IFNULL(B.HasLabServicesOnSite::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasPharmacyOnSite::VARCHAR,''))<>MD5(IFNULL(B.HasPharmacyOnSite::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasXrayOnSite::VARCHAR,''))<>MD5(IFNULL(B.HasXrayOnSite::VARCHAR,'')) OR
-    MD5(IFNULL(A.IsSurgeryCenter::VARCHAR,''))<>MD5(IFNULL(B.IsSurgeryCenter::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasSurgeryOnSite::VARCHAR,''))<>MD5(IFNULL(B.HasSurgeryOnSite::VARCHAR,'')) OR
-    MD5(IFNULL(A.AverageDailyPatientVolume::VARCHAR,''))<>MD5(IFNULL(B.AverageDailyPatientVolume::VARCHAR,'')) OR
-    MD5(IFNULL(A.PhysicianCount::VARCHAR,''))<>MD5(IFNULL(B.PhysicianCount::VARCHAR,'')) OR
-    MD5(IFNULL(A.OfficeCoordinatorName::VARCHAR,''))<>MD5(IFNULL(B.OfficeCoordinatorName::VARCHAR,'')) OR
-    MD5(IFNULL(A.ParkingInformation::VARCHAR,''))<>MD5(IFNULL(B.ParkingInformation::VARCHAR,'')) OR
-    MD5(IFNULL(A.PaymentPolicy::VARCHAR,''))<>MD5(IFNULL(B.PaymentPolicy::VARCHAR,'')) OR
-    MD5(IFNULL(A.LegacyKeyOffice::VARCHAR,''))<>MD5(IFNULL(B.LegacyKeyOffice::VARCHAR,'')) OR
-    MD5(IFNULL(A.LegacyKeyPractice::VARCHAR,''))<>MD5(IFNULL(B.LegacyKeyPractice::VARCHAR,'')) OR
-    MD5(IFNULL(A.OfficeRank::VARCHAR,''))<>MD5(IFNULL(B.OfficeRank::VARCHAR,'')) OR
-    MD5(IFNULL(A.CityStatePostalCodeID::VARCHAR,''))<>MD5(IFNULL(B.CityStatePostalCodeID::VARCHAR,'')) OR
-    MD5(IFNULL(A.HasDentist::VARCHAR,''))<>MD5(IFNULL(B.HasDentist::VARCHAR,'')) OR
-    MD5(IFNULL(A.OfficeURL::VARCHAR,''))<>MD5(IFNULL(B.OfficeURL::VARCHAR,''))
+    MD5(IFNULL(TP.PracticeName::VARCHAR,''))<>           MD5(IFNULL(MP.PracticeName::VARCHAR,'')) OR
+    MD5(IFNULL(TP.YearPracticeEstablished::VARCHAR,''))<>MD5(IFNULL(MP.YearPracticeEstablished::VARCHAR,'')) OR
+    MD5(IFNULL(TP.NPI::VARCHAR,''))<>                    MD5(IFNULL(MP.NPI::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeWebsite::VARCHAR,''))<>        MD5(IFNULL(MP.PracticeWebsite::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeDescription::VARCHAR,''))<>    MD5(IFNULL(MP.PracticeDescription::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeLogo::VARCHAR,''))<>           MD5(IFNULL(MP.PracticeLogo::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeMedicalDirector::VARaHAR,''))<>MD5(IFNULL(MP.PracticeMedicalDirector::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeSoftware::VARCHAR,''))<>       MD5(IFNULL(MP.PracticeSoftware::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PracticeTIN::VARCHAR,''))<>            MD5(IFNULL(MP.PracticeTIN::VARCHAR,'')) OR
+    MD5(IFNULL(TP.OfficeID::VARCHAR,''))<>               MD5(IFNULL(MP.OfficeID::VARCHAR,'')) OR
+    MD5(IFNULL(TP.OfficeCode::VARCHAR,''))<>             MD5(IFNULL(MP.OfficeCode::VARCHAR,'')) OR
+    MD5(IFNULL(TP.officename::VARCHAR,''))<>             MD5(IFNULL(MP.officename::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AddressTypeCode::VARCHAR,''))<>        MD5(IFNULL(MP.AddressTypeCode::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AddressLine1::VARCHAR,''))<>           MD5(IFNULL(MP.AddressLine1::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AddressLine2::VARCHAR,''))<>           MD5(IFNULL(MP.AddressLine2::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AddressLine3::VARCHAR,''))<>           MD5(IFNULL(MP.AddressLine3::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AddressLine4::VARCHAR,''))<>           MD5(IFNULL(MP.AddressLine4::VARCHAR,'')) OR
+    MD5(IFNULL(TP.City::VARCHAR,''))<>                   MD5(IFNULL(MP.City::VARCHAR,'')) OR
+    MD5(IFNULL(TP.State::VARCHAR,''))<>                  MD5(IFNULL(MP.State::VARCHAR,'')) OR
+    MD5(IFNULL(TP.ZipCode::VARCHAR,''))<>                MD5(IFNULL(MP.ZipCode::VARCHAR,'')) OR
+    MD5(IFNULL(TP.County::VARCHAR,''))<>                 MD5(IFNULL(MP.County::VARCHAR,'')) OR
+    MD5(IFNULL(TP.Nation::VARCHAR,''))<>                 MD5(IFNULL(MP.Nation::VARCHAR,'')) OR
+    MD5(IFNULL(TP.Latitude::VARCHAR,''))<>               MD5(IFNULL(MP.Latitude::VARCHAR,'')) OR
+    MD5(IFNULL(TP.Longitude::VARCHAR,''))<>              MD5(IFNULL(MP.Longitude::VARCHAR,'')) OR
+    MD5(IFNULL(TP.FullPhone::VARCHAR,''))<>              MD5(IFNULL(MP.FullPhone::VARCHAR,'')) OR
+    MD5(IFNULL(TP.FullFax::VARCHAR,''))<>                MD5(IFNULL(MP.FullFax::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasBillingStaff::VARCHAR,''))<>        MD5(IFNULL(MP.HasBillingStaff::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasHandicapAccess::VARCHAR,''))<>      MD5(IFNULL(MP.HasHandicapAccess::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasLabServicesOnSite::VARCHAR,''))<>   MD5(IFNULL(MP.HasLabServicesOnSite::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasPharmacyOnSite::VARCHAR,''))<>      MD5(IFNULL(MP.HasPharmacyOnSite::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasXrayOnSite::VARCHAR,''))<>          MD5(IFNULL(MP.HasXrayOnSite::VARCHAR,'')) OR
+    MD5(IFNULL(TP.IsSurgeryCenter::VARCHAR,''))<>        MD5(IFNULL(MP.IsSurgeryCenter::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasSurgeryOnSite::VARCHAR,''))<>       MD5(IFNULL(MP.HasSurgeryOnSite::VARCHAR,'')) OR
+    MD5(IFNULL(TP.AverageDailyPatientVolume::VARCHAR,''))<>MD5(IFNUL(MP.AverageDailyPatientVolume::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PhysicianCount::VARCHAR,''))<>         MD5(IFNULL(MP.PhysicianCount::VARCHAR,'')) OR
+    MD5(IFNULL(TP.OfficeCoordinatorName::VARCHAR,''))<>  MD5(IFNULL(MP.OfficeCoordinatorName::VARCHAR,'')) OR
+    MD5(IFNULL(TP.ParkingInformation::VARCHAR,''))<>     MD5(IFNULL(MP.ParkingInformation::VARCHAR,'')) OR
+    MD5(IFNULL(TP.PaymentPolicy::VARCHAR,''))<>          MD5(IFNULL(MP.PaymentPolicy::VARCHAR,'')) OR
+    MD5(IFNULL(TP.LegacyKeyOffice::VARCHAR,''))<>        MD5(IFNULL(MP.LegacyKeyOffice::VARCHAR,'')) OR
+    MD5(IFNULL(TP.LegacyKeyPractice::VARCHAR,''))<>      MD5(IFNULL(MP.LegacyKeyPractice::VARCHAR,'')) OR
+    MD5(IFNULL(TP.OfficeRank::VARCHAR,''))<>             MD5(IFNULL(MP.OfficeRank::VARCHAR,'')) OR
+    MD5(IFNULL(TP.CityStatePostalCodeID::VARCHAR,''))<>  MD5(IFNULL(MP.CityStatePostalCodeID::VARCHAR,'')) OR
+    MD5(IFNULL(TP.HasDentist::VARCHAR,''))<>             MD5(IFNULL(MP.HasDentist::VARCHAR,'')) OR
+    MD5(IFNULL(TP.OfficeURL::VARCHAR,''))<>              MD5(IFNULL(MP.OfficeURL::VARCHAR,''))
 
 INSERT INTO Mid.Practice
 (
@@ -447,59 +487,59 @@ WHERE ActionCode = 1
 
 UPDATE A
 SET 
-    A.PracticeName = B.PracticeName,
-    A.YearPracticeEstablished = B.YearPracticeEstablished,
-    A.NPI = B.NPI,
-    A.PracticeWebsite = B.PracticeWebsite,
-    A.PracticeDescription = B.PracticeDescription,
-    A.PracticeLogo = B.PracticeLogo,
-    A.PracticeMedicalDirector = B.PracticeMedicalDirector,
-    A.PracticeSoftware = B.PracticeSoftware,
-    A.PracticeTIN = B.PracticeTIN,
-    A.OfficeID = B.OfficeID,
-    A.OfficeCode = B.OfficeCode,
-    A.officename = B.officename,
-    A.AddressTypeCode = B.AddressTypeCode,
-    A.AddressLine1 = B.AddressLine1,
-    A.AddressLine2 = B.AddressLine2,
-    A.AddressLine3 = B.AddressLine3,
-    A.AddressLine4 = B.AddressLine4,
-    A.City = B.City,
-    A.State = B.State,
-    A.ZipCode = B.ZipCode,
-    A.County = B.County,
-    A.Nation = B.Nation,
-    A.Latitude = B.Latitude,
-    A.Longitude = B.Longitude,
-    A.FullPhone = B.FullPhone,
-    A.FullFax = B.FullFax,
-    A.HasBillingStaff = B.HasBillingStaff,
-    A.HasHandicapAccess = B.HasHandicapAccess,
-    A.HasLabServicesOnSite = B.HasLabServicesOnSite,
-    A.HasPharmacyOnSite = B.HasPharmacyOnSite,
-    A.HasXrayOnSite = B.HasXrayOnSite,
-    A.IsSurgeryCenter = B.IsSurgeryCenter,
-    A.HasSurgeryOnSite = B.HasSurgeryOnSite,
-    A.AverageDailyPatientVolume = B.AverageDailyPatientVolume,
-    A.PhysicianCount = B.PhysicianCount,
-    A.OfficeCoordinatorName = B.OfficeCoordinatorName,
-    A.ParkingInformation = B.ParkingInformation,
-    A.PaymentPolicy = B.PaymentPolicy,
-    A.LegacyKeyOffice = B.LegacyKeyOffice,
-    A.LegacyKeyPractice = B.LegacyKeyPractice,
-    A.OfficeRank = B.OfficeRank,
-    A.CityStatePostalCodeID = B.CityStatePostalCodeID,
-    A.HasDentist = B.HasDentist,
-    A.OfficeURL = B.OfficeURL
-FROM Mid.Practice A
-JOIN TempPractice B ON (A.PracticeID = B.PracticeID AND A.OfficeID = B.OfficeID)
-WHERE B.ActionCode = 2
+    MP.PracticeName =               BTP.PracticeName,
+    MP.YearPracticeEstablished =    BTP.YearPracticeEstablished,
+    MP.NPI =                        BTP.NPI,
+    MP.PracticeWebsite =            BTP.PracticeWebsite,
+    MP.PracticeDescription =        BTP.PracticeDescription,
+    MP.PracticeLogo =               BTP.PracticeLogo,
+    MP.PracticeMedicalDirector =    BTP.PracticeMedicalDirector,
+    MP.PracticeSoftware =           BTP.PracticeSoftware,
+    MP.PracticeTIN =                BTP.PracticeTIN,
+    MP.OfficeID =                   BTP.OfficeID,
+    MP.OfficeCode =                 BTP.OfficeCode,
+    MP.officename =                 BTP.officename,
+    MP.AddressTypeCode =            BTP.AddressTypeCode,
+    MP.AddressLine1 =               BTP.AddressLine1,
+    MP.AddressLine2 =               BTP.AddressLine2,
+    MP.AddressLine3 =               BTP.AddressLine3,
+    MP.AddressLine4 =               BTP.AddressLine4,
+    MP.City =                       BTP.City,
+    MP.State =                      BTP.State,
+    MP.ZipCode =                    BTP.ZipCode,
+    MP.County =                     BTP.County,
+    MP.Nation =                     BTP.Nation,
+    MP.Latitude =                   BTP.Latitude,
+    MP.Longitude =                  BTP.Longitude,
+    MP.FullPhone =                  BTP.FullPhone,
+    MP.FullFax =                    BTP.FullFax,
+    MP.HasBillingStaff =            BTP.HasBillingStaff,
+    MP.HasHandicapAccess =          BTP.HasHandicapAccess,
+    MP.HasLabServicesOnSite =       BTP.HasLabServicesOnSite,
+    MP.HasPharmacyOnSite =          BTP.HasPharmacyOnSite,
+    MP.HasXrayOnSite =              BTP.HasXrayOnSite,
+    MP.IsSurgeryCenter =            BTP.IsSurgeryCenter,
+    MP.HasSurgeryOnSite =           BTP.HasSurgeryOnSite,
+    MP.AverageDailyPatientVolume =  BTP.AverageDailyPatientVolume,
+    MP.PhysicianCount =             BTP.PhysicianCount,
+    MP.OfficeCoordinatorName =      BTP.OfficeCoordinatorName,
+    MP.ParkingInformation =         BTP.ParkingInformation,
+    MP.PaymentPolicy =              BTP.PaymentPolicy,
+    MP.LegacyKeyOffice =            BTP.LegacyKeyOffice,
+    MP.LegacyKeyPractice =          BTP.LegacyKeyPractice,
+    MP.OfficeRank =                 BTP.OfficeRank,
+    MP.CityStatePostalCodeID =      BTP.CityStatePostalCodeID,
+    MP.HasDentist =                 BTP.HasDentist,
+    MP.OfficeURL =                  BTP.OfficeURL
+FROM Mid.Practice AS MP
+JOIN TempPractice AS TP ON MP.PracticeID = TP.PracticeID AND MP.OfficeID = TP.OfficeID
+WHERE TP.ActionCode = 2
 
-DELETE  a
-FROM    Mid.Practice AS a 
-JOIN CTE_PracticeBatch as pb on pb.PracticeID = a.PracticeID
-LEFT JOIN TempPractice b ON (a.PracticeID = b.PracticeID AND a.OfficeID = b.OfficeID)
-WHERE   b.PracticeID IS NULL
+DELETE  MP
+FROM    Mid.Practice AS MP
+JOIN CTE_PracticeBatch as PB on PB.PracticeID = MP.PracticeID
+LEFT JOIN TempPractice AS TP ON MP.PracticeID = TP.PracticeID AND MP.OfficeID = TP.OfficeID
+WHERE   TP.PracticeID IS NULL
 
 /*
 END TRY
