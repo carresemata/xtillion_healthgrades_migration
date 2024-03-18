@@ -22,7 +22,7 @@
 		from Base.ProviderURL a
 		join Base.Provider b on a.ProviderID = b.ProviderID
 		join Show.SOLRProviderRedirect c on b.ProviderCode = c.ProviderCodeOld
-		where c.ProviderURLOld is null	
+		where c.ProviderURLOld is null	 
 
 
 
