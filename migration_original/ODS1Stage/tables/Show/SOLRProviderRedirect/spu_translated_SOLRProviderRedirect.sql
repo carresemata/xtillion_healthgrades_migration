@@ -16,7 +16,12 @@ CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProc
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- SOLRProviderRedirect depends on: Base.ProviderRedirect, Base.Provider, Base.ProviderURL, Show.SOLRProvider, and Show.SOLRProviderRedirect
+-- SOLRProviderRedirect depends on: 
+--- Base.ProviderRedirect 
+--- Base.Provider 
+--- Base.ProviderURL 
+--- Show.SOLRProvider 
+--- Show.SOLRProviderRedirect
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
