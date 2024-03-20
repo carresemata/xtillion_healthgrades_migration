@@ -12,8 +12,13 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- SOLRTreatmentEntryLevel depends on : Show.SOLRTreatmentEntryLevel, Base.SpecialtyToCondition, Base.TreatmentLevel, Base.SpecialtyToProcedureMedical, Base.Specialty, and Base.MedicalTerm
-    
+-- SOLRTreatmentEntryLevel depends on :
+---- Show.SOLRTreatmentEntryLevel
+---- Base.SpecialtyToCondition
+---- Base.TreatmentLevel
+---- Base.SpecialtyToProcedureMedical
+---- Base.Specialty
+---- Base.MedicalTerm
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
