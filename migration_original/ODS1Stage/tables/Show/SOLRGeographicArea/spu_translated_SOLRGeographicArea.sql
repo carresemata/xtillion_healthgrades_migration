@@ -1,5 +1,5 @@
 -- spuSOLRGeographicAreaGenerateFromMid
-CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRGEOGRAPHICAREA() 
+CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRGEOGRAPHICAREA() 
     RETURNS STRING
     LANGUAGE SQL
     AS  
@@ -34,9 +34,10 @@ BEGIN
 
 
 ---------------------------------------------------------
---------------- 3. Select statements --------------------
+----------------- 3. SQL statements ---------------------
 ---------------------------------------------------------     
 
+-- Select Statement
 select_statement := 'WITH CTE_geoId AS (SELECT
     DISTINCT GeographicAreaID
 FROM
@@ -58,11 +59,7 @@ SELECT
             Mid.GeographicArea midGeo
             JOIN (SELECT GeographicAreaID FROM CTE_geoId) as geoId on geoId.GeographicAreaID = midGeo.GeographicAreaID';
 
-                     
----------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
----------------------------------------------------------  
-
+-- Update Statement
 update_statement := 
 'UPDATE
 SET
@@ -73,6 +70,7 @@ SET
     solrGeo.UpdatedDate = GeoArea.UpdatedDate,
     solrGeo.UpdatedSource = GeoArea.UpdatedSource';
 
+-- Insert Statement 
 insert_statement := 
 'INSERT
     (
@@ -92,15 +90,18 @@ VALUES
         GeoArea.UpdatedDate,
         GeoArea.UpdatedSource
     );';
-
+                     
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
 
 merge_statement := 
-'MERGE INTO Dev.SOLRGeographicArea AS solrGeo USING 
+'MERGE INTO SHOW.SOLRGeographicArea AS solrGeo USING 
     (' || select_statement || ') AS GeoArea 
     ON GeoArea.GeographicAreaID = solrGeo.GeographicAreaID
-    WHEN MATCHED THEN'
+    WHEN MATCHED THEN '
         || update_statement ||
-    'WHEN NOT MATCHED THEN'
+    ' WHEN NOT MATCHED THEN ' 
         || insert_statement ;
 
 ---------------------------------------------------------
@@ -123,7 +124,5 @@ EXCEPTION
           status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
           RETURN status;
 
-
     
 END;
-
