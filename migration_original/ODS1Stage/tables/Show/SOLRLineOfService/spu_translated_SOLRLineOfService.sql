@@ -1,7 +1,8 @@
 -- Show_spuSOLRLineOfServiceGenerateFromMid
-CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRLINEOFSERVICE() 
+CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRLINEOFSERVICE() 
     RETURNS STRING
     LANGUAGE SQL
+    EXECUTE AS CALLER
     AS  
 
 DECLARE 
@@ -33,9 +34,10 @@ BEGIN
 
 
 ---------------------------------------------------------
---------------- 3. Select statements --------------------
+----------------- 3. SQL statements ---------------------
 ---------------------------------------------------------     
 
+-- Select Statement
 select_statement :=
 'SELECT
         midLine.LineOfServiceID,
@@ -59,11 +61,8 @@ select_statement :=
                 AND EndDeltaProcessDate IS NULL
                 AND SolrDeltaTypeCode = 1 --INSERT/UPDATEs
                 AND MidDeltaProcessComplete = 1)'; --this will indicate the Mid tables have been refreshed with the updated data
-                     
----------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
----------------------------------------------------------  
 
+-- Update statement
 update_statement :=
 'UPDATE
 SET
@@ -74,9 +73,9 @@ SET
     solrLine.LegacyKey = LineService.LegacyKey,
     solrLine.LegacyKeyName = LineService.LegacyKeyName,
     solrLine.UpdatedDate = LineService.UpdatedDate,
-    solrLine.UpdatedSource = LineService.UpdatedSource';
+    solrLine.UpdatedSource = LineService.UpdatedSource ';
  
-
+-- Insert Statement
 insert_statement :=
 'INSERT
     (
@@ -99,18 +98,20 @@ VALUES
         LineService.LegacyKeyName,
         LineService.UpdatedDate,
         LineService.UpdatedSource
-    )';
-
+    );';
+                     
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
  
--- Start the MERGE operation
-merge_statement := 
-'MERGE INTO Dev.SOLRLineOfService AS solrLine USING 
-    (' || select_statement || ') AS LineService 
-    ON LineService.LineOfServiceID = solrLine.LineOfServiceID
-    WHEN MATCHED THEN'
-        || update_statement ||
-    'WHEN NOT MATCHED THEN'
-        || insert_statement ;
+-- Merge Statement
+merge_statement := 'MERGE INTO Show.SOLRLineOfService AS solrLine USING 
+                        (' || select_statement || ') AS LineService 
+                        ON LineService.LineOfServiceID = solrLine.LineOfServiceID AND solrLine.LineOfServiceCode = LineService.LineOfServiceCode
+                        WHEN MATCHED THEN '
+                            || update_statement ||
+                        'WHEN NOT MATCHED THEN '
+                            || insert_statement ;
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
