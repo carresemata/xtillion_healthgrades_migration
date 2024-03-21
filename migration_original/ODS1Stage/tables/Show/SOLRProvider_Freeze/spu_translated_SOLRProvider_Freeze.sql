@@ -1,5 +1,5 @@
 -- hack_spuMAPFreeze
-CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRPROVIDER_FREEZE() 
+CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRPROVIDER_FREEZE() 
     RETURNS STRING
     LANGUAGE SQL
     AS  
@@ -24,8 +24,8 @@ DECLARE
     cleanup_1 STRING; -- Cleanup for Show.SOLRProvider_Freeze
     cleanup_2 STRING; -- Cleanup for Show.WebFreeze
     insert_columns STRING; -- List of columns to insert
-    load_statement STRING; -- Insert statement to final table
-    final_execution STRING; -- Execution of the load and select
+    insert_statement STRING; -- Insert statement to final table
+    merge_statement STRING; -- Merge statement
     status STRING; -- Status monitoring
 
    
@@ -208,6 +208,153 @@ select_statement := 'WITH CTE_ClientCode AS (SELECT
                                     FROM
                                         Show.SOLRProvider_Freeze)';
 
+--- Insert Statement
+insert_statement := ' INSERT  (' || insert_columns ||')
+                      VALUES (  source.ProviderID,
+                                source.ProviderCode,
+                                source.ProviderTypeID,
+                                source.ProviderTypeGroup,
+                                source.FirstName,
+                                source.MiddleName,
+                                source.LastName,
+                                source.Suffix,
+                                source.Degree,
+                                source.Gender,
+                                source.NPI,
+                                source.AMAID,
+                                source.UPIN,
+                                source.MedicareID,
+                                source.DEANumber,
+                                source.TaxIDNumber,
+                                source.DateOfBirth,
+                                source.PlaceOfBirth,
+                                source.CarePhilosophy,
+                                source.ProfessionalInterest,
+                                source.PrimaryEmailAddress,
+                                source.MedicalSchoolNation,
+                                source.YearsSinceMedicalSchoolGraduation,
+                                source.HasDisplayImage,
+                                source.HasElectronicMedicalRecords,
+                                source.HasElectronicPrescription,
+                                source.AcceptsNewPatients,
+                                source.YearlySearchVolume,
+                                source.PatientExperienceSurveyOverallScore,
+                                source.PatientExperienceSurveyOverallCount,
+                                source.PracticeOfficeXML,
+                                source.FacilityXML,
+                                source.SpecialtyXML,
+                                source.EducationXML,
+                                source.LicenseXML,
+                                source.LanguageXML,
+                                source.MalpracticeXML,
+                                source.SanctionXML,
+                                source.SponsorshipXML,
+                                source.AffiliationXML,
+                                source.ProcedureXML,
+                                source.ConditionXML,
+                                source.HealthInsuranceXML,
+                                source.MediaXML,
+                                source.HasAddressXML,
+                                source.HasSpecialtyXML,
+                                source.Active,
+                                source.UpdateDate,
+                                source.InsertDate,
+                                source.ProviderLegacyKey,
+                                source.DisplayImage,
+                                source.AddressXML,
+                                source.BoardActionXML,
+                                source.SurveyXML,
+                                source.RecognitionXML,
+                                source.SurveyResponse,
+                                source.UpdatedDate,
+                                source.UpdatedSource,
+                                source.HasPhilosophy,
+                                source.HasMediaXML,
+                                source.HasProcedureXML,
+                                source.HasConditionXML,
+                                source.HasMalpracticeXML,
+                                source.HasSanctionXML,
+                                source.HasBoardActionXML,
+                                source.IsActive,
+                                source.ExpireCode,
+                                source.Title,
+                                source.CityStateAll,
+                                source.SurveyResponseDate,
+                                source.ProviderSpecialtyFacility5StarXML,
+                                source.HasProviderSpecialtyFacility5StarXML,
+                                source.DisplayPatientExperienceSurveyOverallScore,
+                                source.ProductGroupCode,
+                                source.SponsorCode,
+                                source.FacilityCode,
+                                source.SearchSponsorshipXML,
+                                source.ProductCode,
+                                source.VideoXML,
+                                source.OASXML,
+                                source.SuppressSurvey,
+                                source.ProviderURL,
+                                source.ImageXML,
+                                source.AdXML,
+                                source.HasProfessionalOrganizationXML,
+                                source.ProfessionalOrganizationXML,
+                                source.ProviderProfileViewOneYear,
+                                source.PracticingSpecialtyXML,
+                                source.CertificationXML,
+                                source.HasPracticingSpecialtyXML,
+                                source.HasCertificationXML,
+                                source.PatientExperienceSurveyOverallStarValue,
+                                source.ProviderBiography,
+                                source.DisplayStatusCode,
+                                source.HealthInsuranceXML_v2,
+                                source.ProviderDEAXML,
+                                source.ProviderTypeXML,
+                                source.SubStatusCode,
+                                source.DuplicateProviderCode,
+                                source.DeactivationReason,
+                                source.ProcedureHierarchyXML,
+                                source.ConditionHierarchyXML,
+                                source.ProcMappedXML,
+                                source.CondMappedXML,
+                                source.PracSpecHeirXML,
+                                source.AboutMeXML,
+                                source.HasAboutMeXML,
+                                source.PatientVolume,
+                                source.HasMalpracticeState,
+                                source.ProcedureCount,
+                                source.ConditionCount,
+                                source.AvailabilityXML,
+                                source.VideoXML2,
+                                source.AvailabilityStatement,
+                                source.IsInClientMarket,
+                                source.HasOAR,
+                                source.IsMMPUser,
+                                source.NatlAdvertisingXML,
+                                source.APIXML,
+                                source.DIHGroupNumber,
+                                source.SubStatusDescription,
+                                source.DEAXML,
+                                source.EmailAddressXML,
+                                source.DegreeXML,
+                                source.HasSurveyXML,
+                                source.HasDEAXML,
+                                source.HasEmailAddressXML,
+                                source.ClientCertificationXML,
+                                source.HasGoogleOAS,
+                                source.HasVideoXML2,
+                                source.HasAboutMe,
+                                source.ConversionPathXML,
+                                source.SearchBoostSatisfaction,
+                                source.SearchBoostAccessibility,
+                                source.IsPCPCalculated,
+                                source.FAFBoostSatisfaction,
+                                source.FAFBoostSancMalp,
+                                source.FFDisplaySpecialty,
+                                source.FFPESBoost,
+                                source.FFMalMultiHQ,
+                                source.FFMalMulti,
+                                source.CLinicalFocusXML,
+                                source.ClinicalFocusDCPXML,
+                                source.SyndicationXML,
+                                source.TeleHealthXML);';
                      
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
@@ -220,30 +367,31 @@ cleanup_1 := 'DELETE FROM
                     SELECT
                         ClientCode
                     FROM
-                        Show.WebFreeze
-                );';
+                        Show.WebFreeze);';
 
-            EXECUTE IMMEDIATE cleanup_1;
+            
 
 cleanup_2 := 'DELETE FROM
                 Show.WebFreeze
             WHERE
                 CURRENT_TIMESTAMP > FreezeEndDate;';
 
-            EXECUTE IMMEDIATE cleanup_2;         
 
-load_statement := 'INSERT INTO
-                      Show.SOLRProvider_Freeze('
-                        || insert_columns || ' )' ;
+merge_statement := ' MERGE INTO Show.SOLRProvider_Freeze as target USING 
+                   ('||select_statement||') as source 
+                   ON source.ProviderID = target.ProviderID
+                   WHEN NOT MATCHED THEN '||insert_statement ;             
+
+                   
 
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
-                    
-final_execution := load_statement || select_statement ;
-EXECUTE IMMEDIATE final_execution ;
 
+EXECUTE IMMEDIATE cleanup_1;
+EXECUTE IMMEDIATE cleanup_2;  
+EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
@@ -261,4 +409,3 @@ EXCEPTION
 
     
 END;
-
