@@ -8,10 +8,12 @@
 -- 4. DELTA: Insert into show.solrproviderredirect where the providerid is null
 -- 5. DELTA: Update show.solrproviderredirect where URLs are null
 
-CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProcessing BOOLEAN)
+CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProcessing BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     AS  
+
+DECLARE 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
@@ -27,12 +29,14 @@ CREATE OR REPLACE PROCEDURE DEV.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProc
 --------------- 1. Declaring variables ------------------
 ---------------------------------------------------------
 
-DECLARE 
     select_statement STRING; -- CTE statement
-    load_statement_1 STRING; -- Merge statement to final table
-    load_statement_2 STRING; -- Update statement to final table
-    conditional_statement_1 STRING; -- Insert into statement to final table
-    conditional_statement_2 STRING; -- Merge statement to final table
+    merge_condition STRING; -- Merge condition to final table
+    update_statement STRING; -- Update statement to final table
+    insert_statement STRING; -- Insert statement to final table
+    merge_statement STRING; -- Merge statement
+    delete_statement STRING; -- Delete statement to final table
+    merge_statement_else_1 STRING; -- Insert into statement to final table
+    merge_statement_else_2 STRING; -- Merge statement to final table
     status STRING; -- Status monitoring
 
 ---------------------------------------------------------
@@ -42,80 +46,101 @@ DECLARE
 BEGIN
 
     IF (IsProviderDeltaProcessing) THEN
-        conditional_statement_1 := '';
+        merge_statement_else_1 := '';
     ELSE
-       conditional_statement_1 := '
-                        INSERT INTO
-                            Dev.SOLRProviderRedirect(
-                                ProviderCodeOld,
-                                ProviderCodeNew,
-                                ProviderURLOld,
-                                ProviderURLNew,
-                                LastName,
-                                FirstName,
-                                MiddleName,
-                                Suffix,
-                                DisplayName,
-                                Degree,
-                                Title,
-                                ProviderTypeID,
-                                ProviderTypeGroup,
-                                DeactivationReason,
-                                GENDer,
-                                DateOfBirth,
-                                PracticeOfficeXML,
-                                SpecialtyXML,
-                                EducationXML,
-                                ImageXML,
-                                LastUpdateDate,
-                                UpdateDate,
-                                UpdateSource
-                            )
-                        SELECT
-                            SolrProv.ProviderCode,
-                            SolrProv.ProviderCode,
-                            SolrProv.ProviderURL,
-                            SolrProv.ProviderURL,
-                            SolrProv.LastName,
-                            SolrProv.FirstName,
-                            SolrProv.MiddleName,
-                            SolrProv.Suffix,
-                            SolrProv.FirstName || '' '' || IFF(
-                                SolrProv.MiddleName IS NULL,
-                                '''',
-                                SolrProv.MiddleName || '' ''
-                            ) || SolrProv.LastName || IFF(
-                                SolrProv.Suffix IS NULL,
-                                '''',
-                                '' '' || SolrProv.Suffix
-                            ) AS DisplayName,
-                            SolrProv.Degree,
-                            SolrProv.Title,
-                            SolrProv.ProviderTypeID,
-                            SolrProv.ProviderTypeGroup,
-                            ''Deactivated'' AS DeactivationReason,
-                            SolrProv.Gender,
-                            SolrProv.DateOfBirth,
-                            SolrProv.PracticeOfficeXML,
-                            SolrProv.SpecialtyXML,
-                            SolrProv.EducationXML,
-                            SolrProv.ImageXML,
-                            CURRENT_TIMESTAMP(),
-                            CURRENT_TIMESTAMP(),
-                            CURRENT_USER()
-                        FROM
-                            Show.SOLRProvider SolrProv
-                            LEFT JOIN Base.Provider BaseProv ON BaseProv.ProviderID = SolrProv.ProviderID
-                            LEFT JOIN Show.SOLRProviderRedirect SolrProvRed ON SolrProvRed.ProviderCodeOld = SolrProv.ProviderCode
-                            AND SolrProvRed.ProviderCodeNew = SolrProv.ProviderCode
-                            AND SolrProvRed.DeactivationReason = ''Deactivated''
-                        WHERE
-                            BaseProv.ProviderID IS NULL
-                            AND SolrProvRed.SOLRProviderRedirectID IS NULL;';
-                            
+    
+        merge_statement_else_1 := 'MERGE INTO Show.SOLRProviderRedirect AS Target
+                                    USING (
+                                        SELECT
+                                            SolrProv.ProviderCode AS ProviderCodeOld,
+                                            SolrProv.ProviderCode AS ProviderCodeNew,
+                                            SolrProv.ProviderURL AS ProviderURLOld,
+                                            SolrProv.ProviderURL AS ProviderURLNew,
+                                            SolrProv.LastName,
+                                            SolrProv.FirstName,
+                                            SolrProv.MiddleName,
+                                            SolrProv.Suffix,
+                                            SolrProv.FirstName || '' '' || IFF(SolrProv.MiddleName IS NULL, '''', SolrProv.MiddleName || '' '') || SolrProv.LastName || IFF(SolrProv.Suffix IS NULL,'''', '' '' || SolrProv.Suffix) AS DisplayName,
+                                            SolrProv.Degree,
+                                            SolrProv.Title,
+                                            SolrProv.ProviderTypeID,
+                                            SolrProv.ProviderTypeGroup,
+                                            ''Deactivated'' AS DeactivationReason,
+                                            SolrProv.Gender AS GENDer,
+                                            SolrProv.DateOfBirth,
+                                            SolrProv.PracticeOfficeXML,
+                                            SolrProv.SpecialtyXML,
+                                            SolrProv.EducationXML,
+                                            SolrProv.ImageXML,
+                                            CURRENT_TIMESTAMP() AS LastUpdateDate,
+                                            CURRENT_TIMESTAMP() AS UpdateDate,
+                                            CURRENT_USER() AS UpdateSource
+                                        FROM
+                                            Show.SOLRProvider SolrProv
+                                            LEFT JOIN Base.Provider BaseProv ON BaseProv.ProviderID = SolrProv.ProviderID
+                                            LEFT JOIN Show.SOLRProviderRedirect SolrProvRed ON SolrProvRed.ProviderCodeOld = SolrProv.ProviderCode
+                                            AND SolrProvRed.ProviderCodeNew = SolrProv.ProviderCode
+                                            AND SolrProvRed.DeactivationReason = ''Deactivated''
+                                        WHERE
+                                            BaseProv.ProviderID IS NULL
+                                            AND SolrProvRed.SOLRProviderRedirectID IS NULL
+                                    ) AS Source
+                                    ON Target.ProviderCodeOld = Source.ProviderCodeOld
+                                    WHEN NOT MATCHED THEN 
+                                        INSERT (
+                                            ProviderCodeOld,
+                                            ProviderCodeNew,
+                                            ProviderURLOld,
+                                            ProviderURLNew,
+                                            LastName,
+                                            FirstName,
+                                            MiddleName,
+                                            Suffix,
+                                            DisplayName,
+                                            Degree,
+                                            Title,
+                                            ProviderTypeID,
+                                            ProviderTypeGroup,
+                                            DeactivationReason,
+                                            Gender,
+                                            DateOfBirth,
+                                            PracticeOfficeXML,
+                                            SpecialtyXML,
+                                            EducationXML,
+                                            ImageXML,
+                                            LastUpdateDate,
+                                            UpdateDate,
+                                            UpdateSource
+                                        )
+                                        VALUES (
+                                            Source.ProviderCodeOld,
+                                            Source.ProviderCodeNew,
+                                            Source.ProviderURLOld,
+                                            Source.ProviderURLNew,
+                                            Source.LastName,
+                                            Source.FirstName,
+                                            Source.MiddleName,
+                                            Source.Suffix,
+                                            Source.DisplayName,
+                                            Source.Degree,
+                                            Source.Title,
+                                            Source.ProviderTypeID,
+                                            Source.ProviderTypeGroup,
+                                            Source.DeactivationReason,
+                                            Source.Gender,
+                                            Source.DateOfBirth,
+                                            Source.PracticeOfficeXML,
+                                            Source.SpecialtyXML,
+                                            Source.EducationXML,
+                                            Source.ImageXML,
+                                            Source.LastUpdateDate,
+                                            Source.UpdateDate,
+                                            Source.UpdateSource
+                                        );';
+                                                                
             
                         
-     conditional_statement_2 := 'MERGE INTO Dev.SOLRProviderRedirect as SolrProvRed USING (
+     merge_statement_else_2 := 'MERGE INTO Show.SOLRProviderRedirect as SolrProvRed USING (
                                  SELECT
                                     ProvURL.URL,
                                     BaseProv.ProviderCode
@@ -128,17 +153,19 @@ BEGIN
                         UPDATE
                         SET
                             SolrProvRed.ProviderURLOld = url.URL;';
+        
+        EXECUTE IMMEDIATE merge_statement_else_1;
+        EXECUTE IMMEDIATE merge_statement_else_2;
                                 
     END IF;
 
 
 ---------------------------------------------------------
---------------- 3. Select statements --------------------
+----------------- 3. SQL statements ---------------------
 ---------------------------------------------------------     
 
         
-select_statement :=  
-                    ' WITH CTE_ProviderNotInSOLR AS (
+select_statement := ' WITH CTE_ProviderNotInSOLR AS (
                         	SELECT	ProviderCodeOld 
                         			,ProviderCodeNew 
                         			,ProviderURLOld 
@@ -191,22 +218,7 @@ select_statement :=
                             WHERE SequenceId = 1
                             ';
 
-                     
----------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
----------------------------------------------------------  
-                     
-
-load_statement_1 := '
-            
-                MERGE INTO dev.SOLRProviderRedirect as SolrProvRed
-            USING ('  ||
-                    select_statement
-            || ') as cteFinal --- We call the sp_get to get table
-            ON cteFinal.ProviderCodeOld = SolrProvRed.ProviderCodeOld
-            WHEN MATCHED
-            AND (
-                cteFinal.ProviderCodeOld != SolrProvRed.ProviderCodeOld
+merge_condition := '  cteFinal.ProviderCodeOld != SolrProvRed.ProviderCodeOld
                 OR cteFinal.ProviderCodeNew != SolrProvRed.ProviderCodeNew
                 OR cteFinal.ProviderURLOld != SolrProvRed.ProviderURLOld
                 OR cteFinal.ProviderURLNew != SolrProvRed.ProviderURLNew
@@ -226,105 +238,118 @@ load_statement_1 := '
                 OR cteFinal.SpecialtyCode != SolrProvRed.SpecialtyCode
                 OR cteFinal.SpecialtyLegacyKey != SolrProvRed.SpecialtyLegacyKey
                 OR cteFinal.DeactivationReason != SolrProvRed.DeactivationReason
-                OR cteFinal.LastUpdateDate != SolrProvRed.LastUpdateDate
-            ) THEN
-            UPDATE
-            SET
-                ProviderCodeOld = cteFinal.ProviderCodeOld,
-                ProviderCodeNew = cteFinal.ProviderCodeNew,
-                ProviderURLOld = cteFinal.ProviderURLOld,
-                ProviderURLNew = cteFinal.ProviderURLNew,
-                HGIDOld = cteFinal.HGIDOld,
-                HGIDNew = cteFinal.HGIDNew,
-                HGID8Old = cteFinal.HGID8Old,
-                HGID8New = cteFinal.HGID8New,
-                LastName = cteFinal.LastName,
-                FirstName = cteFinal.FirstName,
-                MiddleName = cteFinal.MiddleName,
-                Suffix = cteFinal.Suffix,
-                DisplayName = cteFinal.DisplayName,
-                Degree = cteFinal.Degree,
-                DegreePriority = cteFinal.DegreePriority,
-                ProviderTypeID = cteFinal.ProviderTypeID,
-                CityState = cteFinal.CityState,
-                SpecialtyCode = cteFinal.SpecialtyCode,
-                SpecialtyLegacyKey = cteFinal.SpecialtyLegacyKey,
-                DeactivationReason = cteFinal.DeactivationReason,
-                LastUpdateDate = cteFinal.LastUpdateDate,
-                UpdateDate = CURRENT_TIMESTAMP(),
-                UpdateSource = CURRENT_USER()
-            WHEN NOT MATCHED THEN
-            INSERT(
-                ProviderCodeOld,
-                ProviderCodeNew,
-                ProviderURLOld,
-                ProviderURLNew,
-                HGIDOld,
-                HGIDNew,
-                HGID8Old,
-                HGID8New,
-                LastName,
-                FirstName,
-                MiddleName,
-                Suffix,
-                DisplayName,
-                Degree,
-                DegreePriority,
-                ProviderTypeID,
-                CityState,
-                SpecialtyCode,
-                SpecialtyLegacyKey,
-                DeactivationReason,
-                LastUpdateDate,
-                UpdateDate,
-                UpdateSource
-            )
-            VALUES
-            (
-                cteFinal.ProviderCodeOld,
-                cteFinal.ProviderCodeNew,
-                cteFinal.ProviderURLOld,
-                cteFinal.ProviderURLNew,
-                cteFinal.HGIDOld,
-                cteFinal.HGIDNew,
-                cteFinal.HGID8Old,
-                cteFinal.HGID8New,
-                cteFinal.LastName,
-                cteFinal.FirstName,
-                cteFinal.MiddleName,
-                cteFinal.Suffix,
-                cteFinal.DisplayName,
-                cteFinal.Degree,
-                cteFinal.DegreePriority,
-                cteFinal.ProviderTypeID,
-                cteFinal.CityState,
-                cteFinal.SpecialtyCode,
-                cteFinal.SpecialtyLegacyKey,
-                cteFinal.DeactivationReason,
-                cteFinal.LastUpdateDate,
-                CURRENT_TIMESTAMP(),
-                CURRENT_USER()
-            );';
+                OR cteFinal.LastUpdateDate != SolrProvRed.LastUpdateDate';
+
+update_statement := 'UPDATE
+                        SET
+                            ProviderCodeOld = cteFinal.ProviderCodeOld,
+                            ProviderCodeNew = cteFinal.ProviderCodeNew,
+                            ProviderURLOld = cteFinal.ProviderURLOld,
+                            ProviderURLNew = cteFinal.ProviderURLNew,
+                            HGIDOld = cteFinal.HGIDOld,
+                            HGIDNew = cteFinal.HGIDNew,
+                            HGID8Old = cteFinal.HGID8Old,
+                            HGID8New = cteFinal.HGID8New,
+                            LastName = cteFinal.LastName,
+                            FirstName = cteFinal.FirstName,
+                            MiddleName = cteFinal.MiddleName,
+                            Suffix = cteFinal.Suffix,
+                            DisplayName = cteFinal.DisplayName,
+                            Degree = cteFinal.Degree,
+                            DegreePriority = cteFinal.DegreePriority,
+                            ProviderTypeID = cteFinal.ProviderTypeID,
+                            CityState = cteFinal.CityState,
+                            SpecialtyCode = cteFinal.SpecialtyCode,
+                            SpecialtyLegacyKey = cteFinal.SpecialtyLegacyKey,
+                            DeactivationReason = cteFinal.DeactivationReason,
+                            LastUpdateDate = cteFinal.LastUpdateDate,
+                            UpdateDate = CURRENT_TIMESTAMP(),
+                            UpdateSource = CURRENT_USER()';
+
+ insert_statement := 'INSERT(
+                        ProviderCodeOld,
+                        ProviderCodeNew,
+                        ProviderURLOld,
+                        ProviderURLNew,
+                        HGIDOld,
+                        HGIDNew,
+                        HGID8Old,
+                        HGID8New,
+                        LastName,
+                        FirstName,
+                        MiddleName,
+                        Suffix,
+                        DisplayName,
+                        Degree,
+                        DegreePriority,
+                        ProviderTypeID,
+                        CityState,
+                        SpecialtyCode,
+                        SpecialtyLegacyKey,
+                        DeactivationReason,
+                        LastUpdateDate,
+                        UpdateDate,
+                        UpdateSource
+                    )
+                    VALUES
+                    (cteFinal.ProviderCodeOld,
+                        cteFinal.ProviderCodeNew,
+                        cteFinal.ProviderURLOld,
+                        cteFinal.ProviderURLNew,
+                        cteFinal.HGIDOld,
+                        cteFinal.HGIDNew,
+                        cteFinal.HGID8Old,
+                        cteFinal.HGID8New,
+                        cteFinal.LastName,
+                        cteFinal.FirstName,
+                        cteFinal.MiddleName,
+                        cteFinal.Suffix,
+                        cteFinal.DisplayName,
+                        cteFinal.Degree,
+                        cteFinal.DegreePriority,
+                        cteFinal.ProviderTypeID,
+                        cteFinal.CityState,
+                        cteFinal.SpecialtyCode,
+                        cteFinal.SpecialtyLegacyKey,
+                        cteFinal.DeactivationReason,
+                        cteFinal.LastUpdateDate,
+                        CURRENT_TIMESTAMP(),
+                        CURRENT_USER() );';
+                
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
+                     
+
+merge_statement := 'MERGE INTO Show.SOLRProviderRedirect as SolrProvRed
+                        USING ('  || select_statement || ') as cteFinal 
+                        ON cteFinal.ProviderCodeOld = SolrProvRed.ProviderCodeOld
+                        WHEN MATCHED AND (' || merge_condition ||') THEN '
+                            || update_statement ||
+                        'WHEN NOT MATCHED THEN '
+                            || insert_statement;
 
                          
-load_statement_2 := 'DELETE FROM
-                Dev.SOLRProviderRedirect
+delete_statement := 'DELETE FROM
+                Show.SOLRProviderRedirect
             WHERE
                 ProviderCodeOld IN (
                     SELECT
                         ProviderCode
                     FROM
                         Show.SOLRProvider);';
+
+                    
                         
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE conditional_statement_1;
-EXECUTE IMMEDIATE conditional_statement_2;
-EXECUTE IMMEDIATE load_statement_1;
-EXECUTE IMMEDIATE load_statement_2;
+--EXECUTE IMMEDIATE merge_statement_else_1; (executed in section 2. Conditionals)
+--EXECUTE IMMEDIATE merge_statement_else_2; (executed in section 2. Conditionals) 
+EXECUTE IMMEDIATE merge_statement;
+EXECUTE IMMEDIATE delete_statement;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
