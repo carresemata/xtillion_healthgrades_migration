@@ -1,18 +1,21 @@
 -- sp_load_solrprovideraddress
 
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.DEV.SP_LOAD_SOLRPROVIDERADDRESS()
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.Show.SP_LOAD_SOLRPROVIDERADDRESS()
 RETURNS VARCHAR(16777216)
 LANGUAGE SQL
 EXECUTE AS CALLER
-AS '
+AS 
 
     ---------------------------------------------------------
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     
     -- SOLRProviderAddress depends on: 
-    --- Mid.ProviderPracticeOffice
-    --- Mid.Provider 
+    --- Base.ProviderRedirect 
+    --- Base.Provider 
+    --- Base.ProviderURL 
+    --- Show.SOLRProvider 
+    --- Show.SOLRProviderRedirect
 
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
@@ -34,7 +37,7 @@ AS '
     ---------------------------------------------------------     
     BEGIN
     
-    select_statement := '' 
+    select_statement := '
                 WITH CTE_ProviderID AS (
     
                 SELECT ProviderID
@@ -100,15 +103,14 @@ AS '
                     FullPhone,
                     AddressGeoPoint
                 FROM CTE_Source
-                
-               '';
+               ';
 
                      
 ---------------------------------------------------------
 --------------------  4. Actions ------------------------
 ---------------------------------------------------------  
 
-insert_statement := ''
+insert_statement := '
                   INSERT (
                             ProviderToOfficeID,
                             ProviderID,
@@ -145,9 +147,9 @@ insert_statement := ''
                             s.FullPhone,
                             s.AddressGeoPoint
                             ) 
-                    '';
+                    ';
 
-update_statement := ''
+update_statement := '
                     UPDATE 
                     SET
                       ProviderID = s.ProviderID,
@@ -165,32 +167,41 @@ update_statement := ''
                       IsPrimaryOffice = s.IsPrimaryOffice,
                       FullPhone = s.FullPhone,
                       RefreshDate = CURRENT_TIMESTAMP()
-                    '';
-                     
-merge_statement := ''
+                    ';
+
+-- This is the merge statement from logic of show.spuSOLRProviderAddressGenerateFromMid                     
+merge_statement := '
                    MERGE INTO DEV.SOLRProviderAddress USING 
-                   (''||select_statement||'') as s 
+                   ('||select_statement||') as s 
                    ON DEV.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
-                   WHEN MATCHED THEN ''||update_statement||''
-                   WHEN NOT MATCHED THEN ''||insert_statement||''
-                   '';
+                   WHEN MATCHED THEN '||update_statement||'
+                   WHEN NOT MATCHED THEN '||insert_statement||'
+                   ';
+
+-- This delete comes from hack.spuRemoveSuspecProviders
+delete_statement := '
+                    DELETE FROM DEV.SOLRProviderAddress spa
+                    USING Base.ProviderRemoval pr, Show.SOLRProvider sp
+                    WHERE sp.ProviderCode = pr.ProviderCode
+                    AND sp.ProviderID = spa.ProviderID
+                    ';
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
-
+EXECUTE IMMEDIATE delete_statement; 
 EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
-status := ''Completed successfully'';
+status := 'Completed successfully';
     RETURN status;
         
 EXCEPTION
     WHEN OTHER THEN
-          status := ''Failed during execution. '' || ''SQL Error: '' || SQLERRM || '' Error code: '' || SQLCODE || ''. SQL State: '' || SQLSTATE;
+          status := 'Failed during execution.' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
           RETURN status;
 END
-';
+;

@@ -1,6 +1,6 @@
 -- Show_spuSOLRProviderDeltaRefresh] only truncates SOLRProviderAddress in line 19
 -- hack_spuRemoveSuspecProviders simply uses SOLRProviderAddress for a join statement in line 12
--- etl_spuMidProviderEntityRefresh simply calls the other procedures 
+-- etl_spuMidProviderEntityRefresh updates a column but this was incorporated in the merge statement
 
 -- 1. Show_spuSOLRProviderAddressGenerateFromMid
 
@@ -101,3 +101,10 @@ WHERE		isnull(s.ProviderID,'') <> isnull(S.ProviderID,'')
 
 		SET @int_MinId = @int_MinId + 10000
 	END
+
+    -- 2. hack_spuRemoveSuspecProviders 
+
+    delete spa
+	from Base.ProviderRemoval pr
+		join Show.SOLRProvider sp on sp.ProviderCode = pr.ProviderCode					
+		join Show.SOLRProviderAddress spa on sp.ProviderID = spa.ProviderID
