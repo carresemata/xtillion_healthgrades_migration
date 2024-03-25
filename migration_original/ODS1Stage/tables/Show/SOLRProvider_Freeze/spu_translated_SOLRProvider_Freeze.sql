@@ -1,5 +1,5 @@
 -- hack_spuMAPFreeze
-CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRPROVIDER_FREEZE() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRPROVIDER_FREEZE() 
     RETURNS STRING
     LANGUAGE SQL
     AS  
@@ -188,7 +188,8 @@ insert_columns := ' ProviderID,
                     SyndicationXML,
                     TeleHealthXML ';
 
-select_statement := 'WITH CTE_ClientCode AS (SELECT
+select_statement := 'WITH CTE_ClientCode AS (
+                    SELECT
                         ClientCode
                     FROM
                         Show.WebFreeze
