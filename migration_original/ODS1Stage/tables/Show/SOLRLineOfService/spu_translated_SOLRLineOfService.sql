@@ -1,5 +1,5 @@
 -- Show_spuSOLRLineOfServiceGenerateFromMid
-CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRLINEOFSERVICE() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRLINEOFSERVICE() 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -39,7 +39,18 @@ BEGIN
 
 -- Select Statement
 select_statement :=
-'SELECT
+'WITH cte_id AS (
+            SELECT
+                DISTINCT LineOfServiceID
+            FROM
+                Show.SOLRLineOfServiceDelta
+            WHERE
+                StartDeltaProcessDate IS NULL
+                AND EndDeltaProcessDate IS NULL
+                AND SolrDeltaTypeCode = 1 --INSERT/UPDATEs
+                AND MidDeltaProcessComplete = 1
+)
+SELECT
         midLine.LineOfServiceID,
         midLine.LineOfServiceCode,
         midLine.LineOfServiceTypeCode,
@@ -50,17 +61,8 @@ select_statement :=
         CURRENT_USER AS UpdatedSource
     FROM
         Mid.LineOfService midLine
-    WHERE
-        midLine.LineOfServiceID IN (
-            SELECT
-                DISTINCT LineOfServiceID
-            FROM
-                Show.SOLRLineOfServiceDelta
-            WHERE
-                StartDeltaProcessDate IS NULL
-                AND EndDeltaProcessDate IS NULL
-                AND SolrDeltaTypeCode = 1 --INSERT/UPDATEs
-                AND MidDeltaProcessComplete = 1)'; --this will indicate the Mid tables have been refreshed with the updated data
+    JOIN
+        cte_id ON midLine.LineOfServiceID = cte_id.LineOfServiceID'; --this will indicate the Mid tables have been refreshed with the updated data
 
 -- Update statement
 update_statement :=
