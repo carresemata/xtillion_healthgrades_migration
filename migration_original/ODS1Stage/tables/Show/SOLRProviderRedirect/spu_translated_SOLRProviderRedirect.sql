@@ -8,7 +8,7 @@
 -- 4. DELTA: Insert into show.solrproviderredirect where the providerid is null
 -- 5. DELTA: Update show.solrproviderredirect where URLs are null
 
-CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProcessing BOOLEAN)
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRPROVIDERREDIRECT(IsProviderDeltaProcessing BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     AS  
