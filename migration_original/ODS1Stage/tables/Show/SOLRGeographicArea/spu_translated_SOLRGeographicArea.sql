@@ -1,5 +1,5 @@
 -- spuSOLRGeographicAreaGenerateFromMid
-CREATE OR REPLACE PROCEDURE SHOW.SP_LOAD_SOLRGEOGRAPHICAREA() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRGEOGRAPHICAREA() 
     RETURNS STRING
     LANGUAGE SQL
     AS  
@@ -57,7 +57,7 @@ SELECT
             CURRENT_USER AS UpdatedSource
         FROM
             Mid.GeographicArea midGeo
-            JOIN (SELECT GeographicAreaID FROM CTE_geoId) as geoId on geoId.GeographicAreaID = midGeo.GeographicAreaID';
+            JOIN CTE_geoId as geoId on geoId.GeographicAreaID = midGeo.GeographicAreaID';
 
 -- Update Statement
 update_statement := 
