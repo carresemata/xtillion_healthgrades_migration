@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE SP_LOAD_TABLE_SOLRMarket() -- Parameters
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.Show.SP_LOAD_TABLE_SOLRMarket() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -44,7 +44,9 @@ BEGIN
 -- If no conditionals:
 select_statement := '
 WITH cte_mid AS (
-    SELECT * FROM mid.clientmarket LIMIT 100
+    SELECT * FROM mid.clientmarket 
+    -- Limit is added to facilitate batch processing
+    -- LIMIT 100
 ),
 
 CTE_spnFeat AS (
