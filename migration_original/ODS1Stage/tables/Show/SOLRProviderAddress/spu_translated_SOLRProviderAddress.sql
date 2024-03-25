@@ -171,16 +171,16 @@ update_statement := '
 
 -- This is the merge statement from logic of show.spuSOLRProviderAddressGenerateFromMid                     
 merge_statement := '
-                   MERGE INTO DEV.SOLRProviderAddress USING 
+                   MERGE INTO Show.SOLRProviderAddress USING 
                    ('||select_statement||') as s 
-                   ON DEV.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
+                   ON Show.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
                    WHEN MATCHED THEN '||update_statement||'
                    WHEN NOT MATCHED THEN '||insert_statement||'
                    ';
 
 -- This delete comes from hack.spuRemoveSuspecProviders
 delete_statement := '
-                    DELETE FROM DEV.SOLRProviderAddress spa
+                    DELETE FROM Show.SOLRProviderAddress spa
                     USING Base.ProviderRemoval pr, Show.SOLRProvider sp
                     WHERE sp.ProviderCode = pr.ProviderCode
                     AND sp.ProviderID = spa.ProviderID
