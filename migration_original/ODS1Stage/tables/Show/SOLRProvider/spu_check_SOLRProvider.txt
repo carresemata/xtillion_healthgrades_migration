@@ -1,4 +1,4 @@
-etl_spuMidProviderEntityRefresh
+etl_spuMidProviderEntityRefresh 
 hack_spuRemoveSuspecProviders
 Show_spuApplyProviderStatusBusinessRules
 Show_spuSOLRProviderGenerateFromMid
