@@ -22,6 +22,7 @@ AS 'DECLARE
 --------------- 1. Declaring variables ------------------
 ---------------------------------------------------------
 
+    truncate_statement STRING;
     select_statement STRING; -- CTE and Select statement for the Merge
     update_statement STRING; -- Update statement for the Merge
     insert_statement STRING; -- Insert statement for the Merge
@@ -50,6 +51,11 @@ BEGIN
                     ORDER BY BasePrac.PracticeID
                     ),'';
     ELSE 
+
+        truncate_statement := 'TRUNCATE TABLE Show.SOLRPractice;'; -- Truncated for full loads
+
+        EXECUTE IMMEDIATE truncate_statement;
+        
         select_statement := ''
         WITH cte_practice_batch AS (
                     SELECT DISTINCT 
