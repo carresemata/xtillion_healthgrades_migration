@@ -1,4 +1,4 @@
-etl_spuMidProviderEntityRefresh 
+etl_spuMidProviderEntityRefresh
 hack_spuRemoveSuspecProviders
 Show_spuApplyProviderStatusBusinessRules
 Show_spuSOLRProviderGenerateFromMid
@@ -7,3 +7,4 @@ etl_spuCheckFinalResults
 Show_spuUpdateSOLRProviderClientCertificationXml
 Mid_spuProviderIsInClientMarketRefresh
 hack_spuMAPFreeze
+hack_spuTheGreatMidShowODS1StageEDPHackSet
