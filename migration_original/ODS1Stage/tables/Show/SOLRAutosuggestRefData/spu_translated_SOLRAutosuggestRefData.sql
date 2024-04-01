@@ -675,7 +675,9 @@ merge_statement :=      $$
                               FROM SHOW.TEMPAUTOSUGGESTREFDATA
                               ) AS source
                         ON source.TermID = target.TermID
-                        WHEN MATCHED THEN $$ || update_statement || $$ 
+                        WHEN MATCHED AND source.Code = target.Code AND source.Description = target.Description
+                            AND source.Definition = target.Definition AND source.Rank = target.Rank 
+                            AND source.AutoType = target.AutoType THEN $$ || update_statement || $$ 
                         WHEN NOT MATCHED THEN $$ || insert_statement;
 
 
