@@ -1,14 +1,5 @@
 --- Mid_spuPracticeSponsorshipRefresh
 
-(
-    @IsProviderDeltaProcessing bit = 0
-)
-
-DECLARE @ErrorMessage VARCHAR(1000)
-
-BEGIN TRY
-
-
     --Create & fill table that holds the list of Practice records that were supposed to migrate with the batch.  
     --  If this is a full file refresh, migrate all Base.Practice records.
     --  If this is a batch migration, the list records comes from provider deltas

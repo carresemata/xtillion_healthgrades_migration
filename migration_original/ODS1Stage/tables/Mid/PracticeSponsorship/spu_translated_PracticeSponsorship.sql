@@ -1,34 +1,81 @@
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.MID.SP_LOAD_PRACTICESPONSORSHIP(ISPROVIDERDELTAPROCESSING BOOLEAN) -- Parameters
+    RETURNS STRING
+    LANGUAGE SQL
+    EXECUTE AS CALLER
+    AS  
+DECLARE 
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+    
+-- Mid.PracticeSponsorship depends on: 
+--- Raw.ProviderDeltaProcessing
+--- Base.Practice
+--- Base.ProviderToOffice
+--- Base.Office
+--- Base.ClientToProduct
+--- Base.Client
+--- Base.Product
+--- Base.ProductGroup
+--- Base.ClientProductToEntity
+--- Base.EntityType
+--- Mid.ProviderSponsorship
 
---- Create temporary tables
--- 1. Create #PracticeBatch as a CTE
----- IF STATEMENT MISSING
--- WITH CTE_PracticeBatch AS (
---             SELECT 
---                 PracticeID, 
---                 PracticeCode 
---             FROM Base.Practice
---             GROUP BY 
---                 PracticeID, 
---                 PracticeCode
---             ORDER BY PracticeID),
-            
-WITH CTE_PracticeBatch AS (
-            SELECT 
-                p.PracticeID, 
-                p.PracticeCode
-            FROM Snowflake.etl.ProviderDeltaProcessing AS a
-            JOIN base.provider_to_office pto ON a.ProviderID = pto.ProviderID
-            JOIN base.Office o ON pto.OfficeID = o.OfficeID
-            JOIN Base.Practice AS p ON p.PracticeID = o.PracticeID
-            GROUP BY 
-                p.PracticeID, 
-                p.PracticeCode
-            ORDER BY p.PracticeID),
+---------------------------------------------------------
+--------------- 1. Declaring variables ------------------
+---------------------------------------------------------
+
+    truncate_statement STRING;
+    select_statement STRING; -- CTE and Select statement for the Merge
+    update_statement STRING; -- Update statement for the Merge
+    insert_statement STRING; -- Insert statement for the Merge
+    merge_statement STRING; -- Merge statement to final table
+    status STRING; -- Status monitoring
+   
+---------------------------------------------------------
+--------------- 2.Conditionals if any -------------------
+---------------------------------------------------------   
+   
+BEGIN
+    IF (IsProviderDeltaProcessing) THEN
+            select_statement := '
+           WITH CTE_PracticeBatch AS (
+                    SELECT 
+                        p.PracticeID, 
+                        p.PracticeCode
+                    FROM raw.ProviderDeltaProcessing AS a
+                    JOIN base.providertooffice pto ON a.ProviderID = pto.ProviderID
+                    JOIN base.Office o ON pto.OfficeID = o.OfficeID
+                    JOIN Base.Practice AS p ON p.PracticeID = o.PracticeID
+                    GROUP BY 
+                        p.PracticeID, 
+                        p.PracticeCode
+                    ORDER BY p.PracticeID
+                    ),';
+           
+    ELSE
+           truncate_statement := 'TRUNCATE TABLE Mid.PracticeSponsorship';
+           select_statement := 'WITH CTE_PracticeBatch AS (
+                    SELECT 
+                        PracticeID, 
+                        PracticeCode 
+                    FROM Base.Practice
+                    GROUP BY 
+                        PracticeID, 
+                        PracticeCode
+                    ORDER BY PracticeID
+                    ),';
+            EXECUTE IMMEDIATE truncate_statement;
+    END IF;
 
 
------- !!!!!!!!!!!!!!!!!  TO DO: CHECK INDEX CREATION IN LINE 41 !!!!!!!!!!!!!!!!!!!!!
+---------------------------------------------------------
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------     
 
--- 2. Create RawPracData as CTE: get raw data from the Base.ClientToProduct table and join with other tables to get the necessary data
+-- Select Statements
+select_statement := select_statement || 
+$$
 CTE_RawPracData AS (
     SELECT	
         pract.PracticeID,
@@ -61,8 +108,6 @@ CTE_RawPracData AS (
     WHERE	
         cliToProd.ActiveFlag = 1
 ),
-
--- 3. Create PractMultClientRank as CTE: get practices associated to multiple clients, and use business rules to pick a winner
 CTE_PractMultClientRank AS (
     SELECT 
         rawPracData.ClientCode AS ClientCode, 
@@ -99,7 +144,6 @@ CTE_PractMultClientRank AS (
             providerCount.PracticeCode = rawPracData.PracticeCode
 ),
 
--- 4. Create InsertPracticeSponsorship as CTE: to insert data into PracticeSponsorship
 CTE_InsertPracticeSponsorship AS (
             SELECT 
                 rawPracDataInner.PracticeID, 
@@ -111,7 +155,9 @@ CTE_InsertPracticeSponsorship AS (
                 rawPracDataInner.ClientToProductID, 
                 rawPracDataInner.ClientCode, 
                 rawPracDataInner.ClientName, 
-                IFNULL(practMultClientRank.ClientPractRank, rawPracDataInner.recID) AS ClientPractRank -- Equivlaent to ISNULL in SQL Server
+                IFNULL(practMultClientRank.ClientPractRank, rawPracDataInner.recID) AS ClientPractRank, -- Equivlaent to ISNULL in SQL Server
+                0 AS ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
+
             FROM 
                 CTE_RawPracData as rawPracDataInner
                 LEFT JOIN CTE_PractMultClientRank as practMultClientRank ON 
@@ -119,136 +165,123 @@ CTE_InsertPracticeSponsorship AS (
                     practMultClientRank.ClientCode = rawPracDataInner.ClientCode AND 
                     practMultClientRank.ProductCode = rawPracDataInner.ProductCode
             WHERE 
-                practMultClientRank.ClientPractRank = 1),
+                practMultClientRank.ClientPractRank = 1
+),
 
--- 5. Create PracticeSponsorship as temporary table: populate the temp TABLE with CTE_InsertPracticeSponsorship data
-CREATE OR REPLACE TEMPORARY TABLE TempPracticeSponsorship AS (
-    SELECT 
-        CTE_InsertPracticeSponsorship.PracticeID, 
-        CTE_InsertPracticeSponsorship.PracticeCode, 
-        CTE_InsertPracticeSponsorship.ProductCode, 
-        CTE_InsertPracticeSponsorship.ProductDescription, 
-        CTE_InsertPracticeSponsorship.ProductGroupCode, 
-        CTE_InsertPracticeSponsorship.ProductGroupDescription, 
-        CTE_InsertPracticeSponsorship.ClientToProductID, 
-        CTE_InsertPracticeSponsorship.ClientCode, 
-        CTE_InsertPracticeSponsorship.ClientName,
-        0 AS ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
-    FROM 
-        CTE_InsertPracticeSponsorship)
+CTE_Action_1 AS (
+    Select tempPracSpon.PracticeID, 1 AS ActionCode
+    FROM CTE_InsertPracticeSponsorship AS tempPracSpon
+    LEFT JOIN Mid.PracticeSponsorship AS midPracSpon ON 
+        tempPracSpon.PracticeID = midPracSpon.PracticeID AND 
+        tempPracSpon.PracticeCode = midPracSpon.PracticeCode
+    WHERE midPracSpon.PracticeID IS NULL
+    GROUP BY tempPracSpon.PracticeID
+),
 
--- 6. Create ColumnUpdates CTE: get the columns that need to be updated
-WITH CTE_ColumnUpdates AS (
-    SELECT 
-        COULUM_NAME AS name, 
-        ROW_NUMBER() OVER (ORDER BY name) AS recId -- Equivalent to IDENTITY(INT, 1, 1) in SQL Server
-    FROM 
-        INFORMATION_SCHEMA.COLUMNS 
+CTE_Action_2 AS (
+    SELECT tempPracSpon.PracticeID, 2 AS ActionCode
+    FROM CTE_InsertPracticeSponsorship AS tempPracSpon
+    JOIN Mid.PracticeSponsorship PracSpon ON 
+        tempPracSpon.PracticeID = PracSpon.PracticeID AND 
+        tempPracSpon.PracticeCode = PracSpon.PracticeCode
     WHERE 
-        TABLE_NAME = 'TempPracticeSponsorship' AND 
-        name NOT IN ('PracticeCode', 'ProductCode', 'ActionCode'))
-
-	/*
-		Flag record level actions for ActionCode
-			0 = No Change
-			1 = Insert
-			2 = UPDATE
-	*/
-
--- ActionCode Insert
--- Set to 1 the ActionCode Column in TempPracticeSponsorship where PracticeID in Mid.PracticeSponsorship is null  
-UPDATE TempPracticeSponsorship
-SET ActionCode = 1 -- Set ActionCode to 1 (Insert) where PracticeID is null
-FROM TempPracticeSponsorship AS tempPracSpon
-LEFT JOIN Mid.PracticeSponsorship AS midPracSpon ON 
-    tempPracSpon.PracticeID = midPracSpon.PracticeID AND 
-    tempPracSpon.PracticeCode = midPracSpon.PracticeCode
-WHERE midPracSpon.PracticeID IS NULL;
-
--- Insert data into Mid.PracticeSponsorship where ActionCode is 1 
-INSERT INTO Mid.PracticeSponsorship 
-    (
-        ClientCode,
-        ClientName,
-        ClientToProductID,
-        PracticeCode,
-        PracticeID,
-        ProductCode,
-        ProductDescription,
-        ProductGroupCode,
-        ProductGroupDescription
-    )
+        MD5(IFNULL(tempPracSpon.ProductDescription::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductDescription::VARCHAR, ''''''''))
+        OR MD5(IFNULL(tempPracSpon.ProductGroupCode::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductGroupCode::VARCHAR, ''''''''))
+        OR MD5(IFNULL(tempPracSpon.ProductGroupDescription::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductGroupDescription::VARCHAR, ''''''''))
+        OR MD5(IFNULL(tempPracSpon.ClientToProductID::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientToProductID::VARCHAR, ''''''''))
+        OR MD5(IFNULL(tempPracSpon.ClientCode::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientCode::VARCHAR, ''''''''))
+        OR MD5(IFNULL(tempPracSpon.ClientName::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientName::VARCHAR, ''''''''))
+    GROUP BY tempPracSpon.PracticeID
+)
 SELECT 
-    ClientCode,
-    ClientName,
-    ClientToProductID,
-    PracticeCode,
-    PracticeID,
-    ProductCode,
-    ProductDescription,
-    ProductGroupCode,
-    ProductGroupDescription
-FROM
-    TempPracticeSponsorship
-WHERE 
-    ActionCode = 1 AND PracticeID NOT IN (SELECT PracticeID FROM Mid.PracticeSponsorship);
+DISTINCT
+    A0.PracticeID,
+    A0.PracticeCode,
+    A0.ProductCode,
+    A0.ProductDescription,
+    A0.ProductGroupCode ,
+    A0.ProductGroupDescription,
+    A0.ClientToProductId,
+    A0.ClientCode,
+    A0.ClientName,
+    IFNULL(A2.ActionCode,IFNULL(A1.ActionCode,A0.ActionCode)) AS ActionCode
+FROM CTE_InsertPracticeSponsorship AS A0
+LEFT JOIN
+    CTE_ACTION_1 AS A1 ON A0.PracticeID = A1.PracticeID
+LEFT JOIN
+    CTE_ACTION_2 AS A2 ON A0.PracticeID = A2.PracticeID
+WHERE
+    IFNULL(A2.ActionCode,IFNULL(A1.ActionCode,A0.ActionCode)) <> 0
 
 
--- ActionCode Update
---- Declare and set all variables
-SET min = 1;
-SET WHEREClause = '';
-SET sql = 'UPDATE TempPracticeSponsorship TempPracSpon' ||
-          'SET TempPracSpon.ActionCode = 2' ||
-          'FROM TempPracticeSponsorship TempPracSpon' ||
-          'JOIN Mid.PracticeSponsorship MidPracSpon ON TempPracSpon.PracticeID = MidPracSpon.PracticeID AND TempPracSpon.PracticeCode = MidPracSpon.PracticeCode' ||
-          'WHERE ';
-SET max = (SELECT MAX(recId) FROM CTE_ColumnUpdates)
-SET column = '';
-SET globalCheck = '';
+$$;
 
---- Define the while loop to check if we need to update any columns
------- CHECK IF THE WHILE LOOP IS CORRECT
-WHILE $min <= $max
-    BEGIN
-        SET column = (SELECT name FROM CTE_ColumnUpdates WHERE recId = min);
-        SET WHEREClause = WHEREClause || 'BINARY_CHECKSUM(isnull(cast(TempPracSpon.' || column || ' as VARCHAR(max)),'''')) <> BINARY_CHECKSUM(isnull(cast(MidPracSpon.' || column || ' as VARCHAR(max)),''''))' || CHAR(10);
-        IF min < max
-            BEGIN
-                SET WHEREClause = WHEREClause || ' or ';
-            END;
-        SET min = min + 1;
-    END;
+--- Update Statement
+update_statement := ' UPDATE 
+                     SET 
+                        PRACTICEID = source.PRACTICEID, 
+                        PRACTICECODE = source.PRACTICECODE, 
+                        PRODUCTCODE = source.PRODUCTCODE, 
+                        PRODUCTDESCRIPTION = source.PRODUCTDESCRIPTION, 
+                        PRODUCTGROUPCODE = source.PRODUCTGROUPCODE, 
+                        PRODUCTGROUPDESCRIPTION = source.PRODUCTGROUPDESCRIPTION, 
+                        CLIENTTOPRODUCTID = source.CLIENTTOPRODUCTID, 
+                        CLIENTCODE = source.CLIENTCODE, 
+                        CLIENTNAME = source.CLIENTNAME';
 
+--- Insert Statement
+insert_statement := ' INSERT  
+                        (PRACTICEID, 
+                        PRACTICECODE, 
+                        PRODUCTCODE, 
+                        PRODUCTDESCRIPTION, 
+                        PRODUCTGROUPCODE, 
+                        PRODUCTGROUPDESCRIPTION, 
+                        CLIENTTOPRODUCTID, 
+                        CLIENTCODE, 
+                        CLIENTNAME)
+                      VALUES 
+                        (source.PRACTICEID, 
+                        source.PRACTICECODE, 
+                        source.PRODUCTCODE, 
+                        source.PRODUCTDESCRIPTION, 
+                        source.PRODUCTGROUPCODE, 
+                        source.PRODUCTGROUPDESCRIPTION, 
+                        source.CLIENTTOPRODUCTID, 
+                        source.CLIENTCODE, 
+                        source.CLIENTNAME)';
 
---- Action 2: Update data in TempPracticeSponsorship where ActionCode is 2 (This is substituting the dynamic SQL in SQL Server, the loop)
--- We need to try if this works
-UPDATE TempPracticeSponsorship
-SET ActionCode = 2
-FROM TempPracticeSponsorship AS tempPracSpon
-JOIN Mid.PracticeSponsorship PracSpon ON 
-    tempPracSpon.PracticeID = PracSpon.PracticeID AND 
-    tempPracSpon.PracticeCode = PracSpon.PracticeCode
-WHERE 
-    MD5(IFNULL(tempPracSpon.ProductDescription::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ProductDescription::VARCHAR, ''))
-    OR MD5(IFNULL(tempPracSpon.ProductGroupCode::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ProductGroupCode::VARCHAR, ''))
-    OR MD5(IFNULL(tempPracSpon.ProductGroupDescription::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ProductGroupDescription::VARCHAR, ''))
-    OR MD5(IFNULL(tempPracSpon.ClientToProductID::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ClientToProductID::VARCHAR, ''))
-    OR MD5(IFNULL(tempPracSpon.ClientCode::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ClientCode::VARCHAR, ''))
-    OR MD5(IFNULL(tempPracSpon.ClientName::VARCHAR, '')) <> MD5(IFNULL(PracSpon.ClientName::VARCHAR, ''));
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
 
 
+merge_statement := ' MERGE INTO Mid.PracticeSponsorship as target USING 
+                   ('||select_statement||') as source 
+                   ON source.PracticeId = target.PracticeId
+                   WHEN MATCHED AND ActionCode = 2 THEN '||update_statement|| '
+                   WHEN NOT MATCHED And ActionCode = 1 THEN '||insert_statement;
+                   
+---------------------------------------------------------
+------------------- 5. Execution ------------------------
+--------------------------------------------------------- 
+                    
+EXECUTE IMMEDIATE merge_statement ;
 
--- Update data in Mid.PracticeSponsorship where ActionCode is 2
-DELETE Mid.PracticeSponsorship
-FROM 
-    Mid.PracticeSponsorship AS midPracSpon
-    JOIN CTE_PracticeBatch AS pracBatch ON midPracSpon.PracticeCode = pracBatch.PracticeCode
-    LEFT JOIN TempPracticeSponsorship AS tempPracSpon ON 
-        midPracSpon.PracticeID = tempPracSpon.PracticeID AND 
-        midPracSpon.PracticeCode = tempPracSpon.PracticeCode AND
-        midPracSpon.ProductCode = tempPracSpon.ProductCode AND
-        midPracSpon.ClientToProductID = tempPracSpon.ClientToProductID AND
-        midPracSpon.ClientCode = tempPracSpon.ClientCode
-WHERE 
-    tempPracSpon.PracticeID IS NULL;
+---------------------------------------------------------
+--------------- 6. Status monitoring --------------------
+--------------------------------------------------------- 
+
+status := 'Completed successfully';
+    RETURN status;
+
+
+        
+EXCEPTION
+    WHEN OTHER THEN
+          status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+          RETURN status;
+
+
+    
+END;
