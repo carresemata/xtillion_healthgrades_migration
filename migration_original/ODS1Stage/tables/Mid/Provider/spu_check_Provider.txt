@@ -1,1 +1,1 @@
-etl_spuDeleteOrphanedProviders
+mid_spuproviderrefresh
