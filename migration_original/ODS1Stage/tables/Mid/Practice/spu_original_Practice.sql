@@ -1,44 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER   procedure [Mid].[spuPracticeRefresh]
-(
-    @IsProviderDeltaProcessing bit = 0
-)
-AS
-
-/*--------------------------------------------------------------------------------------------------------------------
-Created By:     Abhash Bhandary
-Created On:     04/30/2012
-
-Updated By:     Zafer Faddah
-Updated On:     08/27/2014
-Update Note:    Replaced dbo.Individual with src.Provider 
-
-Reoccurence:    This stored procedure will INSERT/UPDATE/DELETE data FROM the Mid.Practice table that is used for 
-                the Practice SOLR Core
-
-Test:           
-EXEC Mid.spuPracticeRefresh
-                    
-TRUNCATE TABLE Mid.Practice
-
-SELECT COUNT(0) FROM Mid.Practice
-SELECT * FROM Mid.Practice WHERE GoogleScriptBlock IS NOT NULL
-SELECT * FROM Mid.Practice WHERE OfficeCode IS NULL
-
-SELECT PracticeCode, Count(PracticeCode )
-FROM ODS2.Mid.Practice GROUP BY PracticeCode 
-HAVING Count(PracticeCode) > 1
-
-
------------------------------------------------------------------------------------------------------------------------*/
-
-
-DECLARE @ErrorMessage VARCHAR(1000)
-
 BEGIN TRY
             if @IsProviderDeltaProcessing = 0
             begin
@@ -62,6 +21,7 @@ BEGIN TRY
             --where practicecode = 'PP3T3CT'
             order by a.PracticeID
           end
+          
         else begin
             insert into #PracticeBatch (PracticeID)
             select distinct e.PracticeID
