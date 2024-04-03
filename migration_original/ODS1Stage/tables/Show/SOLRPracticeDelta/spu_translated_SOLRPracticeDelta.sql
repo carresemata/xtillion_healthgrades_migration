@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRPRACTICEDELTA(IsProvider
     LANGUAGE SQL
     EXECUTE AS CALLER
     AS  
-
+DECLARE 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
@@ -17,7 +17,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRPRACTICEDELTA(IsProvider
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
 ---------------------------------------------------------
-DECLARE 
+
     truncate_statement STRING;
     merge_statement_1 STRING; -- Merge statement to final table
     merge_statement_2 STRING;
@@ -28,10 +28,14 @@ DECLARE
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------
 ---------------------------------------------------------   
-   
 BEGIN
-    IF (IsProviderDeltaProcessing) THEN
-        merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING 
+--- conditionals are executed in the execution section
+
+
+---------------------------------------------------------
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------     
+merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING 
                                            (SELECT DISTINCT
                                                 pr.PracticeID,
                                                 spd.SolrDeltaTypeCode, 
@@ -66,11 +70,7 @@ BEGIN
                                             source.StartDeltaProcessDate,
                                             source.MidDeltaProcessComplete
                                             );';
-
-        EXECUTE IMMEDIATE merge_statement_1;
-            
-           
-    ELSE
+                                
         truncate_statement := 'TRUNCATE TABLE Show.SOLRPracticeDelta';
         merge_statement_2 := $$MERGE INTO Show.SOLRPracticeDelta as target USING 
                                    (select DISTINCT
@@ -131,24 +131,11 @@ BEGIN
                                 source.MidDeltaProcessComplete
                                 );$$;
 
-        EXECUTE IMMEDIATE truncate_statement;
-        EXECUTE IMMEDIATE merge_statement_2;
-        EXECUTE IMMEDIATE merge_statement_3;
-           
-    END IF;
-
-
----------------------------------------------------------
------------------ 3. SQL Statements ---------------------
----------------------------------------------------------     
-
-
-
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
-
+-- Merge statement ran regardless of the parameter value
 merge_statement_4 := 'MERGE INTO Show.SOLRPracticeDelta as target USING 
                    (SELECT DISTINCT
                         PracticeId,
@@ -166,10 +153,13 @@ merge_statement_4 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
--- EXECUTE IMMEDIATE truncate_statement;
--- EXECUTE IMMEDIATE merge_statement_1;
--- EXECUTE IMMEDIATE merge_statement_2;
--- EXECUTE IMMEDIATE merge_statement_3;
+IF (IsProviderDeltaProcessing) THEN
+        EXECUTE IMMEDIATE merge_statement_1;
+ELSE
+        EXECUTE IMMEDIATE truncate_statement;
+        EXECUTE IMMEDIATE merge_statement_2;
+        EXECUTE IMMEDIATE merge_statement_3;
+END IF;
 EXECUTE IMMEDIATE merge_statement_4 ;
 
 ---------------------------------------------------------
@@ -189,10 +179,3 @@ EXCEPTION
 
     
 END;
-
-
-
-
-
-
-
