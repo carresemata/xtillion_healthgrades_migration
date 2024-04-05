@@ -19,68 +19,49 @@ AS
 
 DECLARE
 
+source_table STRING;
 select_statement STRING; 
 insert_statement STRING;
 merge_statement STRING; 
 status STRING;
 
 ---------------------------------------------------------
+--------------- 2.Conditionals if any -------------------
+---------------------------------------------------------  
+BEGIN
+
+    IF (IsProviderDeltaProcessing) THEN
+        source_table := $$ raw.ProviderDeltaProcessing $$;
+    ELSE
+        source_table := $$ Base.Provider $$;
+END IF;
+
+---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
 
--- The conditional statements are included in this block since 
--- the conditional itself directly determines the select
-
-BEGIN
-
-      IF (IsProviderDeltaProcessing) THEN
-        select_statement := $$
-                           (WITH CTE_ProviderBatch AS (
-                                    SELECT p.ProviderID
-                                    FROM raw.ProviderDeltaProcessing p
-                                    ORDER BY p.ProviderID
-                            ),
+    select_statement := $$
+                       (WITH CTE_ProviderBatch AS (
+                                SELECT p.ProviderID
+                                FROM $$ ||source_table|| $$  p
+                                ORDER BY p.ProviderID
+                        ),
+                    
+                        CTE_ProviderLanguage AS (
+                        SELECT ptl.ProviderID, l.LanguageName,
+                               CASE WHEN mpl.ProviderID IS NULL THEN 1 ELSE 0 END AS ActionCode
+                        FROM CTE_ProviderBatch pb
+                        JOIN Base.ProviderToLanguage AS ptl ON ptl.ProviderID = pb.ProviderID
+                        JOIN Base.Language AS l ON l.LanguageID = ptl.LanguageID
+                        LEFT JOIN Mid.ProviderLanguage mpl ON ptl.ProviderID = mpl.ProviderID AND l.LanguageName = mpl.LanguageName
+                        )
                         
-                            CTE_ProviderLanguage AS (
-                            SELECT ptl.ProviderID, l.LanguageName,
-                                   CASE WHEN mpl.ProviderID IS NULL THEN 1 ELSE 0 END AS ActionCode
-                            FROM CTE_ProviderBatch pb
-                            JOIN Base.ProviderToLanguage AS ptl ON ptl.ProviderID = pb.ProviderID
-                            JOIN Base.Language AS l ON l.LanguageID = ptl.LanguageID
-                            LEFT JOIN Mid.ProviderLanguage mpl ON ptl.ProviderID = mpl.ProviderID AND l.LanguageName = mpl.LanguageName
-                            )
-                            
-                            SELECT 
-                                pl.ProviderID,
-                                pl.LanguageName,
-                                pl.ActionCode
-                            FROM CTE_ProviderLanguage pl)
-                            $$;
-                            
-      ELSE
-        select_statement := $$
-                           (WITH CTE_ProviderBatch AS (
-                                    SELECT p.ProviderID
-                                    FROM Base.Provider AS p
-                                    ORDER BY p.ProviderID
-                            ),
-                        
-                            CTE_ProviderLanguage AS (
-                            SELECT ptl.ProviderID, l.LanguageName,
-                                   CASE WHEN mpl.ProviderID IS NULL THEN 1 ELSE 0 END AS ActionCode
-                            FROM CTE_ProviderBatch pb
-                            JOIN Base.ProviderToLanguage AS ptl ON ptl.ProviderID = pb.ProviderID
-                            JOIN Base.Language AS l ON l.LanguageID = ptl.LanguageID
-                            LEFT JOIN Mid.ProviderLanguage mpl ON ptl.ProviderID = mpl.ProviderID AND l.LanguageName = mpl.LanguageName
-                            )
-                            
-                            SELECT 
-                                pl.ProviderID,
-                                pl.LanguageName,
-                                pl.ActionCode
-                            FROM CTE_ProviderLanguage pl)
-                            $$;
-      END IF;
+                        SELECT 
+                            pl.ProviderID,
+                            pl.LanguageName,
+                            pl.ActionCode
+                        FROM CTE_ProviderLanguage pl)
+                        $$;
       
 
       ---------------------------------------------------------
