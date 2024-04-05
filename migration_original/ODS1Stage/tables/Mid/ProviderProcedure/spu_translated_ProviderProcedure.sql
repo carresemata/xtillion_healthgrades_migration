@@ -22,6 +22,8 @@ AS
 
 DECLARE
 
+
+source_table STRING; 
 select_statement STRING; 
 insert_statement STRING;
 update_statement STRING;
@@ -29,94 +31,58 @@ merge_statement STRING;
 status STRING;
 
 ---------------------------------------------------------
+--------------- 2.Conditionals if any -------------------
+---------------------------------------------------------  
+BEGIN
+
+    IF (IsProviderDeltaProcessing) THEN
+        source_table := $$ raw.ProviderDeltaProcessing $$;
+    ELSE
+        source_table := $$ Base.Provider $$;
+END IF;
+
+---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
 
--- The conditional statements are included in this block since 
--- the conditional itself directly determines the select
-
-BEGIN
-
-      IF (IsProviderDeltaProcessing) THEN
-        select_statement := $$
-                            (WITH CTE_ProviderBatch AS (
-                            SELECT p.ProviderID
-                            FROM raw.ProviderDeltaProcessing p
-                            ORDER BY p.ProviderID
-                            ),
-                        
-                            CTE_ProviderProcedure AS (
-                                SELECT
-                                    etmt.EntityToMedicalTermID AS ProviderToProcedureID,
-                                    etmt.EntityID AS ProviderID,
-                                    mt.MedicalTermCode AS ProcedureCode,
-                                    mt.MedicalTermDescription1 AS ProcedureDescription,
-                                    mt.MedicalTermDescription2 AS ProcedureGroupDescription,
-                                    mt.LegacyKey,
-                                    CASE
-                                        WHEN mpp.ProviderToProcedureID IS NULL THEN 1
-                                        ELSE 0
-                                    END AS ActionCode
-                                FROM CTE_ProviderBatch AS pb
-                                INNER JOIN Base.EntityToMedicalTerm AS etmt ON etmt.EntityID = pb.ProviderID
-                                INNER JOIN Base.MedicalTerm AS mt ON mt.MedicalTermID = etmt.MedicalTermID
-                                INNER JOIN Base.EntityType AS et ON et.EntityTypeID = etmt.EntityTypeID
-                                INNER JOIN Base.MedicalTermSet AS mts ON mts.MedicalTermSetID = mt.MedicalTermSetID
-                                INNER JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
-                                LEFT JOIN Mid.ProviderProcedure AS mpp ON etmt.EntityToMedicalTermID = mpp.ProviderToProcedureID
-                            )
-                            
+    select_statement := $$
+                        (WITH CTE_ProviderBatch AS (
+                        SELECT p.ProviderID
+                        FROM $$ ||source_table|| $$ p
+                        ORDER BY p.ProviderID
+                        ),
+                    
+                        CTE_ProviderProcedure AS (
                             SELECT
-                                pp.ProviderToProcedureID,
-                                pp.ProviderID,
-                                pp.ProcedureCode,
-                                pp.ProcedureDescription,
-                                pp.ProcedureGroupDescription,
-                                pp.LegacyKey,
-                                pp.ActionCode
-                            FROM CTE_ProviderProcedure pp)
-                            $$;
-                            
-      ELSE
-        select_statement := $$
-                            (WITH CTE_ProviderBatch AS (
-                            SELECT p.ProviderID
-                            FROM Base.Provider p
-                            ORDER BY p.ProviderID
-                            ),
+                                etmt.EntityToMedicalTermID AS ProviderToProcedureID,
+                                etmt.EntityID AS ProviderID,
+                                mt.MedicalTermCode AS ProcedureCode,
+                                mt.MedicalTermDescription1 AS ProcedureDescription,
+                                mt.MedicalTermDescription2 AS ProcedureGroupDescription,
+                                mt.LegacyKey,
+                                CASE
+                                    WHEN mpp.ProviderToProcedureID IS NULL THEN 1
+                                    ELSE 0
+                                END AS ActionCode
+                            FROM CTE_ProviderBatch AS pb
+                            INNER JOIN Base.EntityToMedicalTerm AS etmt ON etmt.EntityID = pb.ProviderID
+                            INNER JOIN Base.MedicalTerm AS mt ON mt.MedicalTermID = etmt.MedicalTermID
+                            INNER JOIN Base.EntityType AS et ON et.EntityTypeID = etmt.EntityTypeID
+                            INNER JOIN Base.MedicalTermSet AS mts ON mts.MedicalTermSetID = mt.MedicalTermSetID
+                            INNER JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
+                            LEFT JOIN Mid.ProviderProcedure AS mpp ON etmt.EntityToMedicalTermID = mpp.ProviderToProcedureID
+                        )
                         
-                            CTE_ProviderProcedure AS (
-                                SELECT
-                                    etmt.EntityToMedicalTermID AS ProviderToProcedureID,
-                                    etmt.EntityID AS ProviderID,
-                                    mt.MedicalTermCode AS ProcedureCode,
-                                    mt.MedicalTermDescription1 AS ProcedureDescription,
-                                    mt.MedicalTermDescription2 AS ProcedureGroupDescription,
-                                    mt.LegacyKey,
-                                    CASE
-                                        WHEN mpp.ProviderToProcedureID IS NULL THEN 1
-                                        ELSE 0
-                                    END AS ActionCode
-                                FROM CTE_ProviderBatch AS pb
-                                INNER JOIN Base.EntityToMedicalTerm AS etmt ON etmt.EntityID = pb.ProviderID
-                                INNER JOIN Base.MedicalTerm AS mt ON mt.MedicalTermID = etmt.MedicalTermID
-                                INNER JOIN Base.EntityType AS et ON et.EntityTypeID = etmt.EntityTypeID
-                                INNER JOIN Base.MedicalTermSet AS mts ON mts.MedicalTermSetID = mt.MedicalTermSetID
-                                INNER JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
-                                LEFT JOIN Mid.ProviderProcedure AS mpp ON etmt.EntityToMedicalTermID = mpp.ProviderToProcedureID
-                            )
-                            
-                            SELECT
-                                pp.ProviderToProcedureID,
-                                pp.ProviderID,
-                                pp.ProcedureCode,
-                                pp.ProcedureDescription,
-                                pp.ProcedureGroupDescription,
-                                pp.LegacyKey,
-                                pp.ActionCode
-                            FROM CTE_ProviderProcedure pp)
-                            $$;
-      END IF;
+                        SELECT
+                            pp.ProviderToProcedureID,
+                            pp.ProviderID,
+                            pp.ProcedureCode,
+                            pp.ProcedureDescription,
+                            pp.ProcedureGroupDescription,
+                            pp.LegacyKey,
+                            pp.ActionCode
+                        FROM CTE_ProviderProcedure pp)
+                        $$;
       
 
       ---------------------------------------------------------
@@ -188,4 +154,4 @@ BEGIN
               status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
               RETURN status;
                     
-END;     
+END;  
