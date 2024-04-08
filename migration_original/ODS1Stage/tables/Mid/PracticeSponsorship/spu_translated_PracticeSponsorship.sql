@@ -167,7 +167,7 @@ CTE_InsertPracticeSponsorship AS (
             WHERE 
                 practMultClientRank.ClientPractRank = 1
 ),
-
+-- Insert Action
 CTE_Action_1 AS (
     Select tempPracSpon.PracticeID, 1 AS ActionCode
     FROM CTE_InsertPracticeSponsorship AS tempPracSpon
@@ -177,7 +177,7 @@ CTE_Action_1 AS (
     WHERE midPracSpon.PracticeID IS NULL
     GROUP BY tempPracSpon.PracticeID
 ),
-
+-- Update Action
 CTE_Action_2 AS (
     SELECT tempPracSpon.PracticeID, 2 AS ActionCode
     FROM CTE_InsertPracticeSponsorship AS tempPracSpon
@@ -204,14 +204,14 @@ DISTINCT
     A0.ClientToProductId,
     A0.ClientCode,
     A0.ClientName,
-    IFNULL(A2.ActionCode,IFNULL(A1.ActionCode,A0.ActionCode)) AS ActionCode
+    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
 FROM CTE_InsertPracticeSponsorship AS A0
 LEFT JOIN
     CTE_ACTION_1 AS A1 ON A0.PracticeID = A1.PracticeID
 LEFT JOIN
     CTE_ACTION_2 AS A2 ON A0.PracticeID = A2.PracticeID
 WHERE
-    IFNULL(A2.ActionCode,IFNULL(A1.ActionCode,A0.ActionCode)) <> 0
+    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
 
 
 $$;

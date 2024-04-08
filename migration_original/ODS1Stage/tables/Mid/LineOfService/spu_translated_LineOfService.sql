@@ -110,14 +110,13 @@ select_statement := $$
                     A0.LineOfServiceDescription,
                     A0.LegacyKey,
                     A0.LegacyKeyName,
-                    IFNULL(
-                        A2.ActionCode,
-                        IFNULL(A1.ActionCode, A0.ActionCode)
-                    ) AS ActionCode
+                    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
                 FROM
                     CTE_LineOfService A0
                     LEFT JOIN CTE_ACTION_1 A1 ON A0.LineOfServiceID = A1.LineOfServiceID
                     LEFT JOIN CTE_ACTION_2 A2 ON A0.LineOfServiceID = A2.LineOfServiceID
+                WHERE
+                    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
                     $$;
 
 
