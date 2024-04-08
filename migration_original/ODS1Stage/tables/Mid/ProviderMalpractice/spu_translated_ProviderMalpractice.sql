@@ -210,7 +210,7 @@ insert_statement := ' INSERT  (
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Dev.Providermalpractice as target USING 
+merge_statement := ' MERGE INTO Mid.Providermalpractice as target USING 
                    ('||select_statement||') as source 
                    ON source.ProviderMalpracticeID = target.ProviderMalpracticeID
                    WHEN MATCHED AND source.ActionCode = 2 THEN '||update_statement|| '
