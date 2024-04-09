@@ -71,7 +71,7 @@ select_statement := $$
                         2 AS ActionCode
                     FROM
                         CTE_LineOfService
-                        LEFT JOIN Mid.LineOfService MidLine ON MidLine.LineOfServiceID = CTE_LineOfService.LineOfServiceID
+                        JOIN Mid.LineOfService MidLine ON MidLine.LineOfServiceID = CTE_LineOfService.LineOfServiceID
                         AND MidLine.LineOfServiceCode = CTE_LineOfService.LineOfServiceCode
                         AND MidLine.LineOfServiceTypeCode = CTE_LineOfService.LineOfServiceTypeCode
                     WHERE

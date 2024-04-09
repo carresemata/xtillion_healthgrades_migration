@@ -125,7 +125,7 @@ select_statement := select_statement ||
                                     cte.PartnerToEntityID,
                                     2 AS ActionCode
                                 FROM CTE_PartnerEntity AS cte
-                                LEFT JOIN Mid.PartnerEntity AS mid 
+                                JOIN Mid.PartnerEntity AS mid 
                                     ON cte.ProviderCode = mid.ProviderCode AND 
                                     cte.PartnerProductCode = mid.PartnerProductCode AND 
                                     cte.PartnerCode = mid.PartnerCode AND 

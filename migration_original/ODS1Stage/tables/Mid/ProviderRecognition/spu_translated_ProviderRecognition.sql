@@ -84,7 +84,7 @@ select_statement := select_statement ||
                             cte.ProviderID,
                             2 AS ActionCode
                         FROM CTE_ProviderRecognition AS cte
-                        LEFT JOIN Mid.ProviderRecognition AS mid 
+                        JOIN Mid.ProviderRecognition AS mid 
                         ON (cte.ProviderID = mid.ProviderID AND cte.RecognitionCode = mid.RecognitionCode 
                             AND cte.ServiceLine = mid.ServiceLine AND cte.FacilityCode = mid.FacilityCode)
                         WHERE 

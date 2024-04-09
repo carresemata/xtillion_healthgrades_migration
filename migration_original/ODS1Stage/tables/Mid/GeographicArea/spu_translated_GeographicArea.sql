@@ -76,7 +76,7 @@ select_statement := $$WITH CTE_geoArea AS (
                             2 AS ActionCode
                         FROM
                             CTE_geoArea
-                            LEFT JOIN Mid.GeographicArea GeoArea ON CTE_geoArea.GeographicAreaID = GeoArea.GeographicAreaID
+                            JOIN Mid.GeographicArea GeoArea ON CTE_geoArea.GeographicAreaID = GeoArea.GeographicAreaID
                             AND CTE_geoArea.GeographicAreaCode = GeoArea.GeographicAreaCode
                         WHERE
                             MD5(
