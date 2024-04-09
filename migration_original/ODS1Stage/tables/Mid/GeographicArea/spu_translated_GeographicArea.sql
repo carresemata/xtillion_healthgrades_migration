@@ -55,6 +55,7 @@ select_statement := $$WITH CTE_geoArea AS (
                         Base.GeographicArea GeoArea
                         JOIN Base.GeographicAreaType GeoAreaType ON GeoArea.GEOGRAPHICAREATYPEID = GeoAreaType.GEOGRAPHICAREATYPEID
                     ),
+                    -- Insert Action
                     CTE_Action_1 AS (
                         SELECT
                             CTE_geoArea.GeographicAreaID,
@@ -68,6 +69,7 @@ select_statement := $$WITH CTE_geoArea AS (
                         WHERE
                             GeoArea.GeographicAreaID IS NULL
                     ),
+                    -- Update Action
                     CTE_Action_2 AS (
                         SELECT
                             CTE_geoArea.GeographicAreaID,
@@ -93,14 +95,14 @@ select_statement := $$WITH CTE_geoArea AS (
                         A0.GEOGRAPHICAREACODE,
                         A0.GEOGRAPHICAREATYPECODE,
                         A0.GeographicAreaValue,
-                        IFNULL(
-                            A2.ActionCode,
-                            IFNULL(A1.ActionCode, A0.ActionCode)
-                        ) AS ActionCode
+                        IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
                     FROM
                         CTE_geoArea A0
                         LEFT JOIN CTE_ACTION_1 A1 ON A0.GeographicAreaID = A1.GeographicAreaID
-                        LEFT JOIN CTE_ACTION_2 A2 ON A0.GeographicAreaID = A2.GeographicAreaID$$;
+                        LEFT JOIN CTE_ACTION_2 A2 ON A0.GeographicAreaID = A2.GeographicAreaID
+                    WHERE 
+                        IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
+                    $$;
 
 --- Update Statement
 update_statement := ' UPDATE 

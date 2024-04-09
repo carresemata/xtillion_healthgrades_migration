@@ -72,6 +72,7 @@ select_statement := select_statement ||
                     		join Base.MedicalTermType mtt ON mt.MedicalTermTypeID = mtt.MedicalTermTypeID and mtt.MedicalTermTypeCode = 'Specialty'
                     
                     ),
+                    -- Insert Action
                     CTE_Action_1 AS (
                         SELECT 
                             cte.OfficeToSpecialtyId,
@@ -80,6 +81,7 @@ select_statement := select_statement ||
                         JOIN Mid.OfficeSpecialty AS mid ON cte.OfficeToSpecialtyID = mid.OfficeToSpecialtyId 
                         WHERE cte.OfficeToSpecialtyId IS NULL
                     ),
+                    -- Update Action
                     CTE_Action_2 AS (
                         SELECT
                             cte.OfficeToSpecialtyId,
@@ -102,11 +104,11 @@ select_statement := select_statement ||
                         A0.Specialist,
                         A0.Specialists,
                         A0.LegacyKey,
-                        IFNULL(A2.ActionCode,IFNULL(A1.ActionCode, A0.ActionCode)) AS ActionCode
+                        IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
                     FROM CTE_OfficeSpecialty AS A0
                     LEFT JOIN CTE_Action_1 AS A1 ON A0.OfficeToSpecialtyId = A1.OfficeToSpecialtyId
                     LEFT JOIN CTE_Action_2 AS A2 ON A0.OfficeToSpecialtyId = A2.OfficeToSpecialtyId
-                    WHERE IFNULL(A2.ActionCode, IFNULL(A1.ActionCode, A0.ActionCode)) <> 0
+                    WHERE IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
                     $$;
 
 --- Update Statement
