@@ -30,7 +30,6 @@ DECLARE
 delta_select_statement STRING; -- CTE and Select statement for delta
 select_statement STRING; -- CTE and Select statement for the Merge
 update_statement STRING; -- Main Update statement for the Merge
-update_statement_hex STRING; -- Update statement to replace hex chars
 insert_statement STRING; -- Insert statement for the Merge
 merge_statement STRING; -- Merge statement to final table
 status STRING; -- Status monitoring
