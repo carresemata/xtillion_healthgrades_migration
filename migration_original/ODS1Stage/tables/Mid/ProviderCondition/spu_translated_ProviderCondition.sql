@@ -4,6 +4,7 @@ LANGUAGE SQL
 EXECUTE AS CALLER
 AS 
 
+DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
@@ -21,7 +22,6 @@ AS
 --------------- 1. Declaring variables ------------------
 ---------------------------------------------------------
 
-DECLARE
 
 select_statement STRING; 
 insert_statement STRING;

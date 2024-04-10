@@ -108,7 +108,7 @@ select_statement := select_statement ||
                                 2 AS ActionCode
                             FROM
                                 CTE_ProviderSanction AS cte
-                                LEFT JOIN Mid.ProviderSanction AS mid ON cte.ProviderSanctionID = mid.ProviderSanctionID
+                                JOIN Mid.ProviderSanction AS mid ON cte.ProviderSanctionID = mid.ProviderSanctionID
                            WHERE 
                                 MD5(IFNULL(cte.ProviderID::VARCHAR,'')) <> MD5(IFNULL(mid.ProviderID::VARCHAR,'')) OR
                                 MD5(IFNULL(cte.SanctionDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionDescription::VARCHAR,'')) OR

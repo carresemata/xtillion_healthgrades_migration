@@ -98,7 +98,7 @@ select_statement := select_statement ||
                                 cte.ProviderToEducationInstitutionID,
                                 2 AS ActionCode
                             FROM CTE_ProviderEducation AS cte
-                            LEFT JOIN Mid.ProviderEducation AS mid 
+                            JOIN Mid.ProviderEducation AS mid 
                                 ON cte.ProviderToEducationInstitutionID = mid.ProviderToEducationInstitutionID 
                             WHERE 
                                 

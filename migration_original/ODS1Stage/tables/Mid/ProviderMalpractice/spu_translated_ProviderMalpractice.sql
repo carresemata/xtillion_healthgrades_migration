@@ -105,7 +105,7 @@ select_statement := select_statement ||
                                 2 AS ActionCode
                             FROM
                                 CTE_ProviderMalpractice AS cte
-                                LEFT JOIN Mid.ProviderMalpractice AS mid ON cte.ProviderMalpracticeID = mid.ProviderMalpracticeID
+                                JOIN Mid.ProviderMalpractice AS mid ON cte.ProviderMalpracticeID = mid.ProviderMalpracticeID
                             WHERE
                                 MD5(IFNULL(cte.ProviderID::VARCHAR, '')) <> MD5(IFNULL(mid.ProviderID::VARCHAR, ''))
                                 OR MD5(IFNULL(cte.MalpracticeClaimTypeCode::VARCHAR, '')) <> MD5(IFNULL(mid.MalpracticeClaimTypeCode::VARCHAR, ''))

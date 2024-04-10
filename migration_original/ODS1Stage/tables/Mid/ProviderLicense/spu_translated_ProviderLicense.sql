@@ -93,7 +93,7 @@ select_statement := select_statement ||
                             2 AS ActionCode
                         FROM
                             CTE_ProviderLicense AS cte
-                            LEFT JOIN Mid.ProviderLicense AS mid ON cte.ProviderID = mid.ProviderID
+                            JOIN Mid.ProviderLicense AS mid ON cte.ProviderID = mid.ProviderID
                         WHERE
                             MD5(IFNULL(cte.LicenseNumber::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseNumber::VARCHAR, ''))
                             OR MD5(IFNULL(cte.LicenseEffectiveDate::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseEffectiveDate::VARCHAR, ''))

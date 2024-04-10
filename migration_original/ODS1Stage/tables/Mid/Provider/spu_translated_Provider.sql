@@ -4,6 +4,7 @@ LANGUAGE SQL
 EXECUTE AS CALLER
 AS 
 
+DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
@@ -22,7 +23,7 @@ AS
 --------------- 1. Declaring variables ------------------
 ---------------------------------------------------------
 
-DECLARE
+
 create_temp STRING; 
 insert_temp STRING; -- delta logic of insert to temporary table
 join_temp_delta STRING;
