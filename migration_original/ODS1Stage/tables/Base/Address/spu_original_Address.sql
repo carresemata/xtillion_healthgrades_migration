@@ -125,7 +125,7 @@ if object_id('tempdb..#swimlane') is not null drop table #swimlane
 	update	#swimlane
 	set		City = left(ltrim(rtrim(City)),len(City)-1)
 	where	ltrim(rtrim(City)) like '%,'
-
+ 
 	update		T
 	set			State = S.State
 	from		#swimlane T
