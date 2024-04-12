@@ -211,8 +211,8 @@ merge_statement_2 := $$ MERGE INTO Base.Address as target USING
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement_1 ;
 EXECUTE IMMEDIATE merge_statement_2 ;
+EXECUTE IMMEDIATE merge_statement_1 ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
