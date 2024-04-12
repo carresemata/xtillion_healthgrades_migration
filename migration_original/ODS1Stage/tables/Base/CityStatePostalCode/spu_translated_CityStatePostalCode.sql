@@ -38,50 +38,19 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement_1 := $$ WITH CTE_OfficeJSON AS (
-                            SELECT
-                                Process.CREATED_DATETIME AS CREATE_DATE,
-                                -- Process.RELTIO_ID AS ReltioEntityId,
-                                Process.REF_OFFICE_CODE AS OfficeCode,
-                                -- Process.OfficeID,
-                                Process.OFFICE_PROFILE:ADDRESS AS OfficeJSONAddress,
-                                Process.OFFICE_PROFILE:DEMOGRAPHICS AS OfficeJSONDemographics,
-                                    TO_VARCHAR(OfficeJSONAddress[0].ADDRESS_TYPE_CODE) AS AddressTypeCode,
-                                    TO_VARCHAR(OfficeJSONDemographics[0].OFFICE_NAME) AS OfficeName,
-                                    -- TO_NUMBER(OfficeJSON[0].RANK) AS AddressRank,
-                                    TO_VARCHAR(OfficeJSONAddress[0].ADDRESS_LINE_1) AS AddressLine1,
-                                    TO_VARCHAR(OfficeJSONAddress[0].ADDRESS_LINE_2) AS AddressLine2,
-                                    TO_VARCHAR(OfficeJSONAddress[0].SUITE) AS Suite,
-                                    TO_VARCHAR(OfficeJSONAddress[0].CITY) AS City,
-                                    TO_VARCHAR(OfficeJSONAddress[0].STATE) AS State,
-                                    TO_VARCHAR(OfficeJSONAddress[0].ZIP) AS PostalCode,
-                                    TO_VARCHAR(OfficeJSONAddress[0].LATITUDE) AS Latitude,
-                                    TO_VARCHAR(OfficeJSONAddress[0].LONGITUDE) AS Longitude,
-                                    TO_VARCHAR(OfficeJSONAddress[0].TIME_ZONE) AS TimeZone,
-                                    -- TO_BOOLEAN(OfficeJSON[0].DO_SUPPRESS) AS DoSuppress,
-                                    -- TO_BOOLEAN(OfficeJSON[0].IS_DERIVED) AS IsDerived,
-                                    TO_TIMESTAMP_NTZ(OfficeJSONAddress[0].UPDATED_DATETIME) AS LastUpdateDate,
-                                    TO_VARCHAR(OfficeJSONDemographics[0].OFFICE_CODE) AS OfficeCode,
-                                    TO_VARCHAR(OfficeJSONDemographics[0].DATA_SOURCE_CODE) AS SourceCode
+select_statement_1 := $$ SELECT DISTINCT
+                                CASE WHEN TRIM(Address_City) LIKE '%,' THEN LEFT(TRIM(Address_City), LENGTH(Address_City)-1) ELSE Address_City END AS City,
+                                Address_State AS State,
+                                Address_PostalCode AS PostalCode
                             FROM
-                                -- Raw.OfficeProfileProcessingDeDup AS DeDup
-                                Raw.OFFICE_PROFILE_PROCESSING AS Process 
+                                Raw.OFFICE_PROFILE_JSON
                             WHERE
-                                Process.OFFICE_PROFILE IS NOT NULL AND 
-                                OfficeJSONAddress IS NOT NULL AND
-                                OfficeJSONDemographics IS NOT NULL AND 
-                                -- IFNULL(DoSuppress, 0) = 0 
-                                    NULLIF(City,'') IS NOT NULL 
-                                    AND NULLIF(State,'') IS NOT NULL 
-                                    AND NULLIF(PostalCode,'') IS NOT NULL
-                                    AND LENGTH(TRIM(UPPER(AddressLine1)) || IFNULL(TRIM(UPPER(AddressLine2)),'') || IFNULL(TRIM(UPPER(Suite)),'')) > 0
-                                        
-                            )
-                            SELECT DISTINCT
-                                    CASE WHEN TRIM(City) LIKE '%,' THEN LEFT(TRIM(City), LENGTH(City)-1) ELSE City END AS City,
-                                    State,
-                                    PostalCode
-                            FROM CTE_OfficeJSON $$;
+                                OFFICE_PROFILE IS NOT NULL AND
+                                    NULLIF(Address_City,'') IS NOT NULL 
+                                    AND NULLIF(Address_State,'') IS NOT NULL 
+                                    AND NULLIF(Address_PostalCode,'') IS NOT NULL
+                                    AND LENGTH(TRIM(UPPER(Address_AddressLine1)) || IFNULL(TRIM(UPPER(Address_AddressLine2)),'') || IFNULL(TRIM(UPPER(Address_Suite)),'')) > 0
+                                         $$;
 
 
 
@@ -101,48 +70,20 @@ insert_statement_1 := ' INSERT (
                                 CURRENT_TIMESTAMP()
                         )';
 
-select_statement_2 := $$ WITH CTE_FacilityJSON AS (
-                                SELECT
-                                    Facility.FacilityID,
-                                    Process.CREATED_DATETIME AS CREATE_DATE,
-                                    -- Process.RELTIO_ID AS ReltioEntityId,
-                                    Process.REF_FACILITY_CODE AS FacilityCode,
-                                    -- Process.FacilityID,
-                                    Process.FACILITY_PROFILE:ADDRESS AS FacilityJSONAddress,
-                                    Process.FACILITY_PROFILE:DEMOGRAPHICS AS FacilityJSONDemographics,
-                                        TO_VARCHAR(FacilityJSONAddress[0].ADDRESS_LINE_1) AS AddressLine1,
-                                        TO_VARCHAR(FacilityJSONAddress[0].CITY) AS City,
-                                        TO_VARCHAR(FacilityJSONAddress[0].STATE) AS State,
-                                        -- TO_VARCHAR(FacilityJSONAddress[0].COUNTRY) AS Country,
-                                        TO_VARCHAR(FacilityJSONAddress[0].ZIP) AS PostalCode,
-                                        TO_VARCHAR(FacilityJSONAddress[0].LATITUDE) AS Latitude,
-                                        TO_VARCHAR(FacilityJSONAddress[0].LONGITUDE) AS Longitude,
-                                        TO_TIMESTAMP_NTZ(FacilityJSONAddress[0].UPDATED_DATETIME) AS LastUpdateDate,
-                                        TO_VARCHAR(FacilityJSONDemographics[0].DATA_SOURCE_CODE) AS SourceCode
+select_statement_2 := $$ SELECT DISTINCT
+                                    Address_City AS City,
+                                    Address_State AS State,
+                                    Address_PostalCode AS PostalCode,
+                                    Address_Latitude AS Latitude,
+                                    Address_Longitude AS Longitude
                                 FROM
-                                    -- Raw.FacilityProfileProcessingDeDup AS DeDup
-                                    Raw.FACILITY_PROFILE_PROCESSING AS Process 
-                                JOIN Base.Facility AS Facility ON Process.REF_FACILITY_CODE = Facility.FacilityCode
+                                    Raw.FACILITY_PROFILE_JSON AS JSON 
+                                    JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                                 WHERE
-                                    Process.FACILITY_PROFILE IS NOT NULL AND 
-                                    FacilityJSONAddress IS NOT NULL AND
-                                    FacilityJSONDemographics IS NOT NULL AND 
-                                        NULLIF(City,'') IS NOT NULL 
-                                        AND NULLIF(State,'') IS NOT NULL 
-                                        AND NULLIF(PostalCode,'') IS NOT NULL)
-                                SELECT DISTINCT 
-                                    FacilityID,
-                                    AddressLine1,
-                                    City,
-                                    State,
-                                    -- Country,
-                                    PostalCode,
-                                    Latitude,
-                                    Longitude,
-                                    SourceCode,
-                                    FacilityCode,
-                                    ROW_NUMBER() OVER(PARTITION BY FacilityID ORDER BY CREATE_DATE DESC) AS RowRank
-                                FROM CTE_FacilityJSON $$;
+                                    JSON.FACILITY_PROFILE IS NOT NULL AND
+                                    NULLIF(City,'') IS NOT NULL 
+                                    AND NULLIF(State,'') IS NOT NULL 
+                                    AND NULLIF(PostalCode,'') IS NOT NULL $$;
 
 insert_statement_2 := $$INSERT (
                             CityStatePostalCodeId, 
@@ -203,4 +144,3 @@ EXCEPTION
 
     
 END;
-
