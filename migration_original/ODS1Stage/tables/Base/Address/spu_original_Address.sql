@@ -1,4 +1,4 @@
---- 1. etl_spuMergeFacilityAddress (snowflake db) 
+--- 1. etl_spuMergeFacilityAddress (snowflake db) line 72
 
 if object_id('tempdb..#swimlane') is not null drop table #swimlane
         select	distinct x.FacilityID
@@ -70,7 +70,7 @@ if object_id('tempdb..#swimlane') is not null drop table #swimlane
 
 
 
- --------------- 2. etl_spuMergeOfficeAddress (snowflake db)
+ --------------- 2. etl_spuMergeOfficeAddress (snowflake db) (line 61)
  exec etl.spuMergeCityStatePostalCode
 
 	if object_id('tempdb..#SwimLane') is not null drop table #SwimLane
@@ -125,7 +125,7 @@ if object_id('tempdb..#swimlane') is not null drop table #swimlane
 	update	#swimlane
 	set		City = left(ltrim(rtrim(City)),len(City)-1)
 	where	ltrim(rtrim(City)) like '%,'
-
+ 
 	update		T
 	set			State = S.State
 	from		#swimlane T
@@ -161,3 +161,6 @@ if object_id('tempdb..#swimlane') is not null drop table #swimlane
 		set		c.AddressCode = 'AD'+right(convert(varchar(50),convert(binary(20),AddressInt,0),1),10)
 		from	ODS1Stage.Base.Address as c
 		where	c.AddressCode is null
+
+
+--  ODSFix.spuOfficeDuplicateSuiteAddress (line 155)
