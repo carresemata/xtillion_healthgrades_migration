@@ -75,7 +75,7 @@ insert_statement := ' INSERT
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Dev.ProviderEmail as target USING 
+merge_statement := ' MERGE INTO Base.ProviderEmail as target USING 
                    ('||select_statement||') as source 
                    ON source.Providerid = target.Providerid
                    WHEN MATCHED THEN DELETE
