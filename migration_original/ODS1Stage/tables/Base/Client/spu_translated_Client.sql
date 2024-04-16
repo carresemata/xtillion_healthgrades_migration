@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_BASE_CLIENT(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_CLIENT() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -36,35 +36,31 @@ BEGIN
 --- Select Statement
 -- If no conditionals:
 select_statement := $$SELECT
-        DISTINCT x.ClientCode,
+        DISTINCT swimlane.ClientCode,
         c.ClientID,
         case
-            when x.CustomerName is null
-            and c.ClientName is null then x.ClientCode
-            when x.CustomerName is null
+            when swimlane.CustomerName is null
+            and c.ClientName is null then swimlane.ClientCode
+            when swimlane.CustomerName is null
             and c.ClientName is not null then c.ClientName
-            else x.CustomerName
+            else swimlane.CustomerName
         end as ClientName,
-        ifnull(x.LastUpdateDate, current_timestamp()) as LastUpdateDate,
-        ifnull(x.SourceCode, 'Profisee') as SourceCode
+        ifnull(swimlane.LastUpdateDate, current_timestamp()) as LastUpdateDate,
+        ifnull(swimlane.SourceCode, 'Profisee') as SourceCode
     FROM
-        base.swimlane_base_client AS x
-        INNER JOIN ODS1_Stage.Base.Client AS c ON c.ClientCode = x.ClientCode QUALIFY dense_rank() over(
-            partition by x.CustomerProductCode
+        base.swimlane_base_client AS swimlane
+        INNER JOIN ODS1_Stage.Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
+            partition by swimlane.CustomerProductCode
             order by
-                x.created_datetime desc
+                swimlane.created_datetime desc
         ) = 1$$;
 
 --- Update Statement
 update_statement := '
-update
-    Base.Client
-set
-    ClientName = s.ClientName,
-    LastUpdateDate = s.LastUpdateDate
-from
-    (' || select_statement || ') as s
-    inner join Base.Client as p on p.ClientID = s.ClientID';;
+UPDATE
+SET
+    ClientName = source.ClientName,
+    LastUpdateDate = source.LastUpdateDate';
 
 --- Insert Statement
 insert_statement := ' insert
@@ -92,6 +88,7 @@ VALUES
 merge_statement := ' MERGE INTO BASE.CLIENT as target USING 
                    ('||select_statement||') as source 
                    ON source.clientid = target.clientid
+                   WHEN MATCHED THEN '||update_statement||'
                    WHEN NOT MATCHED AND source.clientid IS NOT NULL
                     AND source.clientcode IS NOT NULL THEN'||insert_statement;
                    
@@ -99,7 +96,6 @@ merge_statement := ' MERGE INTO BASE.CLIENT as target USING
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE update_statement;                    
 EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
@@ -116,3 +112,7 @@ EXCEPTION
           status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
           RETURN status;
 END;
+
+CALL BASE.SP_LOAD_CLIENT();
+
+
