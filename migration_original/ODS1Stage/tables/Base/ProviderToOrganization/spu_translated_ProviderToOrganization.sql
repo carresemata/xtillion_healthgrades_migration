@@ -44,6 +44,7 @@ select_statement := $$
                         CURRENT_USER() AS InsertedBy
                     FROM Raw.PROVIDER_PROFILE_JSON AS JSON
                     LEFT JOIN Base.Provider AS p ON p.ProviderCode = JSON.ProviderCode
+                    WHERE p.ProviderID IS NOT NULL
                     $$;
 
 
