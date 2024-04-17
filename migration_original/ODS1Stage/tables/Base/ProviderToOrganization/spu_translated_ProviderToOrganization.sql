@@ -8,7 +8,7 @@ AS DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.ProviderToOrganization depends on:
--- Raw.PROVIDER_PROFILE_JSON
+-- Raw.Provider_Profile_JSON
 -- Base.Provider
 
 ---------------------------------------------------------
@@ -34,7 +34,8 @@ select_statement := $$
                     SELECT
                         IFNULL(JSON.Organization_SourceCode, 'Profisee') AS SourceCode,
                         UUID_STRING() AS ProviderToOrganizationID,
-                        p.ProviderID,
+                        p.ProviderID AS ProviderID,
+                        JSON.ProviderCode AS ProviderCode,
                         -- OrganizationID,
                         -- PositionID,
                         -- PositionStartDate,
@@ -42,7 +43,7 @@ select_statement := $$
                         JSON.Organization_PositionRank AS PositionRank,
                         SYSDATE() AS LastUpdateDate,
                         CURRENT_USER() AS InsertedBy
-                    FROM Raw.PROVIDER_PROFILE_JSON AS JSON
+                    FROM Raw.VW_PROVIDER_PROFILE AS JSON
                     LEFT JOIN Base.Provider AS p ON p.ProviderCode = JSON.ProviderCode
                     WHERE p.ProviderID IS NOT NULL
                     $$;
@@ -53,6 +54,7 @@ insert_statement := $$
                        (   
                         SourceCode,
                         ProviderToOrganizationID,
+                        ProviderID,
                         -- OrganizationID,
                         -- PositionID,
                         -- PositionStartDate,
@@ -65,6 +67,7 @@ insert_statement := $$
                         (   
                         source.SourceCode,
                         source.ProviderToOrganizationID,
+                        source.ProviderID,
                         -- OrganizationID,
                         -- PositionID,
                         -- PositionStartDate,
@@ -81,7 +84,7 @@ insert_statement := $$
 
 merge_statement := $$ MERGE INTO Base.ProviderToOrganization as target 
                     USING ($$||select_statement||$$) as source 
-                   ON source.Providerid = target.Providerid
+                   ON source.ProviderId = target.ProviderId
                    WHEN MATCHED THEN DELETE
                    WHEN NOT MATCHED THEN $$ ||insert_statement;
 
