@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_PROVIDERTOSPECIALTY()
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_PROVIDERTOPROVIDERTYPE()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -8,7 +8,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderToSpecialty depends on: 
+-- Base.ProviderToProviderType depends on: 
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
 
@@ -35,76 +35,45 @@ BEGIN
 
 --- Select Statement
 select_statement := $$ SELECT
-                            P.ProviderId,
-                            JSON.Specialty_SpecialtyCode AS SpecialtyID,
-                            IFNULL(JSON.Specialty_SourceCode, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.Specialty_LastUpdatedate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            JSON.Specialty_SpecialtyRank AS SpecialtyRank,
-                            IFNULL(JSON.Specialty_SpecialtyRankCalculated, 2147483647) AS SpecialtyRankCalculated,
-                            JSON.Specialty_IsSearchable AS IsSearchable,
-                            IFNULL(JSON.Specialty_IsSearchableCalculated, 1) AS IsSearchableCalculated,
-                            IFNULL(JSON.Specialty_IsSpecialtyRedundant, 0) AS SpecialtyIsRedundant,
-                            JSON.Specialty_SpecialtyDCPCount AS SpecialtyDCPCount,
-                            JSON.Specialty_SpecialtyDCPMinFillThreshold AS SpecialtyDCPMinFillThreshold,
-                            JSON.Specialty_ProviderSpecialtyDCPCount AS ProviderSpecialtyDCPCount,
-                            JSON.Specialty_ProviderSpecialtyAveragePercentile AS ProviderSpecialtyAveragePercentile,
-                            JSON.Specialty_IsMeetsLowThreshold AS MeetsLowThreshold,
-                            JSON.Specialty_ProviderRawSpecialtyScore AS ProviderRawSpecialtyScore,
-                            JSON.Specialty_ScaledSpecialtyBoost AS ScaledSpecialtyBoost,
+                            JSON.ProviderCode AS ProviderId,
+                            IFNULL(JSON.ProviderType_ProviderTypeCode, 'ALT') AS ProviderTypeID,
+                            IFNULL(JSON.ProviderType_SourceCode, 'Profisee') AS SourceCode,
+                            IFNULL(JSON.ProviderType_ProviderTypeRankCalculated, 1) AS ProviderTypeRank,
+                            2147483647 AS ProviderTypeRankCalculated,
+                            IFNULL(JSON.ProviderType_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate    
                         FROM Raw.PROVIDER_PROFILE_JSON AS JSON
-                             LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                         WHERE
-                             PROVIDER_PROFILE IS NOT NULL
-                             AND Specialty_SpecialtyCode IS NOT NULL
-                             AND ProviderID IS NOT NULL 
-                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, Specialty_SpecialtyCode ORDER BY Specialty_SpecialtyRankCalculated, CREATE_DATE DESC) = 1$$;
+                            PROVIDER_PROFILE IS NOT NULL
+                            AND ProviderType_ProviderTypeCode IS NOT NULL
+                            AND ProviderID IS NOT NULL 
+                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, IFNULL(ProviderType_ProviderTypeCode, 'ALT') ORDER BY CREATE_DATE DESC) = 1$$;
 
 
 
 --- Insert Statement
 insert_statement := ' INSERT  
-                        (ProviderToSpecialtyID,
+                        (ProviderToProviderTypeID,
                         ProviderID,
-                        SpecialtyID,
+                        ProviderTypeID,
                         SourceCode,
-                        LastUpdateDate,
-                        SpecialtyRank,
-                        SpecialtyRankCalculated,
-                        IsSearchable,
-                        IsSearchableCalculated,
-                        SpecialtyIsRedundant,
-                        SpecialtyDCPCount,
-                        SpecialtyDCPMinFillThreshold,
-                        ProviderSpecialtyDCPCount,
-                        ProviderSpecialtyAveragePercentile,
-                        MeetsLowThreshold,
-                        ProviderRawSpecialtyScore,
-                        ScaledSpecialtyBoost)
+                        ProviderTypeRank,
+                        ProviderTypeRankCalculated,
+                        LastUpdateDate)
                       VALUES 
                         (UUID_STRING(),
                         source.ProviderID,
-                        source.SpecialtyID,
+                        source.ProviderTypeID,
                         source.SourceCode,
-                        source.LastUpdateDate,
-                        source.SpecialtyRank,
-                        source.SpecialtyRankCalculated,
-                        source.IsSearchable,
-                        source.IsSearchableCalculated,
-                        source.SpecialtyIsRedundant,
-                        source.SpecialtyDCPCount,
-                        source.SpecialtyDCPMinFillThreshold,
-                        source.ProviderSpecialtyDCPCount,
-                        source.ProviderSpecialtyAveragePercentile,
-                        source.MeetsLowThreshold,
-                        source.ProviderRawSpecialtyScore,
-                        source.ScaledSpecialtyBoost)';
+                        source.ProviderTypeRank,
+                        source.ProviderTypeRankCalculated,
+                        source.LastUpdateDate)';
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.ProviderToSpecialty as target USING 
+merge_statement := ' MERGE INTO Base.ProviderToProviderType as target USING 
                    ('||select_statement||') as source 
                    ON source.Providerid = target.Providerid
                    WHEN MATCHED THEN DELETE
