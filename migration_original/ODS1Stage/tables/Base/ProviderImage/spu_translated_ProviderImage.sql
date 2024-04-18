@@ -12,6 +12,9 @@ DECLARE
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
 --- Base.MediaImageHost
+--- Base.MediaImageType
+--- Base.MediaSize
+--- Base.MediaReviewLevel
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -37,20 +40,24 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
-                            IFNULL(JSON.Image_MediaImageTypeCode, 'PHYSPHOT') AS MediaImageTypeID,
+                            MT.MediaImageTypeID,
                             JSON.Image_ImageFileName AS FileName,
-                            JSON.Image_MediaSizeCode AS MediaSizeID,
-                            JSON.Image_MediaReviewLevelCode AS MediaReviewLevelID,
+                            MS.MediaSizeID,
+                            MRL.MediaReviewLevelID,
                             IFNULL(JSON.Image_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.Image_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            JSON.Image_MediaContextTypeCode AS MediaContextTypeID,
+                            MCT.MediaContextTypeID,
                             M.MediaImageHostID,
                             JSON.Image_Identifier AS ExternalIdentifier,
                             JSON.Image_ImagePath AS ImagePath
                         FROM
                             Raw.VW_PROVIDER_PROFILE AS JSON
-                            JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                            JOIN Base.MediaImageHost AS M ON JSON.Image_MediaImageHostCode = M.MediaImageHostCode
+                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                            LEFT JOIN Base.MediaImageHost AS M ON JSON.Image_MediaImageHostCode = M.MediaImageHostCode
+                            LEFT JOIN Base.MediaImageType AS MT ON MT.MediaImageTypeCode = JSON.Image_MediaImageTypeCode
+                            LEFT JOIN Base.MediaSize AS MS ON MS.MediaSizeCode = JSON.Image_MediaSizeCode
+                            LEFT JOIN Base.MediaReviewLevel AS MRL ON MRL.MediaReviewLevelCode = JSON.Image_MediaReviewLevelCode
+                            LEFT JOIN Base.MediaContextType AS MCT ON MCT.MediaContextTypeCode = JSON.Image_MediaContextTypeCode    
                         WHERE
                             PROVIDER_PROFILE IS NOT NULL
                             AND Image_ImageFileName IS NOT NULL
