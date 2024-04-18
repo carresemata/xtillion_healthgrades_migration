@@ -12,6 +12,7 @@ DECLARE
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
 --- Base.ProviderMalpractice
+--- Base.State
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -38,7 +39,7 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
-                            JSON.License_State AS StateID, 
+                            S.StateID, 
                             JSON.License_LicenseNumber AS LicenseNumber,
                             JSON.License_LicenseTerminationDate AS LicenseTerminationDate,
                             IFNULL(JSON.License_SourceCode, 'Profisee') AS SourceCode,
@@ -47,6 +48,7 @@ select_statement := $$ SELECT DISTINCT
                         FROM
                             Raw.VW_PROVIDER_PROFILE AS JSON
                             LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                            LEFT JOIN Base.State AS S ON JSON.License_State = S.State
                         WHERE   
                             PROVIDER_PROFILE IS NOT NULL AND
                             IFNULL(LicenseTerminationDate, CURRENT_TIMESTAMP()) >= DATEADD('DAY', -90, CURRENT_TIMESTAMP())
