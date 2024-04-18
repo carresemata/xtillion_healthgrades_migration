@@ -12,6 +12,9 @@ DECLARE
 --- FACILITY_PROFILE_PROCESSING
 --- Base.Facility
 --- Base.EntityType
+--- Base.MediaImageType
+--- Base.MediaSize
+--- Base.MediaReviewLevel
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -35,24 +38,27 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT 
+select_statement := $$ SELECT DISTINCT
                             SHA1(TO_VARCHAR(Facility.FacilityID) || Entity.EntityTypeCode || Image_TypeCode || Image_FileName) AS FacilityImageID,
                             Facility.FacilityId,
                             JSON.Image_FileName AS FileName,
                             JSON.Image_Path AS ImagePath,
-                            JSON.Image_TypeCode AS MediaImageTypeId,
-                            JSON.Image_SizeCode AS MediaSizeId,
-                            JSON.Image_ReviewLevel AS MediaReviewLevelID,
+                            MIT.MediaImageTypeId,
+                            MS.MediaSizeId,
+                            MRL.MediaReviewLevelID,
                             'MergeFacilityImage' AS SourceCode
                             
                         FROM Raw.VW_FACILITY_PROFILE AS JSON
-                        JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode 
-                        JOIN Base.EntityType Entity ON Entity.EntityTypeCode = 'FAC'
+                        LEFT JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode 
+                        LEFT JOIN Base.EntityType Entity ON Entity.EntityTypeCode = 'FAC'
+                        LEFT JOIN Base.MediaImageType AS MIT ON MIT.MediaImageTypeCode = JSON.Image_TypeCode
+                        LEFT JOIN Base.MediaSize AS MS ON MS.MediaSizeCode = JSON.Image_SizeCode
+                        LEFT JOIN Base.MediaReviewLevel AS MRL ON MRL.MediaReviewLevelCode = JSON.Image_ReviewLevel
                         WHERE 
                             FACILITY_PROFILE IS NOT NULL AND
                             FileName IS NOT NULL AND
                             FacilityID IS NOT NULL
-                        QUALIFY ROW_NUMBER() OVER(PARTITION BY Facility.FacilityID, MediaImageTypeID, MediaSizeid ORDER BY CREATE_DATE DESC) = 1$$;
+                        QUALIFY ROW_NUMBER() OVER(PARTITION BY Facility.FacilityID, MediaImageTypeID, MediaSizeid ORDER BY CREATE_DATE DESC) = 1 $$;
 
 
 

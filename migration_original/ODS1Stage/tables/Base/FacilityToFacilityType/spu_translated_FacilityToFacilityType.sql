@@ -37,7 +37,7 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             Facility.FacilityId,
-                            Type.FacilityTypeCode AS FacilityTypeId,
+                            Type.FacilityTypeId,
                             IFNULL(JSON.Facility_Type_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.Facility_Type_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate
                             
