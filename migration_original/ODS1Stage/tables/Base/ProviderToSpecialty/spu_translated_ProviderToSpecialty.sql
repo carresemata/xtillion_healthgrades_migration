@@ -11,6 +11,7 @@ DECLARE
 -- Base.ProviderToSpecialty depends on: 
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
+--- Base.Specialty
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -36,7 +37,7 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             P.ProviderId,
-                            JSON.Specialty_SpecialtyCode AS SpecialtyID,
+                            S.SpecialtyID,
                             IFNULL(JSON.Specialty_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.Specialty_LastUpdatedate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
                             JSON.Specialty_SpecialtyRank AS SpecialtyRank,
@@ -53,11 +54,12 @@ select_statement := $$ SELECT DISTINCT
                             JSON.Specialty_ScaledSpecialtyBoost AS ScaledSpecialtyBoost,
                         FROM Raw.VW_PROVIDER_PROFILE AS JSON
                              LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                             LEFT JOIN Base.Specialty AS S ON S.SpecialtyCode = JSON.Specialty_SpecialtyCode
                         WHERE
                              PROVIDER_PROFILE IS NOT NULL
-                             AND Specialty_SpecialtyCode IS NOT NULL
+                             AND SpecialtyID IS NOT NULL
                              AND ProviderID IS NOT NULL 
-                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, Specialty_SpecialtyCode ORDER BY Specialty_SpecialtyRankCalculated, CREATE_DATE DESC) = 1$$;
+                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, Specialty_SpecialtyCode ORDER BY Specialty_SpecialtyRankCalculated, CREATE_DATE DESC) = 1 $$;
 
 
 
