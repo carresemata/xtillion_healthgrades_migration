@@ -11,6 +11,7 @@ DECLARE
 -- Base.ProviderToProviderType depends on: 
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
+--- Base.ProviderType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -36,13 +37,14 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             P.ProviderId,
-                            IFNULL(JSON.ProviderType_ProviderTypeCode, 'ALT') AS ProviderTypeID,
+                            PT.ProviderTypeID,
                             IFNULL(JSON.ProviderType_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.ProviderType_ProviderTypeRankCalculated, 1) AS ProviderTypeRank,
                             2147483647 AS ProviderTypeRankCalculated,
                             IFNULL(JSON.ProviderType_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate    
                         FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                        LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                        LEFT JOIN Base.ProviderType AS PT ON PT.ProviderTypeCode = IFNULL(JSON.ProviderType_ProviderTypeCode, 'ALT')
                         WHERE
                             PROVIDER_PROFILE IS NOT NULL
                             AND ProviderType_ProviderTypeCode IS NOT NULL
