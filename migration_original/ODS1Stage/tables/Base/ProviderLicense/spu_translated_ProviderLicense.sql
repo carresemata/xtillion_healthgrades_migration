@@ -36,7 +36,7 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
                             JSON.License_State AS StateID, 
                             JSON.License_LicenseNumber AS LicenseNumber,
@@ -45,7 +45,7 @@ select_statement := $$ SELECT
                             IFNULL(JSON.License_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
                             JSON.License_LicenseTypeCode AS LicenseType
                         FROM
-                            Raw.PROVIDER_PROFILE_JSON AS JSON
+                            Raw.VW_PROVIDER_PROFILE AS JSON
                             LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                         WHERE   
                             PROVIDER_PROFILE IS NOT NULL AND
