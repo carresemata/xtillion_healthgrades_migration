@@ -25,9 +25,8 @@ DECLARE
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------
 ---------------------------------------------------------   
-   
-BEGIN
 
+BEGIN
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -36,8 +35,9 @@ BEGIN
 --- Select Statement
 -- If no conditionals:
 select_statement := $$SELECT
-        DISTINCT swimlane.ClientCode,
-        c.ClientID,
+         DISTINCT
+        swimlane.ClientCode,
+        c.clientid,
         case
             when swimlane.CustomerName is null
             and c.ClientName is null then swimlane.ClientCode
@@ -49,10 +49,10 @@ select_statement := $$SELECT
         ifnull(swimlane.SourceCode, 'Profisee') as SourceCode
     FROM
         base.swimlane_base_client AS swimlane
-        INNER JOIN ODS1_Stage.Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
-            partition by swimlane.CustomerProductCode
+        LEFT JOIN ODS1_Stage.Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
+            partition by swimlane.CLIENTCODE
             order by
-                swimlane.created_datetime desc
+                swimlane.LastUpdateDate desc
         ) = 1$$;
 
 --- Update Statement
@@ -96,6 +96,7 @@ merge_statement := ' MERGE INTO BASE.CLIENT as target USING
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
+-- EXECUTE IMMEDIATE update_statement;                    
 EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
@@ -112,7 +113,3 @@ EXCEPTION
           status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
           RETURN status;
 END;
-
-CALL BASE.SP_LOAD_CLIENT();
-
-
