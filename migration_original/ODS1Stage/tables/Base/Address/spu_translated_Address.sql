@@ -46,7 +46,7 @@ select_statement_1 := $$ SELECT DISTINCT
                                 CSPC.CityStatePostalCodeID 
                                 
                             FROM
-                                Raw.FACILITY_PROFILE_JSON AS JSON 
+                                Raw.VW_FACILITY_PROFILE AS JSON 
                                 JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                                 JOIN Base.CityStatePostalCode AS CSPC ON JSON.Address_City = CSPC.City AND JSON.Address_State = CSPC.State AND JSON.Address_PostalCode = CSPC.PostalCode 
                             WHERE
@@ -87,7 +87,7 @@ select_statement_2 := $$ SELECT DISTINCT
                                     JSON.Address_TimeZone AS TimeZone, 
                                     JSON.Address_Suite AS Suite
                             FROM
-                                Raw.OFFICE_PROFILE_JSON AS JSON 
+                                Raw.VW_OFFICE_PROFILE AS JSON 
                                 JOIN Base.CityStatePostalCode AS CSPC ON JSON.Address_PostalCode = CSPC.PostalCode AND JSON.Address_City = CSPC.City AND JSON.Address_State = CSPC.State
                                 
                             WHERE

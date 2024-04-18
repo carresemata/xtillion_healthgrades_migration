@@ -35,7 +35,7 @@ BEGIN
 
 --- Select Statement
 -- If no conditionals:
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                         Facility.FacilityId,
                         IFNULL(JSON.Hours_SourceCode, 'Profisee') AS SourceCode,
                         JSON.Hours_DaysOfWeek AS DaysOfWeekId,
@@ -45,7 +45,7 @@ select_statement := $$ SELECT
                         JSON.Hours_IsOpen24Hours AS FacilityIsOpen24Hours,
                         IFNULL(JSON.Hours_LastUpdateDate, CAST(CURRENT_TIMESTAMP() AS TIMESTAMP_NTZ(3))) AS LastUpdateDate
                     FROM
-                        Raw.FACILITY_PROFILE_JSON AS JSON
+                        Raw.VW_FACILITY_PROFILE AS JSON
                         JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                     WHERE
                         JSON.FACILITY_PROFILE IS NOT NULL AND

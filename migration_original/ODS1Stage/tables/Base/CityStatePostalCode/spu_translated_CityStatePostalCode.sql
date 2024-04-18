@@ -43,7 +43,7 @@ select_statement_1 := $$ SELECT DISTINCT
                                 Address_State AS State,
                                 Address_PostalCode AS PostalCode
                             FROM
-                                Raw.OFFICE_PROFILE_JSON
+                                Raw.VW_OFFICE_PROFILE
                             WHERE
                                 OFFICE_PROFILE IS NOT NULL AND
                                     NULLIF(Address_City,'') IS NOT NULL 
@@ -77,7 +77,7 @@ select_statement_2 := $$ SELECT DISTINCT
                                     Address_Latitude AS Latitude,
                                     Address_Longitude AS Longitude
                                 FROM
-                                    Raw.FACILITY_PROFILE_JSON AS JSON 
+                                    Raw.VW_FACILITY_PROFILE AS JSON 
                                     JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                                 WHERE
                                     JSON.FACILITY_PROFILE IS NOT NULL AND

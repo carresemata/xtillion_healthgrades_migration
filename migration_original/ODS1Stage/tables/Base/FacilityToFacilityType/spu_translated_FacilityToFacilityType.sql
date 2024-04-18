@@ -35,14 +35,14 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             Facility.FacilityId,
                             Type.FacilityTypeCode AS FacilityTypeId,
                             IFNULL(JSON.Facility_Type_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.Facility_Type_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate
                             
                         FROM
-                            Raw.FACILITY_PROFILE_JSON AS JSON
+                            Raw.VW_FACILITY_PROFILE AS JSON
                             JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                             JOIN Base.FacilityType AS Type ON Type.FacilityTypeCode = JSON.Facility_Type_Code
                         WHERE

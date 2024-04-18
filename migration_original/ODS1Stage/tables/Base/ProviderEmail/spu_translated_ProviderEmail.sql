@@ -33,7 +33,7 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             P.ProviderId,
                             JSON.Email_Email AS EmailAddress,
                             IFNULL(JSON.Email_EmailRank, 999) AS EmailRank,
@@ -41,7 +41,7 @@ select_statement := $$ SELECT
                             -- EmailTypeID
                             IFNULL(JSON.Email_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate
                         FROM
-                            Raw.PROVIDER_PROFILE_JSON AS JSON
+                            Raw.VW_PROVIDER_PROFILE AS JSON
                             JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                         WHERE 
                             PROVIDER_PROFILE IS NOT NULL AND
