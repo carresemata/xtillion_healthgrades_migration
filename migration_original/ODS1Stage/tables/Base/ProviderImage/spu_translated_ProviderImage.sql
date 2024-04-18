@@ -35,7 +35,7 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
                             IFNULL(JSON.Image_MediaImageTypeCode, 'PHYSPHOT') AS MediaImageTypeID,
                             JSON.Image_ImageFileName AS FileName,
@@ -48,7 +48,7 @@ select_statement := $$ SELECT
                             JSON.Image_Identifier AS ExternalIdentifier,
                             JSON.Image_ImagePath AS ImagePath
                         FROM
-                            Raw.PROVIDER_PROFILE_JSON AS JSON
+                            Raw.VW_PROVIDER_PROFILE AS JSON
                             JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                             JOIN Base.MediaImageHost AS M ON JSON.Image_MediaImageHostCode = M.MediaImageHostCode
                         WHERE
