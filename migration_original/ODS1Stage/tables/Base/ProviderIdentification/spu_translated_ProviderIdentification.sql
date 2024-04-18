@@ -34,7 +34,7 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
                             JSON.Identification_IdentificationTypeCode AS IdentificationTypeID,
                             JSON.Identification_Identifier AS IdentificationValue,
@@ -42,7 +42,7 @@ select_statement := $$ SELECT
                             JSON.Identification_SourceCode AS SourceCode,
                             JSON.Identification_LastUpdateDate AS LastUpdateDate
                         FROM
-                            Raw.PROVIDER_PROFILE_JSON AS JSON
+                            Raw.VW_PROVIDER_PROFILE AS JSON
                             JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                         WHERE
                             PROVIDER_PROFILE IS NOT NULL AND
