@@ -34,14 +34,14 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                             P.ProviderId,
                             IFNULL(JSON.ProviderType_ProviderTypeCode, 'ALT') AS ProviderTypeID,
                             IFNULL(JSON.ProviderType_SourceCode, 'Profisee') AS SourceCode,
                             IFNULL(JSON.ProviderType_ProviderTypeRankCalculated, 1) AS ProviderTypeRank,
                             2147483647 AS ProviderTypeRankCalculated,
                             IFNULL(JSON.ProviderType_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate    
-                        FROM Raw.PROVIDER_PROFILE_JSON AS JSON
+                        FROM Raw.VW_PROVIDER_PROFILE AS JSON
                             LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
                         WHERE
                             PROVIDER_PROFILE IS NOT NULL
