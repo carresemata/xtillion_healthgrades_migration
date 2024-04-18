@@ -11,6 +11,7 @@ DECLARE
 -- Base.ProviderIdentification depends on: 
 --- Raw.PROVIDER_PROFILE_PROCESSING
 --- Base.Provider
+--- Base.IdentificationType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -36,11 +37,15 @@ BEGIN
 --- Select Statement
 select_statement := $$ SELECT DISTINCT
                             P.ProviderID,
-                            JSON.Identification_IdentificationTypeCode AS IdentificationTypeID,
+                            I.IdentificationTypeID,
                             JSON.Identification_Identifier AS IdentificationValue,
                             JSON.Identification_ExpirationDate AS ExpirationDate,
                             JSON.Identification_SourceCode AS SourceCode,
                             JSON.Identification_LastUpdateDate AS LastUpdateDate
+                        FROM
+                            Raw.VW_PROVIDER_PROFILE AS JSON
+                            JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                            JOIN Base.IdentificationType AS I ON I.IdentificationTypeCode = JSON.Identification_IdentificationTypeCode
                         FROM
                             Raw.VW_PROVIDER_PROFILE AS JSON
                             JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
