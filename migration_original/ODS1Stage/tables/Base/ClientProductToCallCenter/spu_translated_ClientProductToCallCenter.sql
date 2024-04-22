@@ -7,7 +7,8 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
-    
+
+--- Base.ClientProductToCallCenter depends on:
 --- BASE.CLIENTPRODUCTTOCALLCENTER
 --- BASE.CLIENTTOPRODUCT
 --- BASE.CALLCENTER
@@ -19,7 +20,6 @@ DECLARE
 ---------------------------------------------------------
 
     select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
     insert_statement STRING; -- Insert statement for the Merge
     merge_statement STRING; -- Merge statement to final table
     status STRING; -- Status monitoring
@@ -38,39 +38,39 @@ BEGIN
 -- If no conditionals:
 select_statement := $$WITH cte_product_id_pdchsp AS (
         SELECT
-            z.ClientToProductID
+            CPCC.ClientToProductID
         FROM
-            Base.ClientProductToCallCenter AS z
-            JOIN Base.ClientToProduct AS y ON z.ClientToProductID = y.ClientToProductID
-            JOIN Base.CallCenter AS x ON z.CallCenterID = x.CallCenterID
-            JOIN Base.Product AS w ON y.ProductID = w.ProductID
+            Base.ClientProductToCallCenter AS CPCC
+            JOIN Base.ClientToProduct AS CTP ON CPCC.ClientToProductID = CTP.ClientToProductID
+            JOIN Base.CallCenter AS CC ON CPCC.CallCenterID = CC.CallCenterID
+            JOIN Base.Product AS P ON CTP.ProductID = P.ProductID
         WHERE
-            w.ProductCode IN ('MAP', 'PDCHSP')
+            P.ProductCode IN ('MAP', 'PDCHSP')
     )
     SELECT
-        a.ClientToProductID,
+        CP.ClientToProductID,
         '36334343-0000-0000-0000-000000000000' AS CallCenterID,
         1 AS ActiveFlag,
-        a.SourceCode,
+        CP.SourceCode,
         GETDATE() AS LastUpdateDate
     FROM
-        Base.ClientToProduct AS a
-        JOIN Base.Product AS b ON a.ProductID = b.ProductID
-        JOIN Base.Client AS c ON c.ClientID = a.ClientID
-        LEFT JOIN cte_product_id_pdchsp AS z ON a.ClientToProductID = z.ClientToProductID
+        Base.ClientToProduct AS CP
+        JOIN Base.Product AS P ON CP.ProductID = P.ProductID
+        JOIN Base.Client AS c ON c.ClientID = CP.ClientID
+        LEFT JOIN cte_product_id_pdchsp AS CTE ON CP.ClientToProductID = CTE.ClientToProductID
     WHERE
     (
-        b.ProductCode IN ('PDCHSP')
+        P.ProductCode IN ('PDCHSP')
         OR (
-            b.ProductCode IN ('MAP')
+            P.ProductCode IN ('MAP')
             AND ClientCode IN ('COMO', 'PAGE1SLN')
         )
     )
 $$;
 
 --- Insert Statement
-insert_statement := ' INSERT (ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
-    VALUES (Source.ClientToProductID, Source.CallCenterID, Source.ActiveFlag, Source.SourceCode, Source.LastUpdateDate)';
+insert_statement := ' INSERT (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
+    VALUES (UUID_String(),Source.ClientToProductID, Source.CallCenterID, Source.ActiveFlag, Source.SourceCode, Source.LastUpdateDate)';
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
@@ -80,13 +80,13 @@ insert_statement := ' INSERT (ClientToProductID, CallCenterID, ActiveFlag, Sourc
 merge_statement := ' MERGE INTO BASE.CLIENTPRODUCTTOCALLCENTER as target USING 
                    ('||select_statement||') as source 
                    ON source.ClientToProductID = target.ClientToProductID
+                   AND source.CallCenterID = target.CallCenterID
                    WHEN NOT MATCHED THEN'||insert_statement;
                    
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
--- EXECUTE IMMEDIATE update_statement;                    
 EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
