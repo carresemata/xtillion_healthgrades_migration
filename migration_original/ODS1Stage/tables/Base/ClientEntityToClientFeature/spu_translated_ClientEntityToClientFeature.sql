@@ -7,7 +7,8 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
-    
+
+--- Base.ClienttEntityToClientFeature depends on:
 --- BASE.SWIMLANE_BASE_CLIENT
 --- BASE.CLIENTFEATURE
 --- BASE.CLIENTFEATUREVALUE
@@ -57,7 +58,7 @@ cte_tmp_features as (
     where
         FeatureFCBFN = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCBFN' as ClientFeatureCode,
@@ -67,7 +68,7 @@ cte_tmp_features as (
     where
         FeatureFCBFN = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -77,7 +78,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVCLT = 'FVCLT'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -87,7 +88,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVFAC = 'FVFAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -97,7 +98,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVOFFICE = 'FVOFFICE'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
@@ -107,7 +108,7 @@ cte_tmp_features as (
     where
         FeatureFCDTP = 'FVPPN'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
@@ -117,7 +118,7 @@ cte_tmp_features as (
     where
         FeatureFCDTP = 'FVPTN'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
@@ -127,7 +128,7 @@ cte_tmp_features as (
     where
         FeatureFCMWC = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
@@ -137,7 +138,7 @@ cte_tmp_features as (
     where
         FeatureFCMWC = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
@@ -147,7 +148,7 @@ cte_tmp_features as (
     where
         FeatureFCNPA = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
@@ -157,7 +158,7 @@ cte_tmp_features as (
     where
         FeatureFCNPA = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -167,7 +168,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVCLT'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -177,7 +178,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVFAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -187,7 +188,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVOFFICE'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
@@ -197,7 +198,7 @@ cte_tmp_features as (
     where
         FeatureFCEPR = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
@@ -207,7 +208,7 @@ cte_tmp_features as (
     where
         FeatureFCEPR = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
@@ -217,7 +218,7 @@ cte_tmp_features as (
     where
         FeatureFCOOACP = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
@@ -227,7 +228,7 @@ cte_tmp_features as (
     where
         FeatureFCOOACP = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCLOT' as ClientFeatureCode,
@@ -237,7 +238,7 @@ cte_tmp_features as (
     where
         FeatureFCLOT = 'FVCUS'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCMAR' as ClientFeatureCode,
@@ -247,7 +248,7 @@ cte_tmp_features as (
     where
         FeatureFCMAR = 'FVFAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
@@ -257,7 +258,7 @@ cte_tmp_features as (
     where
         FeatureFCDOA = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
@@ -267,7 +268,7 @@ cte_tmp_features as (
     where
         FeatureFCDOA = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
@@ -277,7 +278,7 @@ cte_tmp_features as (
     where
         FeatureFCDOS_FVFAX = 'FVFAX'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
@@ -287,7 +288,7 @@ cte_tmp_features as (
     where
         FeatureFCDOS_FVMMPEML = 'FVMMPEML'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCEOARD' as ClientFeatureCode,
@@ -297,7 +298,7 @@ cte_tmp_features as (
     where
         FeatureFCEOARD = 'FVAQSTD'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOBT' as ClientFeatureCode,
@@ -307,7 +308,7 @@ cte_tmp_features as (
     where
         FeatureFCOBT = 'FVRAPT'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -317,7 +318,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVDFC = 'FVDFC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -327,7 +328,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVDPR = 'FVDPR'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -337,7 +338,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVMT = 'FVMT'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -347,7 +348,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVPSR = 'FVPSR'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOAS' as ClientFeatureCode,
@@ -357,7 +358,7 @@ cte_tmp_features as (
     where
         FeatureFCOAS = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCSPC' as ClientFeatureCode,
@@ -367,7 +368,7 @@ cte_tmp_features as (
     where
         FeatureFCSPC = 'FVABR1'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCPNI' as ClientFeatureCode,
@@ -377,7 +378,7 @@ cte_tmp_features as (
     where
         FeatureFCPNI = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
@@ -387,7 +388,7 @@ cte_tmp_features as (
     where
         FeatureFCPQM = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
@@ -397,7 +398,7 @@ cte_tmp_features as (
     where
         FeatureFCPQM = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -407,7 +408,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPOFFICE = 'FVCPOFFICE'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -417,7 +418,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOCC = 'FVCPTOCC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -427,7 +428,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOFAC = 'FVCPTOFAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -437,7 +438,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOPRAC = 'FVCPTOPRAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -447,7 +448,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOPROV = 'FVCPTOPROV'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -457,7 +458,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPRACOFF = 'FVPRACOFF'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -467,7 +468,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPROVFAC = 'FVPROVFAC'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -477,7 +478,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPROVOFF = 'FVPROVOFF'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
@@ -487,7 +488,7 @@ cte_tmp_features as (
     where
         FeatureFCOOPSR = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
@@ -497,7 +498,7 @@ cte_tmp_features as (
     where
         FeatureFCOOPSR = 'FVYES'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
@@ -507,7 +508,7 @@ cte_tmp_features as (
     where
         FeatureFCOOMT = 'FVNO'
         and RowRank = 1
-    union
+    UNION ALL
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
@@ -603,6 +604,4 @@ EXCEPTION
           status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
           RETURN status;
 END;
-
-
 
