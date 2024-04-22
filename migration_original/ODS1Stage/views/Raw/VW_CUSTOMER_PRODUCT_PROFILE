@@ -1,0 +1,266 @@
+CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_CUSTOMER_PRODUCT_PROFILE AS (
+SELECT
+    Process.MST_CUSTOMER_PRODUCT_PROFILE_ID AS MST_id,
+    Process.CREATED_DATETIME AS CREATE_DATE,
+    Process.REF_CUSTOMER_PRODUCT_CODE AS CustomerProductCode,
+    SPLIT_PART(CustomerProductCode, '-', 1) AS ClientCode,
+    SPLIT_PART(CustomerProductCode, '-', 2) AS ProductCode,
+    Process.CUSTOMER_PRODUCT_PROFILE,
+    -- Feature
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].CUSTOMER_NAME
+    ) AS Feature_CustomerName,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].QUEUE_SIZE
+    ) AS Feature_QueueSize,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].OAS_URL_PATH
+    ) AS Feature_OasUrlPath,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].REF_OAS_PARTNER_TYPE_CODE
+    ) AS Feature_RefOasPartnerTypeCode,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCBFN
+    ) AS Feature_FeatureFcbfn,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCBRL
+    ) AS Feature_FeatureFcbrl,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCCP_FVCLT
+    ) AS Feature_FeatureFcccpFvclt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCCP_FVFAC
+    ) AS Feature_FeatureFcccpFvfac,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCCP_FVOFFICE
+    ) AS Feature_FeatureFcccpFvoffice,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCLLOGO
+    ) AS Feature_FeatureFccllogo,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCWALL
+    ) AS Feature_FeatureFccwall,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCCLURL
+    ) AS Feature_FeatureFcclurl,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCDISLOC
+    ) AS Feature_FeatureFcdisloc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCDOA
+    ) AS Feature_FeatureFcdoa,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCDOS_FVFAX
+    ) AS Feature_FeatureFcdosFvfax,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCDOS_FVMMPEML
+    ) AS Feature_FeatureFcdosFvmmpeml,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCDTP
+    ) AS Feature_FeatureFcdtp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCEOARD
+    ) AS Feature_FeatureFceoard,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCEPR
+    ) AS Feature_FeatureFcepr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOOACP
+    ) AS Feature_FeatureFcooacp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCLOT
+    ) AS Feature_FeatureFclot,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCMAR
+    ) AS Feature_FeatureFcmar,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCMWC
+    ) AS Feature_FeatureFcmwc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCNPA
+    ) AS Feature_FeatureFcnpa,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOAS
+    ) AS Feature_FeatureFcoas,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOASURL
+    ) AS Feature_FeatureFcoasurl,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOASVT
+    ) AS Feature_FeatureFcoasvt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOBT
+    ) AS Feature_FeatureFcobt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCODC_FVDFC
+    ) AS Feature_FeatureFcodcFvdfc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCODC_FVDPR
+    ) AS Feature_FeatureFcodcFvdpr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCODC_FVMT
+    ) AS Feature_FeatureFcodcFvmt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCODC_FVPSR
+    ) AS Feature_FeatureFcodcFvpsr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCPNI
+    ) AS Feature_FeatureFcpni,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCPQM
+    ) AS Feature_FEATURE_FCPQM,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCPQM
+    ) AS Feature_FeatureFcpqm,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVCPOFFICE
+    ) AS Feature_FeatureFcrelFvcpoffice,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVCPTOCC
+    ) AS Feature_FeatureFcrelFvcptocc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVCPTOFAC
+    ) AS Feature_FeatureFcrelFvcptofac,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVCPTOPRAC
+    ) AS Feature_FeatureFcrelFvcptoprac,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVCPTOPROV
+    ) AS Feature_FeatureFcrelFvcptoprov,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVPRACOFF
+    ) AS Feature_FeatureFcrelFvpracoff,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVPROVFAC
+    ) AS Feature_FeatureFcrelFvprovfac,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCREL_FVPROVOFF
+    ) AS Feature_FeatureFcrelFvprovoff,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCSPC
+    ) AS Feature_FeatureFcspc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOOPSR
+    ) AS Feature_FeatureFcoopsr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_FCOOMT
+    ) AS Feature_FeatureFcoomt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_AUTODF
+    ) AS Feature_FeatureAutodf,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_PTP
+    ) AS Feature_FeaturePtp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_AUTODO
+    ) AS Feature_FeatureAutodo,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].FEATURE_AUTODP
+    ) AS Feature_FeatureAutodp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].ACTIVATION_FLAG
+    ) AS Feature_ActivationFlag,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].DATA_SOURCE_CODE
+    ) AS Feature_SourceCode,
+    TO_TIMESTAMP_NTZ(
+        Process.CUSTOMER_PRODUCT_PROFILE:FEATURE [0].UPDATED_DATETIME
+    ) AS Feature_LastUpdateDate,
+    
+    -- Display Partner
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].REF_DISPLAY_PARTNER_CODE
+    ) AS DisplayPartner_RefDisplayPartnerCode,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTDES
+    ) AS DisplayPartner_PhonePtdes,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTDESM
+    ) AS DisplayPartner_PhonePtdesm,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTDEST
+    ) AS DisplayPartner_PhonePtdest,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMTR
+    ) AS DisplayPartner_PhonePtmtr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMTRM
+    ) AS DisplayPartner_PhonePtmtrm,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMTRT
+    ) AS DisplayPartner_PhonePtmtrt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMWC
+    ) AS DisplayPartner_PhonePtmwc,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMWCM
+    ) AS DisplayPartner_PhonePtmwcm,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTMWCT
+    ) AS DisplayPartner_PhonePtmwct,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTPSR
+    ) AS DisplayPartner_PhonePtpsr,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTPSRM
+    ) AS DisplayPartner_PhonePtpmrm,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTPSRT
+    ) AS DisplayPartner_PhonePtPsrt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTHOS
+    ) AS DisplayPartner_PhonePtHos,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTHOSM
+    ) AS DisplayPartner_PhonePtHosM,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTHOST
+    ) AS DisplayPartner_PhonePtHost,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTPSRD
+    ) AS DisplayPartner_PhonePtPsrd,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTEMP
+    ) AS DisplayPartner_PhonePtEmp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTEMPM
+    ) AS DisplayPartner_PhonePtEmpM,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTEMPT
+    ) AS DisplayPartner_PhonePtEmpt,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTDPPEP
+    ) AS DisplayPartner_PhonePtDpPep,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].PHONE_PTDPPNP
+    ) AS DisplayPartner_PhonePtDpPnp,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].DATA_SOURCE_CODE
+    ) AS DisplayPartner_SourceCode,
+    TO_TIMESTAMP_NTZ(
+        Process.CUSTOMER_PRODUCT_PROFILE:DISPLAY_PARTNER [0].UPDATED_DATETIME
+    ) AS DisplayPartner_LastUpdateDate,
+    -- Image
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].MEDIA_FILE_NAME
+    ) AS Image_MediaFileName,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].REF_MEDIA_IMAGE_TYPE_CODE
+    ) AS Image_RefMediaImageTypeCode,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].REF_MEDIA_SIZE_CODE
+    ) AS Image_RefMediaSizeCode,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].REF_MEDIA_REVIEW_LEVEL_CODE
+    ) AS Image_RefMediaReviewLevelCode,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].MEDIA_PATH
+    ) AS Image_MediaPath,
+    TO_VARCHAR(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].DATA_SOURCE_CODE
+    ) AS Image_SourceCode,
+    TO_TIMESTAMP_NTZ(
+        Process.CUSTOMER_PRODUCT_PROFILE:IMAGE [0].UPDATED_DATETIME
+    ) AS Image_LastUpdateDate
+FROM
+    Raw.CUSTOMER_PRODUCT_PROFILE_PROCESSING AS Process);
