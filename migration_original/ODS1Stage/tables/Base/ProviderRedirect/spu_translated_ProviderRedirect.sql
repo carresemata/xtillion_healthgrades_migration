@@ -51,7 +51,7 @@ update_statement := $$
 merge_statement := $$ MERGE INTO Base.ProviderRedirect as target 
                     USING ($$||select_statement||$$) as source 
                     ON source.ProviderCode = target.ProviderCodeNew
-                    WHEN MATCHED THEN $$ ||update_statement||$$;
+                    WHEN MATCHED THEN $$ ||update_statement
                     $$;
 
 
