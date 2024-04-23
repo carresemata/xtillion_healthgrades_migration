@@ -9,6 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderToEducationInstitution depends on: 
+--- RAW.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.EducationInstitution
 --- Base.EducationInstitutionType
