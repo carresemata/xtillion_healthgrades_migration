@@ -9,6 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderToTeleHealthMethod depends on: 
+--- RAW.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.TelehealthMethod
 --- Base.TeleHealthMethodType
