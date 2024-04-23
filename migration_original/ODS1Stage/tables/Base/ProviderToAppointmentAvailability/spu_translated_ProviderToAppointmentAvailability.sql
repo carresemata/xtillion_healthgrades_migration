@@ -1,0 +1,88 @@
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_PROVIDERTOAPPOINTMENTAVAILABILITY()
+RETURNS STRING
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+DECLARE
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+-- BASE.ProviderToAppointmentAvailability depends on:
+--- Raw.VW_PROVIDER_PROFILE
+--- Base.Provider
+--- Base.AppointmentAvailability
+
+---------------------------------------------------------
+--------------- 1. Declaring variables ------------------
+---------------------------------------------------------
+select_statement STRING;
+insert_statement STRING;
+merge_statement STRING;
+status STRING;
+---------------------------------------------------------
+--------------- 2.Conditionals if any -------------------
+---------------------------------------------------------
+BEGIN
+---------------------------------------------------------
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------
+-- Select Statement
+select_statement :=  $$ SELECT
+                            P.ProviderId,
+                            AA.AppointmentAvailabilityID,
+                            IFNULL(JSON.APPOINTMENTAVAILABILITY_SOURCECODE, 'Profisee') AS SourceCode,
+                            IFNULL(JSON.APPOINTMENTAVAILABILITY_LASTUPDATEDATE, SYSDATE()) AS LastUpdatedDate
+                        FROM RAW.VW_PROVIDER_PROFILE AS JSON
+                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
+                            LEFT JOIN Base.AppointmentAvailability AS AA ON AA.APPOINTMENTAVAILABILITYCODE = JSON.APPOINTMENTAVAILABILITY_APPOINTMENTAVAILABILITYCODE
+                        WHERE
+                            PROVIDER_PROFILE IS NOT NULL AND
+                            PROVIDERID IS NOT NULL AND
+                            AppointmentAvailabilityID IS NOT NULL AND
+                            JSON.APPOINTMENTAVAILABILITY_APPOINTMENTAVAILABILITYCODE IS NOT NULL
+                        QUALIFY row_number() over(partition by PROVIDERID, JSON.APPOINTMENTAVAILABILITY_APPOINTMENTAVAILABILITYCODE order by CREATE_DATE desc) = 1$$;
+
+-- Insert Statement
+insert_statement := ' INSERT 
+                        (ProviderToAppointmentAvailabilityID, 
+                        ProviderID, 
+                        AppointmentAvailabilityID, 
+                        SourceCode, 
+                        LastUpdatedDate)
+                      VALUES (
+                        UUID_STRING(),
+                        source.ProviderID, 
+                        source.AppointmentAvailabilityID, 
+                        source.SourceCode, 
+                        source.LastUpdatedDate)
+                        ';
+
+
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
+
+merge_statement := 'MERGE INTO Base.ProviderToAppointmentAvailability AS target
+USING (' || select_statement || ') AS source
+ON target.ProviderID = source.ProviderID
+AND target.AppointmentAvailabilityID = source.AppointmentAvailabilityID
+WHEN MATCHED THEN DELETE
+WHEN NOT MATCHED THEN ' || insert_statement;
+
+---------------------------------------------------------
+------------------- 5. Execution ------------------------
+---------------------------------------------------------
+EXECUTE IMMEDIATE merge_statement;
+
+---------------------------------------------------------
+--------------- 6. Status monitoring --------------------
+---------------------------------------------------------
+status := 'Completed successfully';
+RETURN status;
+
+EXCEPTION
+WHEN OTHER THEN
+status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+RETURN status;
+
+END;
