@@ -11,6 +11,7 @@ DECLARE
 -- Base.FacilityHours depends on: 
 --- FACILITY_PROFILE_PROCESSING
 --- Base.Facility
+--- Base.DaysOfWeek
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -35,25 +36,26 @@ BEGIN
 
 --- Select Statement
 -- If no conditionals:
-select_statement := $$ SELECT
+select_statement := $$ SELECT DISTINCT
                         Facility.FacilityId,
                         IFNULL(JSON.Hours_SourceCode, 'Profisee') AS SourceCode,
-                        JSON.Hours_DaysOfWeek AS DaysOfWeekId,
+                        Days.DaysOfWeekId,
                         JSON.Hours_OpeningTime AS FacilityHoursOpeningTime,
                         JSON.Hours_ClosingTime AS FacilityHoursClosingTime,
                         JSON.Hours_IsClosed AS FacilityIsClosed,
                         JSON.Hours_IsOpen24Hours AS FacilityIsOpen24Hours,
                         IFNULL(JSON.Hours_LastUpdateDate, CAST(CURRENT_TIMESTAMP() AS TIMESTAMP_NTZ(3))) AS LastUpdateDate
                     FROM
-                        Raw.FACILITY_PROFILE_JSON AS JSON
-                        JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
+                        Raw.VW_FACILITY_PROFILE AS JSON
+                        LEFT JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
+                        LEFT JOIN Base.DaysOfWeek AS Days ON Days.DaysOfWeekCode = JSON.Hours_DaysOfWeek
                     WHERE
                         JSON.FACILITY_PROFILE IS NOT NULL AND
                         FacilityId IS NOT NULL AND
                         DaysOFWeekID IS NOT NULL 
                         QUALIFY ROW_NUMBER() OVER(PARTITION BY Facility.FacilityID, Hours_DaysOfWeek
                                                     ORDER BY
-                                                    CREATE_DATE DESC) = 1$$;
+                                                    CREATE_DATE DESC) = 1 $$;
 
 
 --- Insert Statement

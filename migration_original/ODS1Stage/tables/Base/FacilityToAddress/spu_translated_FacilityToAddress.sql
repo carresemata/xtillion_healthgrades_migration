@@ -41,7 +41,7 @@ select_statement := $$  SELECT DISTINCT
                                 Address.AddressID,
                                 JSON.Address_SourceCode AS SourceCode
                             FROM
-                                Raw.FACILITY_PROFILE_JSON AS JSON 
+                                Raw.VW_FACILITY_PROFILE AS JSON 
                                 JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
                                 JOIN Base.CityStatePostalCode AS CSPC ON JSON.Address_City = CSPC.City AND JSON.Address_State = CSPC.State AND JSON.Address_PostalCode = CSPC.PostalCode 
                                 JOIN Base.Address AS Address ON Address.AddressLine1 = JSON.Address_AddressLine1 AND CSPC.CityStatePostalCodeID = Address.CityStatePostalCodeID 
