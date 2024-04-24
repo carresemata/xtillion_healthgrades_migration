@@ -9,6 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderURL depends on: 
+--- RAW.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.ProviderType
 
