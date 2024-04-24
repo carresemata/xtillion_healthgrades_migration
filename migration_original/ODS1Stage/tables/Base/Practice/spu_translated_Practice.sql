@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.Practice depends on: 
---- Raw.PRACTICE_PROFILE_PROCESSING
+--- Raw.VW_PRACTICE_PROFILE
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

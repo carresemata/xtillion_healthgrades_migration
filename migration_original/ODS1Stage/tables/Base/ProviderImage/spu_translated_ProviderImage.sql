@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderImage depends on: 
---- Raw.PROVIDER_PROFILE_PROCESSING
+--- Raw.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.MediaImageHost
 --- Base.MediaImageType

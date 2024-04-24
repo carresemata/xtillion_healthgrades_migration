@@ -8,10 +8,11 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.ProviderToClientProductToDisplayPartner depends on :
+--- Raw.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.ClientToProduct
 --- Base.SyndicationPartner
---- Raw.VW_PROVIDER_PROFILE
+
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
