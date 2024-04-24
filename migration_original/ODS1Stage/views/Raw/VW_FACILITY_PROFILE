@@ -1,4 +1,25 @@
 CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_FACILITY_PROFILE AS (
+
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+--- Raw.FACILITY_PROFILE_PROCESSING
+
+---------------------------------------------------------
+-------------------- 1. JSON Keys -----------------------
+---------------------------------------------------------
+
+--- Address
+--- Customer Product
+--- Demographics
+--- Facility Service
+--- Facility Profile
+--- Hours
+--- Image
+--- Language
+--- Syndication
+
 SELECT  
     Process.MST_FACILITY_PROFILE_ID AS MST_id,
     Process.CREATED_DATETIME AS CREATE_DATE,
