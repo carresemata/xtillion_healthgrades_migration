@@ -14,6 +14,7 @@ DECLARE
 --- Base.Provider
 --- Base.MediaVideoHost
 --- Base.MediaReviewLevel
+--- Base.MediaContextType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
