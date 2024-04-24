@@ -9,8 +9,8 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.CityStatePostalCode depends on: 
---- Raw.OFFICE_PROFILE_PROCESSING
---- Raw.FACILITY_OFFICE_PROCESSING
+--- Raw.VW_OFFICE_PROFILE
+--- Raw.VW_FACILITY_PROFILE
 --- Base.Facility
 
 ---------------------------------------------------------

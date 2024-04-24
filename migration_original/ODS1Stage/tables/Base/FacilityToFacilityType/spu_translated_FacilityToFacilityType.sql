@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.FacilityToFacilityType depends on: 
---- FACILITY_PROFILE_PROCESSING
+--- Raw.VW_FACILITY_PROFILE
 --- Base.Facility
 --- Base.FacilityType
 
