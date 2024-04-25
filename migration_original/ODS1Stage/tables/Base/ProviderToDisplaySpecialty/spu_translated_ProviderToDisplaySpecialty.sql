@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderToDisplaySpecialty depends on:
---- Raw.ProviderDeltaProcessing
+--- Raw.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.ProviderToSpecialty
 --- Base.DisplaySpecialtyRule
