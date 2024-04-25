@@ -47,6 +47,7 @@ DECLARE
 ---------------------------------------------------------
 select_statement STRING;
 insert_statement STRING;
+delete_statement STRING;
 merge_statement STRING;
 status STRING;
 
@@ -728,11 +729,11 @@ select_statement := $$
                                     IFF(cte_pst.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_pst.LastUpdateDate || '"', '') 
                                     || '}'
                                 )::VARCHAR, 
-                                'Procedure', 
+                                'ProviderSubType', 
                                 ''
                             ) AS XML
                         FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Procedure cte_pst ON cte_pst.ProviderID = cte_p.ProviderID
+                        INNER JOIN CTE_ProviderSubType cte_pst ON cte_pst.ProviderID = cte_p.ProviderID
                         GROUP BY cte_p.ProviderID
                     ),
                     
@@ -861,7 +862,6 @@ insert_statement := $$
 merge_statement := $$ MERGE INTO Base.ProviderLastUpdateDate as target 
                     USING ($$||select_statement||$$) as source 
                    ON source.ProviderId = target.ProviderId
-                   WHEN MATCHED THEN DELETE
                    WHEN NOT MATCHED THEN $$ ||insert_statement;
 
 ---------------------------------------------------------
