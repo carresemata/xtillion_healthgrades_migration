@@ -67,7 +67,7 @@ select_statement := select_statement ||
                                 SELECT ProviderId
                                 FROM Base.Provider),
                                 
-                            NotExists AS (
+                            CTE_NotExists AS (
                               SELECT 1
                               FROM Base.ProviderToSpecialty pts
                               LEFT JOIN Base.DisplaySpecialtyRule AS dsr ON pts.specialtyid = dsr.specialtyid
@@ -85,7 +85,7 @@ select_statement := select_statement ||
                               JOIN CTE_ProviderBatch b ON b.ProviderID = a.ProviderID
                               JOIN Base.DisplaySpecialtyRule c ON c.SpecialtyID = a.SpecialtyID
                               WHERE a.IsSearchableCalculated = 1 AND
-                                    NOT EXISTS (SELECT * FROM NotExists)
+                                    NOT EXISTS (SELECT * FROM CTE_NotExists)
                             ),
                             CTE_ProviderCerts AS (
                                 SELECT DISTINCT
