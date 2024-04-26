@@ -47,7 +47,7 @@ DECLARE
 ---------------------------------------------------------
 select_statement STRING;
 insert_statement STRING;
-delete_statement STRING;
+update_statement STRING;
 merge_statement STRING;
 status STRING;
 
@@ -774,7 +774,7 @@ select_statement := $$
                     ),
                     
                     CTE_FinalXML AS (
-                        SELECT 
+                        SELECT DISTINCT
                             cte_p.ProviderID,
                             '<LastUpdateDateBySwimlane>' || 
                             COALESCE(cte_d.XML, '') ||
@@ -855,6 +855,10 @@ insert_statement := $$
                         )
                      $$;
 
+update_statement := $$
+                    UPDATE SET target.LastUpdateDatePayload = TO_VARIANT(source.LastUpdateDatePayload)
+                    $$;
+
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
@@ -862,6 +866,7 @@ insert_statement := $$
 merge_statement := $$ MERGE INTO Base.ProviderLastUpdateDate as target 
                     USING ($$||select_statement||$$) as source 
                    ON source.ProviderId = target.ProviderId
+                   WHEN MATCHED THEN $$||update_statement||$$
                    WHEN NOT MATCHED THEN $$ ||insert_statement;
 
 ---------------------------------------------------------
@@ -870,9 +875,9 @@ merge_statement := $$ MERGE INTO Base.ProviderLastUpdateDate as target
 
 EXECUTE IMMEDIATE merge_statement;
 
--- ---------------------------------------------------------
--- --------------- 6. Status monitoring --------------------
--- --------------------------------------------------------- 
+---------------------------------------------------------
+--------------- 6. Status monitoring --------------------
+--------------------------------------------------------- 
 
 status := 'Completed successfully';
     RETURN status;
