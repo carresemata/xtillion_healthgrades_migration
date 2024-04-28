@@ -41,4 +41,14 @@
 		join ODS1Stage.Base.ClientToProduct as cp on cp.ClientToProductCode = y.CustomerProductCode
 		where x.FacilityCode is not null 
 
-        
+        --URL Updates
+		--drop table #tmp_URL
+		select FacilityCode, ClientToProductCode, 'FCCIURL' as URLTypeCode, FeatureFCCIURL as URL into #tmp_url from #swimlane where FeatureFCCIURL is not null and RowRank = 1 union
+		select FacilityCode, ClientToProductCode, 'FCCLURL' as URLTypeCode, FeatureFCCLURL as URL from #swimlane where FeatureFCCLURL is not null and RowRank = 1 union
+		select FacilityCode, ClientToProductCode, 'FCFURL' as URLTypeCode, FeatureFCFURL as URL from #swimlane where FeatureFCFURL is not null and RowRank = 1
+
+		--Base.URL Update
+		insert into ODS1Stage.Base.URL (URLID, URL, LastUpdateDate)
+		select distinct convert(uniqueidentifier, HASHBYTES('SHA1', s.URL)) as URLID, s.URL, getutcdate() as LastUpdateDate
+		from #tmp_url s
+		where not exists (select 1 from ODS1Stage.Base.URL as p where p.URLID=convert(uniqueidentifier, HASHBYTES('SHA1', s.URL)))
