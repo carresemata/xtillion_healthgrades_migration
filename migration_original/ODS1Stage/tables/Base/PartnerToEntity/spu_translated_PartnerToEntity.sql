@@ -118,8 +118,11 @@ select * from cte_swimlaneapi2$$;
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
-insert_statement_1 := ' INSERT INTO Base.PartnerToEntity 
-                            (PartnerToEntityId,
+insert_statement_1 := ' MERGE INTO Base.PartnerToEntity as target USING 
+                   ('||select_statement_1 ||' SELECT * FROM CTE_swimlaneURL2) as source 
+                   ON target.PartnerToEntityId = source.PartnerToEntityId AND target.PartnerId = source.PartnerId
+                   WHEN NOT MATCHED THEN 
+                    INSERT (PartnerToEntityId,
                             PartnerID, 
                             PrimaryEntityID, 
                             PrimaryEntityTypeID, 
@@ -127,12 +130,23 @@ insert_statement_1 := ' INSERT INTO Base.PartnerToEntity
                             SecondaryEntityTypeID, 
                             PartnerSecondaryEntityId,
                             OASURL, 
-                            LastUpdateDate) ' 
-                            ||select_statement_1|| 'SELECT * FROM CTE_SwimlaneURL2';
-                    
+                            LastUpdateDate)
+                    VALUES (source.PartnerToEntityId,
+                            source.PartnerID, 
+                            source.PrimaryEntityID, 
+                            source.PrimaryEntityTypeID, 
+                            source.SecondaryEntityID, 
+                            source.SecondaryEntityTypeID, 
+                            source.PartnerSecondaryEntityId,
+                            source.OASURL, 
+                            source.LastUpdateDate)';
 
-insert_statement_2 := ' INSERT INTO Base.PartnerToEntity 
-                            (PartnerToEntityId,
+                    
+insert_statement_2 := ' MERGE INTO Base.PartnerToEntity as target USING 
+                   ('||select_statement_2 ||') as source 
+                   ON target.PartnerToEntityId = source.PartnerToEntityId AND target.PartnerId = source.PartnerId
+                   WHEN NOT MATCHED THEN 
+                    INSERT (PartnerToEntityId,
                             PartnerID, 
                             PrimaryEntityID, 
                             PrimaryEntityTypeID, 
@@ -140,8 +154,18 @@ insert_statement_2 := ' INSERT INTO Base.PartnerToEntity
                             SecondaryEntityTypeID,  
                             TertiaryEntityID, 
                             TertiaryEntityTypeID, 
-                            LastUpdateDate) ' ||select_statement_2;                    
-                   
+                            LastUpdateDate)
+                    VALUES (source.PartnerToEntityId,
+                            source.PartnerID, 
+                            source.PrimaryEntityID, 
+                            source.PrimaryEntityTypeID, 
+                            source.SecondaryEntityID, 
+                            source.SecondaryEntityTypeID, 
+                            source.TertiaryEntityID,
+                            source.TertiaryEntityTypeID, 
+                            source.LastUpdateDate)';
+                    
+ 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
