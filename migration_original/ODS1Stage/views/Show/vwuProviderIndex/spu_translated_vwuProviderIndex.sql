@@ -1,5 +1,7 @@
+CREATE OR REPLACE VIEW ODS1_STAGE.SHOW.VWUPROVIDERINDEX AS 
+
 ---------------------------------------------------------
----------------- 0. View dependencies -------------------
+--------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
 -- Show.vwuProviderIndex depends on:
@@ -7,7 +9,11 @@
 --- Show.ConsolidatedProviders
 --- Show.DelayClient
 
-CREATE OR REPLACE VIEW ODS1_STAGE.SHOW.VWUPROVIDERINDEX AS 
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+
+
 
 SELECT
     SOLRProviderID,

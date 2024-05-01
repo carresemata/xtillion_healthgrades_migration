@@ -13,12 +13,12 @@ DECLARE
 ---------------------------------------------------------
     
 -- SOLRTreatmentEntryLevel depends on :
----- Show.SOLRTreatmentEntryLevel
----- Base.SpecialtyToCondition
----- Base.TreatmentLevel
----- Base.SpecialtyToProcedureMedical
----- Base.Specialty
----- Base.MedicalTerm
+--- Show.SOLRTreatmentEntryLevel
+--- Base.SpecialtyToCondition
+--- Base.TreatmentLevel
+--- Base.SpecialtyToProcedureMedical
+--- Base.Specialty
+--- Base.MedicalTerm
     
 
 ---------------------------------------------------------

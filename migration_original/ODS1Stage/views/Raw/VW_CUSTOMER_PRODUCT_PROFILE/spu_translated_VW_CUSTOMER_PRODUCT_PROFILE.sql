@@ -4,6 +4,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_CUSTOMER_PRODUCT_PROFILE A
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Raw.VW_CUSTOMER_PRODUCT_PROFILE depends on:
 --- Raw.CUSTOMER_PRODUCT_PROFILE_PROCESSING
 
 ---------------------------------------------------------

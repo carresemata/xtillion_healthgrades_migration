@@ -1,5 +1,24 @@
 CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUPDCEMPLOYEDPROVIDERPHONE
 AS
+
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+-- Base.VWUPDCEMPLOYEDPROVIDERPHONE depends on:
+--- Base.ClientProductToEntity
+--- Base.vwuClientProductEntityToPhone
+--- Base.ClientToProduct
+
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+
+-- ClientToProductID
+-- ClientProductToEntityID
+-- EmployedProviderPhone
+-- PhoneTypeCode
+
 SELECT
   cpte.ClientToProductID,
   vw_cpetp.ClientProductToEntityID,

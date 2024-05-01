@@ -8,7 +8,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- ProviderToCertificationSpecialty depends on: 
+-- Base.ProviderToCertificationSpecialty depends on: 
 --- Raw.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.CertificationBoard

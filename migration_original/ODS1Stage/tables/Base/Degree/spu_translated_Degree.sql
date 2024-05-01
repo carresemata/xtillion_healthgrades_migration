@@ -8,8 +8,8 @@ AS DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.Degree depends on:
--- Raw.Provider_Profile_JSON
--- Base.Degree
+--- RAW.VW_PROVIDER_PROFILE
+--- Base.Degree
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

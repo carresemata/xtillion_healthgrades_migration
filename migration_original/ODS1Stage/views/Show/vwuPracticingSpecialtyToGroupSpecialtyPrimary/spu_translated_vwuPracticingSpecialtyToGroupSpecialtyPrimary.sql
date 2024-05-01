@@ -1,13 +1,3 @@
----------------------------------------------------------
----------------- 0. View dependencies -------------------
----------------------------------------------------------
-
--- Show.vwuPracticingSpecialtyToGroupSpecialtyPrimary depends on: 
---- Show.SOLRSpecialty (currently empty as of MAR 24 2024)
---- Base.SpecialtyGroup
---- Base.SpecialtyGroupToSpecialty
---- Base.Specialty
-
 CREATE OR REPLACE VIEW ODS1_STAGE.SHOW.VWUPRACTICINGSPECIALTYTOGROUPSPECIALTYPRIMARY(
 	PRACTICINGSPECIALTYCODE,
 	PRACTICINGSPECIALTYDESCRIPTION,
@@ -19,6 +9,31 @@ CREATE OR REPLACE VIEW ODS1_STAGE.SHOW.VWUPRACTICINGSPECIALTYTOGROUPSPECIALTYPRI
 	DIRECTORYURL,
 	DIRECTORYNAMESUFFIX
 ) AS
+
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+-- Show.vwuPracticingSpecialtyToGroupSpecialtyPrimary depends on: 
+--- Show.SOLRSpecialty
+--- Base.SpecialtyGroup
+--- Base.SpecialtyGroupToSpecialty
+--- Base.Specialty
+
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+
+-- PracticingSpecialtyCode
+-- PracticingSpecialtyDescription
+-- RolledUpSpecialtyCode
+-- RolledUpSpecialtyDescription
+-- RolledUpLegacyID
+-- RolledUpSpecialtyRank
+-- DirectoryName
+-- DirectoryUrl
+-- DirectoryNameSuffix
+
 SELECT
   s.SpecialtyCode AS PracticingSpecialtyCode,
   LTRIM(RTRIM(s.SpecialtyDescription)) AS PracticingSpecialtyDescription,

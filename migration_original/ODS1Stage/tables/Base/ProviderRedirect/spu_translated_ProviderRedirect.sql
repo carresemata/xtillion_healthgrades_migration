@@ -8,9 +8,9 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
---- Base.ProviderRedirect depends on:
--- Mid.Provider (yes, this is not a typo...)
--- Base.ProviderRedirect
+-- Base.ProviderRedirect depends on:
+--- Mid.Provider 
+--- Base.ProviderRedirect
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

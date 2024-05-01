@@ -1,5 +1,25 @@
 CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUPROVIDERRECOGNITION AS
 
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+-- Base.VWUProviderRecognition depends on:
+--- Base.ProviderSanction
+--- Base.SanctionAction
+--- Base.ProviderMalpractice
+--- Base.Provider
+--- Base.Award
+--- Base.ProviderToCertificationSpecialty
+--- Base.CertificationStatus
+
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+-- ProviderID
+-- AwardID
+
+
 WITH CTE_ProviderSanctions AS (
     SELECT DISTINCT ps.ProviderID
     FROM Base.ProviderSanction ps

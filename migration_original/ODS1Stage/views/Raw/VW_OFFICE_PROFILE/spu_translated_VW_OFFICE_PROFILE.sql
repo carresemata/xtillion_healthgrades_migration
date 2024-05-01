@@ -4,6 +4,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_OFFICE_PROFILE AS (
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Raw.VW_OFFICE_PROFILE depends on:
 --- Raw.OFFICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------
