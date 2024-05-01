@@ -4,6 +4,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PRACTICE_PROFILE AS (
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Raw.VW_PRACTICE_PROFILE depends on:
 --- Raw.PRACTICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------

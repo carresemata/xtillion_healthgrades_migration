@@ -1,6 +1,34 @@
 CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUPDCCLIENTDETAIL
 AS 
 
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+-- Base.VWUPDCCLIENTDETAIL depends on:
+--- Base.ClientProductImage
+--- Base.MediaImageType
+--- Base.ClientProductEntityToURL
+--- Base.URLType
+--- Base.URL
+--- Base.vwuClientProductEntityToPhone
+--- Base.ClientProductToEntity
+--- Base.EntityType
+--- Base.ClientToProduct
+
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+-- ClientToProductID
+-- ClientProductToEntityID
+-- ImageFilePath
+-- MediaImageTypeCode
+-- URL
+-- URLTypeCode
+-- DesignatedProviderPhone
+-- PhoneTypeCode
+
+
 WITH CTE_images AS (
     SELECT
         cpi.ClientToProductID,

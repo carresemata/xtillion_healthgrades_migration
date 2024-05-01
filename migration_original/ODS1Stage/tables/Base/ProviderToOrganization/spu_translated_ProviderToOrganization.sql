@@ -8,8 +8,8 @@ AS DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.ProviderToOrganization depends on:
--- Raw.Provider_Profile_JSON
--- Base.Provider
+--- Raw.VW_PROVIDER_PROFILE
+--- Base.Provider
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

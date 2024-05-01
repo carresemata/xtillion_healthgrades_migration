@@ -1,12 +1,36 @@
 CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUPROVIDERSPECIALTY
 AS
+
+---------------------------------------------------------
+--------------- 0. Table dependencies -------------------
+---------------------------------------------------------
+
+-- Base.VWUPROVIDERSPECIALTY depends on:
+--- Base.EntityToMedicalTerm
+--- Base.MedicalTerm
+--- Base.MedicalTermType
+--- Base.EntityType
+
+---------------------------------------------------------
+--------------------- 1. Columns ------------------------
+---------------------------------------------------------
+
+-- ProviderToSpecialtyID
+-- ProviderID
+-- MedicalTermID
+-- SpecialtyCode
+-- Specialty
+-- SpecialtyRank
+-- Searchable
+-- SourceCode
+
 SELECT
-  EntityToMedicalTermID ProviderToSpecialtyID,
-  etmt.EntityID ProviderID,
+  EntityToMedicalTermID AS ProviderToSpecialtyID,
+  etmt.EntityID AS ProviderID,
   etmt.MedicalTermID,
-  mt.MedicalTermCode SpecialtyCode,
-  mt.MedicalTermDescription1 Specialty,
-  etmt.MedicalTermRank SpecialtyRank,
+  mt.MedicalTermCode AS SpecialtyCode,
+  mt.MedicalTermDescription1 AS Specialty,
+  etmt.MedicalTermRank AS SpecialtyRank,
   etmt.Searchable,
   etmt.SourceCode
 FROM

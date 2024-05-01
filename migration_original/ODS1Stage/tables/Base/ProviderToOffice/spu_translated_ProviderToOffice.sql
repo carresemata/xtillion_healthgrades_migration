@@ -9,7 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- BASE.ProviderToOffice depends on:
----RAW.VW_PROVIDER_PROFILE
+--- RAW.VW_PROVIDER_PROFILE
 --- Base.Provider
 --- Base.Office
 

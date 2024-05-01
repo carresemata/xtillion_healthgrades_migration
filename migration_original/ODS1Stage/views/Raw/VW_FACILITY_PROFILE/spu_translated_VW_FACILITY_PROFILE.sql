@@ -4,6 +4,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_FACILITY_PROFILE AS (
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Raw.VW_FACILITY_PROFILE depends on:
 --- Raw.FACILITY_PROFILE_PROCESSING
 
 ---------------------------------------------------------
