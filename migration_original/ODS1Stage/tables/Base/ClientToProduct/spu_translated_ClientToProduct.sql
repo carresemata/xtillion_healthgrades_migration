@@ -9,6 +9,8 @@ DECLARE
 ---------------------------------------------------------
 --- Base,ClientToProduct depends on:
 -- Base.swimlane_base_client
+-- Base.Client
+-- Base.Product
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -29,121 +31,18 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------   
 select_statement := $$
-                    WITH CTE_swimlane AS (
-                        SELECT *
-                        FROM Base.swimlane_base_client 
-                        QUALIFY DENSE_RANK() OVER(PARTITION BY customerproductcode ORDER BY LastUpdateDate) = 1
-                    ),
-                    
-                    CTE_FeatureFCBRL AS (
-                        SELECT *,
-                        CASE
-                            WHEN LEFT(FeatureFCBRL, 2) != 'FV' THEN 'FV' || UPPER(
-                                REPLACE(
-                                    REPLACE(
-                                        REPLACE(FeatureFCBRL, 'CLIENT', 'CLT'),
-                                        'CUSTOMER',
-                                        'CLT'
-                                    ),
-                                    'FACILITY',
-                                    'FAC'
-                                )
-                            )
-                            ELSE FeatureFCBRL
-                        END AS FeatureFCBRLNew
-                        FROM CTE_swimlane
-                    ),
-                    
-                    CTE_OASPartnerTypeCode AS (
-                        SELECT *,
-                        CASE
-                            WHEN PRODUCTCODE IN ('CDOAS', 'IOAS') AND OASPartnerTypeCode IS NULL THEN 'URL'
-                            ELSE OASPartnerTypeCode
-                        END AS OASPartnerTypeCodeNew
-                        FROM CTE_FeatureFCBRL
-                    ),
-                    
-                    CTE_CustomerName AS (
-                        SELECT cte.*,
-                        CASE
-                            WHEN cte.CustomerName IS NULL AND c.ClientName IS NULL THEN cte.ClientCode
-                            WHEN cte.CustomerName IS NULL AND c.ClientName IS NOT NULL THEN c.ClientName
-                            ELSE cte.CustomerName
-                        END AS CustomerNameNew
-                        FROM CTE_OASPartnerTypeCode AS cte
-                        LEFT JOIN Base.Client AS c ON c.ClientCode = cte.ClientCode
-                    ),
-                    
-                    CTE_FinalSwimlane AS (
-                        SELECT
-                            CREATED_DATETIME,
-                            CUSTOMERPRODUCTCODE,
-                            CLIENTTOPRODUCTID,
-                            CLIENTCODE,
-                            PRODUCTCODE,
-                            CUSTOMERPRODUCTJSON,
-                            CUSTOMERNAMENEW AS CustomerName,
-                            QUEUESIZE,
-                            LASTUPDATEDATE,
-                            SOURCECODE,
-                            ACTIVEFLAG,
-                            OASURLPATH,
-                            OASPARTNERTYPECODENEW AS OASPartnerTypeCode,
-                            FEATUREFCBFN,
-                            FEATUREFCBRLNEW AS FeatureFCBRL,
-                            FEATUREFCCCP_FVCLT,
-                            FEATUREFCCCP_FVFAC,
-                            FEATUREFCCCP_FVOFFICE,
-                            FEATUREFCCLLOGO,
-                            FEATUREFCCWALL,
-                            FEATUREFCCLURL,
-                            FEATUREFCDISLOC,
-                            FEATUREFCDOA,
-                            FEATUREFCDOS_FVFAX,
-                            FEATUREFCDOS_FVMMPEML,
-                            FEATUREFCDTP,
-                            FEATUREFCEOARD,
-                            FEATUREFCEPR,
-                            FEATUREFCOOACP,
-                            FEATUREFCLOT,
-                            FEATUREFCMAR,
-                            FEATUREFCMWC,
-                            FEATUREFCNPA,
-                            FEATUREFCOAS,
-                            FEATUREFCOASURL,
-                            FEATUREFCOASVT,
-                            FEATUREFCOBT,
-                            FEATUREFCODC_FVDFC,
-                            FEATUREFCODC_FVDPR,
-                            FEATUREFCODC_FVMT,
-                            FEATUREFCODC_FVPSR,
-                            FEATUREFCPNI,
-                            FEATUREFCPQM,
-                            FEATUREFCREL_FVCPOFFICE,
-                            FEATUREFCREL_FVCPTOCC,
-                            FEATUREFCREL_FVCPTOFAC,
-                            FEATUREFCREL_FVCPTOPRAC,
-                            FEATUREFCREL_FVCPTOPROV,
-                            FEATUREFCREL_FVPRACOFF,
-                            FEATUREFCREL_FVPROVFAC,
-                            FEATUREFCREL_FVPROVOFF,
-                            FEATUREFCSPC,
-                            FEATUREFCOOPSR,
-                            FEATUREFCOOMT
-                        FROM CTE_CustomerName
-                    )
-                    
                     SELECT
-                        s.ClientCode AS ClientID,
-                        s.ProductCode AS ProductID,
+                        c.ClientID,
+                        p.ProductID,
                         IFNULL(s.ActiveFlag, true) AS ActiveFlag,
                         IFNULL(s.SourceCode, 'Profisee') AS SourceCode,
-                        IFNULL(s.LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
+                        IFNULL(s.LastUpdateDate, SYSDATE()) AS LastUpdateDate,
                         s.QueueSize,
                         s.ClientToProductID,
                         -- s.ReltioEntityID
-                    FROM 
-                        CTE_FinalSwimlane s
+                    FROM Base.swimlane_base_client s
+                    INNER JOIN Base.Client c ON c.ClientCode = s.ClientCode 
+                    INNER JOIN Base.Product p on p.ProductCode = s.ProductCode
                     WHERE
                         s.ClientToProductID IS NOT NULL
                         AND s.ClientCode IS NOT NULL
@@ -153,6 +52,7 @@ select_statement := $$
                             FROM Base.ClientToProduct cp
                             WHERE cp.ClientToProductCode = s.ClientToProductID
                         )
+                    QUALIFY DENSE_RANK() OVER( PARTITION BY s.CustomerProductCode ORDER BY s.created_datetime DESC) = 1
                     $$;
 
 
@@ -175,7 +75,7 @@ insert_statement := $$
                         source.SourceCode,
                         source.LastUpdateDate,
                         source.QueueSize,
-                        source.ClientToProductID
+                        UUID_STRING()
                         )
                     $$;
 
