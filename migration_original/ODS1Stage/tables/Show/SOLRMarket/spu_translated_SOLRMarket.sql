@@ -1,10 +1,9 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.Show.SP_LOAD_TABLE_SOLRMarket() -- Parameters
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-
-DECLARE 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRMARKET()
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+COMMENT='user-defined procedure'
+EXECUTE AS CALLER
+AS DECLARE 
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
@@ -42,11 +41,9 @@ BEGIN
 
 --- Select Statement
 -- If no conditionals:
-select_statement := '
+select_statement := ''
 WITH cte_mid AS (
-    SELECT * FROM mid.clientmarket 
-    -- Limit is added to facilitate batch processing
-    -- LIMIT 100
+    SELECT * FROM mid.clientmarket LIMIT 100
 ),
 
 CTE_spnFeat AS (
@@ -64,7 +61,7 @@ CTE_spnFeat AS (
         JOIN Base.ClientFeatureValue AS CFV ON CFV.ClientFeatureValueID = FTFV.ClientFeatureValueID
         JOIN Base.ClientFeatureGroup AS CFG ON CF.ClientFeatureGroupID = CFG.ClientFeatureGroupID
     WHERE
-        ET.EntityTypeCode = ''CLPROD''
+        ET.EntityTypeCode = ''''CLPROD''''
     ORDER BY
         ClientFeatureCode,
         ClientFeatureValueCode
@@ -85,8 +82,8 @@ CTE_callCtrFeat AS (
         JOIN Base.ClientFeatureValue CFV ON CFV.ClientFeatureValueID = TCFV.ClientFeatureValueID
         JOIN Base.ClientFeatureGroup CFG ON CF.ClientFeatureGroupID = CFG.ClientFeatureGroupID
     WHERE
-        CFG.ClientFeatureGroupCode = ''FGOAR''
-        AND ET.EntityTypeCode = ''CLCTR'' 
+        CFG.ClientFeatureGroupCode = ''''FGOAR''''
+        AND ET.EntityTypeCode = ''''CLCTR'''' 
     ORDER BY
         ClientFeatureCode,
         ClientFeatureValueCode
@@ -100,17 +97,17 @@ CTE_clCtr AS (
         ApptCutOffTime AS aptCoffHr,
         EmailAddress AS eml,
         FaxNumber AS fxNo,
-        p_json_to_xml(
+        UTILS.P_JSON_TO_XML(
             ARRAY_AGG(
-                ''{ '' || 
-                ''"featCd":'' || CTE_CCF.featCd || '','' || 
-                ''"featDesc":'' || CTE_CCF.featDesc || '','' || 
-                ''"featValCd":'' || CTE_CCF.featValCd || '','' || 
-                ''"featValDesc":'' || CTE_CCF.featValDesc || 
-                '' }''
+                ''''{ '''' || 
+                ''''"featCd":'''' || CTE_CCF.featCd || '''','''' || 
+                ''''"featDesc":'''' || CTE_CCF.featDesc || '''','''' || 
+                ''''"featValCd":'''' || CTE_CCF.featValCd || '''','''' || 
+                ''''"featValDesc":'''' || CTE_CCF.featValDesc || 
+                '''' }''''
             )::VARCHAR,
-            ''clCtrFeatL'',
-            ''clCtrFeat''
+            ''''clCtrFeatL'''',
+            ''''clCtrFeat''''
         ) AS clCtrFeatL
     FROM
         Base.vwuCallCenterDetails AS CCD 
@@ -175,54 +172,54 @@ CTE_spnL AS (
         CM.CallToActionMtrMsg AS caToActMsgMtr,
         CM.CallToActionPsrMsg AS caToActMsgPsr,
         CM.SafeHarborMsg AS safHarMsg,
-        p_json_to_xml(
+        UTILS.P_JSON_TO_XML(
             ARRAY_AGG(
-                ''{ ''||
-                IFF(CTE_SF.featCd IS NOT NULL, ''"featCd":'' || ''"'' || CTE_SF.featCd || ''"'' || '','', '''') ||
-                IFF(CTE_SF.featDesc IS NOT NULL, ''"featDesc":'' || ''"'' || CTE_SF.featDesc || ''"'' || '','', '''') ||
-                IFF(CTE_SF.featValCd IS NOT NULL, ''"featValCd":'' || ''"'' || CTE_SF.featValCd || ''"'' || '','', '''') ||
-                IFF(CTE_SF.featValDesc IS NOT NULL, ''"featValDesc":'' || ''"'' || CTE_SF.featValDesc || ''"'', '''')
-                ||'' }''
+                ''''{ ''''||
+                IFF(CTE_SF.featCd IS NOT NULL, ''''"featCd":'''' || ''''"'''' || CTE_SF.featCd || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_SF.featDesc IS NOT NULL, ''''"featDesc":'''' || ''''"'''' || CTE_SF.featDesc || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_SF.featValCd IS NOT NULL, ''''"featValCd":'''' || ''''"'''' || CTE_SF.featValCd || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_SF.featValDesc IS NOT NULL, ''''"featValDesc":'''' || ''''"'''' || CTE_SF.featValDesc || ''''"'''', '''''''')
+                ||'''' }''''
             )::VARCHAR,
-            ''spnFeatL'',
-            ''spnFeat''
+            ''''spnFeatL'''',
+            ''''spnFeat''''
         ) as spnFeatL,
-        p_json_to_xml(
+        UTILS.P_JSON_TO_XML(
             ARRAY_AGG(
-                ''{ ''||
-                IFF(CTE_clCtr.clCtrCd IS NOT NULL, ''"clCtrCd":'' || ''"'' || CTE_clCtr.clCtrCd || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.clCtrNm IS NOT NULL, ''"clCtrNm":'' || ''"'' || CTE_clCtr.clCtrNm || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.aptCoffDay IS NOT NULL, ''"aptCoffDay":'' || ''"'' || CTE_clCtr.aptCoffDay || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.aptCoffHr IS NOT NULL, ''"aptCoffHr":'' || ''"'' || CTE_clCtr.aptCoffHr || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.eml IS NOT NULL, ''"eml":'' || ''"'' || CTE_clCtr.eml || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.fxNo IS NOT NULL, ''"fxNo":'' || ''"'' || CTE_clCtr.fxNo || ''"'' || '','', '''') ||
-                IFF(CTE_clCtr.clCtrFeatL IS NOT NULL, ''"clCtrFeatL":'' || ''"'' || CTE_clCtr.clCtrFeatL || ''"'', '''')
-                ||'' }''
+                ''''{ ''''||
+                IFF(CTE_clCtr.clCtrCd IS NOT NULL, ''''"clCtrCd":'''' || ''''"'''' || CTE_clCtr.clCtrCd || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.clCtrNm IS NOT NULL, ''''"clCtrNm":'''' || ''''"'''' || CTE_clCtr.clCtrNm || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.aptCoffDay IS NOT NULL, ''''"aptCoffDay":'''' || ''''"'''' || CTE_clCtr.aptCoffDay || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.aptCoffHr IS NOT NULL, ''''"aptCoffHr":'''' || ''''"'''' || CTE_clCtr.aptCoffHr || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.eml IS NOT NULL, ''''"eml":'''' || ''''"'''' || CTE_clCtr.eml || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.fxNo IS NOT NULL, ''''"fxNo":'''' || ''''"'''' || CTE_clCtr.fxNo || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_clCtr.clCtrFeatL IS NOT NULL, ''''"clCtrFeatL":'''' || ''''"'''' || CTE_clCtr.clCtrFeatL || ''''"'''', '''''''')
+                ||'''' }''''
             )::VARCHAR,
-            ''clCtrL'',
-            ''clCtr''
+            ''''clCtrL'''',
+            ''''clCtr''''
         ) as clCtrL,
-        p_json_to_xml(
+        UTILS.P_JSON_TO_XML(
             ARRAY_AGG(
-                ''{ ''||
-                IFF(CTE_dispL.facCd IS NOT NULL, ''"facCd":'' || ''"'' || CTE_dispL.facCd || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.facNm IS NOT NULL, ''"facNm":'' || ''"'' || CTE_dispL.facNm || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.phoneMtrL IS NOT NULL, ''"phoneMtrL":'' || ''"'' || CTE_dispL.phoneMtrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.phonePsrL IS NOT NULL, ''"phonePsrL":'' || ''"'' || CTE_dispL.phonePsrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.mobilePhoneMtrL IS NOT NULL, ''"mobilePhoneMtrL":'' || ''"'' || CTE_dispL.mobilePhoneMtrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.mobilePhonePsrL IS NOT NULL, ''"mobilePhonePsrL":'' || ''"'' || CTE_dispL.mobilePhonePsrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.urlL IS NOT NULL, ''"urlL":'' || ''"'' || CTE_dispL.urlL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.imageL IS NOT NULL, ''"imageL":'' || ''"'' || CTE_dispL.imageL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.quaMsgMtrL IS NOT NULL, ''"quaMsgMtrL":'' || ''"'' || CTE_dispL.quaMsgMtrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.quaMsgPsrL IS NOT NULL, ''"quaMsgPsrL":'' || ''"'' || CTE_dispL.quaMsgPsrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.tabletPhoneMtrL IS NOT NULL, ''"tabletPhoneMtrL":'' || ''"'' || CTE_dispL.tabletPhoneMtrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.tabletPhonePsrL IS NOT NULL, ''"tabletPhonePsrL":'' || ''"'' || CTE_dispL.tabletPhonePsrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.desktopPhoneMtrL IS NOT NULL, ''"desktopPhoneMtrL":'' || ''"'' || CTE_dispL.desktopPhoneMtrL || ''"'' || '','', '''') ||
-                IFF(CTE_dispL.desktopPhonePsrL IS NOT NULL, ''"desktopPhonePsrL":'' || ''"'' || CTE_dispL.desktopPhonePsrL || ''"'', '''')
-                ||'' }''
+                ''''{ ''''||
+                IFF(CTE_dispL.facCd IS NOT NULL, ''''"facCd":'''' || ''''"'''' || CTE_dispL.facCd || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.facNm IS NOT NULL, ''''"facNm":'''' || ''''"'''' || CTE_dispL.facNm || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.phoneMtrL IS NOT NULL, ''''"phoneMtrL":'''' || ''''"'''' || CTE_dispL.phoneMtrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.phonePsrL IS NOT NULL, ''''"phonePsrL":'''' || ''''"'''' || CTE_dispL.phonePsrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.mobilePhoneMtrL IS NOT NULL, ''''"mobilePhoneMtrL":'''' || ''''"'''' || CTE_dispL.mobilePhoneMtrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.mobilePhonePsrL IS NOT NULL, ''''"mobilePhonePsrL":'''' || ''''"'''' || CTE_dispL.mobilePhonePsrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.urlL IS NOT NULL, ''''"urlL":'''' || ''''"'''' || CTE_dispL.urlL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.imageL IS NOT NULL, ''''"imageL":'''' || ''''"'''' || CTE_dispL.imageL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.quaMsgMtrL IS NOT NULL, ''''"quaMsgMtrL":'''' || ''''"'''' || CTE_dispL.quaMsgMtrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.quaMsgPsrL IS NOT NULL, ''''"quaMsgPsrL":'''' || ''''"'''' || CTE_dispL.quaMsgPsrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.tabletPhoneMtrL IS NOT NULL, ''''"tabletPhoneMtrL":'''' || ''''"'''' || CTE_dispL.tabletPhoneMtrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.tabletPhonePsrL IS NOT NULL, ''''"tabletPhonePsrL":'''' || ''''"'''' || CTE_dispL.tabletPhonePsrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.desktopPhoneMtrL IS NOT NULL, ''''"desktopPhoneMtrL":'''' || ''''"'''' || CTE_dispL.desktopPhoneMtrL || ''''"'''' || '''','''', '''''''') ||
+                IFF(CTE_dispL.desktopPhonePsrL IS NOT NULL, ''''"desktopPhonePsrL":'''' || ''''"'''' || CTE_dispL.desktopPhonePsrL || ''''"'''', '''''''')
+                ||'''' }''''
             )::VARCHAR,
-            ''dispL'',
-            ''disp''
+            ''''dispL'''',
+            ''''disp''''
         ) as dispL
     FROM
         CTE_MID AS CM
@@ -250,31 +247,31 @@ CTE_sponsorL AS (
             CM.ProductCode AS prCd,
             CM.ProductGroupCode AS prGrCd,
             CASE
-                WHEN CM.ProductCode = ''MAP''
+                WHEN CM.ProductCode = ''''MAP''''
                 AND (
                     PhoneMtrXML IS NOT NULL
                     OR PhonePsrXML IS NOT NULL
                 ) THEN 1
                 ELSE 0
             END AS compositePhone,
-            p_json_to_xml(
+            UTILS.P_JSON_TO_XML(
                 ARRAY_AGG(
-                    ''{ ''||
-                    IFF(CTE_spnL.spnCd IS NOT NULL, ''"spnCd":'' || ''"'' || CTE_spnL.spnCd || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.spnNm IS NOT NULL, ''"spnNm":'' || ''"'' || CTE_spnL.spnNm || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.mktShr IS NOT NULL, ''"mktShr":'' || ''"'' || CTE_spnL.mktShr || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.psrMktShr IS NOT NULL, ''"psrMktShr":'' || ''"'' || CTE_spnL.psrMktShr || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.provMktShr IS NOT NULL, ''"provMktShr":'' || ''"'' || CTE_spnL.provMktShr || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.caToActMsgMtr IS NOT NULL, ''"caToActMsgMtr":'' || ''"'' || CTE_spnL.caToActMsgMtr || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.caToActMsgPsr IS NOT NULL, ''"caToActMsgPsr":'' || ''"'' || CTE_spnL.caToActMsgPsr || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.safHarMsg IS NOT NULL, ''"safHarMsg":'' || ''"'' || CTE_spnL.safHarMsg || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.spnFeatL IS NOT NULL, ''"xml_1":'' || ''"'' || CTE_spnL.spnFeatL || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.clCtrL IS NOT NULL, ''"xml_2":'' || ''"'' || CTE_spnL.clCtrL || ''"'' || '','', '''') ||
-                    IFF(CTE_spnL.dispL IS NOT NULL, ''"xml_3":'' || ''"'' || CTE_spnL.dispL || ''"'', '''')
-                    ||'' }''
+                    ''''{ ''''||
+                    IFF(CTE_spnL.spnCd IS NOT NULL, ''''"spnCd":'''' || ''''"'''' || CTE_spnL.spnCd || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.spnNm IS NOT NULL, ''''"spnNm":'''' || ''''"'''' || CTE_spnL.spnNm || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.mktShr IS NOT NULL, ''''"mktShr":'''' || ''''"'''' || CTE_spnL.mktShr || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.psrMktShr IS NOT NULL, ''''"psrMktShr":'''' || ''''"'''' || CTE_spnL.psrMktShr || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.provMktShr IS NOT NULL, ''''"provMktShr":'''' || ''''"'''' || CTE_spnL.provMktShr || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.caToActMsgMtr IS NOT NULL, ''''"caToActMsgMtr":'''' || ''''"'''' || CTE_spnL.caToActMsgMtr || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.caToActMsgPsr IS NOT NULL, ''''"caToActMsgPsr":'''' || ''''"'''' || CTE_spnL.caToActMsgPsr || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.safHarMsg IS NOT NULL, ''''"safHarMsg":'''' || ''''"'''' || CTE_spnL.safHarMsg || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.spnFeatL IS NOT NULL, ''''"xml_1":'''' || ''''"'''' || CTE_spnL.spnFeatL || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.clCtrL IS NOT NULL, ''''"xml_2":'''' || ''''"'''' || CTE_spnL.clCtrL || ''''"'''' || '''','''', '''''''') ||
+                    IFF(CTE_spnL.dispL IS NOT NULL, ''''"xml_3":'''' || ''''"'''' || CTE_spnL.dispL || ''''"'''', '''''''')
+                    ||'''' }''''
                 )::VARCHAR,
-                ''spn'',
-                ''spnL''
+                ''''spn'''',
+                ''''spnL''''
             ) AS spnL
         FROM
             CTE_MID AS CM
@@ -286,7 +283,7 @@ CTE_sponsorL AS (
             CM.MarketID,
             CM.ClientToProductID,
             CASE
-                WHEN CM.ProductCode = ''MAP''
+                WHEN CM.ProductCode = ''''MAP''''
                 AND (
                     PhoneMtrXML is not null
                     or PhonePsrXML is not null
@@ -309,17 +306,17 @@ CTE_sponsorL AS (
             CM.LineOfServiceTypeDescription,
             GETDATE() AS UpdatedDate,
             CURRENT_USER() AS UpdatedSource,
-            p_json_to_xml(
+            UTILS.P_JSON_TO_XML(
                 ARRAY_AGG(
-                    ''{ ''||
-                    IFF(prCd IS NOT NULL, ''"prCd":'' || ''"'' || prCd || ''"'' || '','', '''') ||
-                    IFF(prGrCd IS NOT NULL, ''"prGrCd":'' || ''"'' || prGrCd || ''"'' || '','', '''') ||
-                    IFF(compositePhone IS NOT NULL, ''"compositePhone":'' || ''"'' || compositePhone || ''"'' || '','', '''') ||
-                    IFF(spnL IS NOT NULL, ''"xml_1":'' || ''"'' || spnL || ''"'', '''')
-                    ||'' }''
+                    ''''{ ''''||
+                    IFF(prCd IS NOT NULL, ''''"prCd":'''' || ''''"'''' || prCd || ''''"'''' || '''','''', '''''''') ||
+                    IFF(prGrCd IS NOT NULL, ''''"prGrCd":'''' || ''''"'''' || prGrCd || ''''"'''' || '''','''', '''''''') ||
+                    IFF(compositePhone IS NOT NULL, ''''"compositePhone":'''' || ''''"'''' || compositePhone || ''''"'''' || '''','''', '''''''') ||
+                    IFF(spnL IS NOT NULL, ''''"xml_1":'''' || ''''"'''' || spnL || ''''"'''', '''''''')
+                    ||'''' }''''
                 )::VARCHAR,
-                ''sponsorL'',
-                ''sponsor''
+                ''''sponsorL'''',
+                ''''sponsor''''
             ) as SponsorshipXML
         FROM
             CTE_MID AS CM
@@ -364,11 +361,11 @@ CTE_sponsorL AS (
     UpdatedSource
 FROM
     CTE_my
- ';
+ '';
 
 
 --- Update Statement
-update_statement := ' 
+update_statement := '' 
                     UPDATE 
                         SET 
                             target.MarketID =                       source.MarketID,
@@ -385,10 +382,10 @@ update_statement := '
                             target.SponsorshipXML =                 source.SponsorshipXML,
                             target.UpdatedDate =                    source.UpdatedDate, 
                             target.UpdatedSource =                  source.UpdatedSource
-                        ';
+                        '';
 
 --- Insert Statement
-insert_statement := ' INSERT( 
+insert_statement := '' INSERT( 
                             MarketID,
                             MarketCode,
                             GeographicAreaCode,
@@ -419,18 +416,18 @@ insert_statement := ' INSERT(
                             source.SponsorshipXML,
                             UpdatedDate,
                             UpdatedSource
-                      )';
+                      )'';
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO ODS1_STAGE.DEV.SOLRMARKET as target USING 
-                   ('||select_statement||') as source 
+merge_statement := '' MERGE INTO ODS1_STAGE.DEV.SOLRMARKET as target USING 
+                   (''||select_statement||'') as source 
                    ON source.MarketID = target.MarketID
-                   WHEN MATCHED THEN '||update_statement|| '
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   WHEN MATCHED THEN ''||update_statement|| ''
+                   WHEN NOT MATCHED THEN ''||insert_statement;
                    
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
@@ -442,14 +439,16 @@ EXECUTE IMMEDIATE merge_statement ;
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := ''Completed successfully'';
     RETURN status;
 
 
         
 EXCEPTION
     WHEN OTHER THEN
-          status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+          status := ''Failed during execution. '' || ''SQL Error: '' || SQLERRM || '' Error code: '' || SQLCODE || ''. SQL State: '' || SQLSTATE;
           RETURN status;
 
+
+    
 END;

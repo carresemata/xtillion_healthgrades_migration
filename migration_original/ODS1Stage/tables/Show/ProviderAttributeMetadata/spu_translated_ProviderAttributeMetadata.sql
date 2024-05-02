@@ -1,9 +1,8 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADATA() 
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADATA()
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS DECLARE 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
@@ -91,7 +90,7 @@ select_statement := $$
                     Base.MedicalTerm AS mt
                     JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
                 WHERE
-                    mtt.MedicalTermTypeCode IN ('Condition', 'Procedure')
+                    mtt.MedicalTermTypeCode IN (''Condition'', ''Procedure'')
                 ORDER BY
                     mt.MedicalTermID
             ),
@@ -135,8 +134,8 @@ select_statement := $$
                 --About Me
                 SELECT
                     ptam.ProviderID,
-                    'AboutMe ' || AboutMeCode AS DataElement,
-                    IFNULL(SourceCode, 'N/A') AS SourceCode,
+                    ''AboutMe '' || AboutMeCode AS DataElement,
+                    IFNULL(SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ptam.LastUPDATEdDate) AS LastUpdateDate
                 FROM
@@ -151,8 +150,8 @@ select_statement := $$
                     --Provider Address:
                 SELECT
                     pto.ProviderID,
-                    'Address' AS DataElement,
-                    IFNULL(ota.SourceCode, 'N/A') AS SourceCode,
+                    ''Address'' AS DataElement,
+                    IFNULL(ota.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ota.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -166,8 +165,8 @@ select_statement := $$
                     --Appointment Availability:
                 SELECT
                     paa.ProviderID,
-                    'Appointment Availability' AS DataElement,
-                    IFNULL(paa.SourceCode, 'N/A') AS SourceCode,
+                    ''Appointment Availability'' AS DataElement,
+                    IFNULL(paa.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(paa.InsertedOn) AS LastUpdateDate
                 FROM
@@ -180,8 +179,8 @@ select_statement := $$
                     --Provider Availability Statement:
                 SELECT
                     pas.ProviderID,
-                    'Availability Statement' AS DataElement,
-                    IFNULL(pas.SourceCode, 'N/A') AS SourceCode,
+                    ''Availability Statement'' AS DataElement,
+                    IFNULL(pas.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pas.InsertedOn) AS LastUpdateDate
                 FROM
@@ -194,8 +193,8 @@ select_statement := $$
                     --Certifications:
                 SELECT
                     ptc.ProviderID,
-                    'Certifications' AS DataElement,
-                    IFNULL(ptc.SourceCode, 'N/A') AS SourceCode,
+                    ''Certifications'' AS DataElement,
+                    IFNULL(ptc.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ptc.InsertedOn) AS LastUpdateDate
                 FROM
@@ -209,13 +208,13 @@ select_statement := $$
                 SELECT
                     emt.EntityID AS ProviderID,
                     MedicalTermTypeCode AS DataElement,
-                    IFNULL(emt.SourceCode, 'N/A') AS SourceCode,
+                    IFNULL(emt.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(emt.LastUPDATEDate) AS LastUpdateDate
                 FROM
                     CTE_ProviderEntityToMedicalTermList AS emt
                 WHERE
-                    emt.MedicalTermTypeCode = 'Condition'
+                    emt.MedicalTermTypeCode = ''Condition''
                 GROUP BY
                     emt.EntityID,
                     emt.MedicalTermTypeCode,
@@ -224,8 +223,8 @@ select_statement := $$
                     --Degree:
                 SELECT
                     ptd.ProviderID,
-                    'Degree' AS DataElement,
-                    IFNULL(ptd.SourceCode, 'N/A') AS SourceCode,
+                    ''Degree'' AS DataElement,
+                    IFNULL(ptd.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ptd.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -238,8 +237,8 @@ select_statement := $$
                     --FirstName:
                 SELECT
                     a.ProviderID,
-                    'FirstName' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
+                    ''FirstName'' AS DataElement,
+                    IFNULL(a.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(a.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -252,8 +251,8 @@ select_statement := $$
                     --Health Insurance:
                 SELECT
                     phi.ProviderID,
-                    'Health Insurance' AS DataElement,
-                    IFNULL(phi.SourceCode, 'N/A') AS SourceCode,
+                    ''Health Insurance'' AS DataElement,
+                    IFNULL(phi.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(phi.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -266,8 +265,8 @@ select_statement := $$
                     --Hospital Affiliation
                 SELECT
                     ptf.ProviderID,
-                    'Hospital Affiliation' AS DataElement,
-                    IFNULL(ptf.SourceCode, 'N/A') AS SourceCode,
+                    ''Hospital Affiliation'' AS DataElement,
+                    IFNULL(ptf.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ptf.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -280,8 +279,8 @@ select_statement := $$
                     --Languages Spoken:
                 SELECT
                     pl.ProviderID,
-                    'Languages Spoken' AS DataElement,
-                    IFNULL(pl.SourceCode, 'N/A') AS SourceCode,
+                    ''Languages Spoken'' AS DataElement,
+                    IFNULL(pl.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pl.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -294,8 +293,8 @@ select_statement := $$
                     --LastName:
                 SELECT
                     a.ProviderID,
-                    'LastName' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
+                    ''LastName'' AS DataElement,
+                    IFNULL(a.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(a.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -308,8 +307,8 @@ select_statement := $$
                     --Malpractice:
                 SELECT
                     pm.ProviderID,
-                    'Malpractice' AS DataElement,
-                    IFNULL(pm.SourceCode, 'N/A') AS SourceCode,
+                    ''Malpractice'' AS DataElement,
+                    IFNULL(pm.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pm.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -322,8 +321,8 @@ select_statement := $$
                     --Media:
                 SELECT
                     pm.ProviderID,
-                    'Media' AS DataElement,
-                    IFNULL(pm.SourceCode, 'N/A') AS SourceCode,
+                    ''Media'' AS DataElement,
+                    IFNULL(pm.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pm.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -336,8 +335,8 @@ select_statement := $$
                     --Office:
                 SELECT
                     pto.ProviderID,
-                    'Office' AS DataElement,
-                    IFNULL(pto.SourceCode, 'N/A') AS SourceCode,
+                    ''Office'' AS DataElement,
+                    IFNULL(pto.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pto.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -350,8 +349,8 @@ select_statement := $$
                     --Office Fax:
                 SELECT
                     pto.ProviderID,
-                    'Office Fax' AS DataElement,
-                    IFNULL(op.SourceCode, 'N/A') AS SourceCode,
+                    ''Office Fax'' AS DataElement,
+                    IFNULL(op.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(op.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -360,7 +359,7 @@ select_statement := $$
                     JOIN Base.OfficeToPhone op ON pto.OfficeID = op.OfficeID
                     JOIN Base.PhoneType pt ON pt.PhoneTypeID = op.PhoneTypeID
                 WHERE
-                    pt.PhoneTypeCode = 'FAX'
+                    pt.PhoneTypeCode = ''FAX''
                 GROUP BY
                     pto.ProviderID,
                     op.SourceCode
@@ -368,8 +367,8 @@ select_statement := $$
                     --Office Name:
                 SELECT
                     a.ProviderID,
-                    'Office Name' AS DataElement,
-                    IFNULL(b.SourceCode, 'N/A') AS SourceCode,
+                    ''Office Name'' AS DataElement,
+                    IFNULL(b.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(b.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -383,8 +382,8 @@ select_statement := $$
                     --Photo:
                 SELECT
                     pimg.ProviderID,
-                    'Photo' AS DataElement,
-                    IFNULL(pimg.SourceCode, 'N/A') AS SourceCode,
+                    ''Photo'' AS DataElement,
+                    IFNULL(pimg.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pimg.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -397,8 +396,8 @@ select_statement := $$
                     --Positions:
                 SELECT
                     po.ProviderID,
-                    'Positions' AS DataElement,
-                    IFNULL(po.SourceCode, 'N/A') AS SourceCode,
+                    ''Positions'' AS DataElement,
+                    IFNULL(po.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(po.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -413,8 +412,8 @@ select_statement := $$
                     --Practice Name:
                 SELECT
                     po.ProviderID,
-                    'Practice Name' AS DataElement,
-                    IFNULL(a.SourceCode, '') AS SourceCode,
+                    ''Practice Name'' AS DataElement,
+                    IFNULL(a.SourceCode, '''') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(a.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -430,13 +429,13 @@ select_statement := $$
                 SELECT
                     emt.EntityID AS ProviderID,
                     MedicalTermTypeCode AS DataElement,
-                    IFNULL(emt.SourceCode, 'N/A') AS SourceCode,
+                    IFNULL(emt.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(emt.LastUPDATEDate) AS LastUpdateDate
                 FROM
                     CTE_ProviderEntityToMedicalTermList AS emt
                 WHERE
-                    emt.MedicalTermTypeCode = 'Procedure'
+                    emt.MedicalTermTypeCode = ''Procedure''
                 GROUP BY
                     emt.EntityID,
                     emt.MedicalTermTypeCode,
@@ -445,8 +444,8 @@ select_statement := $$
                     -- Sanctions:
                 SELECT
                     ps.ProviderID,
-                    'Sanctions' AS DataElement,
-                    IFNULL(ps.SourceCode, 'N/A') AS SourceCode,
+                    ''Sanctions'' AS DataElement,
+                    IFNULL(ps.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(ps.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -459,8 +458,8 @@ select_statement := $$
                     --Specialty:
                 SELECT
                     pts.ProviderID,
-                    'Specialty' AS DataElement,
-                    IFNULL(pts.SourceCode, 'N/A') AS SourceCode,
+                    ''Specialty'' AS DataElement,
+                    IFNULL(pts.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(pts.InsertedOn) AS LastUpdateDate
                 FROM
@@ -473,8 +472,8 @@ select_statement := $$
                     --Video:
                 SELECT
                     a.ProviderID,
-                    'Video' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
+                    ''Video'' AS DataElement,
+                    IFNULL(a.SourceCode, ''N/A'') AS SourceCode,
                     CURRENT_USER() AS UpdatedBy, 
                     MAX(a.LastUPDATEDate) AS LastUpdateDate
                 FROM
@@ -491,24 +490,24 @@ select_statement := $$
                     p.ProviderId,
                     p.ProviderCode,
                     CTE_updates.DataElement,
-                    p_json_to_xml(
+                    UTILS.P_JSON_TO_XML(
                         ARRAY_AGG(
-                            '{ ' || IFF(
+                            ''{ '' || IFF(
                                 CTE_updates.DataElement IS NOT NULL,
-                                '"elem":' || '"' || CTE_updates.DataElement || '"' || ',',
-                                ''
+                                ''"elem":'' || ''"'' || CTE_updates.DataElement || ''"'' || '','',
+                                ''''
                             ) || IFF(
                                 CTE_updates.SourceCode IS NOT NULL,
-                                '"src":' || '"' || CTE_updates.SourceCode || '"' || ',',
-                                ''
+                                ''"src":'' || ''"'' || CTE_updates.SourceCode || ''"'' || '','',
+                                ''''
                             ) || IFF(
                                 CTE_updates.LastUpdateDate IS NOT NULL,
-                                '"upd":' || '"' || CTE_updates.LastUpdateDate || '"',
-                                ''
-                            ) || ' }'
+                                ''"upd":'' || ''"'' || CTE_updates.LastUpdateDate || ''"'',
+                                ''''
+                            ) || '' }''
                         )::varchar,
-                        '',
-                        ''
+                        '''',
+                        ''''
                     ) AS UpdateTrackingXML,
                     CTE_updates.UpdatedBy,
                     CTE_updates.LastUpdateDate AS UpdatedOn
@@ -528,15 +527,15 @@ select_statement := $$
             SELECT DISTINCT
                 p.ProviderId,
                 p.ProviderCode,
-                TO_VARIANT(p_json_to_xml(
+                TO_VARIANT(UTILS.P_JSON_TO_XML(
                         array_agg( 
-                        '{ '||
-            IFF(UpdateTrackingXML IS NOT NULL, '"xml_1":' || '"' || UpdateTrackingXML || '"', '')
-            ||' }'
+                        ''{ ''||
+            IFF(UpdateTrackingXML IS NOT NULL, ''"xml_1":'' || ''"'' || UpdateTrackingXML || ''"'', '''')
+            ||'' }''
                         )::varchar
                         ,
-                        'prov',
-                        'de'
+                        ''prov'',
+                        ''de''
                     )) AS UpdateTrackingXML, -- TO_VARIANT()
                 u.UpdatedBy,
                 MAX(u.LastUpdateDate) AS UpdatedOn
@@ -555,15 +554,15 @@ select_statement := $$
 
 
 --- Update Statement
-update_statement := ' UPDATE 
+update_statement := '' UPDATE 
                         SET
                             ProviderCode = source.ProviderCode,
                             UpdateTrackingXML = source.UpdateTrackingXML,
                             UpdatedBy = CURRENT_USER(),
-                            UpdatedOn = CURRENT_TIMESTAMP()';
+                            UpdatedOn = CURRENT_TIMESTAMP()'';
                         
 --- Insert Statement
-insert_statement := ' INSERT (
+insert_statement := '' INSERT (
                             ProviderId,
                             ProviderCode,
                             UpdateTrackingXML,
@@ -576,18 +575,18 @@ insert_statement := ' INSERT (
                             source.UpdateTrackingXML,
                             source.Updatedby,
                             source.UpdatedOn
-                        );';
+                        );'';
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Dev.ProviderAttributeMetadata as target USING 
-                   ('||select_statement||') as source 
+merge_statement := '' MERGE INTO Dev.ProviderAttributeMetadata as target USING 
+                   (''||select_statement||'') as source 
                    ON source.ProviderId = target.ProviderId
-                   WHEN MATCHED THEN '||update_statement|| '
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   WHEN MATCHED THEN ''||update_statement|| ''
+                   WHEN NOT MATCHED THEN ''||insert_statement;
                    
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
@@ -599,18 +598,16 @@ EXECUTE IMMEDIATE merge_statement ;
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := ''Completed successfully'';
     RETURN status;
 
 
         
 EXCEPTION
     WHEN OTHER THEN
-          status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+          status := ''Failed during execution. '' || ''SQL Error: '' || SQLERRM || '' Error code: '' || SQLCODE || ''. SQL State: '' || SQLSTATE;
           RETURN status;
 
 
     
 END;
-
-call sp_load_providerattributemetadata();
