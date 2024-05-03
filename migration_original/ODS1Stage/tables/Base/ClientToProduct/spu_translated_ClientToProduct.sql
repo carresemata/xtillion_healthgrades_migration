@@ -85,7 +85,7 @@ insert_statement := $$
 
 merge_statement := $$ MERGE INTO Base.ClientToProduct as target USING 
                    ($$||select_statement||$$) as source 
-                   ON source.ClientToProductID = target.ClientToProductID
+                   ON source.ClientID = target.ClientID AND source.ProductID = target.ProductID AND source.SourceCode = target.SourceCode AND source.QueueSize = target.QueueSize
                    WHEN NOT MATCHED THEN $$||insert_statement;
 
     
