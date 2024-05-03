@@ -9,7 +9,6 @@ DECLARE
 ---------------------------------------------------------
 
 --- Base.ClientProductToCallCenter depends on:
---- BASE.CLIENTPRODUCTTOCALLCENTER
 --- BASE.CLIENTTOPRODUCT
 --- BASE.CALLCENTER
 --- BASE.PRODUCT

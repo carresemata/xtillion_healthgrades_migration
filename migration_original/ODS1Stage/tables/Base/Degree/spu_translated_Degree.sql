@@ -9,7 +9,6 @@ AS DECLARE
 ---------------------------------------------------------
 -- Base.Degree depends on:
 --- RAW.VW_PROVIDER_PROFILE
---- Base.Degree
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

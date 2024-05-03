@@ -7,9 +7,9 @@ def table_dependencies():
     table_dependencies = {}
 
     # Define the base directories
-    base_dirs = ['/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/ODS1Stage/tables', 
-                 '/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/ODS1Stage/views'
-                ]
+    
+    base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables'),
+                    os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')]
 
     for base_dir in base_dirs:
         # Navigate to the directory
@@ -60,13 +60,20 @@ def table_dependencies():
     # Order the table dependencies json by table_name
     table_dependencies = dict(sorted(table_dependencies.items()))
 
+    # Find the tables that are at the same time the source and the target of a dependency and print the table name
+    for table_name, source_tables in table_dependencies.items():
+        if table_name in source_tables:
+            # remove the table_name from the source_tables
+            source_tables.remove(table_name)
+    #         print(table_name)
     
     # Print the table dependencies
     # print(json.dumps(table_dependencies, indent=4))
     # print(table_dependencies)
-
-    # Navigate back to the original directory
-    os.chdir('/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/other')
+    
+    os.chdir('..')
+    # Navigate back to the original directory to write the JSON file
+    os.chdir(os.path.join(os.path.dirname(os.getcwd()), 'other'))
 
     # Write the table dependencies to a JSON file
     with open('table_dependencies.json', 'w') as f:

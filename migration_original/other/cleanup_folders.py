@@ -4,9 +4,8 @@ import shutil
 def delete_empty_folders():
 
     # Define the base directories
-    base_dirs = ['/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/ODS1Stage/tables', 
-                 '/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/ODS1Stage/views'
-                ]
+    base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables'),
+                    os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')]
 
     for base_dir in base_dirs:
         # Navigate to the directory: tables or views folder
