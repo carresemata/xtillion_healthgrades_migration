@@ -9,9 +9,9 @@ def add_monitoring_logs():
             schema_path = os.path.join(base_dir, schema)
             for table in os.listdir(schema_path):
                 table_path = os.path.join(schema_path, table)
-                file_path = os.path.join(table_path, f'spu_translated_{table}.sql')
-                
-                if os.path.getsize(file_path) != 0: 
+                file_path = os.path.join(table_path, f'spu_translated_{table}.sql')   
+    
+    if os.path.getsize(file_path) != 0: 
                     with open(file_path, 'r') as f:
                         content = f.read()
                         
@@ -37,22 +37,25 @@ def add_monitoring_logs():
 """
                         content = content.replace(match.group(1), monitoring_logs)
                         content_updated = True
-                    
+                                    
                     # Add the new variables for the monitoring logs
-                    match = re.search(r"status STRING;(.*?\n.*?\n)", content, re.DOTALL)
+                    match = re.search(r"status STRING;.*", content)
                     if match:
                         new_vars = f"""
     procedure_name varchar(50) default('sp_load_{table}');
     execution_start DATETIME default getdate();
-    
+
 """
-                        content = content.replace(match.group(1), new_vars)
+                        # Find the position where to insert new variables
+                        insert_pos = match.end()
+                        # Insert new variables into the content
+                        content = content[:insert_pos] + new_vars + content[insert_pos:]
                         content_updated = True
 
                     # Change all the file to lowercase
-                    match = re.search(f"DECLARE(.*?)END;", content, re.DOTALL)
+                    match = re.search(f"(DECLARE.*?END;)", content, re.DOTALL | re.IGNORECASE)
                     if match:
-                        content = content.replace(match.group(1), match.group(1).lower())
+                        content = content.replace(match.group(0), match.group(0).lower())
                         content_updated = True
 
                     # Write the new content to the file
