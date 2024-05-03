@@ -2,8 +2,8 @@ import os
 import re
 
 def add_monitoring_logs():
-    base_dirs = ['/Users/carrese/Desktop/xtillion_healthgrades_migration-1/migration_original/ODS1Stage/tables']
-
+    #### WARNING: When we format all files to lowercase this will affect the parsing of JSON as the keys are case sensitive
+    base_dirs = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
     for base_dir in base_dirs:
         for schema in os.listdir(base_dir):
             schema_path = os.path.join(base_dir, schema)
@@ -61,3 +61,4 @@ def add_monitoring_logs():
                             f.write(content)
 
 add_monitoring_logs()
+
