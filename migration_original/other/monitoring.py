@@ -54,8 +54,16 @@ def add_monitoring_logs():
 
                     # Change all the file to lowercase
                     match = re.search(f"(DECLARE.*?END;)", content, re.DOTALL | re.IGNORECASE)
-                    if match:
-                        content = content.replace(match.group(0), match.group(0).lower())
+                    # Find all strings inside single or double quotes (that are not empty or contain spaces) and save them
+                    matches = re.findall(r"[\"']([^\s\"']{1,})[\"']", content)
+
+                    # Convert all the file to lowercase
+                    content = content.lower()
+
+                    # Convert back to original case for matched words
+                    for match in matches:
+                        content = content.replace(f'"{match.lower()}"', f'"{match}"')
+                        content = content.replace(f"'{match.lower()}'", f"'{match}'")
                         content_updated = True
 
                     # Write the new content to the file
