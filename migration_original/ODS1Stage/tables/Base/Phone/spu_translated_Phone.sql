@@ -24,11 +24,11 @@ DECLARE
 ---------------------------------------------------------
 
     select_statement_1 STRING; 
-    insert_statement_1 STRING; 
+    merge_statement_1 STRING; 
     select_statement_2 STRING; 
-    insert_statement_2 STRING;
+    merge_statement_2 STRING;
     select_statement_3 STRING; 
-    insert_statement_3 STRING;
+    merge_statement_3 STRING;
     status STRING; -- Status monitoring
    
 ---------------------------------------------------------
@@ -645,7 +645,7 @@ WHERE NOT EXISTS (SELECT * FROM CTE_NOTEXISTS)$$;
 ---------------------------------------------------------  
 
 
-insert_statement_1 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_1 := ' MERGE INTO Base.Phone as target USING 
                    ('||select_statement_1||') as source 
                    ON source.PhoneId = target.PhoneId
                    WHEN NOT MATCHED THEN
@@ -656,7 +656,7 @@ insert_statement_1 := ' MERGE INTO Base.Phone as target USING
                             source.PhoneNumber,
                             SYSDATE())';
 
-insert_statement_2 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_2 := ' MERGE INTO Base.Phone as target USING 
                    ('||select_statement_2||') as source 
                    ON source.PhoneId = target.PhoneId
                    WHEN NOT MATCHED THEN
@@ -669,7 +669,7 @@ insert_statement_2 := ' MERGE INTO Base.Phone as target USING
                             source.SourceCode,
                             source.LastUpdateDate)';
 
-insert_statement_3 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_3 := ' MERGE INTO Base.Phone as target USING 
                    ('||select_statement_3||') as source 
                    ON source.PhoneId = target.PhoneId
                    WHEN NOT MATCHED THEN
@@ -684,9 +684,9 @@ insert_statement_3 := ' MERGE INTO Base.Phone as target USING
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE insert_statement_1 ;
-EXECUTE IMMEDIATE insert_statement_2 ;
-EXECUTE IMMEDIATE insert_statement_3 ;
+EXECUTE IMMEDIATE merge_statement_1 ;
+EXECUTE IMMEDIATE merge_statement_2 ;
+EXECUTE IMMEDIATE merge_statement_3 ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
