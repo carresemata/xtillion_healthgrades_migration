@@ -7,7 +7,7 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
---- Base,ClientProductEntityRelationship depends on:
+--- Base.ClientProductEntityRelationship depends on:
 -- RAW.VW_PROVIDER_PROFILE
 -- RAW.VW_OFFICE_PROFILE
 -- Base.Provider
