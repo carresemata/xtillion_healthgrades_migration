@@ -20,6 +20,7 @@ DECLARE
 ---------------------------------------------------------
 select_statement STRING;
 insert_statement STRING;
+merge_statement STRING;
 status STRING;
 
 ---------------------------------------------------------
@@ -57,22 +58,30 @@ select_statement := $$  WITH CTE_swimlane AS (SELECT
                                 LastUpdateDate
                             FROM CTE_Swimlane  $$;
 
-
+insert_statement := ' INSERT
+                       (URLid,
+                        URL,
+                        LastUpdateDate)
+                    VALUES
+                        (source.URLid,
+                        source.URL,
+                        source.LastUpdateDate)';
 
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------
 
-insert_statement := ' INSERT INTO Base.URL
-                        (URLId,
-                        URL,
-                        LastUpdateDate) ' ||select_statement;
+
+merge_statement := ' MERGE INTO Base.URL AS target 
+USING ('||select_statement||') AS source
+ON source.URLId = target.URLID 
+WHEN NOT MATCHED THEN '||insert_statement;
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE insert_statement;
+EXECUTE IMMEDIATE merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
