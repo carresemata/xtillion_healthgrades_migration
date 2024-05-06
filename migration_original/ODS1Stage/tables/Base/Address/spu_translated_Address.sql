@@ -8,7 +8,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.CityStatePostalCode depends on: 
+-- Base.Address depends on: 
 --- Raw.VW_OFFICE_PROFILE
 --- Raw.VW_FACILITY_PROFILE
 --- Base.Facility
