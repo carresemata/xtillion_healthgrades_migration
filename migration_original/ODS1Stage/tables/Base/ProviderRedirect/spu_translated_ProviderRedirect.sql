@@ -10,7 +10,6 @@ DECLARE
 ---------------------------------------------------------
 -- Base.ProviderRedirect depends on:
 --- Mid.Provider 
---- Base.ProviderRedirect
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

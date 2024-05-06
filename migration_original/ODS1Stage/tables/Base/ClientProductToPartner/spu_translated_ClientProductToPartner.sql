@@ -12,7 +12,6 @@ DECLARE
 -- Base.swimlane_base_client
 -- Base.Client
 -- Base.ClientToProduct
--- Base.ClientProductToPartner 
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

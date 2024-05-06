@@ -12,7 +12,6 @@ DECLARE
     
 -- Show.SOLRGeographicAreaDelta depends on: 
 --- Mid.GeographicArea
---- Show.SOLRGeographicAreaDelta
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
