@@ -28,8 +28,10 @@ DECLARE
 ---------------------------------------------------------
 
     select_statement STRING; -- CTE and Select statement for the insert
-    insert_statement_1 STRING; -- Insert statement 
+    insert_statement_1 STRING; 
     insert_statement_2 STRING;
+    merge_statement_1 STRING; 
+    merge_statement_2 STRING;
     status STRING; -- Status monitoring
    
 ---------------------------------------------------------
@@ -52,8 +54,7 @@ select_statement := $$ WITH CTE_ProviderCustomerProduct AS (
         -- ProviderReltioEntityId
         JSON.ProviderCode,
         SUBSTRING(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, 1,  POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) - 1 ) AS ClientCode,
-        SUBSTR(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) + 1, LENGTH(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE)
-) AS ProductCode,
+        SUBSTR(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) + 1, LENGTH(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE)) AS ProductCode,
         JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
         row_number() over(partition by P.ProviderId, JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) as RowRank
     FROM RAW.VW_PROVIDER_PROFILE AS JSON
@@ -68,8 +69,7 @@ CTE_ProviderOfficeCustomerProduct AS (
         -- ProviderReltioEntityId
         JSON.ProviderCode,
         SUBSTRING(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, 1,  POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) - 1 ) AS ClientCode,
-        SUBSTR(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) + 1, LENGTH(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE)
-) AS ProductCode,
+        SUBSTR(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE, POSITION('-' IN JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE) + 1, LENGTH(JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE)) AS ProductCode,
         JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
         JSON.OFFICE_OFFICECODE AS OfficeCode,
         -- OfficeReltioEntityID
@@ -124,9 +124,9 @@ CTE_PhoneXML1 AS (
         providerId,
         utils.p_json_to_xml(
             ARRAY_AGG('{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }')::VARCHAR,
+                            IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
+                            IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
+                            ||' }')::VARCHAR,
                                     '',
                                     'phone'
                                 ) AS phoneXML
@@ -172,9 +172,9 @@ CTE_PhoneXML2 AS (
         OfficeId,
         utils.p_json_to_xml(
             ARRAY_AGG('{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }')::VARCHAR,
+                            IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
+                            IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
+                            ||' }')::VARCHAR,
                                     '',
                                     'phone'
                                 ) AS phoneXML
@@ -209,17 +209,7 @@ CTE_Insert_2 AS (
 ) $$;
 
 
-
-
----------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
----------------------------------------------------------  
-
-insert_statement_1 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target USING 
-                   ('||select_statement ||' SELECT * FROM CTE_insert_1) as source 
-                   ON target.ProviderId = source.ProviderId AND target.OfficeId = source.OfficeId
-                   WHEN NOT MATCHED THEN 
-                    INSERT (ProviderToMapCustomerProductId,
+insert_statement_1 := 'INSERT (ProviderToMapCustomerProductId,
                             ProviderID, 
                             OfficeID, 
                             ClientToProductID, 
@@ -231,13 +221,8 @@ insert_statement_1 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target U
                             source.ClientToProductID, 
                             source.PhoneXML, 
                             source.DisplayPhoneNumber)';
-
-                    
-insert_statement_2 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target USING 
-                   ('||select_statement || ' SELECT * FROM CTE_insert_2) as source 
-                   ON target.ProviderId = source.ProviderId AND target.OfficeId = source.OfficeId
-                   WHEN NOT MATCHED THEN 
-                    INSERT (ProviderToMapCustomerProductId,
+                
+insert_statement_2 := 'INSERT (ProviderToMapCustomerProductId,
                             ProviderID, 
                             OfficeID, 
                             ClientToProductID, 
@@ -249,14 +234,29 @@ insert_statement_2 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target U
                             source.ClientToProductID, 
                             source.PhoneXML, 
                             source.DisplayPartnerCode)';
+
+---------------------------------------------------------
+--------- 4. Actions (Inserts and Updates) --------------
+---------------------------------------------------------  
+
+merge_statement_1 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target USING 
+                   ('||select_statement ||' SELECT * FROM CTE_insert_1) as source 
+                   ON target.ProviderId = source.ProviderId AND target.OfficeId = source.OfficeId
+                   WHEN NOT MATCHED THEN ' || insert_statement_1;
+
+                    
+merge_statement_2 := ' MERGE INTO Base.ProviderToMapCustomerProduct as target USING 
+                   ('||select_statement || ' SELECT * FROM CTE_insert_2) as source 
+                   ON target.ProviderId = source.ProviderId AND target.OfficeId = source.OfficeId
+                   WHEN NOT MATCHED THEN ' || insert_statement_2;
                     
  
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE insert_statement_1 ;
-EXECUTE IMMEDIATE insert_statement_2 ;
+EXECUTE IMMEDIATE merge_statement_1 ;
+EXECUTE IMMEDIATE merge_statement_2 ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
