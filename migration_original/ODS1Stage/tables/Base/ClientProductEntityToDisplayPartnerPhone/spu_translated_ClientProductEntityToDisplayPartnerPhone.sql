@@ -1,6 +1,4 @@
-
-
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhone() -- Parameters
+CREATE OR REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhone() -- Parameters
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     AS CALLER
@@ -35,42 +33,110 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
     ---------------------------------------------------------
     --- Select Statement
     -- If no conditionals:
-    select_statement_1:= $$with cte_swimlane_phones as (
+    select_statement_1:= $$
+            WITH cte_swimlane AS (
         SELECT
-            ClientToProductCode,
-            ProductCode,
-            DISPLAY_PARTNER [0] :REF_DISPLAY_PARTNER_CODE AS DisplayPartnerCode,
-            DISPLAY_PARTNER [0] :PHONE_PTDES AS PhonePTDES,
-            DISPLAY_PARTNER [0] :PHONE_PTDESM AS PhonePTDESM,
-            DISPLAY_PARTNER [0] :PHONE_PTDEST AS PhonePTDEST,
-            DISPLAY_PARTNER [0] :PHONE_PTEMP AS PhonePTEMP,
-            DISPLAY_PARTNER [0] :PHONE_PTEMPM AS PhonePTEMPM,
-            DISPLAY_PARTNER [0] :PHONE_PTEMPT AS PhonePTEMPT,
-            DISPLAY_PARTNER [0] :PHONE_PTHOS AS PhonePTHOS,
-            DISPLAY_PARTNER [0] :PHONE_PTHOSM AS PhonePTHOSM,
-            DISPLAY_PARTNER [0] :PHONE_PTHOST AS PhonePTHOST,
-            DISPLAY_PARTNER [0] :PHONE_PTMTR AS PhonePTMTR,
-            DISPLAY_PARTNER [0] :PHONE_PTMTRT AS PhonePTMTRT,
-            DISPLAY_PARTNER [0] :PHONE_PTMTRM AS PhonePTMTRM,
-            DISPLAY_PARTNER [0] :PHONE_PTMWC AS PhonePTMWC,
-            DISPLAY_PARTNER [0] :PHONE_PTMWCT AS PhonePTMWCT,
-            DISPLAY_PARTNER [0] :PHONE_PTMWCM AS PhonePTMWCM,
-            DISPLAY_PARTNER [0] :PHONE_PTPSR AS PhonePTPSR,
-            DISPLAY_PARTNER [0] :PHONE_PTPSRD AS PhonePTPSRD,
-            DISPLAY_PARTNER [0] :PHONE_PTPSRM AS PhonePTPSRM,
-            DISPLAY_PARTNER [0] :PHONE_PTPSRT AS PhonePTPSRT,
-            DISPLAY_PARTNER [0] :PHONE_PTDPPEP AS PhonePTDPPEP,
-            DISPLAY_PARTNER [0] :PHONE_PTDPPNP AS PhonePTDPPNP
-        FROM(
-                select
-                    CUSTOMERPRODUCTCODE AS ClientToProductCode,
-                    PRODUCTCODE as ProductCode,
-                    customerproductjson:DISPLAY_PARTNER AS DISPLAY_PARTNER
-                from
-                    swimlane_base_client
-                WHERE
-                    DISPLAY_PARTNER IS NOT NULL
-            )
+            *
+        from
+            base.swimlane_base_client qualify dense_rank() over(
+                partition by customerproductcode
+                order by
+                    LastUpdateDate
+            ) = 1
+    ),
+    CTE_SwimlanePhones AS (
+        SELECT
+            S.CUSTOMERPRODUCTCODE AS ClientToProductcode,
+            S.ProductCode,
+            JSON.DISPLAYPARTNER_REFDISPLAYPARTNERCODE AS DisplayPartnerCode,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTDES
+            END AS PhonePTDES,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTDESM
+            END AS PhonePTDESM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTDEST
+            END AS PhonePTDEST,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMTR
+            END AS PhonePTMTR,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMTRM
+            END AS PhonePTMTRM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMTRT
+            END AS PhonePTMTRT,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMWC
+            END AS PhonePTMWC,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMWCM
+            END AS PhonePTMWCM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTMWCT
+            END AS PhonePTMWCT,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTPSR
+            END AS PhonePTPSR,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTPSRM
+            END AS PhonePTPSRM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTPSRT
+            END AS PhonePTPSRT,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTHOS
+            END AS PhonePTHOS,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTHOSM
+            END AS PhonePTHOSM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTHOST
+            END AS PhonePTHOST,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTPSRD
+            END AS PhonePTPSRD,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTEMP
+            END AS PhonePTEMP,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTEMPM
+            END AS PhonePTEMPM,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTEMPT
+            END AS PhonePTEMPT,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTDPPEP
+            END AS PhonePTDPPEP,
+            CASE
+                WHEN S.ProductCode = 'MAP' THEN NULL
+                ELSE JSON.DISPLAYPARTNER_PHONEPTDPPNP
+            END AS PhonePTDPPNP
+        FROM
+            CTE_swimlane AS S
+            LEFT JOIN RAW.VW_CUSTOMER_PRODUCT_PROFILE AS JSON ON JSON.CustomerProductCode = S.CustomerProductCode
+            INNER JOIN Base.SyndicationPartner As SP ON SP.SyndicationPartnerCode = JSON.DISPLAYPARTNER_REFDISPLAYPARTNERCODE
     ),
     cte_tmp_phones as (
         select
@@ -79,7 +145,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTDES' as PhoneTypeCode,
             PhonePTDES as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTDES is not null
         union all
@@ -89,7 +155,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTDESM' as PhoneTypeCode,
             PhonePTDESM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTDESM is not null
         union all
@@ -99,7 +165,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTDEST' as PhoneTypeCode,
             PhonePTDEST as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTDEST is not null
         union all
@@ -109,7 +175,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTEMP' as PhoneTypeCode,
             PhonePTEMP as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTEMP is not null
         union all
@@ -119,7 +185,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTEMPM' as PhoneTypeCode,
             PhonePTEMPM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTEMPM is not null
         union all
@@ -129,7 +195,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTEMPT' as PhoneTypeCode,
             PhonePTEMPT as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTEMPT is not null
         union all
@@ -139,7 +205,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTHOS' as PhoneTypeCode,
             PhonePTHOS as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTHOS is not null
         union all
@@ -149,7 +215,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTHOSM' as PhoneTypeCode,
             PhonePTHOSM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTHOSM is not null
         union all
@@ -159,7 +225,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTHOST' as PhoneTypeCode,
             PhonePTHOST as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTHOST is not null
         union all
@@ -169,7 +235,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMTR' as PhoneTypeCode,
             PhonePTMTR as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMTR is not null
         union all
@@ -179,7 +245,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMTRT' as PhoneTypeCode,
             PhonePTMTRT as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMTRT is not null
         union all
@@ -189,7 +255,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMTRM' as PhoneTypeCode,
             PhonePTMTRM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMTRM is not null
         union all
@@ -199,7 +265,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMWC' as PhoneTypeCode,
             PhonePTMWC as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMWC is not null
         union all
@@ -209,7 +275,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMWCT' as PhoneTypeCode,
             PhonePTMWCT as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMWCT is not null
         union all
@@ -219,7 +285,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTMWCM' as PhoneTypeCode,
             PhonePTMWCM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTMWCM is not null
         union all
@@ -229,7 +295,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTPSR' as PhoneTypeCode,
             PhonePTPSR as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTPSR is not null
         union all
@@ -239,7 +305,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTPSRD' as PhoneTypeCode,
             PhonePTPSRD as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTPSRD is not null
         union all
@@ -249,7 +315,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTPSRM' as PhoneTypeCode,
             PhonePTPSRM as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTPSRM is not null
         union all
@@ -259,7 +325,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTPSRT' as PhoneTypeCode,
             PhonePTPSRT as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTPSRT is not null
         union all
@@ -269,7 +335,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTDPPEP' as PhoneTypeCode,
             PhonePTDPPEP as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTDPPEP is not null
         union all
@@ -279,7 +345,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
             'PTDPPNP' as PhoneTypeCode,
             PhonePTDPPNP as PhoneNumber
         from
-            cte_swimlane_phones
+            CTE_SwimlanePhones
         where
             PhonePTDPPNP is not null
     )
@@ -292,12 +358,13 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductEntityToDisplay
         sysdate() as LastUpdateDate
     from
         cte_tmp_phones s
-        inner join ODS1_Stage.Base.EntityType as et on et.EntityTypeCode = 'CLPROD'
-        inner join ODS1_Stage.base.PhoneType as pt on pt.PhoneTypeCode = s.PhoneTypeCode
-        inner join ODS1_Stage.base.ClientToProduct as CtP on CtP.ClientToProductCode = s.ClientToProductCode
-        inner join ODS1_Stage.base.ClientProductToEntity as CPtE on CPtE.ClientToProductID = CtP.ClientToProductID
-        and CPtE.EntityTypeID = et.EntityTypeID 
-        where s.DisplayPartnerCode != 'HG' $$;
+        inner join Base.EntityType as et on et.EntityTypeCode = 'CLPROD'
+        inner join base.PhoneType as pt on pt.PhoneTypeCode = s.PhoneTypeCode
+        inner join base.ClientToProduct as CtP on CtP.ClientToProductCode = s.ClientToProductCode
+        inner join base.ClientProductToEntity as CPtE on CPtE.ClientToProductID = CtP.ClientToProductID
+        and CPtE.EntityTypeID = et.EntityTypeID
+    where
+        s.DisplayPartnerCode != 'HG' $$;
 select_statement_2:= $$     with cte_swimlane as (
         SELECT
             facilityid as FacilityID,
@@ -601,7 +668,7 @@ select_statement_2:= $$     with cte_swimlane as (
         'Profisee' as SourceCode, 
         SYSDATE() as LastUpdateDate
     from cte_tmp_phones as s
-        join ODS1_STAGE.Base.EntityType b
+        join Base.EntityType b
         on b.EntityTypeCode='FAC'
         join base.facility as f on f.facilitycode = s.facilitycode
         join base.clienttoproduct as cp on cp.clienttoproductcode = s.ClientToProductCode
