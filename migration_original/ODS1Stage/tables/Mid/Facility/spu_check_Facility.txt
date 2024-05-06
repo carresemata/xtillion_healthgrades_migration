@@ -1,2 +1,0 @@
-Mid_spuFacilityRefresh
-etl_spuMidFacilityEntityRefresh

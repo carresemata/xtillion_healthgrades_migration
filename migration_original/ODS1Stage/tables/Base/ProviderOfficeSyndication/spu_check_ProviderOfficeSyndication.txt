@@ -1,2 +1,0 @@
-CallTracking_MAPProvisioinedLines
-etl_spuMergeProviderMAPCustomerProduct

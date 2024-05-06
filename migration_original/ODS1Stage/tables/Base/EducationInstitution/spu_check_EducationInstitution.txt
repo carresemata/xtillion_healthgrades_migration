@@ -1,3 +1,0 @@
-etl_spuMergeProviderEducationInstitution
-RawFile_spuMergeProviderEducationInstitution
-FastPass_spuMergeProviderToEducationInstitution
