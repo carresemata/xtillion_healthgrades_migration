@@ -271,7 +271,7 @@ select_statement := $$
                     CTE_DemographicsXML AS (
                         SELECT 
                         cte_p.ProviderID,
-                        Show.p_json_to_xml(
+                        utils.p_json_to_xml(
                             ARRAY_AGG(
                                 '{ '||
                                 IFF(cte_d.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_d.SourceCode || '"' || ',', '') ||
@@ -289,7 +289,7 @@ select_statement := $$
                     CTE_AboutMeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                 '{ '||
                                 IFF(cte_am.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_am.SourceCode || '"' || ',', '') ||
@@ -307,7 +307,7 @@ select_statement := $$
                     CTE_AppointmentAvailabilityStatementXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                 '{ '||
                                 IFF(cte_aas.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_aas.SourceCode || '"' || ',', '') ||
@@ -325,7 +325,7 @@ select_statement := $$
                     CTE_EmailXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                 '{ '||
                                 IFF(cte_e.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_e.SourceCode || '"' || ',', '') ||
@@ -343,7 +343,7 @@ select_statement := $$
                     CTE_LicenseXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                 '{ '||
                                 IFF(cte_l.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_l.SourceCode || '"' || ',', '') ||
@@ -361,7 +361,7 @@ select_statement := $$
                     CTE_OfficeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_o.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_o.SourceCode || '"' || ',', '') ||
@@ -379,7 +379,7 @@ select_statement := $$
                     CTE_ProviderTypeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_pt.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_pt.SourceCode || '"' || ',', '') ||
@@ -397,7 +397,7 @@ select_statement := $$
                     CTE_StatusXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_s.SourceCode || '"' || ',', '') ||
@@ -415,7 +415,7 @@ select_statement := $$
                     CTE_AppointmentAvailabilityXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_aa.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_aa.SourceCode || '"' || ',', '') ||
@@ -433,7 +433,7 @@ select_statement := $$
                     CTE_CertificationSpecialtyXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_cs.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_cs.SourceCode || '"' || ',', '') ||
@@ -451,7 +451,7 @@ select_statement := $$
                     CTE_FacilityXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_f.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_f.SourceCode || '"' || ',', '') ||
@@ -469,7 +469,7 @@ select_statement := $$
                     CTE_ImageXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_i.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_i.SourceCode || '"' || ',', '') ||
@@ -487,7 +487,7 @@ select_statement := $$
                     CTE_MalpracticeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_m.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_m.SourceCode || '"' || ',', '') ||
@@ -505,7 +505,7 @@ select_statement := $$
                     CTE_OrganizationXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{ '||
                                     IFF(cte_o.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_o.SourceCode || '"' || ',', '') ||
@@ -523,7 +523,7 @@ select_statement := $$
                     CTE_SponsorshipXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":"' || cte_s.SourceCode || '"', '') ||
@@ -541,7 +541,7 @@ select_statement := $$
                     CTE_DegreeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_d.SourceCode IS NOT NULL, '"SourceCode":"' || cte_d.SourceCode || '"', '') ||
@@ -559,7 +559,7 @@ select_statement := $$
                     CTE_EducationXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_e.SourceCode IS NOT NULL, '"SourceCode":"' || cte_e.SourceCode || '"', '') ||
@@ -577,7 +577,7 @@ select_statement := $$
                     CTE_HealthInsuranceXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_hi.SourceCode IS NOT NULL, '"SourceCode":"' || cte_hi.SourceCode || '"', '') ||
@@ -595,7 +595,7 @@ select_statement := $$
                     CTE_LanguageXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_l.SourceCode IS NOT NULL, '"SourceCode":"' || cte_l.SourceCode || '"', '') ||
@@ -613,7 +613,7 @@ select_statement := $$
                     CTE_MediaXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_m.SourceCode IS NOT NULL, '"SourceCode":"' || cte_m.SourceCode || '"', '') ||
@@ -632,7 +632,7 @@ select_statement := $$
                     CTE_SpecialtyXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":"' || cte_s.SourceCode || '"', '') ||
@@ -650,7 +650,7 @@ select_statement := $$
                     CTE_VideoXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_v.SourceCode IS NOT NULL, '"SourceCode":"' || cte_v.SourceCode || '"', '') ||
@@ -668,7 +668,7 @@ select_statement := $$
                     CTE_TelehealthXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_th.SourceCode IS NOT NULL, '"SourceCode":"' || cte_th.SourceCode || '"', '') ||
@@ -686,7 +686,7 @@ select_statement := $$
                     CTE_ConditionXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_c.SourceCode IS NOT NULL, '"SourceCode":"' || cte_c.SourceCode || '"', '') ||
@@ -704,7 +704,7 @@ select_statement := $$
                     CTE_ProcedureXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_pr.SourceCode IS NOT NULL, '"SourceCode":"' || cte_pr.SourceCode || '"', '') ||
@@ -722,7 +722,7 @@ select_statement := $$
                     CTE_ProviderSubTypeXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_pst.SourceCode IS NOT NULL, '"SourceCode":"' || cte_pst.SourceCode || '"', '') ||
@@ -740,7 +740,7 @@ select_statement := $$
                     CTE_TrainingXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_t.SourceCode IS NOT NULL, '"SourceCode":"' || cte_t.SourceCode || '"', '') ||
@@ -758,7 +758,7 @@ select_statement := $$
                     CTE_IdentificationXML AS (
                         SELECT 
                             cte_p.ProviderID,
-                            Show.p_json_to_xml(
+                            utils.p_json_to_xml(
                                 ARRAY_AGG(
                                     '{' ||
                                     IFF(cte_i.SourceCode IS NOT NULL, '"SourceCode":"' || cte_i.SourceCode || '"', '') ||

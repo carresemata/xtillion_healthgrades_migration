@@ -181,7 +181,7 @@ select_statement := select_statement ||
                          cte_phoneL_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                         ''{ '' ||
                         IFF(ph IS NOT NULL, ''"ph":'' || ''"'' || ph || ''"'' || '','', '''') ||
@@ -203,7 +203,7 @@ select_statement := select_statement ||
                         cte_mobile_phoneL_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(ph IS NOT NULL, ''"ph":'' || ''"'' || ph || ''"'' || '','', '''') ||
@@ -238,7 +238,7 @@ select_statement := select_statement ||
                         cte_imageL_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(img IS NOT NULL, ''"img":'' || ''"'' || img || ''"'' || '','', '''') ||
@@ -280,7 +280,7 @@ select_statement := select_statement ||
                         cte_practice_sponsorship_xml AS (
                             SELECT
                                 PracticeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(prCd IS NOT NULL, ''"prCd":'' || ''"'' || prCd || ''"'' || '','', '''') ||
@@ -315,7 +315,7 @@ select_statement := select_statement ||
                         cte_email_xml AS (
                             SELECT
                                 PracticeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(pEmail IS NOT NULL, ''"pEmail":'' || ''"'' || pEmail || ''"'', '''')
@@ -357,7 +357,7 @@ select_statement := select_statement ||
                         cte_hours_xml as (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF("day" IS NOT NULL, ''"day":'' || ''"'' || "day" || ''"'' || '','', '''') ||
@@ -381,7 +381,7 @@ select_statement := select_statement ||
                         cte_phone_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(phFull IS NOT NULL, ''"phFull":'' || ''"'' || phFull || ''"'', '''')
@@ -400,7 +400,7 @@ select_statement := select_statement ||
                         cte_fax_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(faxFull IS NOT NULL, ''"faxFull":'' || ''"'' || faxFull || ''"'', '''')
@@ -419,7 +419,7 @@ select_statement := select_statement ||
                         cte_specialty_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(spCd IS NOT NULL, ''"spCd":'' || ''"'' || spCd || ''"'' || '','', '''') ||
@@ -442,7 +442,7 @@ select_statement := select_statement ||
                         cte_sponsor_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         ''{ '' ||
                                         IFF(phoneL IS NOT NULL, ''"phoneL":'' || ''"'' || phoneL || ''"'' || '','', '''') ||
@@ -552,7 +552,7 @@ select_statement := select_statement ||
                         cte_office_xml AS (
                             SELECT
                                 OfficeID,
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         REPLACE(
                                         ''{ ''||
@@ -617,7 +617,7 @@ select_statement := select_statement ||
                             p.PracticeSoftware,
                             p.PracticeTIN,
                             TO_VARIANT(
-                                p_json_to_xml(
+                                utils.p_json_to_xml(
                                     ARRAY_AGG(
                                         REPLACE(
                                             ''{ ''||

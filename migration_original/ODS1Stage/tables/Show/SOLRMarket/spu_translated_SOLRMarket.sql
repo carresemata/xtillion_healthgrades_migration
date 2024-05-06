@@ -10,6 +10,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Show.SOLRMarket depends on:
 --- Mid.ClientMarket
 --- Base.ClientEntityToClientFeature
 --- Base.EntityType
@@ -100,7 +101,7 @@ CTE_clCtr AS (
         ApptCutOffTime AS aptCoffHr,
         EmailAddress AS eml,
         FaxNumber AS fxNo,
-        p_json_to_xml(
+        utils.p_json_to_xml(
             ARRAY_AGG(
                 ''{ '' || 
                 ''"featCd":'' || CTE_CCF.featCd || '','' || 
@@ -175,7 +176,7 @@ CTE_spnL AS (
         CM.CallToActionMtrMsg AS caToActMsgMtr,
         CM.CallToActionPsrMsg AS caToActMsgPsr,
         CM.SafeHarborMsg AS safHarMsg,
-        p_json_to_xml(
+        utils.p_json_to_xml(
             ARRAY_AGG(
                 ''{ ''||
                 IFF(CTE_SF.featCd IS NOT NULL, ''"featCd":'' || ''"'' || CTE_SF.featCd || ''"'' || '','', '''') ||
@@ -187,7 +188,7 @@ CTE_spnL AS (
             ''spnFeatL'',
             ''spnFeat''
         ) as spnFeatL,
-        p_json_to_xml(
+        utils.p_json_to_xml(
             ARRAY_AGG(
                 ''{ ''||
                 IFF(CTE_clCtr.clCtrCd IS NOT NULL, ''"clCtrCd":'' || ''"'' || CTE_clCtr.clCtrCd || ''"'' || '','', '''') ||
@@ -202,7 +203,7 @@ CTE_spnL AS (
             ''clCtrL'',
             ''clCtr''
         ) as clCtrL,
-        p_json_to_xml(
+        utils.p_json_to_xml(
             ARRAY_AGG(
                 ''{ ''||
                 IFF(CTE_dispL.facCd IS NOT NULL, ''"facCd":'' || ''"'' || CTE_dispL.facCd || ''"'' || '','', '''') ||
@@ -257,7 +258,7 @@ CTE_sponsorL AS (
                 ) THEN 1
                 ELSE 0
             END AS compositePhone,
-            p_json_to_xml(
+            utils.p_json_to_xml(
                 ARRAY_AGG(
                     ''{ ''||
                     IFF(CTE_spnL.spnCd IS NOT NULL, ''"spnCd":'' || ''"'' || CTE_spnL.spnCd || ''"'' || '','', '''') ||
@@ -309,7 +310,7 @@ CTE_sponsorL AS (
             CM.LineOfServiceTypeDescription,
             GETDATE() AS UpdatedDate,
             CURRENT_USER() AS UpdatedSource,
-            p_json_to_xml(
+            utils.p_json_to_xml(
                 ARRAY_AGG(
                     ''{ ''||
                     IFF(prCd IS NOT NULL, ''"prCd":'' || ''"'' || prCd || ''"'' || '','', '''') ||

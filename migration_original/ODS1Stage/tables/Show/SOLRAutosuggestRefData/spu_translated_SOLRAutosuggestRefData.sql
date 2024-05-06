@@ -9,6 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+--- Show.SOLRAutosuggestRefData depends on:
 -- Base.Gender
 -- Base.Suffix
 -- Base.ProviderType
@@ -430,7 +431,7 @@ select_statement_payor := $$
                           cte_rel_xml AS (
                               SELECT 
                                 InsurancePayorCode,
-                                TO_VARIANT(p_json_to_xml(
+                                TO_VARIANT(utils.p_json_to_xml(
                                     ARRAY_AGG(
                                     REPLACE(
                                     '{ '||
@@ -482,7 +483,7 @@ select_statement_product := $$
                             cte_rel_xml AS (
                               SELECT 
                                 HealthInsurancePlanToPlanTypeID,
-                                TO_VARIANT(p_json_to_xml(
+                                TO_VARIANT(utils.p_json_to_xml(
                                     ARRAY_AGG(
                                     REPLACE(
                                     '{ '||
@@ -532,7 +533,7 @@ select_statement_certspec := $$
                             cte_rel_xml AS (
                               SELECT 
                                 CertificationSpecialtyID,
-                                TO_VARIANT(p_json_to_xml(
+                                TO_VARIANT(utils.p_json_to_xml(
                                     ARRAY_AGG(
                                     REPLACE(
                                     '{ '||
@@ -575,7 +576,7 @@ select_statement_dispstatus := $$
                             cte_rel_xml AS (
                               SELECT 
                                 DisplayStatusCode,
-                                TO_VARIANT(p_json_to_xml(
+                                TO_VARIANT(utils.p_json_to_xml(
                                     ARRAY_AGG(
                                     REPLACE(
                                     '{ '||

@@ -491,7 +491,7 @@ select_statement := $$
                     p.ProviderId,
                     p.ProviderCode,
                     CTE_updates.DataElement,
-                    p_json_to_xml(
+                    utils.p_json_to_xml(
                         ARRAY_AGG(
                             '{ ' || IFF(
                                 CTE_updates.DataElement IS NOT NULL,
@@ -528,7 +528,7 @@ select_statement := $$
             SELECT DISTINCT
                 p.ProviderId,
                 p.ProviderCode,
-                TO_VARIANT(p_json_to_xml(
+                TO_VARIANT(utils.p_json_to_xml(
                         array_agg( 
                         '{ '||
             IFF(UpdateTrackingXML IS NOT NULL, '"xml_1":' || '"' || UpdateTrackingXML || '"', '')
@@ -612,5 +612,3 @@ EXCEPTION
 
     
 END;
-
-call sp_load_providerattributemetadata();
