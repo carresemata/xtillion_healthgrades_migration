@@ -9,7 +9,7 @@ AS 'DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRPractice depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Practice
 --- Base.Office
 --- Base.Client
@@ -61,7 +61,7 @@ BEGIN
                     SELECT DISTINCT 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
-                    FROM Raw.ProviderDeltaProcessing AS DeltaProc
+                    FROM Raw.Provider_Profile_Processing AS DeltaProc
                     INNER JOIN base.ProviderToOffice PTO ON DeltaProc.ProviderID = PTO.ProviderID
                     INNER JOIN base.Office Off ON PTO.OfficeID = Off.OfficeID
                     INNER JOIN Base.Practice AS BasePrac ON BasePrac.PracticeID = Off.PracticeID

@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.PracticeSponsorship depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Practice
 --- Base.ProviderToOffice
 --- Base.Office
@@ -43,7 +43,7 @@ BEGIN
                     SELECT 
                         p.PracticeID, 
                         p.PracticeCode
-                    FROM raw.ProviderDeltaProcessing AS a
+                    FROM raw.Provider_Profile_Processing AS a
                     JOIN base.providertooffice pto ON a.ProviderID = pto.ProviderID
                     JOIN base.Office o ON pto.OfficeID = o.OfficeID
                     JOIN Base.Practice AS p ON p.PracticeID = o.PracticeID

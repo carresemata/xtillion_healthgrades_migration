@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderHealthInsurance depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProviderToHealthInsurance
 --- Base.HealthInsurancePlanToPlanType
@@ -40,7 +40,7 @@ BEGIN
             SELECT
                 pdp.ProviderID
             FROM
-                Raw.ProviderDeltaProcessing as pdp
+                Raw.Provider_Profile_Processing as pdp
         ),';
     ELSE
            truncate_statement := 'TRUNCATE TABLE Show.ProviderHealthInsurance';

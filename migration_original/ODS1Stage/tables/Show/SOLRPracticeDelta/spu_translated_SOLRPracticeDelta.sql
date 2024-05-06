@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRPracticeDelta depends on:
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Practice
 --- Base.ProviderToOffice
 --- Base.Office
@@ -44,7 +44,7 @@ merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
                                                 spd.EndDeltaProcessDate,
                                                 spd.StartMoveDate,
                                                 spd.EndMoveDate
-                                            FROM	Raw.ProviderDeltaProcessing as pdp
+                                            FROM	Raw.Provider_Profile_Processing as pdp
                                             		join	Base.ProviderToOffice po on pdp.ProviderID = po.ProviderID
                                             		join	Base.Office o on po.OfficeID = o.OfficeID
                                             		join	Base.Practice pr on o.PracticeID = pr.PracticeID		
@@ -106,7 +106,7 @@ merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
                                     CURRENT_TIMESTAMP() as StartDeltaProcessDate,
                                     '1' as MidDeltaProcessComplete
                                 from
-                                    Raw.ProviderDeltaProcessing as pdp
+                                    Raw.Provider_Profile_Processing as pdp
                                     inner join Base.ProviderToOffice as pto on pdp.ProviderID = pto.ProviderID
                                     inner join Base.Office as o on pto.OfficeID = o.OfficeID
                                 WHERE

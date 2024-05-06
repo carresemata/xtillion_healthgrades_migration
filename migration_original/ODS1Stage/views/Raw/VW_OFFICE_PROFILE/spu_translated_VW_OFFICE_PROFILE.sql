@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_OFFICE_PROFILE AS (
 ---------------------------------------------------------
 
 -- Raw.VW_OFFICE_PROFILE depends on:
---- Raw.OFFICE_PROFILE_PROCESSING
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------

@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PROVIDER_PROFILE AS  (
 ---------------------------------------------------------
 
 -- Raw.VW_PROVIDER_PROFILE depends on:
---- Raw.PROVIDER_PROFILE_PROCESSING
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------

@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderAffiliation depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProviderToAffiliation
 --- Base.Affiliation
@@ -36,7 +36,7 @@ BEGIN
                 SELECT
                     pdp.ProviderID
                 FROM
-                    Raw.ProviderDeltaProcessing as pdp),';
+                    Raw.Provider_Profile_Processing as pdp),';
     ELSE
            select_statement := '
            WITH CTE_ProviderBatch AS (

@@ -11,9 +11,7 @@ DECLARE
 
 -- Base.EntityToMedicalTerm depends on:
 --- Raw.VW_PROVIDER_PROFILE
---- Raw.ProviderProfileProcessing
 --- Base.Provider
---- Base.EntityToMedicalTerm
 --- Base.MedicalTerm
 --- Base.EntityType
 --- Base.MedicalTermType

@@ -65,7 +65,7 @@ def table_dependencies():
         if table_name in source_tables:
             # remove the table_name from the source_tables
             source_tables.remove(table_name)
-    #         print(table_name)
+            # print(table_name)
     
     # Print the table dependencies
     # print(json.dumps(table_dependencies, indent=4))

@@ -60,7 +60,7 @@ create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
---- Raw.VW_CUSTOMER_PRODUCT_PROFILE
+--- MDM_TEAM.MST.VW_CUSTOMER_PRODUCT_PROFILE
 --- Base.ClientToProduct
 
 

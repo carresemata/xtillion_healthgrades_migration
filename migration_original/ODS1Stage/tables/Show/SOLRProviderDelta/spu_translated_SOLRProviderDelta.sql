@@ -11,7 +11,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRProviderDelta depends on: 
---- Raw.ProviderDeltaProcessing (empty)
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProvidersWithSponsorshipIssues (empty)
 --- Show.SOLRProviderDelta_PoweredByHealthgrades (empty)
@@ -44,7 +44,7 @@ BEGIN
                                         ProviderId, 
                                         1 AS SolrDeltaTypeCode, 
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate
-                            		FROM	Raw.ProviderDeltaProcessing
+                            		FROM	Raw.Provider_Profile_Processing
                             		WHERE	ProviderId NOT IN (SELECT ProviderId FROM Show.SOLRProviderDelta)) as source
                                     ON source.ProviderId = target.ProviderId
                                     WHEN NOT MATCHED THEN
@@ -63,7 +63,7 @@ BEGIN
                                     (SELECT 
                                         ProvDelta.ProviderID
                                     FROM 
-                                        Raw.ProviderDeltaProcessing AS ProvDelta
+                                        Raw.Provider_Profile_Processing AS ProvDelta
                                     INNER JOIN Show.SOLRProviderDelta SOLRProvDelta
                                     ON ProvDelta.ProviderID = SOLRProvDelta.ProviderID) AS source
                                     ON source.ProviderID = target.ProviderID
@@ -80,7 +80,7 @@ BEGIN
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate,
                                         1 AS MidDeltaProcessComplete
                                     FROM
-                                        Raw.ProviderDeltaProcessing AS ProvDelta
+                                        Raw.Provider_Profile_Processing AS ProvDelta
                                         INNER JOIN Base.Provider AS BaseProv ON BaseProv.ProviderID = ProvDelta.ProviderID
                                         LEFT JOIN Show.SOLRProviderDelta AS SOLRProvDelta ON SOLRProvDelta.ProviderID = ProvDelta.ProviderID
                                         LEFT JOIN Base.ProvidersWithSponsorshipIssues AS ProvIssue ON ProvIssue.ProviderCode = BaseProv.ProviderCode

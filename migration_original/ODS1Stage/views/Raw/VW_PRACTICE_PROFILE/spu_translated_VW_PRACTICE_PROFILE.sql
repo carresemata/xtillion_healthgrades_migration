@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PRACTICE_PROFILE AS (
 ---------------------------------------------------------
 
 -- Raw.VW_PRACTICE_PROFILE depends on:
---- Raw.PRACTICE_PROFILE_PROCESSING
+--- MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------

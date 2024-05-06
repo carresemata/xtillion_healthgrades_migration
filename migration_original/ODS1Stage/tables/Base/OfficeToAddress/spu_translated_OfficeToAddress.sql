@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
--- BASE.OfficeToPhone depends on:
+-- BASE.OfficeToAddress depends on:
 --- Raw.VW_OFFICE_PROFILE
 --- Base.Office
 --- Base.AddressType

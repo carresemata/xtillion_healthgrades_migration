@@ -9,8 +9,9 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- Show.SOLRProviderDelta_PoweredByHealthgrades depends on:
 -- Show.SOLRProvider
--- Base.ProviderCertification (formerly scdghcorp.ProviderCertification in SQL Server)
+-- Base.ProviderCertification (formerly in the scdghcorp schema in SQL Server)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

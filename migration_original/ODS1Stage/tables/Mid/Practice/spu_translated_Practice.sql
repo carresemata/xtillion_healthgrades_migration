@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
 
 -- Mid.Practice depends on:
---- Raw.ProviderDeltaProcessing 
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.ProviderToProviderType
 --- Base.ProviderType
 --- Base.ProviderToOffice 
@@ -53,7 +53,7 @@ BEGIN
            WITH CTE_PracticeBatch AS (
                 SELECT DISTINCT 
                     O.PracticeID
-                FROM Raw.ProviderDeltaProcessing as PDP 
+                FROM Raw.Provider_Profile_Processing as PDP 
                     JOIN Base.ProviderToOffice AS PTO on PTO.ProviderID = PDP.ProviderID
                     JOIN Base.Office AS O on O.OfficeID = PTO.OfficeID
                 ORDER BY O.PracticeID), ';

@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderEducation depends on:
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.ProviderToEducationInstitution
 --- Base.EducationInstitution
 --- Base.EducationInstitutionType
@@ -39,7 +39,7 @@ BEGIN
                 SELECT
                     pdp.ProviderID
                 from
-                    Raw.ProviderDeltaProcessing as pdp),';
+                    Raw.Provider_Profile_Processing as pdp),';
     ELSE
            select_statement := '
            WITH CTE_ProviderBatch AS (

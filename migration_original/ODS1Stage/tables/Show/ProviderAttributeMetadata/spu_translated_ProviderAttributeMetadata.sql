@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Show.ProviderAttributeMetadata depends on: 
---- Raw.ProviderProfileProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.MedicalTerm
 --- Base.MedicalTermType
@@ -71,7 +71,7 @@ select_statement := $$
         END AS ProviderID,
         PDP.PROVIDER_CODE AS ProviderCode
     FROM
-        Raw.ProviderProfileProcessing AS PDP
+        Raw.Provider_Profile_Processing AS PDP
         JOIN Base.Provider AS P ON PDP.PROVIDER_CODE = P.ProviderCode
     ORDER BY
         (

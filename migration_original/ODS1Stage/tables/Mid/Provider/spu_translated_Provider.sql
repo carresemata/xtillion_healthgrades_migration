@@ -9,6 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+--- Mid.Provider depends on:
 -- Base.Provider
 -- Base.ProviderToDegree
 -- Base.Degree

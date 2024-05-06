@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.PartnerEntity depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.PartnerToEntity
 --- Base.Partner
 --- Base.Provider
@@ -40,7 +40,7 @@ BEGIN
            select_statement := '
             WITH CTE_ProviderBatch AS (
                 SELECT DISTINCT p.ProviderID, p.ProviderCode
-                FROM Raw.ProviderDeltaProcessing as pdp
+                FROM Raw.Provider_Profile_Processing as pdp
                 JOIN Base.Provider as p on p.ProviderID = pdp.ProviderID),
            ';
     ELSE

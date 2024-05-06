@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_FACILITY_PROFILE AS (
 ---------------------------------------------------------
 
 -- Raw.VW_FACILITY_PROFILE depends on:
---- Raw.FACILITY_PROFILE_PROCESSING
+--- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------

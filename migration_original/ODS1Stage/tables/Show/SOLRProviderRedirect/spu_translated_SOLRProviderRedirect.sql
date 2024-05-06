@@ -18,12 +18,11 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- SOLRProviderRedirect depends on: 
+-- Show.SOLRProviderRedirect depends on: 
 --- Base.ProviderRedirect 
 --- Base.Provider 
 --- Base.ProviderURL 
 --- Show.SOLRProvider 
---- Show.SOLRProviderRedirect
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

@@ -9,7 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 --- Base.ProviderLastUpdateDate depends on:
--- Base.ProviderProfileProcessing
+-- MDM_TEAM.MST.Provider_Profile_Processing
 -- Base.Provider
 -- Base.ProviderToAboutMe
 -- Base.ProviderAppointmentAvailabilityStatement
@@ -63,7 +63,7 @@ BEGIN
 select_statement := $$
                     WITH CTE_Provider AS (
                         SELECT ppp.ProviderID
-                        FROM raw.ProviderProfileProcessing ppp 
+                        FROM raw.Provider_Profile_Processing ppp 
                         INNER JOIN Base.Provider p ON p.ProviderCode = ppp.Provider_Code
                     ),
                     

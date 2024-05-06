@@ -10,7 +10,7 @@ AS
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     
-    -- SOLRProviderAddress depends on: 
+    -- Show.SOLRProviderAddress depends on: 
     --- Base.ProviderRedirect 
     --- Base.Provider 
     --- Base.ProviderURL 

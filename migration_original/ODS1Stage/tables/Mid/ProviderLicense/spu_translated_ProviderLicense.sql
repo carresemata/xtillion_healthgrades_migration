@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderLicense depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProviderLicense
 --- Base.State
@@ -36,7 +36,7 @@ BEGIN
                 SELECT
                     pdp.ProviderID
                 FROM
-                    Raw.ProviderDeltaProcessing as pdp),';
+                    Raw.Provider_Profile_Processing as pdp),';
     ELSE
            truncate_statement := 'TRUNCATE TABLE Mid.ProviderLicense';
            EXECUTE IMMEDIATE truncate_statement;
