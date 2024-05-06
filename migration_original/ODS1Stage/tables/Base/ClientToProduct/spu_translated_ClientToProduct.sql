@@ -7,7 +7,7 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
---- Base,ClientToProduct depends on:
+--- Base.ClientToProduct depends on:
 -- Base.swimlane_base_client
 -- Base.Client
 -- Base.Product
