@@ -19,7 +19,9 @@ DECLARE
 
     select_statement STRING; -- CTE and Select statement for the insert
     insert_statement STRING; -- Insert statement 
+    merge_statement STRING;
     status STRING; -- Status monitoring
+    
    
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------
@@ -70,27 +72,36 @@ select_statement := $$ WITH CTE_Swimlane AS (SELECT
                             FROM CTE_TempImage  $$;
 
 
+insert_statement := ' INSERT
+                        (ImageId,
+                        ImageFilePath,
+                        LastUpdateDate)
+                      VALUES
+                        (source.ImageId,
+                        source.ImageFilePath,
+                        source.LastUpdateDate)';
 
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
 
-insert_statement := ' INSERT INTO Base.Image 
-                        (ImageId,
-                        ImageFilePath,
-                        LastUpdateDate) ' ||select_statement;
+merge_statement:= ' MERGE INTO Dev.Image as target USING 
+                   ('||select_statement||') as source 
+                   ON source.imageid = target.imageid 
+                   WHEN NOT MATCHED THEN '||insert_statement;
                    
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE insert_statement ;
+EXECUTE IMMEDIATE merge_statement ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
 status := 'Completed successfully';
+        
     RETURN status;
 
 
@@ -98,8 +109,7 @@ status := 'Completed successfully';
 EXCEPTION
     WHEN OTHER THEN
           status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+          
           RETURN status;
-
-
     
 END;
