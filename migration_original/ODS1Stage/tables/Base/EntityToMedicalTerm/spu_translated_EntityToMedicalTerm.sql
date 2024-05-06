@@ -24,11 +24,11 @@ DECLARE
 
     select_statement_1 STRING;
     delete_statement_1 STRING;
-    update_statement_1 STRING;
-    insert_statement_1 STRING;
+    merge_statement_1 STRING;
+    merge_statement_2 STRING;
     select_statement_2 STRING;
-    update_statement_2 STRING;
-    insert_statement_2 STRING;
+    merge_statement_3 STRING;
+    merge_statement_4 STRING;
     status STRING; -- Status monitoring
    
 ---------------------------------------------------------
@@ -172,7 +172,7 @@ delete_statement_1 := 'DELETE FROM Base.EntityToMedicalTerm
                 (' || select_statement_1 || 'SELECT EntityToMedicalTermID FROM CTE_DeleteSome)';
 
 
-update_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
+merge_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
                    ('||select_statement_1 ||' SELECT * FROM CTE_swimlane ) as source 
                    ON target.EntityID = source.EntityId AND target.MedicalTermID = source.MedicalTermID
                    WHEN MATCHED AND 
@@ -190,7 +190,7 @@ update_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
                                 target.NationalRankingB = source.NationalRankingB, 
                                 target.SourceCode = source.SourceCode';
 
-insert_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
+merge_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
                    ('||select_statement_1 ||' SELECT * FROM CTE_Tmp2) as source 
                    ON target.EntityID = source.EntityID AND target.MedicalTermID = source.MedicalTermID
                    WHEN NOT MATCHED THEN 
@@ -215,7 +215,7 @@ insert_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
                                 
 
 
-update_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
+merge_statement_3 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
                    ('||select_statement_2 ||' SELECT * FROM CTE_swimlane )   as source 
                    ON target.EntityID = source.EntityId AND target.MedicalTermID = source.MedicalTermID
                    WHEN MATCHED AND 
@@ -231,7 +231,7 @@ update_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
                             target.NationalRankingB = source.NationalRankingB,
                             target.SourceCode = source.SourceCode';
 
-insert_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
+merge_statement_4 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
                    ('||select_statement_2 ||' SELECT * FROM CTE_Tmp2) as source 
                    ON target.EntityID = source.EntityID AND target.MedicalTermID = source.MedicalTermID
                    WHEN NOT MATCHED THEN 
@@ -260,10 +260,10 @@ insert_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
 --------------------------------------------------------- 
 
 EXECUTE IMMEDIATE delete_statement_1 ;
-EXECUTE IMMEDIATE update_statement_1 ;
-EXECUTE IMMEDIATE insert_statement_1 ;
-EXECUTE IMMEDIATE update_statement_2 ;
-EXECUTE IMMEDIATE insert_statement_2 ;
+EXECUTE IMMEDIATE merge_statement_1 ;
+EXECUTE IMMEDIATE merge_statement_2 ;
+EXECUTE IMMEDIATE merge_statement_3 ;
+EXECUTE IMMEDIATE merge_statement_4 ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
