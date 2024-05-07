@@ -12,7 +12,6 @@ DECLARE
 -- BASE.ProviderMalpractice depends on:
 --- RAW.VW_PROVIDER_PROFILE
 --- Base.Provider
---- Base.ProviderLicense
 --- Base.MalpracticeClaimType
 
 ---------------------------------------------------------
@@ -37,7 +36,7 @@ BEGIN
 -- Select Statement
 select_statement := $$  WITH CTE_Swimlane AS (SELECT
     P.ProviderId,
-    PL.ProviderLicenseId,
+    --PL.ProviderLicenseId,
     M.MalpracticeClaimTypeID,
     JSON.ProviderCode,
     JSON.MALPRACTICE_MALPRACTICECLAIMTYPECODE AS MalpracticeClaimTypeCode,
@@ -59,7 +58,7 @@ select_statement := $$  WITH CTE_Swimlane AS (SELECT
 FROM
     RAW.VW_PROVIDER_PROFILE AS JSON
     LEFT JOIN Base.Provider AS P ON JSON.ProviderCode = P.ProviderCode
-    LEFT JOIN Base.ProviderLicense AS PL ON PL.Providerid = P.ProviderId AND PL.licensenumber = JSON.MALPRACTICE_LICENSENUMBER
+    --LEFT JOIN Base.ProviderLicense AS PL ON PL.Providerid = P.ProviderId AND PL.licensenumber = JSON.MALPRACTICE_LICENSENUMBER
     LEFT JOIN Base.MalpracticeClaimType AS M ON M.MALPRACTICECLAIMTYPECODE = JSON.MALPRACTICE_MALPRACTICECLAIMTYPECODE
 WHERE
     PROVIDER_PROFILE IS NOT NULL
@@ -134,7 +133,7 @@ CTE_BadMalpracticeClaimTypeCode AS (
 CTE_KEEP AS (
     SELECT 
         S.ProviderId,
-        S.ProviderLicenseId,
+        --S.ProviderLicenseId,
         S.MalpracticeClaimTypeID,
         S.ProviderCode,
         S.MalpracticeClaimTypeCode,
@@ -171,7 +170,7 @@ CTE_KEEP AS (
 CTE_Delete1 AS (
     SELECT 
         ProviderId,
-        ProviderLicenseId,
+        --ProviderLicenseId,
         MalpracticeClaimTypeID,
         ProviderCode,
         MalpracticeClaimTypeCode,
@@ -194,7 +193,7 @@ CTE_Delete1 AS (
     WHERE RN1 IN (SELECT RN1 FROM CTE_KEEP))
 SELECT 
     ProviderId,
-    ProviderLicenseId,
+    --ProviderLicenseId,
     MalpracticeClaimTypeID,
     ProviderCode,
     MalpracticeClaimTypeCode,
@@ -221,7 +220,7 @@ WHERE D.RN1 NOT IN (SELECT RN1 FROM CTE_BadMalpracticeClaimTypeCode) $$;
 insert_statement := ' INSERT  
                             (ProviderMalpracticeID,
                             ProviderID,
-                            ProviderLicenseID,
+                            --ProviderLicenseID,
                             MalpracticeClaimTypeID,
                             ClaimNumber,
                             ClaimDate,
@@ -239,7 +238,7 @@ insert_statement := ' INSERT
                     VALUES 
                           ( UUID_STRING(),
                             source.ProviderID,
-                            source.ProviderLicenseID,
+                            --source.ProviderLicenseID,
                             source.MalpracticeClaimTypeID,
                             source.ClaimNumber,
                             source.ClaimDate,
@@ -263,7 +262,7 @@ insert_statement := ' INSERT
 
 merge_statement := ' MERGE INTO Base.ProviderMalpractice AS target 
 USING ('||select_statement||') AS source
-ON source.ProviderID = target.ProviderID AND source.ProviderLicenseId = target.ProviderLicenseId AND source.MalpracticeClaimTypeID = target.MalpracticeClaimTypeID
+ON source.ProviderID = target.ProviderID AND source.MalpracticeClaimTypeID = target.MalpracticeClaimTypeID --AND source.ProviderLicenseId = target.ProviderLicenseId
 WHEN MATCHED THEN DELETE 
 WHEN NOT MATCHED THEN'||insert_statement;
 

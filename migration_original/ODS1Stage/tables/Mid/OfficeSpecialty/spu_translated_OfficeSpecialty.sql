@@ -15,6 +15,7 @@ DECLARE
 --- Base.EntityToMedicalTerm 
 --- Base.MedicalTerm
 --- Base.MedicalTermType
+--- Base.Provider
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -35,7 +36,8 @@ BEGIN
            select_statement := '
             WITH CTE_OfficeBatch AS (SELECT DISTINCT pto.OfficeID
             FROM Raw.Provider_Profile_Processing AS pdp 
-            JOIN Base.ProviderToOffice AS pto ON pto.ProviderID = pdp.ProviderID
+            JOIN Base.Provider AS P ON P.ProviderCode = pdp.ref_provider_code
+            JOIN Base.ProviderToOffice AS pto ON pto.ProviderId = P.ProviderID
             ORDER BY pto.OfficeID),
            ';
     ELSE

@@ -41,7 +41,7 @@ BEGIN
             WITH CTE_ProviderBatch AS (
                 SELECT DISTINCT p.ProviderID, p.ProviderCode
                 FROM Raw.Provider_Profile_Processing as pdp
-                JOIN Base.Provider as p on p.ProviderID = pdp.ProviderID),
+                JOIN Base.Provider as p on p.Providercode = pdp.ref_provider_code),
            ';
     ELSE
            truncate_statement := 'TRUNCATE TABLE Mid.PartnerEntity';

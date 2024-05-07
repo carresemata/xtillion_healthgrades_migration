@@ -13,6 +13,7 @@ DECLARE
 --- Base.Practice
 --- Base.ProviderToOffice
 --- Base.Office
+--- Base.Provider
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -44,8 +45,9 @@ merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
                                                 spd.EndDeltaProcessDate,
                                                 spd.StartMoveDate,
                                                 spd.EndMoveDate
-                                            FROM	Raw.Provider_Profile_Processing as pdp
-                                            		join	Base.ProviderToOffice po on pdp.ProviderID = po.ProviderID
+                                            FROM	Raw.Provider_Profile_Processing as ppp
+                                                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
+                                            		join	Base.ProviderToOffice po on p.ProviderID = po.ProviderID
                                             		join	Base.Office o on po.OfficeID = o.OfficeID
                                             		join	Base.Practice pr on o.PracticeID = pr.PracticeID		
                                             		left join	Show.SOLRPracticeDelta spd on pr.PracticeID = spd.PracticeID) as source 

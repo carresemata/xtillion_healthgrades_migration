@@ -10,7 +10,6 @@ DECLARE
     
 -- Show.SOLRProvider depends on: 
 --- Show.WebFreeze
---- Show.SOLRProvider_FREEZE
 --- Show.ProviderSourceUpdate
 --- Show.SOLRProviderDelta
 --- Mid.ProviderPracticeOffice

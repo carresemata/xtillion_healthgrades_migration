@@ -17,6 +17,17 @@ AS 'DECLARE
 --- Mid.PracticeSponsorship
 --- Show.vwuProviderIndex
 --- Show.ClientContract
+--- Mid.Practice
+--- Mid.OfficeSpecialty
+--- Base.OfficeHours
+--- Base.DaysOfWeek
+--- Base.vwuPDCPracticeOfficeDetail
+--- Base.CityStatePostalCode
+--- Base.State
+--- Base.Product
+--- Base.PracticeEmail
+--- Base.Provider
+
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -61,8 +72,9 @@ BEGIN
                     SELECT DISTINCT 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
-                    FROM Raw.Provider_Profile_Processing AS DeltaProc
-                    INNER JOIN base.ProviderToOffice PTO ON DeltaProc.ProviderID = PTO.ProviderID
+                    FROM Raw.Provider_Profile_Processing as ppp
+                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
+                    INNER JOIN base.ProviderToOffice PTO ON p.ProviderID = PTO.ProviderID
                     INNER JOIN base.Office Off ON PTO.OfficeID = Off.OfficeID
                     INNER JOIN Base.Practice AS BasePrac ON BasePrac.PracticeID = Off.PracticeID
                     ORDER BY BasePrac.PracticeID

@@ -65,21 +65,14 @@ BEGIN
 select_statement := $$
                     WITH CTE_ProviderIdList AS (
     SELECT
-        DISTINCT CASE
-            WHEN P.ProviderID IS NOT NULL THEN p.ProviderID
-            ELSE PDP.ProviderID
-        END AS ProviderID,
-        PDP.PROVIDER_CODE AS ProviderCode
+        DISTINCT 
+        p.providerid,
+        PDP.ref_provider_code AS ProviderCode
     FROM
         Raw.Provider_Profile_Processing AS PDP
-        JOIN Base.Provider AS P ON PDP.PROVIDER_CODE = P.ProviderCode
+        JOIN Base.Provider AS P ON PDP.ref_provider_code = P.ProviderCode
     ORDER BY
-        (
-            CASE
-                WHEN P.ProviderID IS NOT NULL THEN p.ProviderID
-                ELSE PDP.ProviderID
-            END
-        )
+        p.providerid
             ),
             CTE_MedicalTerm AS (
                 SELECT

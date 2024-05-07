@@ -38,9 +38,10 @@ BEGIN
            select_statement := '
           WITH CTE_ProviderBatch AS (
                 SELECT
-                    pdp.ProviderID
+                    p.ProviderID
                 FROM
-                    Raw.Provider_Profile_Processing as pdp),';
+                    Raw.Provider_Profile_Processing as ppp
+                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
     ELSE
            select_statement := '
            WITH CTE_ProviderBatch AS (
