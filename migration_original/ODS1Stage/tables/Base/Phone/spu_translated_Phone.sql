@@ -9,12 +9,11 @@ DECLARE
 ---------------------------------------------------------
 
 -- Base.Phone depends on:
---- Raw.VW_CUSTOMER_PRODUCT_PROFILE
---- RAW.VW_OFFICE_PROFILE
---- RAW.VW_FACILITY_PROFILE
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (RAW.VW_CUSTOMER_PRODUCT_PROFILE and Base.vw_Swimlane_base_client)
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
+--- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
 --- Base.Facility
 --- Base.ClientToProduct
---- Base.Swimlane_base_client
 --- Base.SyndicationPartner
 --- Base.Office
 --- Base.PhoneType
@@ -48,7 +47,7 @@ select_statement_1 := $$ WITH cte_swimlane AS (
     SELECT
         *
     from
-        base.swimlane_base_client qualify dense_rank() over(
+        base.vw_swimlane_base_client qualify dense_rank() over(
             partition by customerproductcode
             order by
                 LastUpdateDate

@@ -22,7 +22,6 @@ DECLARE
 --- Base.ProviderAppointmentAvailabilityStatement (empty)
 --- Base.ProviderToCertificationSpecialty (empty)
 --- Base.ProviderToDegree
---- Base.Provider
 --- Base.ProviderToHealthInsurance
 --- Base.ProviderToFacility
 --- Base.ProviderToLanguage

@@ -7,7 +7,10 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     --- Base.ClientProductToEntity depends on:
-    --- Base.SWIMLANE_BASE_CLIENT
+    --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
+    --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
+    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
+    --- MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING (RAW.VW_PRACTICE_PROFILE)
     --- BASE.ENTITYTYPE
     --- BASE.CLIENTTOPRODUCT
     --- BASE.FACILITY
@@ -16,12 +19,6 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     --- BASE.RELATIONSHIPTYPE
     --- BASE.PRODUCT
     --- BASE.PRACTICE
-    --- BASE.PROVIDER
-    --- Raw.VW_PROVIDER_PROFILE
-    --- Raw.VW_FACILITY_PROFILE
-    --- Raw.VW_PRACTICE_PROFILE
-
-
 
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
@@ -59,7 +56,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
         cp.ClientToProductID as EntityID,
         ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
     FROM
-        base.swimlane_base_client s
+        base.vw_swimlane_base_client s
         join base.clienttoproduct as cp on s.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
         JOIN Base.EntityType b on b.EntityTypeCode = 'CLPROD'
     where

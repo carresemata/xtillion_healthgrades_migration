@@ -7,7 +7,7 @@ CREATE OR REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     --- Base.ClientProductEntityToDisplayPartnerPhone depends on:
-    --- Base.SWIMLANE_BASE_CLIENT
+    --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_SWIMLANE_BASE_CLIENT)
     --- BASE.PHONE
     --- BASE.PHONETYPE
     --- BASE.ENTITYTYPE
@@ -38,7 +38,7 @@ CREATE OR REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
         SELECT
             *
         from
-            base.swimlane_base_client qualify dense_rank() over(
+            base.vw_swimlane_base_client qualify dense_rank() over(
                 partition by customerproductcode
                 order by
                     LastUpdateDate

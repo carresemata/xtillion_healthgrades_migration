@@ -10,7 +10,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- BASE.OfficeToAddress depends on:
---- Raw.VW_OFFICE_PROFILE
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
 --- Base.Office
 --- Base.AddressType
 

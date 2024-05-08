@@ -38,10 +38,7 @@ DECLARE
 -- Base.HealthInsurancePlanType
 -- Base.HealthInsurancePayor
 -- Base.CertificationAgencyToBoardToSpecialty
--- Base.CertificationAgency
--- Base.CertificationBoard
 -- Base.CertificationSpecialty
--- Base.SubStatus
 -- Base.DisplayStatus
 
 ---------------------------------------------------------

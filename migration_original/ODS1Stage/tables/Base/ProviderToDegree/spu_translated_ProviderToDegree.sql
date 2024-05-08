@@ -8,7 +8,7 @@ AS DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.ProviderToDegree depends on:
--- Raw.VW_Provider_Profile
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 -- Base.Provider
 
 ---------------------------------------------------------

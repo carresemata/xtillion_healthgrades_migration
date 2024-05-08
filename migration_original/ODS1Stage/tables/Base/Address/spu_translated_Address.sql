@@ -9,8 +9,8 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.Address depends on: 
---- Raw.VW_OFFICE_PROFILE
---- Raw.VW_FACILITY_PROFILE
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
+--- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
 --- Base.Facility
 --- Base.CityStatePostalCode
 

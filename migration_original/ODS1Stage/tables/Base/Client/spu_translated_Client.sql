@@ -7,10 +7,9 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
-    
---- BASE.SWIMLANE_BASE_CLIENT
---- RAW.CUSTOMER_PRODUCT_PROFILE_PROCESSING
---- BASE.CLIENT
+
+--- BASE.CLIENT depends on:   
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (BASE.vw_SWIMLANE_BASE_CLIENT)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -33,11 +32,10 @@ BEGIN
 ---------------------------------------------------------     
 
 --- Select Statement
--- If no conditionals:
-select_statement := $$SELECT
+select_statement := $$ SELECT
          DISTINCT
         swimlane.ClientCode,
-        c.clientid,
+        UUID_STRING() AS clientid,
         case
             when swimlane.CustomerName is null
             and c.ClientName is null then swimlane.ClientCode
@@ -49,11 +47,11 @@ select_statement := $$SELECT
         ifnull(swimlane.SourceCode, 'Profisee') as SourceCode
     FROM
         base.swimlane_base_client AS swimlane
-        LEFT JOIN ODS1_Stage.Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
+        LEFT JOIN Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
             partition by swimlane.CLIENTCODE
             order by
                 swimlane.LastUpdateDate desc
-        ) = 1$$;
+        ) = 1 $$;
 
 --- Update Statement
 update_statement := '

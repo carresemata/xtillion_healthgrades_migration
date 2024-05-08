@@ -11,7 +11,7 @@ DECLARE
 --- BASE.CLIENTFEATURETOCLIENTFEATUREVALUE depends on:
 --- BASE.CLIENTFEATURE
 --- BASE.CLIENTFEATUREVALUE
---- BASE.SWIMLANE_BASE_CLIENT
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING  (BASE.vw_SWIMLANE_BASE_CLIENT)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -43,7 +43,7 @@ select_statement := $$with cte_swimlane as (
                 LastUpdateDate
         ) as rowrank,
     from
-        base.swimlane_base_client
+        base.vw_swimlane_base_client
 ),
 cte_tmp_features as (
     select

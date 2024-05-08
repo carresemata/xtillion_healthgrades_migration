@@ -9,7 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.ProviderMedia depends on the following tables:
---- Raw.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.MediaType
 

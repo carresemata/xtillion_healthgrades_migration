@@ -1,4 +1,4 @@
-create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
+create or replace view ODS1_STAGE.BASE.VW_SWIMLANE_BASE_CLIENT(
 	CREATED_DATETIME,
 	CUSTOMERPRODUCTCODE,
 	CLIENTTOPRODUCTID,
@@ -60,8 +60,8 @@ create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
--- Base.Swimlane_Base_Client depends on: 
---- Raw.VW_CUSTOMER_PRODUCT_PROFILE
+-- Base.vw_Swimlane_Base_Client depends on: 
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (RAW.VW_CUSTOMER_PRODUCT_PROFILE)
 
 ---------------------------------------------------------
 -------------------- 1. Columns -------------------------

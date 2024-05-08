@@ -8,7 +8,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 --- Base.ClientToProduct depends on:
--- Base.swimlane_base_client
+-- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
 -- Base.Client
 -- Base.Product
 
@@ -40,7 +40,7 @@ select_statement := $$
                         IFNULL(s.LastUpdateDate, SYSDATE()) AS LastUpdateDate,
                         s.QueueSize,
                         -- s.ReltioEntityID
-                    FROM Base.swimlane_base_client s
+                    FROM Base.vw_swimlane_base_client s
                     INNER JOIN Base.Client c ON c.ClientCode = s.ClientCode 
                     INNER JOIN Base.Product p on p.ProductCode = s.ProductCode
                     WHERE

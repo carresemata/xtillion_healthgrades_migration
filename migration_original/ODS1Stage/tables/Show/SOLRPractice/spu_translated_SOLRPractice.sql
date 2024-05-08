@@ -9,25 +9,36 @@ AS 'DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRPractice depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
+--- MDM_TEAM.MST.Provider_Profile_Processing 
 --- Base.Practice
 --- Base.Office
 --- Base.Client
 --- Base.ProviderToOffice
 --- Mid.PracticeSponsorship
---- Show.vwuProviderIndex
 --- Show.ClientContract
 --- Mid.Practice
 --- Mid.OfficeSpecialty
 --- Base.OfficeHours
 --- Base.DaysOfWeek
---- Base.vwuPDCPracticeOfficeDetail
 --- Base.CityStatePostalCode
 --- Base.State
 --- Base.Product
 --- Base.PracticeEmail
 --- Base.Provider
-
+--- BASE.CLIENTPRODUCTTOENTITY (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTTOPRODUCT (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.ENTITYTYPE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTPRODUCTENTITYTOIMAGE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.IMAGETYPE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.IMAGE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.OFFICETOADDRESS (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.ADDRESS (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTPRODUCTENTITYTOPHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- Show.SOLRProvider (Show.vwuProviderIndex )
+--- Show.ConsolidatedProviders (Show.vwuProviderIndex )
+--- Show.DelayClient (Show.vwuProviderIndex )
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

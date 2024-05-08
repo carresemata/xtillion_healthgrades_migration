@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.FacilityToAddress depends on: 
---- Raw.VW_FACILITY_PROFILE
+--- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
 --- Base.Facility
 --- Base.CityStatePostalCode
 --- Base.Address
