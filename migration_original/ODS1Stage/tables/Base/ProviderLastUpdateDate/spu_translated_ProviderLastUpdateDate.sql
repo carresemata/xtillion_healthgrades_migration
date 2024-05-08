@@ -63,8 +63,8 @@ BEGIN
 select_statement := $$
                     WITH CTE_Provider AS (
                         SELECT ppp.ProviderID
-                        FROM raw.Provider_Profile_Processing ppp 
-                        INNER JOIN Base.Provider p ON p.ProviderCode = ppp.Provider_Code
+                        FROM MDM_TEAM.MST.Provider_Profile_Processing ppp 
+                        INNER JOIN Base.Provider p ON p.ProviderCode = ppp.ref_Provider_Code
                     ),
                     
                     CTE_Demographics AS (

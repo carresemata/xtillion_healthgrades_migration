@@ -62,7 +62,6 @@ create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
 
 -- Base.Swimlane_Base_Client depends on: 
 --- Raw.VW_CUSTOMER_PRODUCT_PROFILE
---- Base.ClientToProduct
 
 ---------------------------------------------------------
 -------------------- 1. Columns -------------------------
@@ -73,7 +72,7 @@ create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
         vw.create_date AS created_datetime, -- this should be create_Date
         -- RELTIO_ID as ReltioEntityID,
         replace(vw.CUSTOMERPRODUCTCODE, ' ', '') as CustomerProductCode,
-        cp.ClientToProductID,
+        --cp.ClientToProductID,
         vw.ClientCode,
         vw.ProductCode,
         vw.CUSTOMER_PRODUCT_PROFILE as CustomerProductJSON,
@@ -127,7 +126,7 @@ create or replace view ODS1_STAGE.BASE.SWIMLANE_BASE_CLIENT(
         CASE WHEN vw.FEATURE_FEATUREFCOOMT in ('true', 'FVYES') then 'FVYES' else 'FVNO' end AS FeatureFCOOMT
     from
         raw.vw_customer_product_profile as vw
-        join base.clienttoproduct as cp on vw.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
+        -- join base.clienttoproduct as cp on vw.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
     where
         vw.CUSTOMERPRODUCTCODE IS NOT NULL
 );

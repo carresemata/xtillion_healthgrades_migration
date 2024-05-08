@@ -35,7 +35,7 @@ BEGIN
     IF (IsProviderDeltaProcessing) THEN
            select_statement := '
             WITH CTE_OfficeBatch AS (SELECT DISTINCT pto.OfficeID
-            FROM Raw.Provider_Profile_Processing AS pdp 
+            FROM MDM_TEAM.MST.Provider_Profile_Processing AS pdp 
             JOIN Base.Provider AS P ON P.ProviderCode = pdp.ref_provider_code
             JOIN Base.ProviderToOffice AS pto ON pto.ProviderId = P.ProviderID
             ORDER BY pto.OfficeID),

@@ -45,7 +45,7 @@ merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
                                                 spd.EndDeltaProcessDate,
                                                 spd.StartMoveDate,
                                                 spd.EndMoveDate
-                                            FROM	Raw.Provider_Profile_Processing as ppp
+                                            FROM	MDM_TEAM.MST.Provider_Profile_Processing as ppp
                                                     JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
                                             		join	Base.ProviderToOffice po on p.ProviderID = po.ProviderID
                                             		join	Base.Office o on po.OfficeID = o.OfficeID
@@ -108,8 +108,9 @@ merge_statement_1 := 'MERGE INTO Show.SOLRPracticeDelta as target USING
                                     CURRENT_TIMESTAMP() as StartDeltaProcessDate,
                                     '1' as MidDeltaProcessComplete
                                 from
-                                    Raw.Provider_Profile_Processing as pdp
-                                    inner join Base.ProviderToOffice as pto on pdp.ProviderID = pto.ProviderID
+                                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                                    inner JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
+                                    inner join Base.ProviderToOffice as pto on p.ProviderID = pto.ProviderID
                                     inner join Base.Office as o on pto.OfficeID = o.OfficeID
                                 WHERE
                                     o.practiceid not in (

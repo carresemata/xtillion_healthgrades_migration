@@ -54,7 +54,7 @@ BEGIN
            WITH CTE_PracticeBatch AS (
                 SELECT DISTINCT 
                 O.PracticeID
-                FROM Raw.Provider_Profile_Processing as PDP 
+                FROM MDM_TEAM.MST.Provider_Profile_Processing as PDP 
                     JOIN Base.Provider As P ON P.ProviderCode = PDP.REF_PROVIDER_CODE
                     JOIN Base.ProviderToOffice AS PTO on PTO.ProviderID = P.ProviderID
                     JOIN Base.Office AS O on O.OfficeID = PTO.OfficeID

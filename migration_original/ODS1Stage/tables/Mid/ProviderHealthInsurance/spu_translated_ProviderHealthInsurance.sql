@@ -40,7 +40,7 @@ BEGIN
             SELECT
                     p.ProviderID
                 FROM
-                    Raw.Provider_Profile_Processing as ppp
+                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
                     JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
         ),';
     ELSE

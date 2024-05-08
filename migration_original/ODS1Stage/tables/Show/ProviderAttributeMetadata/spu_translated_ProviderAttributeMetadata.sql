@@ -69,7 +69,7 @@ select_statement := $$
         p.providerid,
         PDP.ref_provider_code AS ProviderCode
     FROM
-        Raw.Provider_Profile_Processing AS PDP
+        MDM_TEAM.MST.Provider_Profile_Processing AS PDP
         JOIN Base.Provider AS P ON PDP.ref_provider_code = P.ProviderCode
     ORDER BY
         p.providerid

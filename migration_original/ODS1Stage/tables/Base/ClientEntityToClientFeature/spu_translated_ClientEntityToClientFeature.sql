@@ -14,6 +14,7 @@ DECLARE
 --- BASE.CLIENTFEATUREVALUE
 --- BASE.ENTITYTYPE
 --- BASE.CLIENTFEATURETOCLIENTFEATUREVALUE
+--- BASE.CLIENTTOPRODUCT
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -537,10 +538,11 @@ from
     AND CFV.ClientFeatureValueID = CFTCFV.ClientFeatureValueID
     JOIN (
         select distinct 
-            customerproductcode,
-            ClientToProductID
+            vw.customerproductcode,
+            cp.ClientToProductID
         from
-            base.swimlane_base_client
+            base.swimlane_base_client as vw
+            join base.clienttoproduct as cp on vw.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
     ) c on s.CustomerProductCode = c.CustomerProductCode$$;
 
 --- Update Statement

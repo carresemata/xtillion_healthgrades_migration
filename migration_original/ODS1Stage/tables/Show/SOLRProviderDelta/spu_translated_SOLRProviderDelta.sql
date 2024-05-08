@@ -43,7 +43,7 @@ BEGIN
                                         P.ProviderId, 
                                         1 AS SolrDeltaTypeCode, 
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate
-                            		FROM	Raw.Provider_Profile_Processing AS PPP
+                            		FROM	MDM_TEAM.MST.Provider_Profile_Processing AS PPP
                                     INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code
                             		WHERE	ProviderId NOT IN (SELECT ProviderId FROM Show.SOLRProviderDelta)) as source
                                         ON source.ProviderId = target.ProviderId
@@ -63,7 +63,7 @@ BEGIN
                                     (SELECT 
                                         P.ProviderID
                                     FROM 
-                                        Raw.Provider_Profile_Processing AS PPP
+                                        MDM_TEAM.MST.Provider_Profile_Processing AS PPP
                                     INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code    
                                     INNER JOIN Show.SOLRProviderDelta SOLRProvDelta
                                     ON P.ProviderID = SOLRProvDelta.ProviderID) AS source
@@ -81,7 +81,7 @@ BEGIN
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate,
                                         1 AS MidDeltaProcessComplete
                                     FROM
-                                        Raw.Provider_Profile_Processing AS PPP
+                                        MDM_TEAM.MST.Provider_Profile_Processing AS PPP
                                         INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code
                                         LEFT JOIN Show.SOLRProviderDelta AS SOLRProvDelta ON SOLRProvDelta.ProviderID = P.ProviderID
                                         LEFT JOIN Base.ProvidersWithSponsorshipIssues AS ProvIssue ON ProvIssue.ProviderCode = P.ProviderCode

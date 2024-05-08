@@ -72,7 +72,7 @@ BEGIN
                     SELECT DISTINCT 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
-                    FROM Raw.Provider_Profile_Processing as ppp
+                    FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
                     JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
                     INNER JOIN base.ProviderToOffice PTO ON p.ProviderID = PTO.ProviderID
                     INNER JOIN base.Office Off ON PTO.OfficeID = Off.OfficeID

@@ -32,50 +32,42 @@ BEGIN
 ---------------------------------------------------------   
 select_statement := $$
                     SELECT
+                        UUID_STRING() AS ClientToProductID,
                         c.ClientID,
                         p.ProductID,
                         IFNULL(s.ActiveFlag, true) AS ActiveFlag,
                         IFNULL(s.SourceCode, 'Profisee') AS SourceCode,
                         IFNULL(s.LastUpdateDate, SYSDATE()) AS LastUpdateDate,
                         s.QueueSize,
-                        s.ClientToProductID,
                         -- s.ReltioEntityID
                     FROM Base.swimlane_base_client s
                     INNER JOIN Base.Client c ON c.ClientCode = s.ClientCode 
                     INNER JOIN Base.Product p on p.ProductCode = s.ProductCode
                     WHERE
-                        s.ClientToProductID IS NOT NULL
-                        AND s.ClientCode IS NOT NULL
+                        s.ClientCode IS NOT NULL
                         AND s.ProductCode IS NOT NULL
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM Base.ClientToProduct cp
-                            WHERE cp.ClientToProductCode = s.ClientToProductID
-                        )
                     QUALIFY DENSE_RANK() OVER( PARTITION BY s.CustomerProductCode ORDER BY s.created_datetime DESC) = 1
                     $$;
 
 
 insert_statement := $$ 
                     INSERT  
-                        (
+                        (ClientToProductID,
                          ClientID, 
                          ProductID, 
                          ActiveFlag, 
                          SourceCode, 
                          LastUpdateDate, 
-                         QueueSize,
-                         ClientToProductID
+                         QueueSize
                          )
                     VALUES 
-                        (
+                        (source.ClientToProductID,
                         source.ClientID,
                         source.ProductID,
                         source.ActiveFlag,
                         source.SourceCode,
                         source.LastUpdateDate,
-                        source.QueueSize,
-                        UUID_STRING()
+                        source.QueueSize
                         )
                     $$;
 

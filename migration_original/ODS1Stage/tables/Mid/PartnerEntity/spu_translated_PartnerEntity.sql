@@ -40,7 +40,7 @@ BEGIN
            select_statement := '
             WITH CTE_ProviderBatch AS (
                 SELECT DISTINCT p.ProviderID, p.ProviderCode
-                FROM Raw.Provider_Profile_Processing as pdp
+                FROM MDM_TEAM.MST.Provider_Profile_Processing as pdp
                 JOIN Base.Provider as p on p.Providercode = pdp.ref_provider_code),
            ';
     ELSE

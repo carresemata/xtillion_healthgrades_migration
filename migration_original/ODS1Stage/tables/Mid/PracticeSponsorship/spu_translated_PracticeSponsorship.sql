@@ -44,7 +44,7 @@ BEGIN
                     SELECT 
                         pa.PracticeID, 
                         pa.PracticeCode
-                    FROM raw.Provider_Profile_Processing AS ppp
+                    FROM MDM_TEAM.MST.Provider_Profile_Processing AS ppp
                     JOIN Base.Provider AS P ON p.providercode = ppp.ref_provider_code
                     JOIN base.providertooffice pto ON p.ProviderID = pto.ProviderID
                     JOIN base.Office o ON pto.OfficeID = o.OfficeID

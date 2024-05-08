@@ -14,6 +14,15 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     --- BASE.OFFICE
     --- BASE.PROVIDER
     --- BASE.RELATIONSHIPTYPE
+    --- BASE.PRODUCT
+    --- BASE.PRACTICE
+    --- BASE.PROVIDER
+    --- Raw.VW_PROVIDER_PROFILE
+    --- Raw.VW_FACILITY_PROFILE
+    --- Raw.VW_PRACTICE_PROFILE
+
+
+
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
     ---------------------------------------------------------
@@ -44,16 +53,18 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     --------------------------------–------spuMergeCustomerProduct--------------------------------–------
     select_statement_1 := $$  
     SELECT
-        distinct ClientToProductID,
+        distinct 
+        cp.ClientToProductID,
         b.EntityTypeID,
-        ClientToProductID as EntityID,
+        cp.ClientToProductID as EntityID,
         ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
     FROM
         base.swimlane_base_client s
-        JOIN ODS1_STAGE.Base.EntityType b on b.EntityTypeCode = 'CLPROD'
+        join base.clienttoproduct as cp on s.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
+        JOIN Base.EntityType b on b.EntityTypeCode = 'CLPROD'
     where
         (
-            s.ClientToProductID is not null
+            cp.ClientToProductID is not null
             and s.CLIENTCODE is not null
             and s.PRODUCTCODE is not null
         ) $$;
@@ -171,9 +182,9 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
             ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
         FROM
             cte_swimlane as s
-            JOIN ODS1_STAGE.Base.EntityType b on b.EntityTypeCode = 'PROV'
-            JOIN ODS1_STAGE.base.ClientToProduct as cp on s.ClientTOProductID = cp.ClientToProductID
-            JOIN ODS1_STAGE.base.Provider as p on s.ProviderID = p.ProviderID
+            JOIN Base.EntityType b on b.EntityTypeCode = 'PROV'
+            JOIN base.ClientToProduct as cp on s.ClientTOProductID = cp.ClientToProductID
+            JOIN base.Provider as p on s.ProviderID = p.ProviderID
         where
             s.RowRank = 1
             and (s.ClientToProductID is not null)$$;
@@ -214,10 +225,10 @@ SELECT
     SYSDATE() as LastUpdateDate
 FROM
     cte_swimlane T
-    JOIN ODS1_STAGE.Base.EntityType et on et.EntityTypeCode = 'OFFICE'
-    JOIN ODS1_STAGE.Base.ClientToProduct cp on T.ClientToProductID = cp.ClientToProductID
-    JOIN ODS1_STAGE.Base.Office o on o.OfficeID = T.OfficeID
-    JOIN ODS1_STAGE.Base.Product PR on PR.ProductID = cp.ProductID
+    JOIN Base.EntityType et on et.EntityTypeCode = 'OFFICE'
+    JOIN Base.ClientToProduct cp on T.ClientToProductID = cp.ClientToProductID
+    JOIN Base.Office o on o.OfficeID = T.OfficeID
+    JOIN Base.Product PR on PR.ProductID = cp.ProductID
 where
     ProductTypeCode = 'Practice' $$;
     --------------------------------–------spuMergePracticeCustomerProduct--------------------------------–------
@@ -234,7 +245,7 @@ from
     raw.vw_practice_profile as x
     join base.practice as p on x.practicecode = p.practicecode
     join base.clienttoproduct as cp on cp.clienttoproductcode = x.customerproduct_customerproductcode
-    join ODS1Stage.Base.EntityType b on b.EntityTypeCode='PRAC'
+    join Base.EntityType b on b.EntityTypeCode='PRAC'
     )
     select
         ClientToProductID,
