@@ -2,7 +2,6 @@ import os
 import re
 
 def add_monitoring_logs():
-    #### WARNING: When we format all files to lowercase this will affect the parsing of JSON as the keys are case sensitive
     base_dirs = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
     for base_dir in base_dirs:
         for schema in os.listdir(base_dir):
@@ -52,19 +51,6 @@ def add_monitoring_logs():
                         content = content[:insert_pos] + new_vars + content[insert_pos:]
                         content_updated = True
 
-                    # Change all the file to lowercase
-                    match = re.search(f"(DECLARE.*?END;)", content, re.DOTALL | re.IGNORECASE)
-                    # Find all strings inside single or double quotes (that are not empty or contain spaces) and save them
-                    matches = re.findall(r"[\"']([^\s\"']{1,})[\"']", content)
-
-                    # Convert all the file to lowercase
-                    content = content.lower()
-
-                    # Convert back to original case for matched words
-                    for match in matches:
-                        content = content.replace(f'"{match.lower()}"', f'"{match}"')
-                        content = content.replace(f"'{match.lower()}'", f"'{match}'")
-                        content_updated = True
 
                     # Write the new content to the file
                     if content_updated:

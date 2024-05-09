@@ -104,7 +104,11 @@ def table_dependencies():
     with open('table_dependencies.json', 'w') as f:
         json.dump(table_dependencies, f, indent=4)
 
-    
+    # Create sp_dependencies.json where the empty dependencies are removed
+    sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
+    with open('sp_dependencies.json', 'w') as f:
+        json.dump(sp_dependencies, f, indent=4)
+
 
 
 # Call the function
