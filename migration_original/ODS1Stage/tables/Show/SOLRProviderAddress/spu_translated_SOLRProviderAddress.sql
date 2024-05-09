@@ -1,6 +1,6 @@
 -- sp_load_solrprovideraddress
 
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.Show.SP_LOAD_SOLRPROVIDERADDRESS()
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS()
 RETURNS VARCHAR(16777216)
 LANGUAGE SQL
 EXECUTE AS CALLER
@@ -27,6 +27,9 @@ AS
     delete_statement STRING; -- Delete statements
     merge_statement STRING; -- Merge statement combining everything
     status STRING; -- Status monitoring
+    procedure_name varchar(50) default('sp_load_SOLRProviderAddress');
+    execution_start DATETIME default getdate();
+
 
     ---------------------------------------------------------
     --------------- 2.Conditionals if any -------------------

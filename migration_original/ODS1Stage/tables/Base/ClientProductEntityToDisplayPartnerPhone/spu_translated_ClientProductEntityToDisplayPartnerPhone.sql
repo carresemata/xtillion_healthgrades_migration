@@ -27,6 +27,9 @@ CREATE OR REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     merge_statement_1 STRING;
     merge_statement_2 STRING;
     status STRING;
+    procedure_name varchar(50) default('sp_load_ClientProductEntityToDisplayPartnerPhone');
+    execution_start DATETIME default getdate();
+
     ---------------------------------------------------------
     --------------- 2.Conditionals if any -------------------
     ---------------------------------------------------------
