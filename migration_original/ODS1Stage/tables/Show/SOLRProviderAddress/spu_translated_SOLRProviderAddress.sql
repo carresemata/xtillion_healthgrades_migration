@@ -11,11 +11,11 @@ AS
     ---------------------------------------------------------
     
     -- Show.SOLRProviderAddress depends on: 
-    --- Base.ProviderRedirect 
-    --- Base.Provider 
-    --- Base.ProviderURL 
     --- Show.SOLRProvider 
-    --- Show.SOLRProviderRedirect
+    --- Mid.ProviderPracticeOffice
+    --- Mid.Provider
+    --- Base.ProviderRemoval
+    
 
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------

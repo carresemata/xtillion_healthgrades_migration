@@ -8,10 +8,11 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+-- mid.providerpracticeoffice depends on:
+-- MDM_TEAM.MST.Provider_Profile_Processing
 -- base.officetoaddress
 -- base.practice
 -- base.officetophone
--- mid.providerpracticeoffice
 -- base.provider
 -- base.phone
 -- base.nation
@@ -20,8 +21,7 @@ DECLARE
 -- base.practiceemail
 -- base.office
 -- base.providertooffice
--- raw.providerdeltaprocessing
--- base.citystate
+-- base.citystatepostalcode
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -43,13 +43,14 @@ BEGIN
        EXECUTE IMMEDIATE $$ TRUNCATE TABLE Mid.ProviderPracticeOffice $$;
        delta_select_statement :=  $$        
                             WITH CTE_ProviderBatch AS (
-                            SELECT pdp.ProviderID
-                            FROM Raw.ProviderDeltaProcessing as pdp), 
+                            SELECT p.ProviderID
+                            FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                            JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode), 
                             $$;
     ELSE
-       EXECUTE IMMEDIATE $$ DELETE FROM Mid.ProviderPracticeOffice ppo 
-                              USING raw.ProviderDeltaProcessing pdp
-                              WHERE pdp.ProviderID = ppo.ProviderID 
+       EXECUTE IMMEDIATE $$   DELETE FROM mid.ProviderPracticeOffice ppo 
+                              USING raw.vw_provider_profile ppp
+                              WHERE ppp.office_officecode = ppo.officecode
                          $$;
             
        delta_select_statement := $$

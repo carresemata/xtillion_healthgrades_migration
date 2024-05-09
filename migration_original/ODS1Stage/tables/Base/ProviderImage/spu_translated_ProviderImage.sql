@@ -15,6 +15,7 @@ DECLARE
 --- Base.MediaImageType
 --- Base.MediaSize
 --- Base.MediaReviewLevel
+--- Base.MediaContextType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

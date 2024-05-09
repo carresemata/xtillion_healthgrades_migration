@@ -40,6 +40,7 @@ DECLARE
 -- Base.CertificationAgencyToBoardToSpecialty
 -- Base.CertificationSpecialty
 -- Base.DisplayStatus
+-- Base.PopularSearchTerm (from DBO schema)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

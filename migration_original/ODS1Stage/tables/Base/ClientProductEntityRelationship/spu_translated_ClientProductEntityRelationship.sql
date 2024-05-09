@@ -17,6 +17,7 @@ DECLARE
 -- Base.ClientToProduct
 -- Base.EntityType
 -- Base.ClientProductToEntity
+-- Base.Practice
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

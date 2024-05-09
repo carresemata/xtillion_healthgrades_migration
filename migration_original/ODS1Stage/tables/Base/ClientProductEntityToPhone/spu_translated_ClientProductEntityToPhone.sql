@@ -7,13 +7,21 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE()
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     
-    --- Base.ClienttEntityToClientFeature depends on:
-    --- BASE.SWIMLANE_BASE_CLIENT
-    --- BASE.PHONE
-    --- BASE.PHONETYPE
-    --- BASE.ENTITYTYPE
-    --- BASE.CLIENTPRODUCTTOENTITY
-    --- BASE.CLIENTTOPRODUCT
+    --- Base.ClientProductEntityToPhone depends on:
+    --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (raw.vw_provider_profile)
+    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (raw.vw_facility_profile)
+    --- Base.EntityType
+    --- Base.CLIENTTOPRODUCT
+    --- Base.Facility
+    --- Base.ClientProductToEntity
+    --- Base.Phone
+    --- Base.PhoneType
+    --- Base.SyndicationPartner
+    --- Base.ClientProductEntityToPhone
+    --- Base.Office
+    --- Base.OfficeToPhone
+
+    
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
     ---------------------------------------------------------
@@ -607,11 +615,11 @@ select_statement_2 := $$ with cte_swimlane_phones as (
             sysdate() as LastUpdateDate
         from
             cte_tmp_phones s
-            inner join ODS1_Stage.Base.EntityType b on b.EntityTypeCode = 'CLPROD'
-            inner join ODS1_Stage.base.Phone ph on ph.PhoneNumber = s.PhoneNumber
-            inner join ODS1_Stage.base.PhoneType pt on pt.PhoneTypeCode = s.PhoneTypeCode
-            inner join ODS1_Stage.base.ClientToProduct CtP on CtP.ClientToProductCode = s.ClientToProductCode
-            inner join ODS1_Stage.base.ClientProductToEntity CPtE on CPtE.ClientToProductID = CtP.ClientToProductID
+            inner join Base.EntityType b on b.EntityTypeCode = 'CLPROD'
+            inner join base.Phone ph on ph.PhoneNumber = s.PhoneNumber
+            inner join base.PhoneType pt on pt.PhoneTypeCode = s.PhoneTypeCode
+            inner join base.ClientToProduct CtP on CtP.ClientToProductCode = s.ClientToProductCode
+            inner join base.ClientProductToEntity CPtE on CPtE.ClientToProductID = CtP.ClientToProductID
             and CPtE.EntityTypeID = b.EntityTypeID
         where
             s.DisplayPartnerCode = 'HG'$$;
@@ -640,11 +648,11 @@ select_statement_3 := $$with cte_json_data as (
                 ph.PhoneID as PhoneID
             from
                 cte_json_data t
-                join ODS1_STAGE.Base.EntityType et on et.EntityTypeCode = 'OFFICE'
-                join ODS1_STAGE.BASE.OFFICE AS O ON O.OFFICECODE = T.OFFICECODE
-                join ODS1_STAGE.Base.OfficeToPhone op on op.OfficeID = o.OfficeID
-                join ODS1_STAGE.Base.Phone ph on ph.PhoneID = op.PhoneID
-                join ODS1_STAGE.Base.PhoneType pt on pt.PhoneTypeID = op.PhoneTypeID
+                join Base.EntityType et on et.EntityTypeCode = 'OFFICE'
+                join BASE.OFFICE AS O ON O.OFFICECODE = T.OFFICECODE
+                join Base.OfficeToPhone op on op.OfficeID = o.OfficeID
+                join Base.Phone ph on ph.PhoneID = op.PhoneID
+                join Base.PhoneType pt on pt.PhoneTypeID = op.PhoneTypeID
                 and pt.PhoneTypeCode = 'Service'
         )
         select
@@ -657,9 +665,9 @@ select_statement_3 := $$with cte_json_data as (
             cte_tmp_phones as s -- on convert(uniqueidentifier, hashbytes('SHA1',  concat(ClientToProductCode,b.EntityTypeCode,s.OfficeCode) ))=cpe.ClientProductToEntityID
             join base.office as o on o.officecode = s.officecode
             join clienttoproduct as cp on cp.clienttoproductcode = s.clienttoproductcode
-            join ODS1_Stage.Base.Phone as p on s.PhoneID = p.PhoneID
-            join ODS1_Stage.Base.PhoneType as pt on s.PhoneTypeCode = pt.PhoneTypeCode
-            join ODS1_Stage.Base.EntityType as et on s.EntityTypeCode = et.EntityTypeCode
+            join Base.Phone as p on s.PhoneID = p.PhoneID
+            join Base.PhoneType as pt on s.PhoneTypeCode = pt.PhoneTypeCode
+            join Base.EntityType as et on s.EntityTypeCode = et.EntityTypeCode
             join clientproducttoentity as cpe on cpe.entitytypeid = et.entitytypeid
             and cpe.entityid = o.officeid
             and cpe.clienttoproductid = cp.clienttoproductid $$;

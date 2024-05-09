@@ -6,14 +6,17 @@ CREATE OR REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     ---------------------------------------------------------
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
+    
     --- Base.ClientProductEntityToDisplayPartnerPhone depends on:
     --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_SWIMLANE_BASE_CLIENT)
-    --- BASE.PHONE
+    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
     --- BASE.PHONETYPE
     --- BASE.ENTITYTYPE
     --- BASE.CLIENTPRODUCTTOENTITY
     --- BASE.CLIENTTOPRODUCT
     --- BASE.FACILITY
+    --- BASE.SYNDICATIONPARTNER
+
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
     ---------------------------------------------------------

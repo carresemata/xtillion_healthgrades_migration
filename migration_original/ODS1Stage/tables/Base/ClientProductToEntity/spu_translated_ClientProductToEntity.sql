@@ -6,6 +6,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     ---------------------------------------------------------
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
+    
     --- Base.ClientProductToEntity depends on:
     --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
     --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
@@ -98,10 +99,10 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
             s.LastUpdateDate
         FROM
             cte_swimlane s
-            INNER JOIN ODS1_STAGE.Base.EntityType b ON b.EntityTypeCode = 'FAC'
-            INNER JOIN ODS1_STAGE.Base.ClientToProduct cp ON s.ClientToProductID = cp.ClientToProductID
-            INNER JOIN ODS1_STAGE.Base.Facility o ON s.FacilityID = o.FacilityID
-            LEFT JOIN ODS1_STAGE.Base.ClientProductToEntity T ON T.ClientToProductID = s.ClientToProductID
+            INNER JOIN Base.EntityType b ON b.EntityTypeCode = 'FAC'
+            INNER JOIN Base.ClientToProduct cp ON s.ClientToProductID = cp.ClientToProductID
+            INNER JOIN Base.Facility o ON s.FacilityID = o.FacilityID
+            LEFT JOIN Base.ClientProductToEntity T ON T.ClientToProductID = s.ClientToProductID
             AND T.EntityID = o.FacilityID
             AND T.entitytypeid = b.entitytypeid
         WHERE

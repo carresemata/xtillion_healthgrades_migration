@@ -14,6 +14,7 @@ DECLARE
 --- Base.ProviderMalpractice
 --- Base.MalpracticeClaimType
 --- Base.MalpracticeState
+--- Base.State
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

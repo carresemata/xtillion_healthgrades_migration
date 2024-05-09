@@ -29,7 +29,6 @@ DECLARE
 -- Base.Product
 -- Base.ProviderToDegree
 -- Base.ProviderToEducationInstitution
--- Base.ProviderToHealthInsurance
 -- Base.ProviderToLanguage
 -- Base.ProviderMedia
 -- Base.ProviderToSpecialty
@@ -41,6 +40,7 @@ DECLARE
 -- Base.ProviderToProviderSubType
 -- Base.ProviderTraining
 -- Base.ProviderIdentification
+-- Base.EntityType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

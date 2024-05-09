@@ -22,6 +22,9 @@ DECLARE
 --- Base.OfficeToAddress
 --- Base.Address
 --- Base.CityStatePostalCode
+--- Base.ClientProductEntityToPhone
+--- Base.Product
+--- Base.Client
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
