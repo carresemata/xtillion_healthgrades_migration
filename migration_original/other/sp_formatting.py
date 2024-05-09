@@ -28,8 +28,8 @@ def format_table_dependencies():
                 for keyword in keywords:
                     content = re.sub(rf'\b{keyword}\b', keyword.lower(), content, flags=re.IGNORECASE)
 
-                # 2. Replace anything with a dot (.) to lowercase
-                content = re.sub(r'(\b\w+\.\w+\b)', lambda x: x.group().lower(), content)
+                # 2. Replace anything with a dot (.) to lowercase where we have alphabeticwords.alphabeticwords
+                content = re.sub(r'([a-zA-Z]+)\.([a-zA-Z]+)', lambda x: f'{x.group(1).lower()}.{x.group(2).lower()}', content)
 
                 # 3. Change the section from DECLARE to BEGIN; to lowercase
                 content = re.sub(r'(DECLARE.*?BEGIN)', lambda x: x.group().lower(), content, flags=re.DOTALL | re.IGNORECASE)
