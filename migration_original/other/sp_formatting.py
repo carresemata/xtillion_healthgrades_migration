@@ -3,9 +3,8 @@ import os
 import re
 
 def format_table_dependencies():
-    base_dirs = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
-    for base_dir in base_dirs:
-        for schema in os.listdir(base_dir):
+    base_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
+    for schema in os.listdir(base_dir):
             schema_path = os.path.join(base_dir, schema)
             for table in os.listdir(schema_path):
                 table_path = os.path.join(schema_path, table)
@@ -41,5 +40,6 @@ def format_table_dependencies():
                 # Write the updated content to the file
                 with open(file_path, 'w') as f:
                     f.write(content)
+
 
 format_table_dependencies()
