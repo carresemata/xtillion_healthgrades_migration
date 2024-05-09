@@ -2,22 +2,23 @@ import os
 import re
 
 def add_monitoring_logs():
-    base_dirs = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
-    for base_dir in base_dirs:
-        for schema in os.listdir(base_dir):
+    base_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
+    for schema in os.listdir(base_dir):
             schema_path = os.path.join(base_dir, schema)
             for table in os.listdir(schema_path):
                 table_path = os.path.join(schema_path, table)
                 file_path = os.path.join(table_path, f'spu_translated_{table}.sql')   
     
-    if os.path.getsize(file_path) != 0: 
-                    with open(file_path, 'r') as f:
-                        content = f.read()
+    #testing file_path
+    # table = 'Address'
+    # file_path = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables/Base/Address/spu_translated_Address.sql')
+                with open(file_path, 'r') as f:
+                    content = f.read()
                         
                     content_updated = False
 
-                    # Add the monitoring logs
-                    match = re.search(r"status := 'Completed successfully';(.*?)END;", content, re.DOTALL)
+                    # STEP 1: Add the monitoring logs
+                    match = re.search(r"status := 'Completed successfully';(.*?)END;", content, re.DOTALL | re.IGNORECASE)
                     if match: 
                         monitoring_logs = f"""
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
@@ -37,13 +38,12 @@ def add_monitoring_logs():
                         content = content.replace(match.group(1), monitoring_logs)
                         content_updated = True
                                     
-                    # Add the new variables for the monitoring logs
+                    # STEP 2: Add the new variables for the monitoring logs
                     match = re.search(r"status STRING;.*", content)
                     if match:
                         new_vars = f"""
     procedure_name varchar(50) default('sp_load_{table}');
     execution_start DATETIME default getdate();
-
 """
                         # Find the position where to insert new variables
                         insert_pos = match.end()
@@ -51,6 +51,11 @@ def add_monitoring_logs():
                         content = content[:insert_pos] + new_vars + content[insert_pos:]
                         content_updated = True
 
+                    #  where you see ODS1_STAGE, replace it with ODS1_STAGE_TEAM
+                    # match = re.search(r"ODS1_STAGE", content)
+                    # if match:
+                    #     content = content.replace('ODS1_STAGE', 'ODS1_STAGE_TEAM')
+                    #     content_updated = True
 
                     # Write the new content to the file
                     if content_updated:

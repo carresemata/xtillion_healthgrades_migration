@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- Parameters
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity() -- Parameters
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     AS CALLER
@@ -39,6 +39,9 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     prefix STRING;
     suffix STRING;
     status STRING;
+    procedure_name varchar(50) default('sp_load_ClientProductToEntity');
+    execution_start DATETIME default getdate();
+
     ---------------------------------------------------------
     --------------- 2.Conditionals if any -------------------
     ---------------------------------------------------------

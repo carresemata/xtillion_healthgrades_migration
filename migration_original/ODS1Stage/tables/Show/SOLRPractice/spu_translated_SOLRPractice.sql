@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.SHOW.SP_LOAD_SOLRPRACTICE("ISPROVIDERDELTAPROCESSING" BOOLEAN)
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE("ISPROVIDERDELTAPROCESSING" BOOLEAN)
 RETURNS VARCHAR(16777216)
 LANGUAGE SQL
 EXECUTE AS CALLER
@@ -53,6 +53,9 @@ AS 'DECLARE
     merge_statement_3 STRING;
     merge_statement_4 STRING;
     status STRING; -- Status monitoring
+    procedure_name varchar(50) default('sp_load_SOLRPractice');
+    execution_start DATETIME default getdate();
+
    
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------

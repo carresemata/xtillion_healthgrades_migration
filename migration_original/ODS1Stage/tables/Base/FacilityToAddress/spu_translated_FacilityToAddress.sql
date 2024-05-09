@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_FACILITYTOADDRESS() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYTOADDRESS() 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -22,6 +22,9 @@ DECLARE
     insert_statement STRING; -- Insert statement for the Merge
     merge_statement STRING; -- Merge statement to final table
     status STRING; -- Status monitoring
+    procedure_name varchar(50) default('sp_load_FacilityToAddress');
+    execution_start DATETIME default getdate();
+
    
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------
@@ -96,15 +99,17 @@ EXECUTE IMMEDIATE merge_statement ;
 --------------------------------------------------------- 
 
 status := 'Completed successfully';
-    RETURN status;
+        insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
+                select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
+        RETURN status;
 
-        
-EXCEPTION
-    WHEN OTHER THEN
-          status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
-          RETURN status;
+        EXCEPTION
+        WHEN OTHER THEN
+            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
 
+            insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
+                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
 
-    
+            RETURN status;
 END;
