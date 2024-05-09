@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Show.ProviderAttributeMetadata depends on: 
---- Raw.ProviderProfileProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.MedicalTerm
 --- Base.MedicalTermType
@@ -22,7 +22,6 @@ DECLARE
 --- Base.ProviderAppointmentAvailabilityStatement (empty)
 --- Base.ProviderToCertificationSpecialty (empty)
 --- Base.ProviderToDegree
---- Base.Provider
 --- Base.ProviderToHealthInsurance
 --- Base.ProviderToFacility
 --- Base.ProviderToLanguage
@@ -65,21 +64,14 @@ BEGIN
 select_statement := $$
                     WITH CTE_ProviderIdList AS (
     SELECT
-        DISTINCT CASE
-            WHEN P.ProviderID IS NOT NULL THEN p.ProviderID
-            ELSE PDP.ProviderID
-        END AS ProviderID,
-        PDP.PROVIDER_CODE AS ProviderCode
+        DISTINCT 
+        p.providerid,
+        PDP.ref_provider_code AS ProviderCode
     FROM
-        Raw.ProviderProfileProcessing AS PDP
-        JOIN Base.Provider AS P ON PDP.PROVIDER_CODE = P.ProviderCode
+        MDM_TEAM.MST.Provider_Profile_Processing AS PDP
+        JOIN Base.Provider AS P ON PDP.ref_provider_code = P.ProviderCode
     ORDER BY
-        (
-            CASE
-                WHEN P.ProviderID IS NOT NULL THEN p.ProviderID
-                ELSE PDP.ProviderID
-            END
-        )
+        p.providerid
             ),
             CTE_MedicalTerm AS (
                 SELECT

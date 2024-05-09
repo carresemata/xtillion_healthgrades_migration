@@ -9,7 +9,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 --- Base.ProviderLastUpdateDate depends on:
--- Base.ProviderProfileProcessing
+-- MDM_TEAM.MST.Provider_Profile_Processing
 -- Base.Provider
 -- Base.ProviderToAboutMe
 -- Base.ProviderAppointmentAvailabilityStatement
@@ -29,7 +29,6 @@ DECLARE
 -- Base.Product
 -- Base.ProviderToDegree
 -- Base.ProviderToEducationInstitution
--- Base.ProviderToHealthInsurance
 -- Base.ProviderToLanguage
 -- Base.ProviderMedia
 -- Base.ProviderToSpecialty
@@ -41,6 +40,7 @@ DECLARE
 -- Base.ProviderToProviderSubType
 -- Base.ProviderTraining
 -- Base.ProviderIdentification
+-- Base.EntityType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -63,8 +63,8 @@ BEGIN
 select_statement := $$
                     WITH CTE_Provider AS (
                         SELECT ppp.ProviderID
-                        FROM raw.ProviderProfileProcessing ppp 
-                        INNER JOIN Base.Provider p ON p.ProviderCode = ppp.Provider_Code
+                        FROM MDM_TEAM.MST.Provider_Profile_Processing ppp 
+                        INNER JOIN Base.Provider p ON p.ProviderCode = ppp.ref_Provider_Code
                     ),
                     
                     CTE_Demographics AS (

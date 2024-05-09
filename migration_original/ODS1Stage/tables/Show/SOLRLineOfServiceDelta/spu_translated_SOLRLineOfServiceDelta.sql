@@ -12,7 +12,6 @@ DECLARE
     
 -- Show.SOLRLineOfServiceDelta depends on: 
 --- Mid.LineOfService
---- Show.LineOfServiceDelta
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

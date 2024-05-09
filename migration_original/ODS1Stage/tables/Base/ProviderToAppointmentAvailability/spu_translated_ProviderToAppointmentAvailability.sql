@@ -8,7 +8,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- BASE.ProviderToAppointmentAvailability depends on:
---- Raw.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.AppointmentAvailability
 

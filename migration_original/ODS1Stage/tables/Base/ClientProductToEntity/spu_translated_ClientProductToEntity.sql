@@ -6,14 +6,21 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     ---------------------------------------------------------
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
+    
     --- Base.ClientProductToEntity depends on:
-    --- Base.SWIMLANE_BASE_CLIENT
+    --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
+    --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
+    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
+    --- MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING (RAW.VW_PRACTICE_PROFILE)
     --- BASE.ENTITYTYPE
     --- BASE.CLIENTTOPRODUCT
     --- BASE.FACILITY
     --- BASE.OFFICE
     --- BASE.PROVIDER
     --- BASE.RELATIONSHIPTYPE
+    --- BASE.PRODUCT
+    --- BASE.PRACTICE
+
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
     ---------------------------------------------------------
@@ -44,16 +51,18 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
     --------------------------------–------spuMergeCustomerProduct--------------------------------–------
     select_statement_1 := $$  
     SELECT
-        distinct ClientToProductID,
+        distinct 
+        cp.ClientToProductID,
         b.EntityTypeID,
-        ClientToProductID as EntityID,
+        cp.ClientToProductID as EntityID,
         ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
     FROM
-        base.swimlane_base_client s
-        JOIN ODS1_STAGE.Base.EntityType b on b.EntityTypeCode = 'CLPROD'
+        base.vw_swimlane_base_client s
+        join base.clienttoproduct as cp on s.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
+        JOIN Base.EntityType b on b.EntityTypeCode = 'CLPROD'
     where
         (
-            s.ClientToProductID is not null
+            cp.ClientToProductID is not null
             and s.CLIENTCODE is not null
             and s.PRODUCTCODE is not null
         ) $$;
@@ -90,10 +99,10 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
             s.LastUpdateDate
         FROM
             cte_swimlane s
-            INNER JOIN ODS1_STAGE.Base.EntityType b ON b.EntityTypeCode = 'FAC'
-            INNER JOIN ODS1_STAGE.Base.ClientToProduct cp ON s.ClientToProductID = cp.ClientToProductID
-            INNER JOIN ODS1_STAGE.Base.Facility o ON s.FacilityID = o.FacilityID
-            LEFT JOIN ODS1_STAGE.Base.ClientProductToEntity T ON T.ClientToProductID = s.ClientToProductID
+            INNER JOIN Base.EntityType b ON b.EntityTypeCode = 'FAC'
+            INNER JOIN Base.ClientToProduct cp ON s.ClientToProductID = cp.ClientToProductID
+            INNER JOIN Base.Facility o ON s.FacilityID = o.FacilityID
+            LEFT JOIN Base.ClientProductToEntity T ON T.ClientToProductID = s.ClientToProductID
             AND T.EntityID = o.FacilityID
             AND T.entitytypeid = b.entitytypeid
         WHERE
@@ -171,9 +180,9 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE.BASE.SP_LOAD_ClientProductToEntity() -- P
             ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
         FROM
             cte_swimlane as s
-            JOIN ODS1_STAGE.Base.EntityType b on b.EntityTypeCode = 'PROV'
-            JOIN ODS1_STAGE.base.ClientToProduct as cp on s.ClientTOProductID = cp.ClientToProductID
-            JOIN ODS1_STAGE.base.Provider as p on s.ProviderID = p.ProviderID
+            JOIN Base.EntityType b on b.EntityTypeCode = 'PROV'
+            JOIN base.ClientToProduct as cp on s.ClientTOProductID = cp.ClientToProductID
+            JOIN base.Provider as p on s.ProviderID = p.ProviderID
         where
             s.RowRank = 1
             and (s.ClientToProductID is not null)$$;
@@ -214,10 +223,10 @@ SELECT
     SYSDATE() as LastUpdateDate
 FROM
     cte_swimlane T
-    JOIN ODS1_STAGE.Base.EntityType et on et.EntityTypeCode = 'OFFICE'
-    JOIN ODS1_STAGE.Base.ClientToProduct cp on T.ClientToProductID = cp.ClientToProductID
-    JOIN ODS1_STAGE.Base.Office o on o.OfficeID = T.OfficeID
-    JOIN ODS1_STAGE.Base.Product PR on PR.ProductID = cp.ProductID
+    JOIN Base.EntityType et on et.EntityTypeCode = 'OFFICE'
+    JOIN Base.ClientToProduct cp on T.ClientToProductID = cp.ClientToProductID
+    JOIN Base.Office o on o.OfficeID = T.OfficeID
+    JOIN Base.Product PR on PR.ProductID = cp.ProductID
 where
     ProductTypeCode = 'Practice' $$;
     --------------------------------–------spuMergePracticeCustomerProduct--------------------------------–------
@@ -234,7 +243,7 @@ from
     raw.vw_practice_profile as x
     join base.practice as p on x.practicecode = p.practicecode
     join base.clienttoproduct as cp on cp.clienttoproductcode = x.customerproduct_customerproductcode
-    join ODS1Stage.Base.EntityType b on b.EntityTypeCode='PRAC'
+    join Base.EntityType b on b.EntityTypeCode='PRAC'
     )
     select
         ClientToProductID,

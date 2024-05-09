@@ -10,12 +10,12 @@ AS
     --------------- 0. Table dependencies -------------------
     ---------------------------------------------------------
     
-    -- SOLRProviderAddress depends on: 
-    --- Base.ProviderRedirect 
-    --- Base.Provider 
-    --- Base.ProviderURL 
+    -- Show.SOLRProviderAddress depends on: 
     --- Show.SOLRProvider 
-    --- Show.SOLRProviderRedirect
+    --- Mid.ProviderPracticeOffice
+    --- Mid.Provider
+    --- Base.ProviderRemoval
+    
 
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------

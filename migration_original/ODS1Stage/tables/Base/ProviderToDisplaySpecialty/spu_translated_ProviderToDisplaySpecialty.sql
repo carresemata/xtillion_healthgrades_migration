@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderToDisplaySpecialty depends on:
---- Raw.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.ProviderToSpecialty
 --- Base.DisplaySpecialtyRule
@@ -37,13 +37,15 @@ BEGIN
     IF (IsProviderDeltaProcessing) THEN
            delete_statement := 'DELETE FROM Base.ProviderToDisplaySpecialty 
                                     WHERE ProviderID IN 
-                                        (SELECT ProviderID 
-                                         FROM Raw.ProviderDeltaProcessing)';
+                                        (SELECT p.ProviderID
+                                        FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                                        JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode)';
 
            select_statement := '
            WITH CTE_ProviderBatch AS (
-                SELECT ProviderId
-                FROM Raw.ProviderDeltaProcessing
+                SELECT p.ProviderID
+                FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode
             ),';
     ELSE
            truncate_statement := 'TRUNCATE TABLE Base.ProviderToDisplaySpecialty';

@@ -11,10 +11,9 @@ DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRProviderDelta depends on: 
---- Raw.ProviderDeltaProcessing (empty)
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProvidersWithSponsorshipIssues (empty)
---- Show.SOLRProviderDelta_PoweredByHealthgrades (empty)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -41,31 +40,33 @@ BEGIN
 
         merge_statement_if_1 := 'MERGE INTO Show.SOLRProviderDelta as target USING
                                     (SELECT	
-                                        ProviderId, 
+                                        P.ProviderId, 
                                         1 AS SolrDeltaTypeCode, 
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate
-                            		FROM	Raw.ProviderDeltaProcessing
+                            		FROM	MDM_TEAM.MST.Provider_Profile_Processing AS PPP
+                                    INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code
                             		WHERE	ProviderId NOT IN (SELECT ProviderId FROM Show.SOLRProviderDelta)) as source
-                                    ON source.ProviderId = target.ProviderId
-                                    WHEN NOT MATCHED THEN
-                                        INSERT (
-                                            ProviderId, 
-                                            SolrDeltaTypeCode, 
-                                            StartDeltaProcessDate
-                                        )
-                                        VALUES (
-                                            source.ProviderId, 
-                                            source.SolrDeltaTypeCode, 
-                                            source.StartDeltaProcessDate
-                                        );';
+                                        ON source.ProviderId = target.ProviderId
+                                        WHEN NOT MATCHED THEN
+                                            INSERT (
+                                                ProviderId, 
+                                                SolrDeltaTypeCode, 
+                                                StartDeltaProcessDate
+                                            )
+                                            VALUES (
+                                                source.ProviderId, 
+                                                source.SolrDeltaTypeCode, 
+                                                source.StartDeltaProcessDate
+                                            );';
 
          merge_statement_if_2 :=  'MERGE INTO Show.SOLRProviderDelta AS target USING 
                                     (SELECT 
-                                        ProvDelta.ProviderID
+                                        P.ProviderID
                                     FROM 
-                                        Raw.ProviderDeltaProcessing AS ProvDelta
+                                        MDM_TEAM.MST.Provider_Profile_Processing AS PPP
+                                    INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code    
                                     INNER JOIN Show.SOLRProviderDelta SOLRProvDelta
-                                    ON ProvDelta.ProviderID = SOLRProvDelta.ProviderID) AS source
+                                    ON P.ProviderID = SOLRProvDelta.ProviderID) AS source
                                     ON source.ProviderID = target.ProviderID
                                     WHEN MATCHED THEN 
                                         UPDATE SET
@@ -75,40 +76,18 @@ BEGIN
 
          select_statement_if_3 := 'WITH CTE_union AS (
                                     SELECT
-                                        DISTINCT ProvDelta.ProviderID,
+                                        DISTINCT P.ProviderID,
                                         1 AS SolrDeltaTypeCode,
                                         CURRENT_TIMESTAMP() AS StartDeltaProcessDate,
                                         1 AS MidDeltaProcessComplete
                                     FROM
-                                        Raw.ProviderDeltaProcessing AS ProvDelta
-                                        INNER JOIN Base.Provider AS BaseProv ON BaseProv.ProviderID = ProvDelta.ProviderID
-                                        LEFT JOIN Show.SOLRProviderDelta AS SOLRProvDelta ON SOLRProvDelta.ProviderID = ProvDelta.ProviderID
-                                        LEFT JOIN Base.ProvidersWithSponsorshipIssues AS ProvIssue ON ProvIssue.ProviderCode = BaseProv.ProviderCode
+                                        MDM_TEAM.MST.Provider_Profile_Processing AS PPP
+                                        INNER JOIN Base.Provider AS P ON P.ProviderCode = PPP.Ref_Provider_Code
+                                        LEFT JOIN Show.SOLRProviderDelta AS SOLRProvDelta ON SOLRProvDelta.ProviderID = P.ProviderID
+                                        LEFT JOIN Base.ProvidersWithSponsorshipIssues AS ProvIssue ON ProvIssue.ProviderCode = P.ProviderCode
                                     WHERE
                                         SOLRProvDelta.ProviderID IS NULL
                                         AND ProvIssue.ProviderCode IS NULL
-                                    UNION
-                                    SELECT
-                                        DISTINCT SOLRProvHealth.ProviderID,
-                                        1 AS SolrDeltaTypeCode,
-                                        CURRENT_TIMESTAMP() AS StartDeltaProcessDate,
-                                        1 AS MidDeltaProcessComplete
-                                    FROM
-                                        Show.SOLRProviderDelta_PoweredByHealthgrades AS SOLRProvHealth
-                                        LEFT JOIN Base.Provider AS BaseProv ON BaseProv.EDWBaseRecordID = SOLRProvHealth.ProviderID
-                                    WHERE
-                                        SOLRProvHealth.ProviderID NOT IN (
-                                            SELECT
-                                                ProviderID
-                                            FROM
-                                                Show.SOLRProviderDelta
-                                        )
-                                        AND BaseProv.ProviderCode NOT IN (
-                                            SELECT
-                                                ProviderCode
-                                            FROM
-                                                Base.ProvidersWithSponsorshipIssues
-                                        )
                                 ),
                                 CTE_final AS (
                                     SELECT
@@ -155,10 +134,6 @@ BEGIN
                                     ON target.ProviderID = source.ProviderID
                                     WHEN NOT MATCHED THEN ' || insert_statement_if_3;
 
-
-         EXECUTE IMMEDIATE merge_statement_if_1;
-         EXECUTE IMMEDIATE merge_statement_if_2;
-         EXECUTE IMMEDIATE merge_statement_if_3;
         
     ELSE
         select_statement_else := 'SELECT 
@@ -184,8 +159,7 @@ BEGIN
                                        ('|| select_statement_else ||') as source 
                                        ON source.ProviderID = target.ProviderID
                                        WHEN NOT MATCHED THEN ' || insert_statement_else;
-                                       
-        EXECUTE IMMEDIATE merge_statement_else;
+
         
     END IF;
 
@@ -211,10 +185,14 @@ update_statement := ' UPDATE Show.SOLRProviderDelta
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
 
--- EXECUTE IMMEDIATE merge_statement_if_1;
--- EXECUTE IMMEDIATE merge_statement_if_2;
--- EXECUTE IMMEDIATE merge_statement_if_3;
--- EXECUTE IMMEDIATE merge_statement_else;
+IF (IsProviderDeltaProcessing) THEN
+    EXECUTE IMMEDIATE merge_statement_if_1;
+    EXECUTE IMMEDIATE merge_statement_if_2;
+    EXECUTE IMMEDIATE merge_statement_if_3;
+ELSE
+    EXECUTE IMMEDIATE merge_statement_else;
+END IF;
+
 EXECUTE IMMEDIATE update_statement ;
 
 ---------------------------------------------------------

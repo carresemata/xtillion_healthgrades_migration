@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderLicense depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Provider
 --- Base.ProviderLicense
 --- Base.State
@@ -34,9 +34,10 @@ BEGIN
            select_statement := '
           WITH CTE_ProviderBatch AS (
                 SELECT
-                    pdp.ProviderID
+                    p.ProviderID
                 FROM
-                    Raw.ProviderDeltaProcessing as pdp),';
+                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
     ELSE
            truncate_statement := 'TRUNCATE TABLE Mid.ProviderLicense';
            EXECUTE IMMEDIATE truncate_statement;

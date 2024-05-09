@@ -9,12 +9,13 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderImage depends on: 
---- Raw.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.MediaImageHost
 --- Base.MediaImageType
 --- Base.MediaSize
 --- Base.MediaReviewLevel
+--- Base.MediaContextType
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

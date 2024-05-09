@@ -7,8 +7,10 @@ AS
 
 -- Base.VWUPDCEMPLOYEDPROVIDERPHONE depends on:
 --- Base.ClientProductToEntity
---- Base.vwuClientProductEntityToPhone
 --- Base.ClientToProduct
+--- BASE.CLIENTPRODUCTENTITYTOPHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 
 ---------------------------------------------------------
 --------------------- 1. Columns ------------------------

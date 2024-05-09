@@ -9,13 +9,14 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+--- Mid.ProviderProcedure depends on:
+-- MDM_TEAM.MST.Provider_Profile_Processing
 -- Base.Provider
 -- Base.EntityToMedicalTerm
 -- Base.MedicalTerm
 -- Base.EntityType
 -- Base.MedicalTermSet
 -- Base.MedicalTermType
--- raw.ProviderDeltaProcessing
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -35,7 +36,8 @@ status STRING;
 BEGIN
 
     IF (IsProviderDeltaProcessing) THEN
-        source_table := $$ raw.ProviderDeltaProcessing $$;
+        source_table := $$ MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                            JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode $$;
     ELSE
         source_table := $$ Base.Provider $$;
 END IF;
@@ -47,7 +49,7 @@ END IF;
     select_statement := $$
                         (WITH CTE_ProviderBatch AS (
                         SELECT p.ProviderID
-                        FROM $$ ||source_table|| $$ p
+                        FROM $$ ||source_table|| $$
                         ORDER BY p.ProviderID
                         ),
                     

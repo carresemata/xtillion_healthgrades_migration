@@ -11,10 +11,12 @@ AS
 --- Base.ClientProductEntityToURL
 --- Base.URLType
 --- Base.URL
---- Base.vwuClientProductEntityToPhone
 --- Base.ClientProductToEntity
 --- Base.EntityType
 --- Base.ClientToProduct
+--- BASE.CLIENTPRODUCTENTITYTOPHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 
 ---------------------------------------------------------
 --------------------- 1. Columns ------------------------

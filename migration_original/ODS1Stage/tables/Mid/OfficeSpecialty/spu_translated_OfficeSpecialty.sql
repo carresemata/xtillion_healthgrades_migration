@@ -9,12 +9,13 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.OfficeSpecialty depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.ProviderToOffice
 --- Base.Office
 --- Base.EntityToMedicalTerm 
 --- Base.MedicalTerm
 --- Base.MedicalTermType
+--- Base.Provider
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -34,8 +35,9 @@ BEGIN
     IF (IsProviderDeltaProcessing) THEN
            select_statement := '
             WITH CTE_OfficeBatch AS (SELECT DISTINCT pto.OfficeID
-            FROM Raw.ProviderDeltaProcessing AS pdp
-            JOIN Base.ProviderToOffice AS pto ON pto.ProviderID = pdp.ProviderID
+            FROM MDM_TEAM.MST.Provider_Profile_Processing AS pdp 
+            JOIN Base.Provider AS P ON P.ProviderCode = pdp.ref_provider_code
+            JOIN Base.ProviderToOffice AS pto ON pto.ProviderId = P.ProviderID
             ORDER BY pto.OfficeID),
            ';
     ELSE

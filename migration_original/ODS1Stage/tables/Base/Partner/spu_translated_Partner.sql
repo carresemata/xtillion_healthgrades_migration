@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.Partner depends on: 
---- Base.swimlane_base_client
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING  (Base.vw_swimlane_base_client)
 --- Base.Client
 --- Base.PartnerType
 --- Base.Product
@@ -42,7 +42,7 @@ select_statement := $$  WITH cte_swimlane AS (
     SELECT
         *
     from
-        base.swimlane_base_client qualify dense_rank() over(
+        base.vw_swimlane_base_client qualify dense_rank() over(
             partition by customerproductcode
             order by
                 LastUpdateDate
@@ -97,7 +97,6 @@ CTE_FinalSwimlane AS (
     SELECT
         CREATED_DATETIME,
         CUSTOMERPRODUCTCODE,
-        CLIENTTOPRODUCTID,
         CLIENTCODE,
         PRODUCTCODE,
         CUSTOMERPRODUCTJSON,

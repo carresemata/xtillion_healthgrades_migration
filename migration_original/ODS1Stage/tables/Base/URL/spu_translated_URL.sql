@@ -10,8 +10,8 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- BASE.URL depends on:
---- RAW.VW_FACILITY_PROFILE
---- RAW.VW_CUSTOMER_PRODUCT_PROFILE
+--- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (RAW.VW_CUSTOMER_PRODUCT_PROFILE)
 --- Base.Facility
 --- Base.ClientToProduct
 

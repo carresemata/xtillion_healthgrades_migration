@@ -9,11 +9,12 @@ DECLARE
 ---------------------------------------------------------
 
 --- Base.ClienttEntityToClientFeature depends on:
---- BASE.SWIMLANE_BASE_CLIENT
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING  (BASE.vw_SWIMLANE_BASE_CLIENT)
 --- BASE.CLIENTFEATURE
 --- BASE.CLIENTFEATUREVALUE
 --- BASE.ENTITYTYPE
 --- BASE.CLIENTFEATURETOCLIENTFEATUREVALUE
+--- BASE.CLIENTTOPRODUCT
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -46,7 +47,7 @@ select_statement := $$with cte_swimlane as (
                 LastUpdateDate
         ) as rowrank,
     from
-        base.swimlane_base_client
+        base.vw_swimlane_base_client
 ),
 cte_tmp_features as (
     select
@@ -537,10 +538,11 @@ from
     AND CFV.ClientFeatureValueID = CFTCFV.ClientFeatureValueID
     JOIN (
         select distinct 
-            customerproductcode,
-            ClientToProductID
+            vw.customerproductcode,
+            cp.ClientToProductID
         from
-            base.swimlane_base_client
+            base.vw_swimlane_base_client as vw
+            join base.clienttoproduct as cp on vw.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
     ) c on s.CustomerProductCode = c.CustomerProductCode$$;
 
 --- Update Statement

@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.Practice depends on: 
---- Raw.VW_PRACTICE_PROFILE
+--- MDMM_TEAM.MST.PRACTICE_PROFILE_PROCESSING (RAW.VW_PRACTICE_PROFILE)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

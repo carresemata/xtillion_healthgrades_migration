@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PRACTICE_PROFILE AS (
 ---------------------------------------------------------
 
 -- Raw.VW_PRACTICE_PROFILE depends on:
---- Raw.PRACTICE_PROFILE_PROCESSING
+--- MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------
@@ -29,4 +29,4 @@ SELECT
     TO_VARCHAR(Process.PRACTICE_PROFILE:DEMOGRAPHICS[0].DATA_SOURCE_CODE) AS Demographics_SourceCode,
     TO_TIMESTAMP_NTZ(Process.PRACTICE_PROFILE:DEMOGRAPHICS[0].UPDATED_DATETIME) AS Demographics_LastUpdateDate
     
-FROM Raw.PRACTICE_PROFILE_PROCESSING AS Process);
+FROM MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING AS Process);

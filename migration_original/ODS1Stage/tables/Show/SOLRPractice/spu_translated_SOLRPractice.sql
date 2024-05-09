@@ -9,14 +9,36 @@ AS 'DECLARE
 ---------------------------------------------------------
     
 -- Show.SOLRPractice depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing 
 --- Base.Practice
 --- Base.Office
 --- Base.Client
 --- Base.ProviderToOffice
 --- Mid.PracticeSponsorship
---- Show.vwuProviderIndex
 --- Show.ClientContract
+--- Mid.Practice
+--- Mid.OfficeSpecialty
+--- Base.OfficeHours
+--- Base.DaysOfWeek
+--- Base.CityStatePostalCode
+--- Base.State
+--- Base.Product
+--- Base.PracticeEmail
+--- Base.Provider
+--- BASE.CLIENTPRODUCTTOENTITY (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTTOPRODUCT (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.ENTITYTYPE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTPRODUCTENTITYTOIMAGE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.IMAGETYPE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.IMAGE (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.OFFICETOADDRESS (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.ADDRESS (BASE.VWUPDCPRACTICEOFFICEDETAIL)
+--- BASE.CLIENTPRODUCTENTITYTOPHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
+--- Show.SOLRProvider (Show.vwuProviderIndex )
+--- Show.ConsolidatedProviders (Show.vwuProviderIndex )
+--- Show.DelayClient (Show.vwuProviderIndex )
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -61,8 +83,9 @@ BEGIN
                     SELECT DISTINCT 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
-                    FROM Raw.ProviderDeltaProcessing AS DeltaProc
-                    INNER JOIN base.ProviderToOffice PTO ON DeltaProc.ProviderID = PTO.ProviderID
+                    FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code
+                    INNER JOIN base.ProviderToOffice PTO ON p.ProviderID = PTO.ProviderID
                     INNER JOIN base.Office Off ON PTO.OfficeID = Off.OfficeID
                     INNER JOIN Base.Practice AS BasePrac ON BasePrac.PracticeID = Off.PracticeID
                     ORDER BY BasePrac.PracticeID

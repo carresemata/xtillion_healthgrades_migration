@@ -9,9 +9,11 @@ DECLARE
 ---------------------------------------------------------
 
 --- Base.ClientProductToPartner depends on: 
--- Base.swimlane_base_client
+-- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
 -- Base.Client
 -- Base.ClientToProduct
+-- Base.Partner
+
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -38,7 +40,7 @@ BEGIN
 cte_sl := $$
           WITH cte_swimlane AS (
                 SELECT *
-                FROM Base.swimlane_base_client 
+                FROM Base.vw_swimlane_base_client 
                 QUALIFY DENSE_RANK() OVER(PARTITION BY customerproductcode ORDER BY LastUpdateDate) = 1
             ),
             
@@ -85,7 +87,6 @@ cte_sl := $$
                 SELECT
                     CREATED_DATETIME,
                     CUSTOMERPRODUCTCODE,
-                    CLIENTTOPRODUCTID,
                     CLIENTCODE,
                     PRODUCTCODE,
                     CUSTOMERPRODUCTJSON,
@@ -144,7 +145,7 @@ cte_sl := $$
 select_statement_1 := cte_sl || $$
                                 SELECT DISTINCT
                                    UUID_STRING() AS ClientProductToPartnerID,
-                                   ctp.ClientToProductId AS ClientToProductID, 
+                                   ctp.ClientToProductId, 
                                    c.ClientId AS PartnerID,
                                    'HG Reference' AS SourceCode, 
                                    SYSDATE() AS LastUpdateDate, 
@@ -160,7 +161,7 @@ select_statement_1 := cte_sl || $$
 select_statement_2 := cte_sl || $$
                                 SELECT DISTINCT
                                    UUID_STRING() AS ClientProductToPartnerID,
-                                   ctp.ClientToProductId AS ClientToProductID, 
+                                   ctp.ClientToProductId, 
                                    (SELECT PartnerId FROM Base.Partner WHERE PartnerCode = 'MHD') AS PartnerID,
                                    'HG Reference' AS SourceCode, 
                                    SYSDATE() AS LastUpdateDate, 
@@ -170,7 +171,7 @@ select_statement_2 := cte_sl || $$
                                 INNER JOIN Base.ClientToProduct ctp ON ctp.ClientId = c.ClientId
                                 LEFT JOIN Base.ClientProductToPartner cptp ON cptp.ClientToProductID = ctp.ClientToProductID
                                 WHERE cptp.ClientProductToPartnerID IS NULL AND ctp.ClientToProductID LIKE '%-MAP' 
-                                    AND LEFT(cte.ClientToProductID, POSITION('-', cte.ClientToProductID) - 1) IN ('STDAVD','HCASAM','HCASM','HCAPASO','HCAWNV','HCAGC','HCAHL1','HCACKS','HCALEW','HCACARES','HCACVA','HCAFRFT','HCATRI','HCASATL','HCANFD','HCAMW','HCAWFD','HCAMT','HCANTD','HCACVA','HCAMT','HCAMW','HCACKS','HCAEFD','HCAGC','HCAHL1','HCALEW','HCANFD','HCAPASO','HCASAM','HCASATL','HCATRI','HCAWFD','HCAWNV','HCAFRFT','HCARES','STDAVD')
+                                    AND LEFT(ctp.ClientToProductID, POSITION('-', ctp.ClientToProductID) - 1) IN ('STDAVD','HCASAM','HCASM','HCAPASO','HCAWNV','HCAGC','HCAHL1','HCACKS','HCALEW','HCACARES','HCACVA','HCAFRFT','HCATRI','HCASATL','HCANFD','HCAMW','HCAWFD','HCAMT','HCANTD','HCACVA','HCAMT','HCAMW','HCACKS','HCAEFD','HCAGC','HCAHL1','HCALEW','HCANFD','HCAPASO','HCASAM','HCASATL','HCATRI','HCAWFD','HCAWNV','HCAFRFT','HCARES','STDAVD')
                                 $$;
 
                                 

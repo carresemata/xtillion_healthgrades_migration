@@ -8,7 +8,7 @@ AS DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 -- Base.Degree depends on:
---- RAW.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

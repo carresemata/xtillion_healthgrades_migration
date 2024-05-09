@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderLicense depends on: 
---- Raw.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.ProviderMalpractice
 --- Base.State
@@ -63,10 +63,10 @@ select_statement := $$ SELECT DISTINCT
 delete_statement := 'DELETE FROM Base.ProviderLicense
                         WHERE ProviderLicenseID IN (
                             SELECT pc.ProviderLicenseID
-                            FROM raw.PROVIDER_PROFILE_JSON as p
+                            FROM raw.VW_PROVIDER_PROFILE as p
                             INNER JOIN Base.Provider as pID ON pID.ProviderCode = p.ProviderCode
                             INNER JOIN Base.ProviderLicense as pc ON pc.ProviderID = pID.ProviderID
-                            LEFT JOIN Base.ProviderMalpractice M ON M.ProviderLicenseID = PC.ProviderLicenseID
+                            LEFT JOIN Base.ProviderMalpractice M ON M.ProviderId = PC.ProviderId -- before it was ON M.ProviderLicenseID = PC.ProviderLicenseID
                             WHERE M.ProviderMalpracticeID IS NULL
                         );';
 

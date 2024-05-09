@@ -38,11 +38,9 @@ DECLARE
 -- Base.HealthInsurancePlanType
 -- Base.HealthInsurancePayor
 -- Base.CertificationAgencyToBoardToSpecialty
--- Base.CertificationAgency
--- Base.CertificationBoard
 -- Base.CertificationSpecialty
--- Base.SubStatus
 -- Base.DisplayStatus
+-- Base.PopularSearchTerm (from DBO schema)
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

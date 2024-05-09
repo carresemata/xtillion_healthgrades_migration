@@ -8,8 +8,8 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 --- Base.ClientProductEntityRelationship depends on:
--- RAW.VW_PROVIDER_PROFILE
--- RAW.VW_OFFICE_PROFILE
+-- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
+-- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
 -- Base.Provider
 -- Base.Facility
 -- Base.Office
@@ -17,6 +17,7 @@ DECLARE
 -- Base.ClientToProduct
 -- Base.EntityType
 -- Base.ClientProductToEntity
+-- Base.Practice
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

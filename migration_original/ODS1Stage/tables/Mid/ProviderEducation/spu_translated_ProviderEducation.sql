@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.ProviderEducation depends on:
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.ProviderToEducationInstitution
 --- Base.EducationInstitution
 --- Base.EducationInstitutionType
@@ -17,6 +17,7 @@ DECLARE
 --- Base.CityStatePostalCode
 --- Base.Nation
 --- Base.Degree
+--- Base.Provider
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------
@@ -37,9 +38,10 @@ BEGIN
            select_statement := '
            WITH CTE_ProviderBatch AS (
                 SELECT
-                    pdp.ProviderID
-                from
-                    Raw.ProviderDeltaProcessing as pdp),';
+                    p.ProviderID
+                FROM
+                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
     ELSE
            select_statement := '
            WITH CTE_ProviderBatch AS (

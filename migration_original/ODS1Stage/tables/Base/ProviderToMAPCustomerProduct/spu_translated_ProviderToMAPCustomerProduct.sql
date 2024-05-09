@@ -9,7 +9,7 @@ DECLARE
 ---------------------------------------------------------
     
 -- Base.ProviderToMAPCustomerProduct depends on:
---- RAW.VW_PROVIDER_PROFILE
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
 --- Base.Provider
 --- Base.ClientToProduct
 --- Base.ClientProductToEntity
@@ -22,6 +22,9 @@ DECLARE
 --- Base.OfficeToAddress
 --- Base.Address
 --- Base.CityStatePostalCode
+--- Base.ClientProductEntityToPhone
+--- Base.Product
+--- Base.Client
 
 ---------------------------------------------------------
 --------------- 1. Declaring variables ------------------

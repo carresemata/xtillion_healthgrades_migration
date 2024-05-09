@@ -12,8 +12,7 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
     
--- SOLRTreatmentEntryLevel depends on :
---- Show.SOLRTreatmentEntryLevel
+-- Show.SOLRTreatmentEntryLevel depends on :
 --- Base.SpecialtyToCondition
 --- Base.TreatmentLevel
 --- Base.SpecialtyToProcedureMedical

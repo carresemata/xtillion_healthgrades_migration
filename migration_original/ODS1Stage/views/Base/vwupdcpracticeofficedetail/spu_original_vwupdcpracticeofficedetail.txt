@@ -1,0 +1,40 @@
+SELECT	b.ClientToProductID, n.ClientCode, b.ClientProductToEntityID, a.OfficeID, a.OfficeCode, a.OfficeName, b1.PracticeID, b1.PracticeCode, b1.PracticeName,
+		img.ImageFilePath, img.ImageTypeCode, u.URL, u.URLTypeCode,
+		ph.PhoneNumber AS  'DesignatedProviderPhone',
+		ph.PhoneTypeCode, a.LegacyKey as hgid
+-- SELECT *  
+FROM	Base.Office AS a WITH (NOLOCK) 
+		left JOIN Base.Practice AS b1 WITH (NOLOCK) ON a.PracticeID = b1.PracticeID
+		JOIN Base.ClientProductToEntity b WITH (NOLOCK) ON a.OfficeID = b.EntityID
+		JOIN Base.ClientToProduct m WITH (NOLOCK) ON b.ClientToProductID = m.ClientToProductID AND m.ActiveFlag = 1
+		JOIN Base.Client n WITH (NOLOCK) ON m.ClientID = n.ClientID 
+		JOIN Base.EntityType c WITH (NOLOCK) ON b.EntityTypeID = c.EntityTypeID AND c.EntityTypeCode = 'OFFICE'
+		LEFT JOIN
+				(
+                    select	d.ClientProductToEntityID, 
+							f.ImageFilePath, 
+							e.ImageTypeCode 
+                    from	Base.ClientProductEntityToImage d WITH (NOLOCK)
+							join Base.ImageType e WITH (NOLOCK) on e.ImageTypeID = d.ImageTypeID
+							join Base.[Image] f ON d.ImageID = f.ImageID
+				) img ON b.ClientProductToEntityID = img.ClientProductToEntityID
+		LEFT JOIN 
+				(
+					SELECT	k.OfficeID, k.PracticeID, replace('/group-directory/' + LOWER(REPLACE(p.StateName,' ','-'))+'-'+LOWER(o.State)+'/'+
+							lower(replace(replace(replace(replace(replace(replace(replace(o.City,' - ',' '),'&','-'),' ','-'),'/','-'),'''',''),'.',''),'--','-')) + '/' + 
+							lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(l.PracticeName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+							'-' + LOWER(ISNULL(SUBSTRING(k.LegacyKey, 5,8),k.OfficeCode)) ,'--','-') AS URL,
+							'FCOURL' AS URLTypeCode
+					FROM	Base.Office k WITH (NOLOCK) 
+							JOIN Base.Practice l WITH (NOLOCK) ON k.PracticeID = l.PracticeID
+							JOIN Base.OfficeToAddress AS m WITH (NOLOCK) ON k.OfficeID = m.OfficeID
+							JOIN Base.Address AS n WITH (NOLOCK) ON n.AddressID = m.AddressID
+							JOIN Base.CityStatePostalCode o WITH (NOLOCK) ON o.CityStatePostalCodeID = n.CityStatePostalCodeID
+							JOIN Base.State p ON p.state = o.state
+
+				) u ON a.OfficeID = u.OfficeID AND a.PracticeID = u.PracticeID
+		LEFT JOIN 
+				(
+					SELECT j.ClientProductToEntityID, j.AreaCode, j.PhoneNumber, j.PhoneTypeCode
+					FROM [Base].[vwuClientProductEntityToPhone] j WITH (NOLOCK) 
+				) ph ON b.ClientProductToEntityID = ph.ClientProductToEntityID

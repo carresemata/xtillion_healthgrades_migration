@@ -9,9 +9,10 @@ DECLARE
 ---------------------------------------------------------
 
 -- Mid.Practice depends on:
---- Raw.ProviderDeltaProcessing 
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.ProviderToProviderType
 --- Base.ProviderType
+--- Base.Provider
 --- Base.ProviderToOffice 
 --- Base.Office
 --- Base.OfficeToAddress
@@ -52,9 +53,10 @@ BEGIN
            select_statement := '
            WITH CTE_PracticeBatch AS (
                 SELECT DISTINCT 
-                    O.PracticeID
-                FROM Raw.ProviderDeltaProcessing as PDP 
-                    JOIN Base.ProviderToOffice AS PTO on PTO.ProviderID = PDP.ProviderID
+                O.PracticeID
+                FROM MDM_TEAM.MST.Provider_Profile_Processing as PDP 
+                    JOIN Base.Provider As P ON P.ProviderCode = PDP.REF_PROVIDER_CODE
+                    JOIN Base.ProviderToOffice AS PTO on PTO.ProviderID = P.ProviderID
                     JOIN Base.Office AS O on O.OfficeID = PTO.OfficeID
                 ORDER BY O.PracticeID), ';
     ELSE

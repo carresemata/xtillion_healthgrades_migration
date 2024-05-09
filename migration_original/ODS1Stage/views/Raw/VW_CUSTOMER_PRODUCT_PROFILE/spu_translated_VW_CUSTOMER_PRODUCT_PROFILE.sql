@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_CUSTOMER_PRODUCT_PROFILE A
 ---------------------------------------------------------
 
 -- Raw.VW_CUSTOMER_PRODUCT_PROFILE depends on:
---- Raw.CUSTOMER_PRODUCT_PROFILE_PROCESSING
+--- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------
@@ -114,4 +114,4 @@ SELECT
     TO_TIMESTAMP_NTZ(Process.CUSTOMER_PRODUCT_PROFILE:IMAGE[0].UPDATED_DATETIME) AS Image_LastUpdateDate
     
 FROM
-    Raw.CUSTOMER_PRODUCT_PROFILE_PROCESSING AS Process);
+    MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING AS Process);

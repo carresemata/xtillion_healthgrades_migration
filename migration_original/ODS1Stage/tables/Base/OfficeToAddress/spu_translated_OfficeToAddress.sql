@@ -9,8 +9,8 @@ DECLARE
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
--- BASE.OfficeToPhone depends on:
---- Raw.VW_OFFICE_PROFILE
+-- BASE.OfficeToAddress depends on:
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
 --- Base.Office
 --- Base.AddressType
 

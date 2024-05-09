@@ -9,13 +9,14 @@ DECLARE
 ---------------------------------------------------------
     
 -- Mid.PracticeSponsorship depends on: 
---- Raw.ProviderDeltaProcessing
+--- MDM_TEAM.MST.Provider_Profile_Processing
 --- Base.Practice
 --- Base.ProviderToOffice
 --- Base.Office
 --- Base.ClientToProduct
 --- Base.Client
 --- Base.Product
+--- Base.Provider
 --- Base.ProductGroup
 --- Base.ClientProductToEntity
 --- Base.EntityType
@@ -41,16 +42,17 @@ BEGIN
             select_statement := '
            WITH CTE_PracticeBatch AS (
                     SELECT 
-                        p.PracticeID, 
-                        p.PracticeCode
-                    FROM raw.ProviderDeltaProcessing AS a
-                    JOIN base.providertooffice pto ON a.ProviderID = pto.ProviderID
+                        pa.PracticeID, 
+                        pa.PracticeCode
+                    FROM MDM_TEAM.MST.Provider_Profile_Processing AS ppp
+                    JOIN Base.Provider AS P ON p.providercode = ppp.ref_provider_code
+                    JOIN base.providertooffice pto ON p.ProviderID = pto.ProviderID
                     JOIN base.Office o ON pto.OfficeID = o.OfficeID
-                    JOIN Base.Practice AS p ON p.PracticeID = o.PracticeID
+                    JOIN Base.Practice AS pa ON pa.PracticeID = o.PracticeID
                     GROUP BY 
-                        p.PracticeID, 
-                        p.PracticeCode
-                    ORDER BY p.PracticeID
+                        pa.PracticeID, 
+                        pa.PracticeCode
+                    ORDER BY pa.PracticeID
                     ),';
            
     ELSE

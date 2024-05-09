@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_OFFICE_PROFILE AS (
 ---------------------------------------------------------
 
 -- Raw.VW_OFFICE_PROFILE depends on:
---- Raw.OFFICE_PROFILE_PROCESSING
+--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------
@@ -73,4 +73,4 @@ SELECT
     TO_TIMESTAMP_NTZ(Process.OFFICE_PROFILE:PRACTICE[0].UPDATED_DATETIME) AS Practice_LastUpdateDate
     
 FROM
-    Raw.OFFICE_PROFILE_PROCESSING AS Process);
+    MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING AS Process);

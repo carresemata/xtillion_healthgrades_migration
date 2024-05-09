@@ -5,7 +5,7 @@ CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PROVIDER_PROFILE AS  (
 ---------------------------------------------------------
 
 -- Raw.VW_PROVIDER_PROFILE depends on:
---- Raw.PROVIDER_PROFILE_PROCESSING
+--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING
 
 ---------------------------------------------------------
 -------------------- 1. JSON Keys -----------------------
@@ -322,4 +322,4 @@ SELECT
     TO_TIMESTAMP_NTZ(Process.PROVIDER_PROFILE:VIDEO [0].UPDATED_DATETIME) AS Video_LastUpdateDate
     
 FROM
-    Raw.PROVIDER_PROFILE_PROCESSING AS Process);
+    MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING AS Process);

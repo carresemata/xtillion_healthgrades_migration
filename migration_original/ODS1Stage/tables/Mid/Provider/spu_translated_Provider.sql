@@ -9,6 +9,8 @@ DECLARE
 --------------- 0. Table dependencies -------------------
 ---------------------------------------------------------
 
+--- Mid.Provider depends on:
+-- MDM_TEAM.MST.Provider_Profile_Processing
 -- Base.Provider
 -- Base.ProviderToDegree
 -- Base.Degree
@@ -115,7 +117,7 @@ BEGIN
                    $$;
                    
       IF (IsProviderDeltaProcessing) THEN
-        join_temp_delta := $$ INNER JOIN raw.ProviderDeltaProcessing AS pdp ON pdp.ProviderID = p.ProviderID $$;
+        join_temp_delta := $$ INNER JOIN MDM_TEAM.MST.Provider_Profile_Processing as ppp ON p.providercode = ppp.ref_provider_code $$;
         insert_temp := insert_temp || join_temp_delta;
       ELSE
         insert_temp := insert_temp;
