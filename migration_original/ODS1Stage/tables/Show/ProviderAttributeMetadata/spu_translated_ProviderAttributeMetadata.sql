@@ -1,60 +1,60 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADATA() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADATA() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Show.ProviderAttributeMetadata depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
---- Base.Provider
---- Base.MedicalTerm
---- Base.MedicalTermType
---- Base.EntityToMedicalTerm
---- Base.ProviderToAboutMe
---- Base.AboutMe
---- Base.ProviderToOffice
---- Base.OfficeToAddress
---- Base.ProviderToAppointmentAvailability (empty)
---- Base.ProviderAppointmentAvailabilityStatement (empty)
---- Base.ProviderToCertificationSpecialty (empty)
---- Base.ProviderToDegree
---- Base.ProviderToHealthInsurance
---- Base.ProviderToFacility
---- Base.ProviderToLanguage
---- Base.ProviderMalpractice
---- Base.ProviderMedia
---- Base.OfficeToPhone
---- Base.PhoneType
---- Base.Office
---- Base.ProviderImage
---- Base.ProviderToOrganization
---- Base.Practice
---- Base.ProviderSanction
---- Base.ProviderToSpecialty
---- Base.ProviderVideo
+-- show.providerattributemetadata depends on: 
+--- mdm_team.mst.provider_profile_processing
+--- base.provider
+--- base.medicalterm
+--- base.medicaltermtype
+--- base.entitytomedicalterm
+--- base.providertoaboutme
+--- base.aboutme
+--- base.providertooffice
+--- base.officetoaddress
+--- base.providertoappointmentavailability (empty)
+--- base.providerappointmentavailabilitystatement (empty)
+--- base.providertocertificationspecialty (empty)
+--- base.providertodegree
+--- base.providertohealthinsurance
+--- base.providertofacility
+--- base.providertolanguage
+--- base.providermalpractice
+--- base.providermedia
+--- base.officetophone
+--- base.phonetype
+--- base.office
+--- base.providerimage
+--- base.providertoorganization
+--- base.practice
+--- base.providersanction
+--- base.providertospecialty
+--- base.providervideo
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderAttributeMetadata');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providerattributemetadata');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -62,550 +62,550 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
--- If no conditionals:
+--- select Statement
+-- if no conditionals:
 select_statement := $$
-                    WITH CTE_ProviderIdList AS (
-    SELECT
-        DISTINCT 
+                    with CTE_ProviderIdList as (
+    select
+        distinct 
         p.providerid,
-        PDP.ref_provider_code AS ProviderCode
-    FROM
-        MDM_TEAM.MST.Provider_Profile_Processing AS PDP
-        JOIN Base.Provider AS P ON PDP.ref_provider_code = P.ProviderCode
-    ORDER BY
+        pdp.ref_provider_code as ProviderCode
+    from
+        MDM_team.mst.Provider_Profile_Processing as PDP
+        join base.provider as P on pdp.ref_provider_code = p.providercode
+    order by
         p.providerid
             ),
-            CTE_MedicalTerm AS (
-                SELECT
-                    mt.MedicalTermID,
-                    mtt.MedicalTermTypeCode,
-                    mt.RefMedicalTermCode,
-                    mt.MedicalTermDescription1
-                FROM
-                    Base.MedicalTerm AS mt
-                    JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
-                WHERE
-                    mtt.MedicalTermTypeCode IN ('Condition', 'Procedure')
-                ORDER BY
-                    mt.MedicalTermID
+            CTE_MedicalTerm as (
+                select
+                    mt.medicaltermid,
+                    mtt.medicaltermtypecode,
+                    mt.refmedicaltermcode,
+                    mt.medicaltermdescription1
+                from
+                    base.medicalterm as mt
+                    join base.medicaltermtype as mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid
+                where
+                    mtt.medicaltermtypecode IN ('Condition', 'Procedure')
+                order by
+                    mt.medicaltermid
             ),
-            CTE_ProviderMedical AS (
-                SELECT
-                    p.ProviderID,
-                    emt.EntityID,
-                    emt.MedicalTermID,
-                    emt.SourceCode,
-                    emt.LastUpdateDate,
-                    IFNULL(emt.IsPreview, 0) AS IsPreview,
-                    emt.NationalRankingA,
-                    emt.NationalRankingB,
-                    emt.NationalRankingBCalc
-                FROM
-                    CTE_ProviderIdList AS p
-                    JOIN Base.EntityToMedicalTerm AS emt ON emt.EntityID = p.ProviderID
+            CTE_ProviderMedical as (
+                select
+                    p.providerid,
+                    emt.entityid,
+                    emt.medicaltermid,
+                    emt.sourcecode,
+                    emt.lastupdatedate,
+                    ifnull(emt.ispreview, 0) as IsPreview,
+                    emt.nationalrankinga,
+                    emt.nationalrankingb,
+                    emt.nationalrankingbcalc
+                from
+                    CTE_ProviderIdList as p
+                    join base.entitytomedicalterm as emt on emt.entityid = p.providerid
             ),
-            CTE_ProviderEntityToMedicalTermList AS (
-                SELECT
-                    DISTINCT pm.ProviderID,
-                    pm.EntityID,
-                    pm.MedicalTermID,
-                    mt.MedicalTermTypeCode,
-                    mt.RefMedicalTermCode,
-                    pm.SourceCode,
-                    pm.LastUpdateDate,
-                    pm.IsPreview,
-                    pm.NationalRankingA,
-                    pm.NationalRankingB,
-                    pm.NationalRankingBCalc
-                FROM
-                    CTE_ProviderMedical AS pm
-                    JOIN CTE_MedicalTerm AS mt ON mt.MedicalTermID = pm.MedicalTermID
-                ORDER BY
-                    pm.EntityID,
-                    pm.MedicalTermID,
-                    mt.MedicalTermTypeCode
+            CTE_ProviderEntityToMedicalTermList as (
+                select
+                    distinct pm.providerid,
+                    pm.entityid,
+                    pm.medicaltermid,
+                    mt.medicaltermtypecode,
+                    mt.refmedicaltermcode,
+                    pm.sourcecode,
+                    pm.lastupdatedate,
+                    pm.ispreview,
+                    pm.nationalrankinga,
+                    pm.nationalrankingb,
+                    pm.nationalrankingbcalc
+                from
+                    CTE_ProviderMedical as pm
+                    join CTE_MedicalTerm as mt on mt.medicaltermid = pm.medicaltermid
+                order by
+                    pm.entityid,
+                    pm.medicaltermid,
+                    mt.medicaltermtypecode
             ),
-            CTE_updates AS (
+            CTE_updates as (
                 --About Me
-                SELECT
-                    ptam.ProviderID,
-                    'AboutMe ' || AboutMeCode AS DataElement,
-                    IFNULL(SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ptam.LastUPDATEdDate) AS LastUpdateDate
-                FROM
+                select
+                    ptam.providerid,
+                    'AboutMe ' || AboutMeCode as DataElement,
+                    ifnull(SourceCode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ptam.lastupdateddate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToAboutMe ptam ON pid.ProviderID = ptam.ProviderID
-                    JOIN Base.AboutMe am ON ptam.AboutMeID = am.AboutMeID
-                GROUP BY
-                    ptam.ProviderID,
+                    join base.providertoaboutme ptam on pid.providerid = ptam.providerid
+                    join base.aboutme am on ptam.aboutmeid = am.aboutmeid
+                group by
+                    ptam.providerid,
                     AboutMeCode,
                     SourceCode
-                UNION ALL
+                union all
                     --Provider Address:
-                SELECT
-                    pto.ProviderID,
-                    'Address' AS DataElement,
-                    IFNULL(ota.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ota.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pto.providerid,
+                    'Address' as DataElement,
+                    ifnull(ota.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ota.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToOffice PTO ON pid.ProviderID = pto.ProviderID
-                    JOIN Base.OfficeToAddress OTA ON ota.OfficeID = pto.OfficeID
-                GROUP BY
-                    pto.ProviderID,
-                    ota.SourceCode
-                UNION ALL
+                    join base.providertooffice PTO on pid.providerid = pto.providerid
+                    join base.officetoaddress OTA on ota.officeid = pto.officeid
+                group by
+                    pto.providerid,
+                    ota.sourcecode
+                union all
                     --Appointment Availability:
-                SELECT
-                    paa.ProviderID,
-                    'Appointment Availability' AS DataElement,
-                    IFNULL(paa.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(paa.InsertedOn) AS LastUpdateDate
-                FROM
+                select
+                    paa.providerid,
+                    'Appointment Availability' as DataElement,
+                    ifnull(paa.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(paa.insertedon) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToAppointmentAvailability paa ON pid.ProviderID = paa.ProviderID
-                GROUP BY
-                    paa.ProviderID,
-                    paa.SourceCode
-                UNION ALL
+                    join base.providertoappointmentavailability paa on pid.providerid = paa.providerid
+                group by
+                    paa.providerid,
+                    paa.sourcecode
+                union all
                     --Provider Availability Statement:
-                SELECT
-                    pas.ProviderID,
-                    'Availability Statement' AS DataElement,
-                    IFNULL(pas.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pas.InsertedOn) AS LastUpdateDate
-                FROM
+                select
+                    pas.providerid,
+                    'Availability Statement' as DataElement,
+                    ifnull(pas.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pas.insertedon) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderAppointmentAvailabilityStatement pas ON pid.ProviderID = pas.ProviderID
-                GROUP BY
-                    pas.ProviderID,
-                    pas.SourceCode
-                UNION ALL
+                    join base.providerappointmentavailabilitystatement pas on pid.providerid = pas.providerid
+                group by
+                    pas.providerid,
+                    pas.sourcecode
+                union all
                     --Certifications:
-                SELECT
-                    ptc.ProviderID,
-                    'Certifications' AS DataElement,
-                    IFNULL(ptc.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ptc.InsertedOn) AS LastUpdateDate
-                FROM
+                select
+                    ptc.providerid,
+                    'Certifications' as DataElement,
+                    ifnull(ptc.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ptc.insertedon) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToCertificationSpecialty ptc ON pid.ProviderID = ptc.ProviderID
-                GROUP BY
-                    ptc.ProviderID,
-                    ptc.SourceCode
-                UNION ALL
+                    join base.providertocertificationspecialty ptc on pid.providerid = ptc.providerid
+                group by
+                    ptc.providerid,
+                    ptc.sourcecode
+                union all
                     --Condition:
-                SELECT
-                    emt.EntityID AS ProviderID,
-                    MedicalTermTypeCode AS DataElement,
-                    IFNULL(emt.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(emt.LastUPDATEDate) AS LastUpdateDate
-                FROM
-                    CTE_ProviderEntityToMedicalTermList AS emt
-                WHERE
-                    emt.MedicalTermTypeCode = 'Condition'
-                GROUP BY
-                    emt.EntityID,
-                    emt.MedicalTermTypeCode,
-                    emt.SourceCode
-                UNION ALL
+                select
+                    emt.entityid as ProviderID,
+                    MedicalTermTypeCode as DataElement,
+                    ifnull(emt.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(emt.lastupdatedate) as LastUpdateDate
+                from
+                    CTE_ProviderEntityToMedicalTermList as emt
+                where
+                    emt.medicaltermtypecode = 'Condition'
+                group by
+                    emt.entityid,
+                    emt.medicaltermtypecode,
+                    emt.sourcecode
+                union all
                     --Degree:
-                SELECT
-                    ptd.ProviderID,
-                    'Degree' AS DataElement,
-                    IFNULL(ptd.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ptd.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    ptd.providerid,
+                    'Degree' as DataElement,
+                    ifnull(ptd.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ptd.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToDegree ptd ON pid.ProviderID = ptd.ProviderID
-                GROUP BY
-                    ptd.ProviderID,
-                    ptd.SourceCode
-                UNION ALL
+                    join base.providertodegree ptd on pid.providerid = ptd.providerid
+                group by
+                    ptd.providerid,
+                    ptd.sourcecode
+                union all
                     --FirstName:
-                SELECT
-                    a.ProviderID,
-                    'FirstName' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(a.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    a.providerid,
+                    'FirstName' as DataElement,
+                    ifnull(a.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(a.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.provider a ON pid.ProviderID = a.ProviderID
-                GROUP BY
-                    a.ProviderID,
-                    a.SourceCode
-                UNION ALL
+                    join base.provider a on pid.providerid = a.providerid
+                group by
+                    a.providerid,
+                    a.sourcecode
+                union all
                     --Health Insurance:
-                SELECT
-                    phi.ProviderID,
-                    'Health Insurance' AS DataElement,
-                    IFNULL(phi.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(phi.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    phi.providerid,
+                    'Health Insurance' as DataElement,
+                    ifnull(phi.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(phi.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToHealthInsurance phi ON pid.ProviderID = phi.ProviderID
-                GROUP BY
-                    phi.ProviderID,
-                    phi.SourceCode
-                UNION ALL
+                    join base.providertohealthinsurance phi on pid.providerid = phi.providerid
+                group by
+                    phi.providerid,
+                    phi.sourcecode
+                union all
                     --Hospital Affiliation
-                SELECT
-                    ptf.ProviderID,
-                    'Hospital Affiliation' AS DataElement,
-                    IFNULL(ptf.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ptf.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    ptf.providerid,
+                    'Hospital Affiliation' as DataElement,
+                    ifnull(ptf.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ptf.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToFacility ptf ON pid.ProviderID = ptf.ProviderID
-                GROUP BY
-                    ptf.ProviderID,
-                    ptf.SourceCode
-                UNION ALL
+                    join base.providertofacility ptf on pid.providerid = ptf.providerid
+                group by
+                    ptf.providerid,
+                    ptf.sourcecode
+                union all
                     --Languages Spoken:
-                SELECT
-                    pl.ProviderID,
-                    'Languages Spoken' AS DataElement,
-                    IFNULL(pl.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pl.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pl.providerid,
+                    'Languages Spoken' as DataElement,
+                    ifnull(pl.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pl.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToLanguage pl ON pid.ProviderID = pl.ProviderID
-                GROUP BY
-                    pl.ProviderID,
-                    pl.SourceCode
-                UNION ALL
+                    join base.providertolanguage pl on pid.providerid = pl.providerid
+                group by
+                    pl.providerid,
+                    pl.sourcecode
+                union all
                     --LastName:
-                SELECT
-                    a.ProviderID,
-                    'LastName' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(a.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    a.providerid,
+                    'LastName' as DataElement,
+                    ifnull(a.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(a.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.provider a ON pid.ProviderID = a.ProviderID
-                GROUP BY
-                    a.ProviderID,
-                    a.SourceCode
-                UNION ALL
+                    join base.provider a on pid.providerid = a.providerid
+                group by
+                    a.providerid,
+                    a.sourcecode
+                union all
                     --Malpractice:
-                SELECT
-                    pm.ProviderID,
-                    'Malpractice' AS DataElement,
-                    IFNULL(pm.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pm.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pm.providerid,
+                    'Malpractice' as DataElement,
+                    ifnull(pm.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pm.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderMalpractice pm ON pid.ProviderID = pm.ProviderID
-                GROUP BY
-                    pm.ProviderID,
-                    pm.SourceCode
-                UNION ALL
+                    join base.providermalpractice pm on pid.providerid = pm.providerid
+                group by
+                    pm.providerid,
+                    pm.sourcecode
+                union all
                     --Media:
-                SELECT
-                    pm.ProviderID,
-                    'Media' AS DataElement,
-                    IFNULL(pm.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pm.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pm.providerid,
+                    'Media' as DataElement,
+                    ifnull(pm.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pm.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderMedia pm ON pid.ProviderID = pm.ProviderID
-                GROUP BY
-                    pm.ProviderID,
-                    pm.SourceCode
-                UNION ALL
+                    join base.providermedia pm on pid.providerid = pm.providerid
+                group by
+                    pm.providerid,
+                    pm.sourcecode
+                union all
                     --Office:
-                SELECT
-                    pto.ProviderID,
-                    'Office' AS DataElement,
-                    IFNULL(pto.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pto.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pto.providerid,
+                    'Office' as DataElement,
+                    ifnull(pto.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pto.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToOffice pto ON pid.ProviderID = pto.ProviderID
-                GROUP BY
-                    pto.ProviderID,
-                    pto.SourceCode
-                UNION ALL
+                    join base.providertooffice pto on pid.providerid = pto.providerid
+                group by
+                    pto.providerid,
+                    pto.sourcecode
+                union all
                     --Office Fax:
-                SELECT
-                    pto.ProviderID,
-                    'Office Fax' AS DataElement,
-                    IFNULL(op.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(op.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pto.providerid,
+                    'Office Fax' as DataElement,
+                    ifnull(op.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(op.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToOffice PTO ON pid.ProviderID = PTO.ProviderID
-                    JOIN Base.OfficeToPhone op ON pto.OfficeID = op.OfficeID
-                    JOIN Base.PhoneType pt ON pt.PhoneTypeID = op.PhoneTypeID
-                WHERE
-                    pt.PhoneTypeCode = 'FAX'
-                GROUP BY
-                    pto.ProviderID,
-                    op.SourceCode
-                UNION ALL
+                    join base.providertooffice PTO on pid.providerid = pto.providerid
+                    join base.officetophone op on pto.officeid = op.officeid
+                    join base.phonetype pt on pt.phonetypeid = op.phonetypeid
+                where
+                    pt.phonetypecode = 'FAX'
+                group by
+                    pto.providerid,
+                    op.sourcecode
+                union all
                     --Office Name:
-                SELECT
-                    a.ProviderID,
-                    'Office Name' AS DataElement,
-                    IFNULL(b.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(b.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    a.providerid,
+                    'Office Name' as DataElement,
+                    ifnull(b.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(b.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToOffice a ON pid.ProviderID = a.ProviderID
-                    JOIN Base.Office b ON b.officeID = a.OfficeID
-                GROUP BY
-                    a.ProviderID,
-                    b.SourceCode
-                UNION ALL
+                    join base.providertooffice a on pid.providerid = a.providerid
+                    join base.office b on b.officeid = a.officeid
+                group by
+                    a.providerid,
+                    b.sourcecode
+                union all
                     --Photo:
-                SELECT
-                    pimg.ProviderID,
-                    'Photo' AS DataElement,
-                    IFNULL(pimg.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pimg.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    pimg.providerid,
+                    'Photo' as DataElement,
+                    ifnull(pimg.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pimg.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderImage pimg ON pid.ProviderID = pimg.ProviderID
-                GROUP BY
-                    pimg.ProviderID,
-                    pimg.SourceCode
-                UNION ALL
+                    join base.providerimage pimg on pid.providerid = pimg.providerid
+                group by
+                    pimg.providerid,
+                    pimg.sourcecode
+                union all
                     --Positions:
-                SELECT
-                    po.ProviderID,
-                    'Positions' AS DataElement,
-                    IFNULL(po.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(po.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    po.providerid,
+                    'Positions' as DataElement,
+                    ifnull(po.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(po.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToOrganization po ON pid.ProviderID = po.ProviderID
-                WHERE
-                    po.PositionEndDate IS NULL
-                GROUP BY
-                    po.ProviderID,
-                    po.SourceCode
-                UNION ALL
+                    join base.providertoorganization po on pid.providerid = po.providerid
+                where
+                    po.positionenddate is null
+                group by
+                    po.providerid,
+                    po.sourcecode
+                union all
                     --Practice Name:
-                SELECT
-                    po.ProviderID,
-                    'Practice Name' AS DataElement,
-                    IFNULL(a.SourceCode, '') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(a.LastUPDATEDate) AS LastUpdateDate
-                FROM
-                    Base.Practice a
-                    JOIN Base.Office o ON a.practiceid = o.practiceid
-                    JOIN Base.ProviderToOffice po ON po.officeid = o.officeid
-                    JOIN CTE_ProviderIDList pid ON pid.ProviderID = po.ProviderID
-                GROUP BY
-                    po.ProviderID,
-                    a.SourceCode
-                UNION ALL
+                select
+                    po.providerid,
+                    'Practice Name' as DataElement,
+                    ifnull(a.sourcecode, '') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(a.lastupdatedate) as LastUpdateDate
+                from
+                    base.practice a
+                    join base.office o on a.practiceid = o.practiceid
+                    join base.providertooffice po on po.officeid = o.officeid
+                    join CTE_ProviderIDList pid on pid.providerid = po.providerid
+                group by
+                    po.providerid,
+                    a.sourcecode
+                union all
                     --Procedure:
-                SELECT
-                    emt.EntityID AS ProviderID,
-                    MedicalTermTypeCode AS DataElement,
-                    IFNULL(emt.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(emt.LastUPDATEDate) AS LastUpdateDate
-                FROM
-                    CTE_ProviderEntityToMedicalTermList AS emt
-                WHERE
-                    emt.MedicalTermTypeCode = 'Procedure'
-                GROUP BY
-                    emt.EntityID,
-                    emt.MedicalTermTypeCode,
-                    emt.SourceCode
-                UNION ALL
+                select
+                    emt.entityid as ProviderID,
+                    MedicalTermTypeCode as DataElement,
+                    ifnull(emt.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(emt.lastupdatedate) as LastUpdateDate
+                from
+                    CTE_ProviderEntityToMedicalTermList as emt
+                where
+                    emt.medicaltermtypecode = 'Procedure'
+                group by
+                    emt.entityid,
+                    emt.medicaltermtypecode,
+                    emt.sourcecode
+                union all
                     -- Sanctions:
-                SELECT
-                    ps.ProviderID,
-                    'Sanctions' AS DataElement,
-                    IFNULL(ps.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(ps.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    ps.providerid,
+                    'Sanctions' as DataElement,
+                    ifnull(ps.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(ps.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderSanction ps ON pid.ProviderID = ps.ProviderID
-                GROUP BY
-                    ps.ProviderID,
-                    ps.SourceCode
-                UNION ALL
+                    join base.providersanction ps on pid.providerid = ps.providerid
+                group by
+                    ps.providerid,
+                    ps.sourcecode
+                union all
                     --Specialty:
-                SELECT
-                    pts.ProviderID,
-                    'Specialty' AS DataElement,
-                    IFNULL(pts.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(pts.InsertedOn) AS LastUpdateDate
-                FROM
+                select
+                    pts.providerid,
+                    'Specialty' as DataElement,
+                    ifnull(pts.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(pts.insertedon) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderToSpecialty pts ON pid.ProviderID = pts.ProviderID
-                GROUP BY
-                    pts.ProviderID,
-                    pts.SourceCode
-                UNION ALL
+                    join base.providertospecialty pts on pid.providerid = pts.providerid
+                group by
+                    pts.providerid,
+                    pts.sourcecode
+                union all
                     --Video:
-                SELECT
-                    a.ProviderID,
-                    'Video' AS DataElement,
-                    IFNULL(a.SourceCode, 'N/A') AS SourceCode,
-                    CURRENT_USER() AS UpdatedBy, 
-                    MAX(a.LastUPDATEDate) AS LastUpdateDate
-                FROM
+                select
+                    a.providerid,
+                    'Video' as DataElement,
+                    ifnull(a.sourcecode, 'N/A') as SourceCode,
+                    CURRENT_USER() as UpdatedBy, 
+                    MAX(a.lastupdatedate) as LastUpdateDate
+                from
                     CTE_ProviderIDList pid
-                    JOIN Base.ProviderVideo a ON pid.ProviderID = a.ProviderID
-                GROUP BY
-                    a.ProviderID,
-                    a.SourceCode
-                ORDER BY
+                    join base.providervideo a on pid.providerid = a.providerid
+                group by
+                    a.providerid,
+                    a.sourcecode
+                order by
                     DataElement ASC
             ), 
-            CTE_UpdateTrackingXML AS (
-            SELECT DISTINCT
-                    p.ProviderId,
-                    p.ProviderCode,
-                    CTE_updates.DataElement,
+            CTE_UpdateTrackingXML as (
+            select distinct
+                    p.providerid,
+                    p.providercode,
+                    CTE_updates.dataelement,
                     utils.p_json_to_xml(
-                        ARRAY_AGG(
-                            '{ ' || IFF(
-                                CTE_updates.DataElement IS NOT NULL,
-                                '"elem":' || '"' || CTE_updates.DataElement || '"' || ',',
+                        array_agg(
+                            '{ ' || iff(
+                                CTE_updates.dataelement is not null,
+                                '"elem":' || '"' || CTE_updates.dataelement || '"' || ',',
                                 ''
-                            ) || IFF(
-                                CTE_updates.SourceCode IS NOT NULL,
-                                '"src":' || '"' || CTE_updates.SourceCode || '"' || ',',
+                            ) || iff(
+                                CTE_updates.sourcecode is not null,
+                                '"src":' || '"' || CTE_updates.sourcecode || '"' || ',',
                                 ''
-                            ) || IFF(
-                                CTE_updates.LastUpdateDate IS NOT NULL,
-                                '"upd":' || '"' || CTE_updates.LastUpdateDate || '"',
+                            ) || iff(
+                                CTE_updates.lastupdatedate is not null,
+                                '"upd":' || '"' || CTE_updates.lastupdatedate || '"',
                                 ''
                             ) || ' }'
                         )::varchar,
                         '',
                         ''
-                    ) AS UpdateTrackingXML,
-                    CTE_updates.UpdatedBy,
-                    CTE_updates.LastUpdateDate AS UpdatedOn
-                FROM
-                    CTE_ProviderIdList AS p
-                    JOIN CTE_updates ON CTE_updates.ProviderID = p.ProviderId
+                    ) as UpdateTrackingXML,
+                    CTE_updates.updatedby,
+                    CTE_updates.lastupdatedate as UpdatedOn
+                from
+                    CTE_ProviderIdList as p
+                    join CTE_updates on CTE_updates.providerid = p.providerid
                     
-                GROUP BY
-                    p.ProviderId,
-                    p.ProviderCode,
-                    CTE_updates.UpdatedBy,
-                    CTE_updates.LastUpdateDate,
-                    CTE_updates.DataElement
-                ORDER BY
-                    CTE_updates.DataElement)
+                group by
+                    p.providerid,
+                    p.providercode,
+                    CTE_updates.updatedby,
+                    CTE_updates.lastupdatedate,
+                    CTE_updates.dataelement
+                order by
+                    CTE_updates.dataelement)
             
-            SELECT DISTINCT
-                p.ProviderId,
-                p.ProviderCode,
+            select distinct
+                p.providerid,
+                p.providercode,
                 TO_VARIANT(utils.p_json_to_xml(
                         array_agg( 
                         '{ '||
-            IFF(UpdateTrackingXML IS NOT NULL, '"xml_1":' || '"' || UpdateTrackingXML || '"', '')
+            iff(UpdateTrackingXML is not null, '"xml_1":' || '"' || UpdateTrackingXML || '"', '')
             ||' }'
                         )::varchar
                         ,
                         'prov',
                         'de'
-                    )) AS UpdateTrackingXML, -- TO_VARIANT()
-                u.UpdatedBy,
-                MAX(u.LastUpdateDate) AS UpdatedOn
+                    )) as UpdateTrackingXML, -- TO_VARIANT()
+                u.updatedby,
+                MAX(u.lastupdatedate) as UpdatedOn
             
-            FROM CTE_ProviderIDList AS p
-            JOIN CTE_updates AS u ON p.ProviderId = u.Providerid
-            JOIN CTE_UpdateTrackingXML AS xml ON p.ProviderId = xml.Providerid
-            GROUP BY
-                p.ProviderId,
-                p.ProviderCode,
-                u.UpdatedBy
-            ORDER BY
-                p.ProviderId,
-                p.ProviderCode
+            from CTE_ProviderIDList as p
+            join CTE_updates as u on p.providerid = u.providerid
+            join CTE_UpdateTrackingXML as xml on p.providerid = xml.providerid
+            group by
+                p.providerid,
+                p.providercode,
+                u.updatedby
+            order by
+                p.providerid,
+                p.providercode
             $$;
 
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                         SET
-                            ProviderCode = source.ProviderCode,
-                            UpdateTrackingXML = source.UpdateTrackingXML,
+                            ProviderCode = source.providercode,
+                            UpdateTrackingXML = source.updatetrackingxml,
                             UpdatedBy = CURRENT_USER(),
-                            UpdatedOn = CURRENT_TIMESTAMP()';
+                            UpdatedOn = current_timestamp()';
                         
---- Insert Statement
-insert_statement := ' INSERT (
+--- insert Statement
+insert_statement := ' insert (
                             ProviderId,
                             ProviderCode,
                             UpdateTrackingXML,
                             UpdatedBy,
                             UpdatedOn
                         )
-                        VALUES (
-                            source.ProviderId,
-                            source.ProviderCode,
-                            source.UpdateTrackingXML,
-                            source.Updatedby,
-                            source.UpdatedOn
+                        values (
+                            source.providerid,
+                            source.providercode,
+                            source.updatetrackingxml,
+                            source.updatedby,
+                            source.updatedon
                         );';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Dev.ProviderAttributeMetadata as target USING 
+merge_statement := ' merge into dev.providerattributemetadata as target using 
                    ('||select_statement||') as source 
-                   ON source.ProviderId = target.ProviderId
-                   WHEN MATCHED THEN '||update_statement|| '
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

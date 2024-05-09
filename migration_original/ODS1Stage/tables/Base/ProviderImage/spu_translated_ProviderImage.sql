@@ -1,39 +1,39 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERIMAGE() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERIMAGE() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderImage depends on: 
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.MediaImageHost
---- Base.MediaImageType
---- Base.MediaSize
---- Base.MediaReviewLevel
---- Base.MediaContextType
+-- base.providerimage depends on: 
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.mediaimagehost
+--- base.mediaimagetype
+--- base.mediasize
+--- base.mediareviewlevel
+--- base.mediacontexttype
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderImage');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providerimage');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -41,36 +41,36 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT DISTINCT
-                            P.ProviderID,
-                            MT.MediaImageTypeID,
-                            JSON.Image_ImageFileName AS FileName,
-                            MS.MediaSizeID,
-                            MRL.MediaReviewLevelID,
-                            IFNULL(JSON.Image_SourceCode, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.Image_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            MCT.MediaContextTypeID,
-                            M.MediaImageHostID,
-                            JSON.Image_Identifier AS ExternalIdentifier,
-                            JSON.Image_ImagePath AS ImagePath
-                        FROM
-                            Raw.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                            LEFT JOIN Base.MediaImageHost AS M ON JSON.Image_MediaImageHostCode = M.MediaImageHostCode
-                            LEFT JOIN Base.MediaImageType AS MT ON MT.MediaImageTypeCode = JSON.Image_MediaImageTypeCode
-                            LEFT JOIN Base.MediaSize AS MS ON MS.MediaSizeCode = JSON.Image_MediaSizeCode
-                            LEFT JOIN Base.MediaReviewLevel AS MRL ON MRL.MediaReviewLevelCode = JSON.Image_MediaReviewLevelCode
-                            LEFT JOIN Base.MediaContextType AS MCT ON MCT.MediaContextTypeCode = JSON.Image_MediaContextTypeCode    
-                        WHERE
-                            PROVIDER_PROFILE IS NOT NULL
-                            AND Image_ImageFileName IS NOT NULL
-                            AND ProviderID IS NOT NULL 
-                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, Image_MediaImageTypeCode, Image_MediaSizeCode, Image_MediaContextTypeCode, Image_MediaImageHostCode ORDER BY CREATE_DATE DESC) = 1$$;
+--- select Statement
+select_statement := $$ select distinct
+                            p.providerid,
+                            mt.mediaimagetypeid,
+                            json.image_ImageFileName as FileName,
+                            ms.mediasizeid,
+                            mrl.mediareviewlevelid,
+                            ifnull(json.image_SourceCode, 'Profisee') as SourceCode,
+                            ifnull(json.image_LastUpdateDate, current_timestamp()) as LastUpdateDate,
+                            mct.mediacontexttypeid,
+                            m.mediaimagehostid,
+                            json.image_Identifier as ExternalIdentifier,
+                            json.image_ImagePath as ImagePath
+                        from
+                            raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.provider as P on p.providercode = json.providercode
+                            left join base.mediaimagehost as M on json.image_MediaImageHostCode = m.mediaimagehostcode
+                            left join base.mediaimagetype as MT on mt.mediaimagetypecode = json.image_MediaImageTypeCode
+                            left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
+                            left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
+                            left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode    
+                        where
+                            PROVIDER_PROFILE is not null
+                            and Image_ImageFileName is not null
+                            and ProviderID is not null 
+                        qualify row_number() over( partition by ProviderID, Image_MediaImageTypeCode, Image_MediaSizeCode, Image_MediaContextTypeCode, Image_MediaImageHostCode order by CREATE_DATE desc) = 1$$;
 
 
---- Insert Statement
-insert_statement := ' INSERT 
+--- insert Statement
+insert_statement := ' insert 
                         (ProviderImageID,
                         ProviderID,
                         MediaImageTypeID,
@@ -83,53 +83,53 @@ insert_statement := ' INSERT
                         MediaImageHostID,
                         ExternalIdentifier,
                         ImagePath)
-                    VALUES
-                        (UUID_STRING(),
-                        source.ProviderID,
-                        source.MediaImageTypeID,
-                        source.FileName,
-                        source.MediaSizeID,
-                        source.MediaReviewLevelID,
-                        source.SourceCode,
-                        source.LastUpdateDate,
-                        source.MediaContextTypeID,
-                        source.MediaImageHostID,
-                        source.ExternalIdentifier,
-                        source.ImagePath)';
+                    values
+                        (uuid_string(),
+                        source.providerid,
+                        source.mediaimagetypeid,
+                        source.filename,
+                        source.mediasizeid,
+                        source.mediareviewlevelid,
+                        source.sourcecode,
+                        source.lastupdatedate,
+                        source.mediacontexttypeid,
+                        source.mediaimagehostid,
+                        source.externalidentifier,
+                        source.imagepath)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.ProviderImage as target USING 
+merge_statement := ' merge into base.providerimage as target using 
                    ('||select_statement||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN MATCHED THEN DELETE
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then delete
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

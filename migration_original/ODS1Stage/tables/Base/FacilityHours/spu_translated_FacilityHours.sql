@@ -1,35 +1,35 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYHOURS() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYHOURS() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.FacilityHours depends on: 
---- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
---- Base.Facility
---- Base.DaysOfWeek
+-- base.facilityhours depends on: 
+--- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- base.facility
+--- base.daysofweek
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_FacilityHours');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_facilityhours');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -37,32 +37,32 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
--- If no conditionals:
-select_statement := $$ SELECT DISTINCT
-                        Facility.FacilityId,
-                        IFNULL(JSON.Hours_SourceCode, 'Profisee') AS SourceCode,
-                        Days.DaysOfWeekId,
-                        JSON.Hours_OpeningTime AS FacilityHoursOpeningTime,
-                        JSON.Hours_ClosingTime AS FacilityHoursClosingTime,
-                        JSON.Hours_IsClosed AS FacilityIsClosed,
-                        JSON.Hours_IsOpen24Hours AS FacilityIsOpen24Hours,
-                        IFNULL(JSON.Hours_LastUpdateDate, CAST(CURRENT_TIMESTAMP() AS TIMESTAMP_NTZ(3))) AS LastUpdateDate
-                    FROM
-                        Raw.VW_FACILITY_PROFILE AS JSON
-                        LEFT JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
-                        LEFT JOIN Base.DaysOfWeek AS Days ON Days.DaysOfWeekCode = JSON.Hours_DaysOfWeek
-                    WHERE
-                        JSON.FACILITY_PROFILE IS NOT NULL AND
-                        FacilityId IS NOT NULL AND
-                        DaysOFWeekID IS NOT NULL 
-                        QUALIFY ROW_NUMBER() OVER(PARTITION BY Facility.FacilityID, Hours_DaysOfWeek
-                                                    ORDER BY
-                                                    CREATE_DATE DESC) = 1 $$;
+--- select Statement
+-- if no conditionals:
+select_statement := $$ select distinct
+                        facility.facilityid,
+                        ifnull(json.hours_SourceCode, 'Profisee') as SourceCode,
+                        days.daysofweekid,
+                        json.hours_OpeningTime as FacilityHoursOpeningTime,
+                        json.hours_ClosingTime as FacilityHoursClosingTime,
+                        json.hours_IsClosed as FacilityIsClosed,
+                        json.hours_IsOpen24Hours as FacilityIsOpen24Hours,
+                        ifnull(json.hours_LastUpdateDate, CAST(current_timestamp() as TIMESTAMP_NTZ(3))) as LastUpdateDate
+                    from
+                        raw.vw_FACILITY_PROFILE as JSON
+                        left join base.facility as Facility on json.facilitycode = facility.facilitycode
+                        left join base.daysofweek as Days on days.daysofweekcode = json.hours_DaysOfWeek
+                    where
+                        json.facility_PROFILE is not null and
+                        FacilityId is not null and
+                        DaysOFWeekID is not null 
+                        qualify row_number() over(partition by facility.facilityid, Hours_DaysOfWeek
+                                                    order by
+                                                    CREATE_DATE desc) = 1 $$;
 
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                         (FacilityHoursID, 
                          FacilityId, 
                          SourceCode, 
@@ -72,49 +72,49 @@ insert_statement := ' INSERT
                          FacilityIsClosed, 
                          FacilityIsOpen24Hours, 
                          LastUpdateDate)
-                      VALUES 
-                        (UUID_STRING(), 
-                         source.FacilityId, 
-                         source.SourceCode, 
-                         source.DaysOfWeekID, 
-                         source.FacilityHoursOpeningTime, 
-                         source.FacilityHoursClosingTime, 
-                         source.FacilityIsClosed, 
-                         source.FacilityIsOpen24Hours, 
-                         source.LastUpdateDate)';
+                      values 
+                        (uuid_string(), 
+                         source.facilityid, 
+                         source.sourcecode, 
+                         source.daysofweekid, 
+                         source.facilityhoursopeningtime, 
+                         source.facilityhoursclosingtime, 
+                         source.facilityisclosed, 
+                         source.facilityisopen24Hours, 
+                         source.lastupdatedate)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.FacilityHours as target USING 
+merge_statement := $$ merge into base.facilityhours as target using 
                    ($$ ||select_statement|| $$) as source 
-                   ON source.Facilityid = target.Facilityid
-                   WHEN MATCHED AND source.SourceCode != 'HG INST' THEN DELETE
-                   WHEN NOT MATCHED THEN $$ ||insert_statement;
+                   on source.facilityid = target.facilityid
+                   WHEN MATCHED and source.sourcecode != 'HG INST' then delete
+                   when not matched then $$ ||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

@@ -1,33 +1,33 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODEGREE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODEGREE()
 RETURNS STRING
 LANGUAGE SQL EXECUTE
-AS CALLER
-AS DECLARE 
+as CALLER
+as declare 
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
--- Base.ProviderToDegree depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.Degree
+-- base.providertodegree depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.degree
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderToDegree');
-    execution_start DATETIME default getdate();
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providertodegree');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
@@ -35,23 +35,23 @@ BEGIN
 ---------------------------------------------------------     
 
 select_statement := $$                 
-                    SELECT 
-                        UUID_STRING() AS ProviderToDegreeID,
-                        p.ProviderId,
-                        JSON.Degree_DegreeCode AS DegreeID,
-                        JSON.Degree_DegreeRank AS DegreePriority,
-                        IFNULL(JSON.Degree_SourceCode, 'Profisee') AS SourceCode,
-                        IFNULL(JSON.Degree_LastUpdateDate, SYSDATE()) AS LastUpdateDate
-                    FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                    LEFT JOIN Base.Provider p ON p.ProviderCode = JSON.ProviderCode
-                    LEFT JOIN Base.Degree d ON d.DegreeAbbreviation = JSON.Degree_DegreeCode
-                    WHERE JSON.PROVIDER_PROFILE IS NOT NULL 
-                    QUALIFY ROW_NUMBER() OVER (PARTITION BY ProviderId, JSON.Degree_DegreeCode ORDER BY JSON.Create_Date DESC) = 1
+                    select 
+                        uuid_string() as ProviderToDegreeID,
+                        p.providerid,
+                        json.degree_DegreeCode as DegreeID,
+                        json.degree_DegreeRank as DegreePriority,
+                        ifnull(json.degree_SourceCode, 'Profisee') as SourceCode,
+                        ifnull(json.degree_LastUpdateDate, sysdate()) as LastUpdateDate
+                    from raw.vw_PROVIDER_PROFILE as JSON
+                    left join base.provider p on p.providercode = json.providercode
+                    left join base.degree d on d.degreeabbreviation = json.degree_DegreeCode
+                    where json.provider_PROFILE is not null 
+                    qualify row_number() over (partition by ProviderId, json.degree_DegreeCode order by json.create_Date desc) = 1
                     $$;
 
 
 insert_statement := $$ 
-                     INSERT  
+                     insert  
                        (   
                         ProviderToDegreeID,
                         ProviderId,
@@ -60,48 +60,48 @@ insert_statement := $$
                         SourceCode,
                         LastUpdateDate
                         )
-                      VALUES 
+                      values 
                         (   
-                        source.ProviderToDegreeID,
-                        source.ProviderId,
-                        source.DegreeId,
-                        source.DegreePriority,
-                        source.SourceCode,
-                        source.LastUpdateDate
+                        source.providertodegreeid,
+                        source.providerid,
+                        source.degreeid,
+                        source.degreepriority,
+                        source.sourcecode,
+                        source.lastupdatedate
                         )
                      $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.ProviderToDegree as target 
-                    USING ($$||select_statement||$$) as source 
-                   ON source.ProviderId = target.ProviderId
-                   WHEN NOT MATCHED THEN $$ ||insert_statement;
+merge_statement := $$ merge into base.providertodegree as target 
+                    using ($$||select_statement||$$) as source 
+                   on source.providerid = target.providerid
+                   when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

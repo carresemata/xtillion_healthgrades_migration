@@ -1,36 +1,36 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICE()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.Office depends on: 
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- Base.Practice
+-- base.office depends on: 
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- base.practice
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    update_clause STRING; -- where condition for update
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Office');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    update_clause string; -- where condition for update
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_office');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -38,12 +38,12 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$  SELECT 
+--- select Statement
+select_statement := $$  select 
                                 -- ReltioEntityID,
-                                UUID_STRING() AS OfficeID,
-                                CASE WHEN LENGTH(JSON.OfficeCode)>10 THEN NULL ELSE JSON.OfficeCode END AS OfficeCode, 
-                                P.PracticeId, 
+                                uuid_string() as OfficeID,
+                                CASE WHEN LENGTH(json.officecode)>10 then null else json.officecode END as OfficeCode, 
+                                p.practiceid, 
                                 -- HasBillingStaff
                                 -- HasHandicapAccess
                                 -- HasLabServicesOnSite
@@ -54,45 +54,45 @@ select_statement := $$  SELECT
                                 -- AverageDailyPatientVolume
                                 -- PhysicianCount
                                 -- OfficeCoordinatorName
-                                JSON.DEMOGRAPHICS_PARKINGINFORMATION AS ParkingInformation,
+                                json.demographics_PARKINGINFORMATION as ParkingInformation,
                                 -- PaymentPolicy
-                                JSON.DEMOGRAPHICS_OFFICENAME AS OfficeName,
-                                IFNULL(JSON.DEMOGRAPHICS_SOURCECODE, 'Profisee') AS Sourcecode,
+                                json.demographics_OFFICENAME as OfficeName,
+                                ifnull(json.demographics_SOURCECODE, 'Profisee') as Sourcecode,
                                 -- OfficeRank
-                                -- Is Derived
+                                -- is Derived
                                 -- NPI
-                                IFNULL(JSON.DEMOGRAPHICS_LASTUPDATEDATE, SYSDATE() ) AS LastUpdateDate
+                                ifnull(json.demographics_LASTUPDATEDATE, sysdate() ) as LastUpdateDate
                                 -- OfficeDescription
                                 -- HasChildPlayground
                                 -- OfficeWebsite
                                 -- OfficeEmail
-                            FROM RAW.VW_OFFICE_PROFILE AS JSON
-                                LEFT JOIN Base.Practice AS P ON P.PracticeCode = JSON.PRACTICE_PRACTICECODE
-                            WHERE
-                                OFFICE_PROFILE IS NOT NULL
-                                AND OFFICECODE IS NOT NULL
-                            QUALIFY row_number() over(partition by OfficeID order by CREATE_DATE desc) = 1 $$;
+                            from raw.vw_OFFICE_PROFILE as JSON
+                                left join base.practice as P on p.practicecode = json.practice_PRACTICECODE
+                            where
+                                OFFICE_PROFILE is not null
+                                and OFFICECODE is not null
+                            qualify row_number() over(partition by OfficeID order by CREATE_DATE desc) = 1 $$;
 
 
 
---- Update Statement
-update_statement := ' UPDATE 
-                     SET  target.OfficeCode = source.OfficeCode, 
-                            target.PracticeID = source.PracticeID, 
-                            target.ParkingInformation = source.ParkingInformation, 
-                            target.OfficeName = source.OfficeName, 
-                            target.SourceCode = source.SourceCode, 
-                            target.LastUpdateDate = source.LastUpdateDate';
+--- update Statement
+update_statement := ' update 
+                     SET  target.officecode = source.officecode, 
+                            target.practiceid = source.practiceid, 
+                            target.parkinginformation = source.parkinginformation, 
+                            target.officename = source.officename, 
+                            target.sourcecode = source.sourcecode, 
+                            target.lastupdatedate = source.lastupdatedate';
                             
--- Update Clause
-update_clause := $$  IFNULL(target.OfficeCode, '') != IFNULL(source.OfficeCode, '') 
-                    or IFNULL(target.OfficeName, '') != IFNULL(source.OfficeName, '') 
-                    or IFNULL(target.SourceCode, '') != IFNULL(source.SourceCode, '') 
-                    or IFNULL(target.ParkingInformation, '') != IFNULL(source.ParkingInformation, '') 
+-- update Clause
+update_clause := $$  ifnull(target.officecode, '') != ifnull(source.officecode, '') 
+                    or ifnull(target.officename, '') != ifnull(source.officename, '') 
+                    or ifnull(target.sourcecode, '') != ifnull(source.sourcecode, '') 
+                    or ifnull(target.parkinginformation, '') != ifnull(source.parkinginformation, '') 
                     $$;                        
         
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                             (OfficeID,
                             OfficeCode,
                             PracticeID,
@@ -100,48 +100,48 @@ insert_statement := ' INSERT
                             OfficeName,
                             SourceCode,
                             LastUpdateDate)
-                      VALUES 
-                            (source.OfficeID,
-                            source.OfficeCode,
-                            source.PracticeID,
-                            source.ParkingInformation,
-                            source.OfficeName,
-                            source.SourceCode,
-                            source.LastUpdateDate )';
+                      values 
+                            (source.officeid,
+                            source.officecode,
+                            source.practiceid,
+                            source.parkinginformation,
+                            source.officename,
+                            source.sourcecode,
+                            source.lastupdatedate )';
 
 
     
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := ' MERGE INTO Base.Office as target USING 
+merge_statement := ' merge into base.office as target using 
                    ('||select_statement||') as source 
-                   ON source.Officeid = target.officeid
-                   WHEN MATCHED AND' || update_clause || 'THEN '||update_statement|| '
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.officeid = target.officeid
+                   WHEN MATCHED and' || update_clause || 'then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

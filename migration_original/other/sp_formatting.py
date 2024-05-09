@@ -22,14 +22,20 @@ def format_table_dependencies():
                             'SET', 'DELETE', 'TRUNCATE', 'IF', 'END IF', 'ELSE', 'THEN', 'NULLIF', 'IFNULL', 'DISTINCT', 
                             'QUALIFY', 'ROW_NUMBER', 'OVER', 'PARTITION',  'BY' , 'DESC', 'WHEN NOT MATCHED', 'REPLACE'
                             'WHEN MATCHED', 'USING', 'MERGE INTO', 'IFF', 'TRIM', 'UPPER', 'LOWER', 'IS', 'ARRAY_AGG', 'VARCHAR', 'TO_VARIANT'
-                            'SQL Statements', 'Actions', 'Inserts', 'Updates', 'JSON', 'WITH', 'NOT', 'EXISTS', 'EXECUTE IMMEDIATE']
+                            'SQL Statements', 'Actions', 'Inserts', 'Updates', 'WITH', 'NOT', 'EXISTS', 'EXECUTE IMMEDIATE', 
+                            'EXCEPTION', 'RETURN', 'OTHER', 'GETDATE', 'TO_VARCHAR']
 
                 # 1. For each keyword, replace its occurrence with the lowercase version in the content
                 for keyword in keywords:
                     content = re.sub(rf'\b{keyword}\b', keyword.lower(), content, flags=re.IGNORECASE)
 
-                # 2. Replace anything with a dot (.) to lowercase where we have alphabeticwords.alphabeticwords
-                content = re.sub(r'([a-zA-Z]+)\.([a-zA-Z]+)', lambda x: f'{x.group(1).lower()}.{x.group(2).lower()}', content)
+                # 2. Replace anything with a dot (.) to lowercase where we have alphabeticwords.alphabeticwords between declare until the end
+                match = re.search(r'(DECLARE.*?END;)', content, re.DOTALL | re.IGNORECASE)
+                if match:
+                      # find all words with alphabeticwords.alphabeticwords and replace them with lowercase
+                    #content = re.sub(r'(\w+\.\w+)', lambda x: x.group().lower(), content, flags=re.IGNORECASE)
+                    modified_content = re.sub(r'([a-zA-Z]+)\.([a-zA-Z]+)', lambda x: f'{x.group(1).lower()}.{x.group(2).lower()}', match.group())
+                    content = content.replace(match.group(), modified_content)
 
                 # 3. Change the section from DECLARE to BEGIN; to lowercase
                 content = re.sub(r'(DECLARE.*?BEGIN)', lambda x: x.group().lower(), content, flags=re.DOTALL | re.IGNORECASE)

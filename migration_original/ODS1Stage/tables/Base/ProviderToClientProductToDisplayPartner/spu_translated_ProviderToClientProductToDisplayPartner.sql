@@ -1,110 +1,110 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCLIENTPRODUCTTODISPLAYPARTNER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCLIENTPRODUCTTODISPLAYPARTNER()
 RETURNS STRING
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS
-DECLARE
+EXECUTE as CALLER
+as
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
--- Base.ProviderToClientProductToDisplayPartner depends on :
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.ClientToProduct
---- Base.SyndicationPartner
+-- base.providertoclientproducttodisplaypartner depends on :
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.clienttoproduct
+--- base.syndicationpartner
 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderToClientProductToDisplayPartner');
-    execution_start DATETIME default getdate();
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
+    execution_start datetime default getdate();
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------
-BEGIN
+begin
 -- no conditionals
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
--- Select Statement
-select_statement := $$  SELECT DISTINCT
-                        P.ProviderID,
-                        CP.ClientToProductID,
-                        SP.SyndicationPartnerId,
-                        JSON.CUSTOMERPRODUCT_SOURCECODE AS SourceCode,
-                        IFNULL(JSON.CUSTOMERPRODUCT_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate
+-- select Statement
+select_statement := $$  select distinct
+                        p.providerid,
+                        cp.clienttoproductid,
+                        sp.syndicationpartnerid,
+                        json.customerproduct_SOURCECODE as SourceCode,
+                        ifnull(json.customerproduct_LASTUPDATEDATE, sysdate()) as LastUpdateDate
                         
-                        FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                            INNER JOIN Base.Provider AS P ON p.ProviderCode = JSON.ProviderCode
-                            INNER JOIN Base.ClientToProduct AS cp ON cp.ClientToProductCode = JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE
-                            INNER JOIN Base.SyndicationPartner AS SP ON SP.SYNDICATIONPARTNERCODE = JSON.CUSTOMERPRODUCT_DISPLAYPARTNER
+                        from raw.vw_PROVIDER_PROFILE as JSON
+                            inner join base.provider as P on p.providercode = json.providercode
+                            inner join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CUSTOMERPRODUCTCODE
+                            inner join base.syndicationpartner as SP on sp.syndicationpartnercode = json.customerproduct_DISPLAYPARTNER
                         
-                        WHERE
-                            PROVIDER_PROFILE IS NOT NULL AND
-                            JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE IS NOT NULL AND
-                            JSON.CUSTOMERPRODUCT_DISPLAYPARTNER IS NOT NULL AND
-                            ClientToProductID IS NOT NULL AND
-                            ProviderID IS NOT NULL
+                        where
+                            PROVIDER_PROFILE is not null and
+                            json.customerproduct_CUSTOMERPRODUCTCODE is not null and
+                            json.customerproduct_DISPLAYPARTNER is not null and
+                            ClientToProductID is not null and
+                            ProviderID is not null
                         
-                        QUALIFY dense_rank() over(partition by ProviderID, JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) = 1 $$;
+                        qualify dense_rank() over(partition by ProviderID, json.customerproduct_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) = 1 $$;
 
--- Insert Statement
-insert_statement := ' INSERT (
+-- insert Statement
+insert_statement := ' insert (
                         ProviderCPDPID,
                         ProviderID,
                         ClientToProductID,
                         SyndicationPartnerId,
                         SourceCode,
                         LastUpdateDate)
-                     VALUES (
-                        UUID_STRING(),
-                        source.ProviderID,
-                        source.ClientToProductID,
-                        source.SyndicationPartnerId,
-                        source.SourceCode,
-                        source.LastUpdateDate)';
+                     values (
+                        uuid_string(),
+                        source.providerid,
+                        source.clienttoproductid,
+                        source.syndicationpartnerid,
+                        source.sourcecode,
+                        source.lastupdatedate)';
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := 'MERGE INTO Base.ProviderToClientProductToDisplayPartner AS target
-USING
-('||select_statement||') AS source
-ON source.ProviderID = target.ProviderID
-AND source.ClientToProductID = target.ClientToProductID
-AND source.SyndicationPartnerId = target.SyndicationPartnerId
-WHEN MATCHED THEN DELETE
-WHEN NOT MATCHED THEN' || insert_statement;
+merge_statement := 'merge into base.providertoclientproducttodisplaypartner as target
+using
+('||select_statement||') as source
+on source.providerid = target.providerid
+and source.clienttoproductid = target.clienttoproductid
+and source.syndicationpartnerid = target.syndicationpartnerid
+WHEN MATCHED then delete
+when not matched then' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

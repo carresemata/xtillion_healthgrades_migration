@@ -1,37 +1,37 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLICENSE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLICENSE()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderLicense depends on: 
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.ProviderMalpractice
---- Base.State
+-- base.providerlicense depends on: 
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.providermalpractice
+--- base.state
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    delete_statement STRING; -- Delete statement 
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderLicense');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    delete_statement string; -- delete statement 
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providerlicense');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -39,42 +39,42 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT DISTINCT
-                            P.ProviderID,
-                            S.StateID, 
-                            JSON.License_LicenseNumber AS LicenseNumber,
-                            JSON.License_LicenseTerminationDate AS LicenseTerminationDate,
-                            IFNULL(JSON.License_SourceCode, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.License_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            JSON.License_LicenseTypeCode AS LicenseType
-                        FROM
-                            Raw.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                            LEFT JOIN Base.State AS S ON JSON.License_State = S.State
-                        WHERE   
-                            PROVIDER_PROFILE IS NOT NULL AND
-                            IFNULL(LicenseTerminationDate, CURRENT_TIMESTAMP()) >= DATEADD('DAY', -90, CURRENT_TIMESTAMP())
-                        	OR NOT (JSON.License_LicenseStatusCode != 'A' AND LicenseTerminationDate IS NULL) AND
-                            ProviderID IS NOT NULL AND
-                            LicenseNumber IS NOT NULL AND
-                            StateID IS NOT NULL
-                        QUALIFY ROW_NUMBER() OVER(PARTITION BY ProviderID, StateID, LicenseNumber, LicenseType  ORDER BY CREATE_DATE DESC) = 1 $$;
+--- select Statement
+select_statement := $$ select distinct
+                            p.providerid,
+                            s.stateid, 
+                            json.license_LicenseNumber as LicenseNumber,
+                            json.license_LicenseTerminationDate as LicenseTerminationDate,
+                            ifnull(json.license_SourceCode, 'Profisee') as SourceCode,
+                            ifnull(json.license_LastUpdateDate, current_timestamp()) as LastUpdateDate,
+                            json.license_LicenseTypeCode as LicenseType
+                        from
+                            raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.provider as P on p.providercode = json.providercode
+                            left join base.state as S on json.license_State = s.state
+                        where   
+                            PROVIDER_PROFILE is not null and
+                            ifnull(LicenseTerminationDate, current_timestamp()) >= DATEADD('DAY', -90, current_timestamp())
+                        	or not (json.license_LicenseStatusCode != 'A' and LicenseTerminationDate is null) and
+                            ProviderID is not null and
+                            LicenseNumber is not null and
+                            StateID is not null
+                        qualify row_number() over(partition by ProviderID, StateID, LicenseNumber, LicenseType  order by CREATE_DATE desc) = 1 $$;
 
 
---- Delete Statement
-delete_statement := 'DELETE FROM Base.ProviderLicense
-                        WHERE ProviderLicenseID IN (
-                            SELECT pc.ProviderLicenseID
-                            FROM raw.VW_PROVIDER_PROFILE as p
-                            INNER JOIN Base.Provider as pID ON pID.ProviderCode = p.ProviderCode
-                            INNER JOIN Base.ProviderLicense as pc ON pc.ProviderID = pID.ProviderID
-                            LEFT JOIN Base.ProviderMalpractice M ON M.ProviderId = PC.ProviderId -- before it was ON M.ProviderLicenseID = PC.ProviderLicenseID
-                            WHERE M.ProviderMalpracticeID IS NULL
+--- delete Statement
+delete_statement := 'delete from base.providerlicense
+                        where ProviderLicenseID IN (
+                            select pc.providerlicenseid
+                            from raw.vw_PROVIDER_PROFILE as p
+                            inner join base.provider as pID on pid.providercode = p.providercode
+                            inner join base.providerlicense as pc on pc.providerid = pid.providerid
+                            left join base.providermalpractice M on m.providerid = pc.providerid -- before it was on m.providerlicenseid = pc.providerlicenseid
+                            where m.providermalpracticeid is null
                         );';
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                         (ProviderLicenseID,
                         ProviderID,
                         StateID,
@@ -83,49 +83,49 @@ insert_statement := ' INSERT
                         SourceCode,
                         LastUpdateDate,
                         LicenseType)
-                      VALUES 
-                        (UUID_STRING(),
-                        source.ProviderID,
-                        source.StateID,
-                        source.LicenseNumber,
-                        source.LicenseTerminationDate,
-                        source.SourceCode,
-                        source.LastUpdateDate,
-                        source.LicenseType)';
+                      values 
+                        (uuid_string(),
+                        source.providerid,
+                        source.stateid,
+                        source.licensenumber,
+                        source.licenseterminationdate,
+                        source.sourcecode,
+                        source.lastupdatedate,
+                        source.licensetype)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.ProviderLicense as target USING 
+merge_statement := ' merge into base.providerlicense as target using 
                    ('||select_statement||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.providerid = target.providerid
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE delete_statement ;
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate delete_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

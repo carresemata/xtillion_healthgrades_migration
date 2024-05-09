@@ -1,128 +1,128 @@
 
 -- 1. spuSOLRTreatmentEntryLevel (validated in snowflake)
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRTREATMENTENTRYLEVEL() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRTREATMENTENTRYLEVEL() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
+    EXECUTE as CALLER
+    as  
 
-DECLARE
+declare
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Show.SOLRTreatmentEntryLevel depends on :
---- Base.SpecialtyToCondition
---- Base.TreatmentLevel
---- Base.SpecialtyToProcedureMedical
---- Base.Specialty
---- Base.MedicalTerm
+-- show.solrtreatmententrylevel depends on :
+--- base.specialtytocondition
+--- base.treatmentlevel
+--- base.specialtytoproceduremedical
+--- base.specialty
+--- base.medicalterm
     
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE statement
-    insert_statement STRING; -- Insert statement to final table
-    merge_statement STRING; -- Merge statement
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_SOLRTreatmentEntryLevel');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte statement
+    insert_statement string; -- insert statement to final table
+    merge_statement string; -- merge statement
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_solrtreatmententrylevel');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- No conditionals
 
 
 ---------------------------------------------------------
---------------- 3. Select statements --------------------
+--------------- 3. select statements --------------------
 ---------------------------------------------------------     
 
--- Select Statement
-select_statement:= 'WITH cte_treatment_spec AS (
-                        SELECT
-                            SpecCond.SpecialtyID,
-                            SpecCond.ConditionID AS MedicalTermID,
-                            TreatLev.TreatmentLevelDescription,
-                            TreatLev.IsMarketView
-                        FROM
-                            Base.SpecialtyToCondition AS SpecCond
-                            JOIN Base.TreatmentLevel AS TreatLev ON TreatLev.TreatmentLevelID = SpecCond.TreatmentLevelID
-                        UNION
-                        SELECT
-                            SpecProc.SpecialtyID,
-                            SpecProc.ProcedureMedicalID AS MedicalTermID,
-                            TreatLev.TreatmentLevelDescription,
-                            TreatLev.IsMarketView
-                        FROM
-                            Base.SpecialtyToProcedureMedical AS SpecProc
-                            JOIN Base.TreatmentLevel AS TreatLev ON TreatLev.TreatmentLevelID = SpecProc.TreatmentLevelID
+-- select Statement
+select_statement:= 'with cte_treatment_spec as (
+                        select
+                            speccond.specialtyid,
+                            speccond.conditionid as MedicalTermID,
+                            treatlev.treatmentleveldescription,
+                            treatlev.ismarketview
+                        from
+                            base.specialtytocondition as SpecCond
+                            join base.treatmentlevel as TreatLev on treatlev.treatmentlevelid = speccond.treatmentlevelid
+                        union
+                        select
+                            specproc.specialtyid,
+                            specproc.proceduremedicalid as MedicalTermID,
+                            treatlev.treatmentleveldescription,
+                            treatlev.ismarketview
+                        from
+                            base.specialtytoproceduremedical as SpecProc
+                            join base.treatmentlevel as TreatLev on treatlev.treatmentlevelid = specproc.treatmentlevelid
                     )
                     
-                        SELECT DISTINCT
-                            Med.RefMedicalTermCode AS DCPCode,
-                            cteTreat.TreatmentLevelDescription,
-                            Spec.SpecialtyCode,
-                            Spec.SpecialtyDescription,
-                            cteTreat.IsMarketView AS ForMarketViewLoad
-                        FROM
+                        select distinct
+                            med.refmedicaltermcode as DCPCode,
+                            ctetreat.treatmentleveldescription,
+                            spec.specialtycode,
+                            spec.specialtydescription,
+                            ctetreat.ismarketview as ForMarketViewLoad
+                        from
                             cte_treatment_spec cteTreat
-                            JOIN Base.Specialty Spec ON Spec.SpecialtyID = cteTreat.SpecialtyID
-                            JOIN Base.MedicalTerm Med ON Med.MedicalTermID = cteTreat.MedicalTermID';
+                            join base.specialty Spec on spec.specialtyid = ctetreat.specialtyid
+                            join base.medicalterm Med on med.medicaltermid = ctetreat.medicaltermid';
 
---- Insert Statement
-insert_statement := ' INSERT  (
+--- insert Statement
+insert_statement := ' insert  (
                         DCPCode,
                         TreatmentLevelDescription,
                         SpecialtyCode,
                         SpecialtyDescription,
                         ForMarketViewLoad)
-                      VALUES (
-                        source.DCPCode,
-                        source.TreatmentLevelDescription,
-                        source.SpecialtyCode,
-                        source.SpecialtyDescription,
-                        source.ForMarketViewLoad);';
+                      values (
+                        source.dcpcode,
+                        source.treatmentleveldescription,
+                        source.specialtycode,
+                        source.specialtydescription,
+                        source.formarketviewload);';
 
                      
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := ' MERGE INTO Show.SOLRTreatmentEntryLevel as target 
-                        USING (' ||select_statement|| ') as source 
-                        ON target.DCPCode = source.DCPCode AND target.SpecialtyCode = source.SpecialtyCode
-                        WHEN NOT MATCHED THEN '
+merge_statement := ' merge into show.solrtreatmententrylevel as target 
+                        using (' ||select_statement|| ') as source 
+                        on target.dcpcode = source.dcpcode and target.specialtycode = source.specialtycode
+                        when not matched then '
                             || insert_statement ;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

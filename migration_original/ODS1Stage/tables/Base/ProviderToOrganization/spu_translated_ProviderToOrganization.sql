@@ -1,32 +1,32 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOORGANIZATION()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOORGANIZATION()
 RETURNS STRING
 LANGUAGE SQL EXECUTE
-AS CALLER
-AS DECLARE 
+as CALLER
+as declare 
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
--- Base.ProviderToOrganization depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
+-- base.providertoorganization depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderToOrganization');
-    execution_start DATETIME default getdate();
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providertoorganization');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
@@ -34,25 +34,25 @@ BEGIN
 ---------------------------------------------------------     
 
 select_statement := $$
-                    SELECT
-                        IFNULL(JSON.Organization_SourceCode, 'Profisee') AS SourceCode,
-                        UUID_STRING() AS ProviderToOrganizationID,
-                        p.ProviderID AS ProviderID,
+                    select
+                        ifnull(json.organization_SourceCode, 'Profisee') as SourceCode,
+                        uuid_string() as ProviderToOrganizationID,
+                        p.providerid as ProviderID,
                         -- OrganizationID,
                         -- PositionID,
                         -- PositionStartDate,
                         -- PositionEndDate,
-                        JSON.Organization_PositionRank AS PositionRank,
-                        SYSDATE() AS LastUpdateDate,
-                        CURRENT_USER() AS InsertedBy
-                    FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                    LEFT JOIN Base.Provider AS p ON p.ProviderCode = JSON.ProviderCode
-                    WHERE p.ProviderID IS NOT NULL
+                        json.organization_PositionRank as PositionRank,
+                        sysdate() as LastUpdateDate,
+                        CURRENT_USER() as InsertedBy
+                    from raw.vw_PROVIDER_PROFILE as JSON
+                    left join base.provider as p on p.providercode = json.providercode
+                    where p.providerid is not null
                     $$;
 
 
 insert_statement := $$ 
-                     INSERT  
+                     insert  
                        (   
                         SourceCode,
                         ProviderToOrganizationID,
@@ -65,53 +65,53 @@ insert_statement := $$
                         LastUpdateDate,
                         InsertedBy
                         )
-                      VALUES 
+                      values 
                         (   
-                        source.SourceCode,
-                        source.ProviderToOrganizationID,
-                        source.ProviderID,
-                        -- source.OrganizationID,
-                        -- source.PositionID,
-                        -- source.PositionStartDate,
-                        -- source.PositionEndDate,
-                        source.PositionRank,
-                        source.LastUpdateDate,
-                        source.InsertedBy
+                        source.sourcecode,
+                        source.providertoorganizationid,
+                        source.providerid,
+                        -- source.organizationid,
+                        -- source.positionid,
+                        -- source.positionstartdate,
+                        -- source.positionenddate,
+                        source.positionrank,
+                        source.lastupdatedate,
+                        source.insertedby
                         )
                      $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.ProviderToOrganization as target 
-                    USING ($$||select_statement||$$) as source 
-                   ON source.ProviderId = target.ProviderId
-                   WHEN MATCHED THEN DELETE
-                   WHEN NOT MATCHED THEN $$ ||insert_statement;
+merge_statement := $$ merge into base.providertoorganization as target 
+                    using ($$||select_statement||$$) as source 
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then delete
+                   when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

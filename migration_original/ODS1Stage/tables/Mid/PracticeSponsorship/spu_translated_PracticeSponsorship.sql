@@ -1,205 +1,205 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP(ISPROVIDERDELTAPROCESSING BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP(ISPROVIDERDELTAPROCESSING BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Mid.PracticeSponsorship depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
---- Base.Practice
---- Base.ProviderToOffice
---- Base.Office
---- Base.ClientToProduct
---- Base.Client
---- Base.Product
---- Base.Provider
---- Base.ProductGroup
---- Base.ClientProductToEntity
---- Base.EntityType
---- Mid.ProviderSponsorship
+-- mid.practicesponsorship depends on: 
+--- mdm_team.mst.provider_profile_processing
+--- base.practice
+--- base.providertooffice
+--- base.office
+--- base.clienttoproduct
+--- base.client
+--- base.product
+--- base.provider
+--- base.productgroup
+--- base.clientproducttoentity
+--- base.entitytype
+--- mid.providersponsorship
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement STRING;
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_PracticeSponsorship');
-    execution_start DATETIME default getdate();
+    truncate_statement string;
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_practicesponsorship');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
+begin
+    if (IsProviderDeltaProcessing) then
             select_statement := '
-           WITH CTE_PracticeBatch AS (
-                    SELECT 
-                        pa.PracticeID, 
-                        pa.PracticeCode
-                    FROM MDM_TEAM.MST.Provider_Profile_Processing AS ppp
-                    JOIN Base.Provider AS P ON p.providercode = ppp.ref_provider_code
-                    JOIN base.providertooffice pto ON p.ProviderID = pto.ProviderID
-                    JOIN base.Office o ON pto.OfficeID = o.OfficeID
-                    JOIN Base.Practice AS pa ON pa.PracticeID = o.PracticeID
-                    GROUP BY 
-                        pa.PracticeID, 
-                        pa.PracticeCode
-                    ORDER BY pa.PracticeID
+           with CTE_PracticeBatch as (
+                    select 
+                        pa.practiceid, 
+                        pa.practicecode
+                    from MDM_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code
+                    join base.providertooffice pto on p.providerid = pto.providerid
+                    join base.office o on pto.officeid = o.officeid
+                    join base.practice as pa on pa.practiceid = o.practiceid
+                    group by 
+                        pa.practiceid, 
+                        pa.practicecode
+                    order by pa.practiceid
                     ),';
            
-    ELSE
-           truncate_statement := 'TRUNCATE TABLE Mid.PracticeSponsorship';
-           select_statement := 'WITH CTE_PracticeBatch AS (
-                    SELECT 
+    else
+           truncate_statement := 'truncate TABLE mid.practicesponsorship';
+           select_statement := 'with CTE_PracticeBatch as (
+                    select 
                         PracticeID, 
                         PracticeCode 
-                    FROM Base.Practice
-                    GROUP BY 
+                    from base.practice
+                    group by 
                         PracticeID, 
                         PracticeCode
-                    ORDER BY PracticeID
+                    order by PracticeID
                     ),';
-            EXECUTE IMMEDIATE truncate_statement;
-    END IF;
+            execute immediate truncate_statement;
+    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
--- Select Statements
+-- select Statements
 select_statement := select_statement || 
 $$
-CTE_RawPracData AS (
-    SELECT	
-        pract.PracticeID,
-        pract.PracticeCode,
-        prod.ProductCode,
-        prod.ProductDescription,
-        prodGrp.ProductGroupCode,
-        prodGrp.ProductGroupDescription,
-        cliToProd.ClientToProductID,
-        cli.ClientCode,
-        cli.ClientName,
-        ROW_NUMBER() OVER (
-            PARTITION BY pract.PracticeID, 
-                         pract.PracticeCode, 
-                         prod.ProductCode, 
-                         prod.ProductDescription, 
-                         prodGrp.ProductGroupCode, 
-                         prodGrp.ProductGroupDescription  
-            ORDER BY 
-                cliProdToEnt.LastUpdateDate ASC) AS recID -- This assignes a sequential recID to rows that have the same PracticeID, PracticeCode, ProductCode, ProductDescription, ProductGroupCode, ProductGroupDescription
-    FROM	
-        Base.ClientToProduct as cliToProd
-        JOIN Base.Client as cli ON cliToProd.ClientID = cli.ClientID
-        JOIN Base.Product as prod ON cliToProd.ProductID = prod.ProductID
-        JOIN Base.ProductGroup as prodGrp ON prod.ProductGroupID = prodGrp.ProductGroupID
-        JOIN Base.ClientProductToEntity as cliProdToEnt ON cliToProd.ClientToProductID = cliProdToEnt.ClientToProductID
-        JOIN Base.EntityType as entType ON cliProdToEnt.EntityTypeID = entType.EntityTypeID AND entType.EntityTypeCode = 'PRAC'
-        JOIN Base.Practice as pract ON cliProdToEnt.EntityID = pract.PracticeID
-        JOIN CTE_PracticeBatch as practBatch ON cliProdToEnt.EntityID = practBatch.PracticeID 
-    WHERE	
-        cliToProd.ActiveFlag = 1
+CTE_RawPracData as (
+    select	
+        pract.practiceid,
+        pract.practicecode,
+        prod.productcode,
+        prod.productdescription,
+        prodgrp.productgroupcode,
+        prodgrp.productgroupdescription,
+        clitoprod.clienttoproductid,
+        cli.clientcode,
+        cli.clientname,
+        row_number() over (
+            partition by pract.practiceid, 
+                         pract.practicecode, 
+                         prod.productcode, 
+                         prod.productdescription, 
+                         prodgrp.productgroupcode, 
+                         prodgrp.productgroupdescription  
+            order by 
+                cliprodtoent.lastupdatedate ASC) as recID -- This assignes a sequential recID to rows that have the same PracticeID, PracticeCode, ProductCode, ProductDescription, ProductGroupCode, ProductGroupDescription
+    from	
+        base.clienttoproduct as cliToProd
+        join base.client as cli on clitoprod.clientid = cli.clientid
+        join base.product as prod on clitoprod.productid = prod.productid
+        join base.productgroup as prodGrp on prod.productgroupid = prodgrp.productgroupid
+        join base.clientproducttoentity as cliProdToEnt on clitoprod.clienttoproductid = cliprodtoent.clienttoproductid
+        join base.entitytype as entType on cliprodtoent.entitytypeid = enttype.entitytypeid and enttype.entitytypecode = 'PRAC'
+        join base.practice as pract on cliprodtoent.entityid = pract.practiceid
+        join CTE_PracticeBatch as practBatch on cliprodtoent.entityid = practbatch.practiceid 
+    where	
+        clitoprod.activeflag = 1
 ),
-CTE_PractMultClientRank AS (
-    SELECT 
-        rawPracData.ClientCode AS ClientCode, 
-        rawPracData.PracticeCode AS PracticeCode, 
-        rawPracData.ProductCode AS ProductCode, 
-        ROW_NUMBER() OVER ( 
-            PARTITION BY rawPracData.PracticeCode
-            ORDER BY 
-                rawPracData.ProductCode, 
-                IFNULL(providerCount.ProvCount, 0) DESC, 
-                rawPracData.ClientCode 
-        ) AS ClientPractRank
-    FROM  
+CTE_PractMultClientRank as (
+    select 
+        rawpracdata.clientcode as ClientCode, 
+        rawpracdata.practicecode as PracticeCode, 
+        rawpracdata.productcode as ProductCode, 
+        row_number() over ( 
+            partition by rawpracdata.practicecode
+            order by 
+                rawpracdata.productcode, 
+                ifnull(providercount.provcount, 0) desc, 
+                rawpracdata.clientcode 
+        ) as ClientPractRank
+    from  
         CTE_RawPracData as rawPracData
-        LEFT JOIN ( 
-            SELECT 
-                provSpon.ClientCode AS ClientCode, 
-                provSpon.PracticeCode AS PracticeCode, 
-                provSpon.ProductCode AS ProductCode, 
-                COUNT(DISTINCT provSpon.ProviderCode) AS ProvCount
-            FROM 
-                Mid.ProviderSponsorship as provSpon
-            JOIN CTE_RawPracData as rawPracDataInner ON 
-                rawPracDataInner.PracticeCode = provSpon.PracticeCode AND 
-                rawPracDataInner.ClientCode = provSpon.ClientCode AND 
-                rawPracDataInner.ProductCode = provSpon.ProductCode
-            GROUP BY 
-                provSpon.ClientCode, 
-                provSpon.PracticeCode, 
-                provSpon.ProductCode 
-        ) AS providerCount ON 
-            providerCount.ClientCode = rawPracData.ClientCode AND 
-            providerCount.ProductCode = rawPracData.ProductCode AND 
-            providerCount.PracticeCode = rawPracData.PracticeCode
+        left join ( 
+            select 
+                provspon.clientcode as ClientCode, 
+                provspon.practicecode as PracticeCode, 
+                provspon.productcode as ProductCode, 
+                COUNT(distinct provspon.providercode) as ProvCount
+            from 
+                mid.providersponsorship as provSpon
+            join CTE_RawPracData as rawPracDataInner on 
+                rawpracdatainner.practicecode = provspon.practicecode and 
+                rawpracdatainner.clientcode = provspon.clientcode and 
+                rawpracdatainner.productcode = provspon.productcode
+            group by 
+                provspon.clientcode, 
+                provspon.practicecode, 
+                provspon.productcode 
+        ) as providerCount on 
+            providercount.clientcode = rawpracdata.clientcode and 
+            providercount.productcode = rawpracdata.productcode and 
+            providercount.practicecode = rawpracdata.practicecode
 ),
 
-CTE_InsertPracticeSponsorship AS (
-            SELECT 
-                rawPracDataInner.PracticeID, 
-                rawPracDataInner.PracticeCode, 
-                rawPracDataInner.ProductCode, 
-                rawPracDataInner.ProductDescription, 
-                rawPracDataInner.ProductGroupCode, 
-                rawPracDataInner.ProductGroupDescription, 
-                rawPracDataInner.ClientToProductID, 
-                rawPracDataInner.ClientCode, 
-                rawPracDataInner.ClientName, 
-                IFNULL(practMultClientRank.ClientPractRank, rawPracDataInner.recID) AS ClientPractRank, -- Equivlaent to ISNULL in SQL Server
-                0 AS ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
+CTE_InsertPracticeSponsorship as (
+            select 
+                rawpracdatainner.practiceid, 
+                rawpracdatainner.practicecode, 
+                rawpracdatainner.productcode, 
+                rawpracdatainner.productdescription, 
+                rawpracdatainner.productgroupcode, 
+                rawpracdatainner.productgroupdescription, 
+                rawpracdatainner.clienttoproductid, 
+                rawpracdatainner.clientcode, 
+                rawpracdatainner.clientname, 
+                ifnull(practmultclientrank.clientpractrank, rawpracdatainner.recid) as ClientPractRank, -- Equivlaent to ISNULL in SQL Server
+                0 as ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
 
-            FROM 
+            from 
                 CTE_RawPracData as rawPracDataInner
-                LEFT JOIN CTE_PractMultClientRank as practMultClientRank ON 
-                    practMultClientRank.PracticeCode = rawPracDataInner.PracticeCode AND 
-                    practMultClientRank.ClientCode = rawPracDataInner.ClientCode AND 
-                    practMultClientRank.ProductCode = rawPracDataInner.ProductCode
-            WHERE 
-                practMultClientRank.ClientPractRank = 1
+                left join CTE_PractMultClientRank as practMultClientRank on 
+                    practmultclientrank.practicecode = rawpracdatainner.practicecode and 
+                    practmultclientrank.clientcode = rawpracdatainner.clientcode and 
+                    practmultclientrank.productcode = rawpracdatainner.productcode
+            where 
+                practmultclientrank.clientpractrank = 1
 ),
--- Insert Action
-CTE_Action_1 AS (
-    Select tempPracSpon.PracticeID, 1 AS ActionCode
-    FROM CTE_InsertPracticeSponsorship AS tempPracSpon
-    LEFT JOIN Mid.PracticeSponsorship AS midPracSpon ON 
-        tempPracSpon.PracticeID = midPracSpon.PracticeID AND 
-        tempPracSpon.PracticeCode = midPracSpon.PracticeCode
-    WHERE midPracSpon.PracticeID IS NULL
-    GROUP BY tempPracSpon.PracticeID
+-- insert Action
+CTE_Action_1 as (
+    select temppracspon.practiceid, 1 as ActionCode
+    from CTE_InsertPracticeSponsorship as tempPracSpon
+    left join mid.practicesponsorship as midPracSpon on 
+        temppracspon.practiceid = midpracspon.practiceid and 
+        temppracspon.practicecode = midpracspon.practicecode
+    where midpracspon.practiceid is null
+    group by temppracspon.practiceid
 ),
--- Update Action
-CTE_Action_2 AS (
-    SELECT tempPracSpon.PracticeID, 2 AS ActionCode
-    FROM CTE_InsertPracticeSponsorship AS tempPracSpon
-    JOIN Mid.PracticeSponsorship PracSpon ON 
-        tempPracSpon.PracticeID = PracSpon.PracticeID AND 
-        tempPracSpon.PracticeCode = PracSpon.PracticeCode
-    WHERE 
-        MD5(IFNULL(tempPracSpon.ProductDescription::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductDescription::VARCHAR, ''''''''))
-        OR MD5(IFNULL(tempPracSpon.ProductGroupCode::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductGroupCode::VARCHAR, ''''''''))
-        OR MD5(IFNULL(tempPracSpon.ProductGroupDescription::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ProductGroupDescription::VARCHAR, ''''''''))
-        OR MD5(IFNULL(tempPracSpon.ClientToProductID::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientToProductID::VARCHAR, ''''''''))
-        OR MD5(IFNULL(tempPracSpon.ClientCode::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientCode::VARCHAR, ''''''''))
-        OR MD5(IFNULL(tempPracSpon.ClientName::VARCHAR, '''''''')) <> MD5(IFNULL(PracSpon.ClientName::VARCHAR, ''''''''))
-    GROUP BY tempPracSpon.PracticeID
+-- update Action
+CTE_Action_2 as (
+    select temppracspon.practiceid, 2 as ActionCode
+    from CTE_InsertPracticeSponsorship as tempPracSpon
+    join mid.practicesponsorship PracSpon on 
+        temppracspon.practiceid = pracspon.practiceid and 
+        temppracspon.practicecode = pracspon.practicecode
+    where 
+        MD5(ifnull(temppracspon.productdescription::varchar, '''''''')) <> MD5(ifnull(pracspon.productdescription::varchar, ''''''''))
+        or MD5(ifnull(temppracspon.productgroupcode::varchar, '''''''')) <> MD5(ifnull(pracspon.productgroupcode::varchar, ''''''''))
+        or MD5(ifnull(temppracspon.productgroupdescription::varchar, '''''''')) <> MD5(ifnull(pracspon.productgroupdescription::varchar, ''''''''))
+        or MD5(ifnull(temppracspon.clienttoproductid::varchar, '''''''')) <> MD5(ifnull(pracspon.clienttoproductid::varchar, ''''''''))
+        or MD5(ifnull(temppracspon.clientcode::varchar, '''''''')) <> MD5(ifnull(pracspon.clientcode::varchar, ''''''''))
+        or MD5(ifnull(temppracspon.clientname::varchar, '''''''')) <> MD5(ifnull(pracspon.clientname::varchar, ''''''''))
+    group by temppracspon.practiceid
 )
-SELECT 
-DISTINCT
+select 
+distinct
     A0.PracticeID,
     A0.PracticeCode,
     A0.ProductCode,
@@ -209,33 +209,33 @@ DISTINCT
     A0.ClientToProductId,
     A0.ClientCode,
     A0.ClientName,
-    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
-FROM CTE_InsertPracticeSponsorship AS A0
-LEFT JOIN
-    CTE_ACTION_1 AS A1 ON A0.PracticeID = A1.PracticeID
-LEFT JOIN
-    CTE_ACTION_2 AS A2 ON A0.PracticeID = A2.PracticeID
-WHERE
-    IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
+    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
+from CTE_InsertPracticeSponsorship as A0
+left join
+    CTE_ACTION_1 as A1 on A0.PracticeID = A1.PracticeID
+left join
+    CTE_ACTION_2 as A2 on A0.PracticeID = A2.PracticeID
+where
+    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
 
 
 $$;
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                      SET 
-                        PRACTICEID = source.PRACTICEID, 
-                        PRACTICECODE = source.PRACTICECODE, 
-                        PRODUCTCODE = source.PRODUCTCODE, 
-                        PRODUCTDESCRIPTION = source.PRODUCTDESCRIPTION, 
-                        PRODUCTGROUPCODE = source.PRODUCTGROUPCODE, 
-                        PRODUCTGROUPDESCRIPTION = source.PRODUCTGROUPDESCRIPTION, 
-                        CLIENTTOPRODUCTID = source.CLIENTTOPRODUCTID, 
-                        CLIENTCODE = source.CLIENTCODE, 
-                        CLIENTNAME = source.CLIENTNAME';
+                        PRACTICEID = source.practiceid, 
+                        PRACTICECODE = source.practicecode, 
+                        PRODUCTCODE = source.productcode, 
+                        PRODUCTDESCRIPTION = source.productdescription, 
+                        PRODUCTGROUPCODE = source.productgroupcode, 
+                        PRODUCTGROUPDESCRIPTION = source.productgroupdescription, 
+                        CLIENTTOPRODUCTID = source.clienttoproductid, 
+                        CLIENTCODE = source.clientcode, 
+                        CLIENTNAME = source.clientname';
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                         (PRACTICEID, 
                         PRACTICECODE, 
                         PRODUCTCODE, 
@@ -245,50 +245,50 @@ insert_statement := ' INSERT
                         CLIENTTOPRODUCTID, 
                         CLIENTCODE, 
                         CLIENTNAME)
-                      VALUES 
-                        (source.PRACTICEID, 
-                        source.PRACTICECODE, 
-                        source.PRODUCTCODE, 
-                        source.PRODUCTDESCRIPTION, 
-                        source.PRODUCTGROUPCODE, 
-                        source.PRODUCTGROUPDESCRIPTION, 
-                        source.CLIENTTOPRODUCTID, 
-                        source.CLIENTCODE, 
-                        source.CLIENTNAME)';
+                      values 
+                        (source.practiceid, 
+                        source.practicecode, 
+                        source.productcode, 
+                        source.productdescription, 
+                        source.productgroupcode, 
+                        source.productgroupdescription, 
+                        source.clienttoproductid, 
+                        source.clientcode, 
+                        source.clientname)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Mid.PracticeSponsorship as target USING 
+merge_statement := ' merge into mid.practicesponsorship as target using 
                    ('||select_statement||') as source 
-                   ON source.PracticeId = target.PracticeId
-                   WHEN MATCHED AND ActionCode = 2 THEN '||update_statement|| '
-                   WHEN NOT MATCHED And ActionCode = 1 THEN '||insert_statement;
+                   on source.practiceid = target.practiceid
+                   WHEN MATCHED and ActionCode = 2 then '||update_statement|| '
+                   when not matched and ActionCode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

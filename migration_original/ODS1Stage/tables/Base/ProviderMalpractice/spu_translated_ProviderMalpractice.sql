@@ -1,177 +1,177 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERMALPRACTICE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERMALPRACTICE()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
+    EXECUTE as CALLER
+    as  
 
-DECLARE 
-
----------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
--- BASE.ProviderMalpractice depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.MalpracticeClaimType
+declare 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderMalpractice');
-    execution_start DATETIME default getdate();
+-- base.providermalpractice depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.malpracticeclaimtype
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providermalpractice');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
--- Select Statement
-select_statement := $$  WITH CTE_Swimlane AS (SELECT
-    P.ProviderId,
-    --PL.ProviderLicenseId,
-    M.MalpracticeClaimTypeID,
-    JSON.ProviderCode,
-    JSON.MALPRACTICE_MALPRACTICECLAIMTYPECODE AS MalpracticeClaimTypeCode,
-    JSON.MALPRACTICE_CLAIMNUMBER AS ClaimNumber,
-    JSON.MALPRACTICE_CLAIMDATE AS ClaimDate,
-    JSON.MALPRACTICE_CLAIMYEAR AS ClaimYear,
-    TO_NUMBER(JSON.MALPRACTICE_CLAIMAMOUNT) AS ClaimAmount,
-    JSON.MALPRACTICE_CLAIMSTATE AS ClaimState,
-    JSON.MALPRACTICE_MALPRACTICECLAIMRANGE AS MalpracticeClaimRange,
-    JSON.MALPRACTICE_COMPLAINT AS Complaint,
-    JSON.MALPRACTICE_INCIDENTDATE AS IncidentDate,
-    JSON.MALPRACTICE_CLOSEDDATE AS ClosedDate,
-    JSON.MALPRACTICE_REPORTDATE AS ReportDate,
-    JSON.MALPRACTICE_SOURCECODE AS SourceCode,
-    JSON.MALPRACTICE_LICENSENUMBER AS LicenseNumber,
-    JSON.MALPRACTICE_LASTUPDATEDATE AS LastUpdateDate,
-    row_number() over(partition by P.ProviderId, JSON.MALPRACTICE_MALPRACTICECLAIMTYPECODE, JSON.MALPRACTICE_CLAIMDATE, JSON.MALPRACTICE_CLAIMYEAR, JSON.MALPRACTICE_CLAIMSTATE, JSON.MALPRACTICE_LICENSENUMBER, JSON.MALPRACTICE_MALPRACTICECLAIMRANGE order by CREATE_DATE desc, TO_NUMBER(JSON.MALPRACTICE_CLAIMAMOUNT) desc) as RowRank, 
-	row_number()over(order by P.ProviderID) as RN1
-FROM
-    RAW.VW_PROVIDER_PROFILE AS JSON
-    LEFT JOIN Base.Provider AS P ON JSON.ProviderCode = P.ProviderCode
-    --LEFT JOIN Base.ProviderLicense AS PL ON PL.Providerid = P.ProviderId AND PL.licensenumber = JSON.MALPRACTICE_LICENSENUMBER
-    LEFT JOIN Base.MalpracticeClaimType AS M ON M.MALPRACTICECLAIMTYPECODE = JSON.MALPRACTICE_MALPRACTICECLAIMTYPECODE
-WHERE
-    PROVIDER_PROFILE IS NOT NULL
-    AND JSON.MALPRACTICE_CLAIMAMOUNT IS NOT NULL),
+-- select Statement
+select_statement := $$  with CTE_Swimlane as (select
+    p.providerid,
+    --pl.providerlicenseid,
+    m.malpracticeclaimtypeid,
+    json.providercode,
+    json.malpractice_MALPRACTICECLAIMTYPECODE as MalpracticeClaimTypeCode,
+    json.malpractice_CLAIMNUMBER as ClaimNumber,
+    json.malpractice_CLAIMDATE as ClaimDate,
+    json.malpractice_CLAIMYEAR as ClaimYear,
+    TO_NUMBER(json.malpractice_CLAIMAMOUNT) as ClaimAmount,
+    json.malpractice_CLAIMSTATE as ClaimState,
+    json.malpractice_MALPRACTICECLAIMRANGE as MalpracticeClaimRange,
+    json.malpractice_COMPLAINT as Complaint,
+    json.malpractice_INCIDENTDATE as IncidentDate,
+    json.malpractice_CLOSEDDATE as ClosedDate,
+    json.malpractice_REPORTDATE as ReportDate,
+    json.malpractice_SOURCECODE as SourceCode,
+    json.malpractice_LICENSENUMBER as LicenseNumber,
+    json.malpractice_LASTUPDATEDATE as LastUpdateDate,
+    row_number() over(partition by p.providerid, json.malpractice_MALPRACTICECLAIMTYPECODE, json.malpractice_CLAIMDATE, json.malpractice_CLAIMYEAR, json.malpractice_CLAIMSTATE, json.malpractice_LICENSENUMBER, json.malpractice_MALPRACTICECLAIMRANGE order by CREATE_DATE desc, TO_NUMBER(json.malpractice_CLAIMAMOUNT) desc) as RowRank, 
+	row_number()over(order by p.providerid) as RN1
+from
+    raw.vw_PROVIDER_PROFILE as JSON
+    left join base.provider as P on json.providercode = p.providercode
+    --left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
+    left join base.malpracticeclaimtype as M on m.malpracticeclaimtypecode = json.malpractice_MALPRACTICECLAIMTYPECODE
+where
+    PROVIDER_PROFILE is not null
+    and json.malpractice_CLAIMAMOUNT is not null),
     
-CTE_BadMalpracticeClaimTypeCode AS (
-    SELECT DISTINCT 
-        P.ProviderCode, 
-        'Bad Malpractice Claim Type Code value of ' || COALESCE(S.MalpracticeClaimTypeCode,'NULL') AS ProblemType, 
+CTE_BadMalpracticeClaimTypeCode as (
+    select distinct 
+        p.providercode, 
+        'Bad Malpractice Claim Type Code value of ' || COALESCE(s.malpracticeclaimtypecode,'null') as ProblemType, 
         RN1
-    FROM CTE_swimlane S
-    JOIN Base.Provider P ON P.ProviderId = S.ProviderId
-    LEFT JOIN Base.MalpracticeClaimType MCT ON MCT.MalpracticeClaimTypeCode = S.MalpracticeClaimTypeCode
-    WHERE MCT.MalpracticeClaimTypeId IS NULL
+    from CTE_swimlane S
+    join base.provider P on p.providerid = s.providerid
+    left join base.malpracticeclaimtype MCT on mct.malpracticeclaimtypecode = s.malpracticeclaimtypecode
+    where mct.malpracticeclaimtypeid is null
     
-            UNION ALL
+            union all
     
-    SELECT DISTINCT 
-        P.ProviderCode, 
-        'Bad Malpractice Claim Type Code value of ' || COALESCE(S.MalpracticeClaimTypeCode,'NULL') AS ProblemType, 
+    select distinct 
+        p.providercode, 
+        'Bad Malpractice Claim Type Code value of ' || COALESCE(s.malpracticeclaimtypecode,'null') as ProblemType, 
         RN1
-    FROM CTE_swimlane S
-    JOIN Base.Provider P ON P.ProviderId = S.ProviderId
-    LEFT JOIN Base.MalpracticeClaimType MCT ON MCT.MalpracticeClaimTypeID = S.MalpracticeClaimTypeID
-    WHERE MCT.MalpracticeClaimTypeId IS NULL	
+    from CTE_swimlane S
+    join base.provider P on p.providerid = s.providerid
+    left join base.malpracticeclaimtype MCT on mct.malpracticeclaimtypeid = s.malpracticeclaimtypeid
+    where mct.malpracticeclaimtypeid is null	
     
-            UNION ALL
+            union all
     
-    SELECT 
-        S.ProviderCode, 
-        'Bad IncidentDate value: ' || TO_VARCHAR(IncidentDate), 
+    select 
+        s.providercode, 
+        'Bad IncidentDate value: ' || to_varchar(IncidentDate), 
         RN1
-    FROM CTE_swimlane S
-    WHERE TRY_CAST(IncidentDate AS DATE) IS NULL AND IncidentDate IS NOT NULL
+    from CTE_swimlane S
+    where TRY_CAST(IncidentDate as DATE) is null and IncidentDate is not null
     
-            UNION ALL
+            union all
     
-    SELECT 
-        S.ProviderCode, 
-        'Bad ReportDate value: ' || TO_VARCHAR(ReportDate), 
+    select 
+        s.providercode, 
+        'Bad ReportDate value: ' || to_varchar(ReportDate), 
         RN1
-    FROM CTE_swimlane S
-    WHERE TRY_CAST(ReportDate AS DATE) IS NULL AND ReportDate IS NOT NULL
+    from CTE_swimlane S
+    where TRY_CAST(ReportDate as DATE) is null and ReportDate is not null
     
-            UNION ALL
+            union all
     
-    SELECT 
-        S.ProviderCode, 
-        'Bad ClaimDate value: ' || TO_VARCHAR(ClaimDate), 
+    select 
+        s.providercode, 
+        'Bad ClaimDate value: ' || to_varchar(ClaimDate), 
         RN1
-    FROM CTE_swimlane S
-    WHERE TRY_CAST(ClaimDate AS DATE) IS NULL AND ClaimDate IS NOT NULL
+    from CTE_swimlane S
+    where TRY_CAST(ClaimDate as DATE) is null and ClaimDate is not null
     
-            UNION ALL
+            union all
     
-    SELECT 
-        S.ProviderCode, 
-        'Bad ClosedDate value: ' || TO_VARCHAR(ClosedDate), 
+    select 
+        s.providercode, 
+        'Bad ClosedDate value: ' || to_varchar(ClosedDate), 
         RN1
-    FROM CTE_swimlane S
-    WHERE TRY_CAST(ClosedDate AS DATE) IS NULL AND ClosedDate IS NOT NULL
+    from CTE_swimlane S
+    where TRY_CAST(ClosedDate as DATE) is null and ClosedDate is not null
     
-            UNION ALL
+            union all
     
-    SELECT 
-        S.ProviderCode, 
-        'Bad ClaimYear value: ' || TO_VARCHAR(ClaimYear),
+    select 
+        s.providercode, 
+        'Bad ClaimYear value: ' || to_varchar(ClaimYear),
         RN1
-    FROM CTE_swimlane S
-    WHERE TRY_CAST(ClaimYear AS INT) IS NULL AND ClaimYear IS NOT NULL
+    from CTE_swimlane S
+    where TRY_CAST(ClaimYear as INT) is null and ClaimYear is not null
 ),
-CTE_KEEP AS (
-    SELECT 
-        S.ProviderId,
-        --S.ProviderLicenseId,
-        S.MalpracticeClaimTypeID,
-        S.ProviderCode,
-        S.MalpracticeClaimTypeCode,
-        S.ClaimNumber,
-        S.ClaimDate,
-        S.ClaimYear,
-        S.ClaimAmount,
-        S.ClaimState,
-        S.MalpracticeClaimRange,
-        S.Complaint,
-        S.IncidentDate,
-        S.ClosedDate,
-        S.ReportDate,
-        S.SourceCode,
-        S.LicenseNumber,
-        S.LastUpdateDate,
-        S.RowRank, 
-        S.RN1
-    FROM CTE_swimlane AS S
-    WHERE (
+CTE_KEEP as (
+    select 
+        s.providerid,
+        --s.providerlicenseid,
+        s.malpracticeclaimtypeid,
+        s.providercode,
+        s.malpracticeclaimtypecode,
+        s.claimnumber,
+        s.claimdate,
+        s.claimyear,
+        s.claimamount,
+        s.claimstate,
+        s.malpracticeclaimrange,
+        s.complaint,
+        s.incidentdate,
+        s.closeddate,
+        s.reportdate,
+        s.sourcecode,
+        s.licensenumber,
+        s.lastupdatedate,
+        s.rowrank, 
+        s.rn1
+    from CTE_swimlane as S
+    where (
         (
-            COALESCE(TRY_CAST(S.IncidentDate AS DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) OR 
-            COALESCE(TRY_CAST(S.ReportDate AS DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) OR 
-            COALESCE(TRY_CAST(S.ClaimDate AS DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) OR 
-            COALESCE(TRY_CAST(S.ClosedDate AS DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE())
+            COALESCE(TRY_CAST(s.incidentdate as DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) or 
+            COALESCE(TRY_CAST(s.reportdate as DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) or 
+            COALESCE(TRY_CAST(s.claimdate as DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE()) or 
+            COALESCE(TRY_CAST(s.closeddate as DATE), '1900-01-01'::DATE) > DATEADD('YEAR', -5, CURRENT_DATE())
         )
-        OR (
-            S.IncidentDate IS NULL AND 
-            S.ReportDate IS NULL AND 
-            S.ClaimDate IS NULL AND 
-            S.ClosedDate IS NULL AND 
-            S.ClaimYear IS NOT NULL AND 
-            TRY_CAST(S.ClaimYear AS INT) > EXTRACT(YEAR FROM DATEADD('YEAR', -5, CURRENT_DATE()))))), 
-CTE_Delete1 AS (
-    SELECT 
+        or (
+            s.incidentdate is null and 
+            s.reportdate is null and 
+            s.claimdate is null and 
+            s.closeddate is null and 
+            s.claimyear is not null and 
+            TRY_CAST(s.claimyear as INT) > EXTRACT(YEAR from DATEADD('YEAR', -5, CURRENT_DATE()))))), 
+CTE_Delete1 as (
+    select 
         ProviderId,
         --ProviderLicenseId,
         MalpracticeClaimTypeID,
@@ -192,9 +192,9 @@ CTE_Delete1 AS (
         LastUpdateDate,
         RowRank,
         RN1
-    FROM CTE_Swimlane
-    WHERE RN1 IN (SELECT RN1 FROM CTE_KEEP))
-SELECT 
+    from CTE_Swimlane
+    where RN1 IN (select RN1 from CTE_KEEP))
+select 
     ProviderId,
     --ProviderLicenseId,
     MalpracticeClaimTypeID,
@@ -215,12 +215,12 @@ SELECT
     LastUpdateDate,
     RowRank,
     RN1
-FROM CTE_Delete1 AS D
-WHERE D.RN1 NOT IN (SELECT RN1 FROM CTE_BadMalpracticeClaimTypeCode) $$;
+from CTE_Delete1 as D
+where d.rn1 not IN (select RN1 from CTE_BadMalpracticeClaimTypeCode) $$;
 
 
-    -- Insert Statement
-insert_statement := ' INSERT  
+    -- insert Statement
+insert_statement := ' insert  
                             (ProviderMalpracticeID,
                             ProviderID,
                             --ProviderLicenseID,
@@ -238,57 +238,57 @@ insert_statement := ' INSERT
                             SourceCode,
                             LicenseNumber,
                             LastUpdateDate)
-                    VALUES 
-                          ( UUID_STRING(),
-                            source.ProviderID,
-                            --source.ProviderLicenseID,
-                            source.MalpracticeClaimTypeID,
-                            source.ClaimNumber,
-                            source.ClaimDate,
-                            source.ClaimYear,
-                            source.ClaimAmount,
-                            source.ClaimState,
-                            source.MalpracticeClaimRange,
-                            source.Complaint,
-                            source.IncidentDate,
-                            source.ClosedDate,
-                            source.ReportDate,
-                            source.SourceCode,
-                            source.LicenseNumber,
-                            source.LastUpdateDate)';
+                    values 
+                          ( uuid_string(),
+                            source.providerid,
+                            --source.providerlicenseid,
+                            source.malpracticeclaimtypeid,
+                            source.claimnumber,
+                            source.claimdate,
+                            source.claimyear,
+                            source.claimamount,
+                            source.claimstate,
+                            source.malpracticeclaimrange,
+                            source.complaint,
+                            source.incidentdate,
+                            source.closeddate,
+                            source.reportdate,
+                            source.sourcecode,
+                            source.licensenumber,
+                            source.lastupdatedate)';
 
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
-merge_statement := ' MERGE INTO Base.ProviderMalpractice AS target 
-USING ('||select_statement||') AS source
-ON source.ProviderID = target.ProviderID AND source.MalpracticeClaimTypeID = target.MalpracticeClaimTypeID --AND source.ProviderLicenseId = target.ProviderLicenseId
-WHEN MATCHED THEN DELETE 
-WHEN NOT MATCHED THEN'||insert_statement;
+merge_statement := ' merge into base.providermalpractice as target 
+using ('||select_statement||') as source
+on source.providerid = target.providerid and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid --and source.providerlicenseid = target.providerlicenseid
+WHEN MATCHED then delete 
+when not matched then'||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

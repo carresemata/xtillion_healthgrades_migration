@@ -1,38 +1,38 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PARTNER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PARTNER()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.Partner depends on: 
---- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING  (Base.vw_swimlane_base_client)
---- Base.Client
---- Base.PartnerType
---- Base.Product
+-- base.partner depends on: 
+--- mdm_team.mst.customer_product_profile_processing  (base.vw_swimlane_base_client)
+--- base.client
+--- base.partnertype
+--- base.product
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    update_clause STRING; -- where condition for update
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Partner');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    update_clause string; -- where condition for update
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_partner');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -40,9 +40,9 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$  WITH cte_swimlane AS (
-    SELECT
+--- select Statement
+select_statement := $$  with cte_swimlane as (
+    select
         *
     from
         base.vw_swimlane_base_client qualify dense_rank() over(
@@ -51,11 +51,11 @@ select_statement := $$  WITH cte_swimlane AS (
                 LastUpdateDate
         ) = 1
 ),
-CTE_FeatureFCBRL AS (
-    SELECT
+CTE_FeatureFCBRL as (
+    select
         *,
         CASE
-            WHEN LEFT(FeatureFCBRL, 2) != 'FV' THEN 'FV' || UPPER(
+            WHEN LEFT(FeatureFCBRL, 2) != 'FV' then 'FV' || upper(
                 REPLACE(
                     REPLACE(
                         REPLACE(FeatureFCBRL, 'CLIENT', 'CLT'),
@@ -66,52 +66,52 @@ CTE_FeatureFCBRL AS (
                     'FAC'
                 )
             )
-            ELSE FeatureFCBRL
-        END AS FeatureFCBRLNew
-    FROM
+            else FeatureFCBRL
+        END as FeatureFCBRLNew
+    from
         CTE_swimlane
 ),
-CTE_OASPartnerTypeCode AS (
-    SELECT
+CTE_OASPartnerTypeCode as (
+    select
         *,
         CASE
             WHEN PRODUCTCODE IN ('CDOAS', 'IOAS')
-            AND OASPartnerTypeCode IS NULL THEN 'URL'
-            ELSE OASPartnerTypeCode
-        END AS OASPartnerTypeCodeNew
-    FROM
+            and OASPartnerTypeCode is null then 'URL'
+            else OASPartnerTypeCode
+        END as OASPartnerTypeCodeNew
+    from
         CTE_FeatureFCBRL
 ),
-CTE_CustomerName AS (
-    SELECT
+CTE_CustomerName as (
+    select
         cte.*,
         CASE
-            WHEN cte.CustomerName IS NULL
-            AND c.ClientName IS NULL THEN cte.ClientCode
-            WHEN cte.CustomerName IS NULL
-            AND c.ClientName IS NOT NULL THEN c.ClientName
-            ELSE cte.CustomerName
-        END AS CustomerNameNew
-    FROM
-        CTE_OASPartnerTypeCode AS cte
-        LEFT JOIN Base.Client AS C ON C.ClientCode = cte.ClientCode
+            WHEN cte.customername is null
+            and c.clientname is null then cte.clientcode
+            WHEN cte.customername is null
+            and c.clientname is not null then c.clientname
+            else cte.customername
+        END as CustomerNameNew
+    from
+        CTE_OASPartnerTypeCode as cte
+        left join base.client as C on c.clientcode = cte.clientcode
 ),
-CTE_FinalSwimlane AS (
-    SELECT
+CTE_FinalSwimlane as (
+    select
         CREATED_DATETIME,
         CUSTOMERPRODUCTCODE,
         CLIENTCODE,
         PRODUCTCODE,
         CUSTOMERPRODUCTJSON,
-        CUSTOMERNAMENEW AS CustomerName,
+        CUSTOMERNAMENEW as CustomerName,
         QUEUESIZE,
         LASTUPDATEDATE,
         SOURCECODE,
         ACTIVEFLAG,
         OASURLPATH,
-        OASPARTNERTYPECODENEW AS OASPartnerTypeCode,
+        OASPARTNERTYPECODENEW as OASPartnerTypeCode,
         FEATUREFCBFN,
-        FEATUREFCBRLNEW AS FeatureFCBRL,
+        FEATUREFCBRLNEW as FeatureFCBRL,
         FEATUREFCCCP_FVCLT,
         FEATUREFCCCP_FVFAC,
         FEATUREFCCCP_FVOFFICE,
@@ -151,44 +151,44 @@ CTE_FinalSwimlane AS (
         FEATUREFCSPC,
         FEATUREFCOOPSR,
         FEATUREFCOOMT
-    FROM
+    from
         CTE_CustomerName
 )
-SELECT DISTINCT
-    C.ClientID AS PartnerID,
-    cte.ClientCode AS PartnerCode,
-    cte.CustomerName AS PartnerDescription,
-    PT.PartnerTypeID,
-    cte.ProductCode AS PartnerProductCode,
-    p.ProductDescription AS PartnerProductDescription,
-    cte.OASURLPath AS URLPath 
-FROM CTE_FinalSwimlane AS cte
-    INNER JOIN Base.PartnerType AS PT ON PT.PartnerTypeCode = cte.OASPartnerTypeCode
-    INNER JOIN Base.Client AS C ON C.CLIENTCODE = cte.CLIENTCODE
-    INNER JOIN Base.Product AS P ON p.Productcode = cte.ProductCode  $$;
+select distinct
+    c.clientid as PartnerID,
+    cte.clientcode as PartnerCode,
+    cte.customername as PartnerDescription,
+    pt.partnertypeid,
+    cte.productcode as PartnerProductCode,
+    p.productdescription as PartnerProductDescription,
+    cte.oasurlpath as URLPath 
+from CTE_FinalSwimlane as cte
+    inner join base.partnertype as PT on pt.partnertypecode = cte.oaspartnertypecode
+    inner join base.client as C on c.clientcode = cte.clientcode
+    inner join base.product as P on p.productcode = cte.productcode  $$;
 
 
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                      SET  
-                        target.PartnerTypeID = source.PartnerTypeID, 
-                        target.PartnerProductCode = source.PartnerProductCode, 
-                        target.URLPath = source.URLPath,
-                        target.PartnerDescription = source.PartnerDescription,
-                        target.PartnerProductDescription = source.PartnerProductDescription';
+                        target.partnertypeid = source.partnertypeid, 
+                        target.partnerproductcode = source.partnerproductcode, 
+                        target.urlpath = source.urlpath,
+                        target.partnerdescription = source.partnerdescription,
+                        target.partnerproductdescription = source.partnerproductdescription';
                             
--- Update Clause
-update_clause := $$ IFNULL(target.PartnerTypeID,'00000000-0000-0000-0000-000000000000') != IFNULL(source.PartnerTypeID,'00000000-0000-0000-0000-000000000000') 
-                    or IFNULL(target.PartnerProductCode,'') != IFNULL(source.PartnerProductCode,'') 
-                    or IFNULL(target.URLPath,'') != IFNULL(source.URLPath,'')
-                    or IFNULL(target.PartnerDescription,'') != IFNULL(source.PartnerDescription,'') 
-                    or IFNULL(target.PartnerProductDescription,'') != IFNULL(source.PartnerProductDescription,'')
+-- update Clause
+update_clause := $$ ifnull(target.partnertypeid,'00000000-0000-0000-0000-000000000000') != ifnull(source.partnertypeid,'00000000-0000-0000-0000-000000000000') 
+                    or ifnull(target.partnerproductcode,'') != ifnull(source.partnerproductcode,'') 
+                    or ifnull(target.urlpath,'') != ifnull(source.urlpath,'')
+                    or ifnull(target.partnerdescription,'') != ifnull(source.partnerdescription,'') 
+                    or ifnull(target.partnerproductdescription,'') != ifnull(source.partnerproductdescription,'')
                     
                     $$;                        
         
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                             (PartnerID,
                             PartnerCode,
                             PartnerDescription,
@@ -196,51 +196,51 @@ insert_statement := ' INSERT
                             PartnerProductCode,
                             PartnerProductDescription,
                             URLPath )
-                      VALUES 
-                            (source.PartnerID,
-                            source.PartnerCode,
-                            source.PartnerDescription,
-                            source.PartnerTypeID,
-                            source.PartnerProductCode,
-                            source.PartnerProductDescription,
-                            source.URLPath
+                      values 
+                            (source.partnerid,
+                            source.partnercode,
+                            source.partnerdescription,
+                            source.partnertypeid,
+                            source.partnerproductcode,
+                            source.partnerproductdescription,
+                            source.urlpath
                             )';
 
 
     
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := ' MERGE INTO Base.Partner as target USING 
+merge_statement := ' merge into base.partner as target using 
                    ('||select_statement||') as source 
-                   ON source.partnerid = target.partnerid AND source.partnertypeid = target.partnertypeid
-                   WHEN MATCHED AND' || update_clause || 'THEN '||update_statement|| '
-                   WHEN NOT MATCHED AND 
-                   not exists (select 1 from Base.Partner as p where p.PartnerCode = p.PartnerCode) THEN'||insert_statement;
+                   on source.partnerid = target.partnerid and source.partnertypeid = target.partnertypeid
+                   WHEN MATCHED and' || update_clause || 'then '||update_statement|| '
+                   when not matched and 
+                   not exists (select 1 from base.partner as p where p.partnercode = p.partnercode) then'||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

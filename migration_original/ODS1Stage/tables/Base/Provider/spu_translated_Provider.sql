@@ -1,38 +1,38 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.Provider depends on: 
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Source
+-- base.provider depends on: 
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.source
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING; -- CTE and Select statement for the Merge
-    update_statement_1 STRING; -- Update statement for the Merge
-    update_clause_1 STRING; -- where condition for update
-    insert_statement_1 STRING; -- Insert statement for the Merge
-    merge_statement_1 STRING; -- Merge statement to final table
+    select_statement_1 string; -- cte and select statement for the merge
+    update_statement_1 string; -- update statement for the merge
+    update_clause_1 string; -- where condition for update
+    insert_statement_1 string; -- insert statement for the merge
+    merge_statement_1 string; -- merge statement to final table
 
-    update_statement_2 STRING; -- Update statement for the Merge
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Provider');
-    execution_start DATETIME default getdate();
+    update_statement_2 string; -- update statement for the merge
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_provider');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -40,78 +40,78 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement_1 := $$ SELECT
+--- select Statement
+select_statement_1 := $$ select
                             -- ReltioEntityId
-                            UUID_STRING() AS ProviderId,
+                            uuid_string() as ProviderId,
                             -- EDWBaseRecordID
-                            JSON.ProviderCode,
-                            JSON.DEMOGRAPHICS_FIRSTNAME AS FirstName,
-                            JSON.DEMOGRAPHICS_MIDDLENAME AS MiddleName,
-                            JSON.DEMOGRAPHICS_LASTNAME AS LastName,
-                            JSON.DEMOGRAPHICS_SUFFIXCODE AS Suffix,
-                            JSON.DEMOGRAPHICS_GENDERCODE AS Gender,
+                            json.providercode,
+                            json.demographics_FIRSTNAME as FirstName,
+                            json.demographics_MIDDLENAME as MiddleName,
+                            json.demographics_LASTNAME as LastName,
+                            json.demographics_SUFFIXCODE as Suffix,
+                            json.demographics_GENDERCODE as Gender,
                             CASE
-                                WHEN JSON.DEMOGRAPHICS_NPI = JSON.ProviderCode THEN NULL
-                                ELSE JSON.DEMOGRAPHICS_NPI
-                            END AS NPI,
-                            TO_DATE(JSON.DEMOGRAPHICS_DATEOFBIRTH) AS DateOfBirth,
-                            JSON.DEMOGRAPHICS_ACCEPTSNEWPATIENTS AS AcceptsNewPatients,
+                                WHEN json.demographics_NPI = json.providercode then null
+                                else json.demographics_NPI
+                            END as NPI,
+                            TO_DATE(json.demographics_DATEOFBIRTH) as DateOfBirth,
+                            json.demographics_ACCEPTSNEWPATIENTS as AcceptsNewPatients,
                             -- HasElectronicMedicalRecords,
                             -- HasElectronicPrescription,
-                            IFNULL(JSON.DEMOGRAPHICS_SOURCECODE, 'Profisee') AS SourceCode,
-                            S.SourceID,
-                            IFNULL(JSON.DEMOGRAPHICS_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate,
+                            ifnull(json.demographics_SOURCECODE, 'Profisee') as SourceCode,
+                            s.sourceid,
+                            ifnull(json.demographics_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
                             -- PatientVolume
                             -- IsInClinicalPractice
                             -- PatientCountIsFew
                             -- IsPCPCalculated
                             -- ProfessionalInterest
-                            JSON.DEMOGRAPHICS_SURVIVERESIDENTIALADDRESSES AS SurviveResidentialAddresses,
-                            JSON.DEMOGRAPHICS_ISPATIENTFAVORITE AS IsPatientFavorite
-                        FROM
-                            RAW.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.Source AS S ON S.SOURCECODE = JSON.DEMOGRAPHICS_SOURCECODE
-                        WHERE
-                            PROVIDER_PROFILE IS NOT NULL
-                        QUALIFY row_number() over(partition by ProviderID order by JSON.ProviderCode, CREATE_DATE desc, NPI) = 1 $$;
+                            json.demographics_SURVIVERESIDENTIALADDRESSES as SurviveResidentialAddresses,
+                            json.demographics_ISPATIENTFAVORITE as IsPatientFavorite
+                        from
+                            raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.source as S on s.sourcecode = json.demographics_SOURCECODE
+                        where
+                            PROVIDER_PROFILE is not null
+                        qualify row_number() over(partition by ProviderID order by json.providercode, CREATE_DATE desc, NPI) = 1 $$;
 
 
 
---- Update Statement
-update_statement_1 := ' UPDATE 
-                     SET  target.ProviderCode = source.ProviderCode,
-                            target.FirstName = source.FirstName,
-                            target.MiddleName = source.MiddleName,
-                            target.LastName = source.LastName,
-                            target.Suffix = source.Suffix,
-                            target.Gender = source.Gender,
-                            target.NPI = source.NPI,
-                            target.DateOfBirth = source.DateOfBirth,
-                            target.AcceptsNewPatients = source.AcceptsNewPatients,
-                            target.SourceCode = source.SourceCode,
-                            target.SourceID = source.SourceID,
-                            target.LastUpdateDate = source.LastUpdateDate,
-                            target.SurviveResidentialAddresses = source.SurviveResidentialAddresses,
-                            target.IsPatientFavorite = source.IsPatientFavorite';
--- Update Clause
-update_clause_1 := $$ IFNULL(target.ProviderCode, '') != IFNULL(source.ProviderCode, '')
-        OR IFNULL(target.FirstName, '') != IFNULL(source.FirstName, '')
-        OR IFNULL(target.MiddleName, '') != IFNULL(source.MiddleName, '')
-        OR IFNULL(target.LastName, '') != IFNULL(source.LastName, '')
-        OR IFNULL(target.Suffix, '') != IFNULL(source.Suffix, '')
-        OR IFNULL(target.Gender, '') != IFNULL(source.Gender, '')
-        OR IFNULL(target.NPI, '') != IFNULL(source.NPI, '')
-        OR IFNULL(target.DateOfBirth, '1900-01-01') != IFNULL(source.DateOfBirth,'1900-01-01')
-        OR IFNULL(target.AcceptsNewPatients, 0) != IFNULL(source.AcceptsNewPatients, 0)
-        OR IFNULL(target.SourceCode, '') != IFNULL(source.SourceCode, '')
-        OR IFNULL(target.SourceID, '00000000-0000-0000-0000-000000000000') != IFNULL(source.SourceID,'00000000-0000-0000-0000-000000000000')
-        OR IFNULL(target.LastUpdateDate, '1900-01-01') != IFNULL(source.LastUpdateDate, '1900-01-01')
-        OR IFNULL(target.SurviveResidentialAddresses, 0) != IFNULL(source.SurviveResidentialAddresses, 0)
-        OR IFNULL(target.IsPatientFavorite, 0) != IFNULL(source.IsPatientFavorite, 0) $$;                        
+--- update Statement
+update_statement_1 := ' update 
+                     SET  target.providercode = source.providercode,
+                            target.firstname = source.firstname,
+                            target.middlename = source.middlename,
+                            target.lastname = source.lastname,
+                            target.suffix = source.suffix,
+                            target.gender = source.gender,
+                            target.npi = source.npi,
+                            target.dateofbirth = source.dateofbirth,
+                            target.acceptsnewpatients = source.acceptsnewpatients,
+                            target.sourcecode = source.sourcecode,
+                            target.sourceid = source.sourceid,
+                            target.lastupdatedate = source.lastupdatedate,
+                            target.surviveresidentialaddresses = source.surviveresidentialaddresses,
+                            target.ispatientfavorite = source.ispatientfavorite';
+-- update Clause
+update_clause_1 := $$ ifnull(target.providercode, '') != ifnull(source.providercode, '')
+        or ifnull(target.firstname, '') != ifnull(source.firstname, '')
+        or ifnull(target.middlename, '') != ifnull(source.middlename, '')
+        or ifnull(target.lastname, '') != ifnull(source.lastname, '')
+        or ifnull(target.suffix, '') != ifnull(source.suffix, '')
+        or ifnull(target.gender, '') != ifnull(source.gender, '')
+        or ifnull(target.npi, '') != ifnull(source.npi, '')
+        or ifnull(target.dateofbirth, '1900-01-01') != ifnull(source.dateofbirth,'1900-01-01')
+        or ifnull(target.acceptsnewpatients, 0) != ifnull(source.acceptsnewpatients, 0)
+        or ifnull(target.sourcecode, '') != ifnull(source.sourcecode, '')
+        or ifnull(target.sourceid, '00000000-0000-0000-0000-000000000000') != ifnull(source.sourceid,'00000000-0000-0000-0000-000000000000')
+        or ifnull(target.lastupdatedate, '1900-01-01') != ifnull(source.lastupdatedate, '1900-01-01')
+        or ifnull(target.surviveresidentialaddresses, 0) != ifnull(source.surviveresidentialaddresses, 0)
+        or ifnull(target.ispatientfavorite, 0) != ifnull(source.ispatientfavorite, 0) $$;                        
         
---- Insert Statement
-insert_statement_1 := ' INSERT  
+--- insert Statement
+insert_statement_1 := ' insert  
                             (ProviderID,
                             ProviderCode,
                             FirstName,
@@ -127,69 +127,69 @@ insert_statement_1 := ' INSERT
                             LastUpdateDate,
                             SurviveResidentialAddresses,
                             IsPatientFavorite)
-                      VALUES 
-                          ( source.ProviderID,
-                            source.ProviderCode,
-                            source.FirstName,
-                            source.MiddleName,
-                            source.LastName,
-                            source.Suffix,
-                            source.Gender,
-                            source.NPI,
-                            source.DateOfBirth,
-                            source.AcceptsNewPatients,
-                            source.SourceCode,
-                            source.SourceID,
-                            source.LastUpdateDate,
-                            source.SurviveResidentialAddresses,
-                            source.IsPatientFavorite)';
+                      values 
+                          ( source.providerid,
+                            source.providercode,
+                            source.firstname,
+                            source.middlename,
+                            source.lastname,
+                            source.suffix,
+                            source.gender,
+                            source.npi,
+                            source.dateofbirth,
+                            source.acceptsnewpatients,
+                            source.sourcecode,
+                            source.sourceid,
+                            source.lastupdatedate,
+                            source.surviveresidentialaddresses,
+                            source.ispatientfavorite)';
 
--- Update Statement
+-- update Statement
 
-update_statement_2 := $$UPDATE Base.Provider AS target
-       SET target.CarePhilosophy = source.ProviderAboutMeText
-         FROM (SELECT 
-                    JSON.ProviderCode,
-                    JSON.ABOUTME_ABOUTMECODE AS AboutMeCode,
-                    JSON.ABOUTME_ABOUTMETEXT AS ProviderAboutMeText
-                FROM RAW.VW_PROVIDER_PROFILE AS JSON
-                    WHERE AboutMeCode = 'CarePhilosophy') AS source
-         WHERE target.ProviderCode = source.ProviderCode
+update_statement_2 := $$update base.provider as target
+       SET target.carephilosophy = source.provideraboutmetext
+         from (select 
+                    json.providercode,
+                    json.aboutme_ABOUTMECODE as AboutMeCode,
+                    json.aboutme_ABOUTMETEXT as ProviderAboutMeText
+                from raw.vw_PROVIDER_PROFILE as JSON
+                    where AboutMeCode = 'CarePhilosophy') as source
+         where target.providercode = source.providercode
     $$;
     
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement_1 := ' MERGE INTO Base.Provider as target USING 
+merge_statement_1 := ' merge into base.provider as target using 
                    ('||select_statement_1||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN MATCHED AND' || update_clause_1 || 'THEN '||update_statement_1|| '
-                   WHEN NOT MATCHED THEN '||insert_statement_1;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED and' || update_clause_1 || 'then '||update_statement_1|| '
+                   when not matched then '||insert_statement_1;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement_1 ;
-EXECUTE IMMEDIATE update_statement_2;
+execute immediate merge_statement_1 ;
+execute immediate update_statement_2;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

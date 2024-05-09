@@ -1,55 +1,55 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE() -- Parameters
     RETURNS STRING
     LANGUAGE SQL EXECUTE
-    AS CALLER
-    AS DECLARE 
+    as CALLER
+    as declare 
     ---------------------------------------------------------
-    --------------- 0. Table dependencies -------------------
+    --------------- 0. table dependencies -------------------
     ---------------------------------------------------------
     
-    --- Base.ClientProductEntityToPhone depends on:
-    --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (raw.vw_provider_profile)
-    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (raw.vw_facility_profile)
-    --- Base.EntityType
-    --- Base.CLIENTTOPRODUCT
-    --- Base.Facility
-    --- Base.ClientProductToEntity
-    --- Base.Phone
-    --- Base.PhoneType
-    --- Base.SyndicationPartner
-    --- Base.ClientProductEntityToPhone
-    --- Base.Office
-    --- Base.OfficeToPhone
+    --- base.clientproductentitytophone depends on:
+    --- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+    --- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+    --- base.entitytype
+    --- base.clienttoproduct
+    --- base.facility
+    --- base.clientproducttoentity
+    --- base.phone
+    --- base.phonetype
+    --- base.syndicationpartner
+    --- base.clientproductentitytophone
+    --- base.office
+    --- base.officetophone
 
     
     ---------------------------------------------------------
-    --------------- 1. Declaring variables ------------------
+    --------------- 1. declaring variables ------------------
     ---------------------------------------------------------
     
-    select_statement_1 STRING;
-    select_statement_2 STRING;
-    select_statement_3 STRING;
-    update_statement STRING;
-    insert_statement STRING;
-    merge_statement_1 STRING;
-    merge_statement_2 STRING;
-    merge_statement_3 STRING;
-    status STRING;
-    procedure_name varchar(50) default('sp_load_ClientProductEntityToPhone');
-    execution_start DATETIME default getdate();
+    select_statement_1 string;
+    select_statement_2 string;
+    select_statement_3 string;
+    update_statement string;
+    insert_statement string;
+    merge_statement_1 string;
+    merge_statement_2 string;
+    merge_statement_3 string;
+    status string;
+    procedure_name varchar(50) default('sp_load_clientproductentitytophone');
+    execution_start datetime default getdate();
 
 
     ---------------------------------------------------------
-    --------------- 2.Conditionals if any -------------------
+    --------------- 2.conditionals if any -------------------
     ---------------------------------------------------------
-    BEGIN 
+    begin 
     ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------
     ---------------------------------------------------------
-    --- Select Statement
-    -- If no conditionals:
+    --- select Statement
+    -- if no conditionals:
     select_statement_1 := $$with cte_swimlane as (
-        SELECT
+        select
             facilityid as FacilityID,
             vfp.facilitycode as FacilityCode,
             cp.clienttoproductid,
@@ -67,16 +67,16 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPH
             sysdate() as LastUpdateDate
         from
             raw.vw_facility_profile as vfp
-            JOIN base.facility as f on vfp.facilitycode = f.facilitycode
-            JOIN base.clienttoproduct as cp on cp.clienttoproductcode = vfp.customerproduct_customerproductcode
-        WHERE
+            join base.facility as f on vfp.facilitycode = f.facilitycode
+            join base.clienttoproduct as cp on cp.clienttoproductcode = vfp.customerproduct_customerproductcode
+        where
             customerproduct_customerproductcode is not null
     ),
     cte_swimlane_phones as (
-        SELECT
-            CTE.FACILITYCODE,
-            CTE.CLIENTTOPRODUCTCODE,
-            CTE.ROWRANK,
+        select
+            cte.facilitycode,
+            cte.clienttoproductcode,
+            cte.rowrank,
             DisplayPartner:DISPLAY_PARTNER_CODE as DisplayPartnerCode,
             DisplayPartner:PHONE_PTFDS as PhonePTFDS,
             DisplayPartner:PHONE_PTFDSM as PhonePTFDSM,
@@ -100,303 +100,303 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPH
             DisplayPartner:PHONE_PTFDPPNP as PhonePTFDPPNP
         from
             cte_swimlane as cte
-            JOIN Base.SyndicationPartner as sp on sp.syndicationPartnerCode = DisplayPartnerCode
+            join base.syndicationpartner as sp on sp.syndicationpartnercode = DisplayPartnerCode
     ),
     cte_tmp_phones as (
-        SELECT
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFDS' as PhoneTypeCode,
             PhonePTFDS as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFDS is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFDSM' as PhoneTypeCode,
             PhonePTFDSM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFDSM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFDST' as PhoneTypeCode,
             PhonePTFDST as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFDST is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMC' as PhoneTypeCode,
             PhonePTFMC as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMC is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMCM' as PhoneTypeCode,
             PhonePTFMCM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMCM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMCT' as PhoneTypeCode,
             PhonePTFMCT as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMCT is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMT' as PhoneTypeCode,
             PhonePTFMT as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMT is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMTM' as PhoneTypeCode,
             PhonePTFMTM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMTM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFMTT' as PhoneTypeCode,
             PhonePTFMTT as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFMTT is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFSR' as PhoneTypeCode,
             PhonePTFSR as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFSR is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFSRD' as PhoneTypeCode,
             PhonePTFSRD as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFSRD is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFSRDM' as PhoneTypeCode,
             PhonePTFSRDM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFSRDM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFSRM' as PhoneTypeCode,
             PhonePTFSRM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFSRM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFSRT' as PhoneTypeCode,
             PhonePTFSRT as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFSRT is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTHFS' as PhoneTypeCode,
             PhonePTHFS as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTHFS is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTHFSM' as PhoneTypeCode,
             PhonePTHFSM as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTHFSM is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTHFST' as PhoneTypeCode,
             PhonePTHFST as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTHFST is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTUFS' as PhoneTypeCode,
             PhonePTUFS as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTUFS is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFDPPEP' as PhoneTypeCode,
             PhonePTFDPPEP as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFDPPEP is not null
             and RowRank = 1
-        UNION ALL
-        SELECT
+        union all
+        select
             FacilityCode,
             ClientToProductCode,
             DisplayPartnerCode,
             'PTFDPPNP' as PhoneTypeCode,
             PhonePTFDPPNP as PhoneNumber
-        FROM
+        from
             CTE_SWIMLANE_PHONES
-        WHERE
+        where
             PhonePTFDPPNP is not null
             and RowRank = 1
     )
     select
         cpe.clientproducttoentityid,
-        PT.PHONETYPEID as PhoneTypeID,
-        P.PHONEID as PhoneID,
+        pt.phonetypeid as PhoneTypeID,
+        p.phoneid as PhoneID,
         'Reltio' as SourceCode,
         sysdate() as LastUpdateDate
     from
         cte_tmp_phones s
-        join Base.EntityType as ET on ET.EntityTypeCode = 'FAC'
-        join Base.CLIENTTOPRODUCT as CTP on CTP.CLIENTTOPRODUCTCODE = s.clienttoproductcode
+        join base.entitytype as ET on et.entitytypecode = 'FAC'
+        join base.clienttoproduct as CTP on ctp.clienttoproductcode = s.clienttoproductcode
         join base.facility as f on f.facilitycode = s.facilitycode
-        join Base.ClientProductToEntity cpe on CTP.CLIENTTOPRODUCTID = cpe.CLIENTTOPRODUCTID
-        and ET.entitytypeid = cpe.entitytypeid
+        join base.clientproducttoentity cpe on ctp.clienttoproductid = cpe.clienttoproductid
+        and et.entitytypeid = cpe.entitytypeid
         and f.facilityid = cpe.entityid
-        join Base.Phone AS P on s.PhoneNumber = P.PhoneNumber
-        join Base.PhoneType as PT on s.PhoneTypeCode = PT.PhoneTypeCode
+        join base.phone as P on s.phonenumber = p.phonenumber
+        join base.phonetype as PT on s.phonetypecode = pt.phonetypecode
     where
-        s.DisplayPartnerCode = 'HG' $$;
+        s.displaypartnercode = 'HG' $$;
         
 select_statement_2 := $$ with cte_swimlane_phones as (
-            SELECT
+            select
                 ClientToProductCode,
                 ProductCode,
-                DISPLAY_PARTNER [0] :REF_DISPLAY_PARTNER_CODE AS DisplayPartnerCode,
-                DISPLAY_PARTNER [0] :PHONE_PTDES AS PhonePTDES,
-                DISPLAY_PARTNER [0] :PHONE_PTDESM AS PhonePTDESM,
-                DISPLAY_PARTNER [0] :PHONE_PTDEST AS PhonePTDEST,
-                DISPLAY_PARTNER [0] :PHONE_PTEMP AS PhonePTEMP,
-                DISPLAY_PARTNER [0] :PHONE_PTEMPM AS PhonePTEMPM,
-                DISPLAY_PARTNER [0] :PHONE_PTEMPT AS PhonePTEMPT,
-                DISPLAY_PARTNER [0] :PHONE_PTHOS AS PhonePTHOS,
-                DISPLAY_PARTNER [0] :PHONE_PTHOSM AS PhonePTHOSM,
-                DISPLAY_PARTNER [0] :PHONE_PTHOST AS PhonePTHOST,
-                DISPLAY_PARTNER [0] :PHONE_PTMTR AS PhonePTMTR,
-                DISPLAY_PARTNER [0] :PHONE_PTMTRT AS PhonePTMTRT,
-                DISPLAY_PARTNER [0] :PHONE_PTMTRM AS PhonePTMTRM,
-                DISPLAY_PARTNER [0] :PHONE_PTMWC AS PhonePTMWC,
-                DISPLAY_PARTNER [0] :PHONE_PTMWCT AS PhonePTMWCT,
-                DISPLAY_PARTNER [0] :PHONE_PTMWCM AS PhonePTMWCM,
-                DISPLAY_PARTNER [0] :PHONE_PTPSR AS PhonePTPSR,
-                DISPLAY_PARTNER [0] :PHONE_PTPSRD AS PhonePTPSRD,
-                DISPLAY_PARTNER [0] :PHONE_PTPSRM AS PhonePTPSRM,
-                DISPLAY_PARTNER [0] :PHONE_PTPSRT AS PhonePTPSRT,
-                DISPLAY_PARTNER [0] :PHONE_PTDPPEP AS PhonePTDPPEP,
-                DISPLAY_PARTNER [0] :PHONE_PTDPPNP AS PhonePTDPPNP
-            FROM(
+                DISPLAY_PARTNER [0] :REF_DISPLAY_PARTNER_CODE as DisplayPartnerCode,
+                DISPLAY_PARTNER [0] :PHONE_PTDES as PhonePTDES,
+                DISPLAY_PARTNER [0] :PHONE_PTDESM as PhonePTDESM,
+                DISPLAY_PARTNER [0] :PHONE_PTDEST as PhonePTDEST,
+                DISPLAY_PARTNER [0] :PHONE_PTEMP as PhonePTEMP,
+                DISPLAY_PARTNER [0] :PHONE_PTEMPM as PhonePTEMPM,
+                DISPLAY_PARTNER [0] :PHONE_PTEMPT as PhonePTEMPT,
+                DISPLAY_PARTNER [0] :PHONE_PTHOS as PhonePTHOS,
+                DISPLAY_PARTNER [0] :PHONE_PTHOSM as PhonePTHOSM,
+                DISPLAY_PARTNER [0] :PHONE_PTHOST as PhonePTHOST,
+                DISPLAY_PARTNER [0] :PHONE_PTMTR as PhonePTMTR,
+                DISPLAY_PARTNER [0] :PHONE_PTMTRT as PhonePTMTRT,
+                DISPLAY_PARTNER [0] :PHONE_PTMTRM as PhonePTMTRM,
+                DISPLAY_PARTNER [0] :PHONE_PTMWC as PhonePTMWC,
+                DISPLAY_PARTNER [0] :PHONE_PTMWCT as PhonePTMWCT,
+                DISPLAY_PARTNER [0] :PHONE_PTMWCM as PhonePTMWCM,
+                DISPLAY_PARTNER [0] :PHONE_PTPSR as PhonePTPSR,
+                DISPLAY_PARTNER [0] :PHONE_PTPSRD as PhonePTPSRD,
+                DISPLAY_PARTNER [0] :PHONE_PTPSRM as PhonePTPSRM,
+                DISPLAY_PARTNER [0] :PHONE_PTPSRT as PhonePTPSRT,
+                DISPLAY_PARTNER [0] :PHONE_PTDPPEP as PhonePTDPPEP,
+                DISPLAY_PARTNER [0] :PHONE_PTDPPNP as PhonePTDPPNP
+            from(
                     select
-                        CUSTOMERPRODUCTCODE AS ClientToProductCode,
+                        CUSTOMERPRODUCTCODE as ClientToProductCode,
                         PRODUCTCODE as ProductCode,
-                        customerproductjson:DISPLAY_PARTNER AS DISPLAY_PARTNER
+                        customerproductjson:DISPLAY_PARTNER as DISPLAY_PARTNER
                     from
                         swimlane_base_client
-                    WHERE
-                        DISPLAY_PARTNER IS NOT NULL
+                    where
+                        DISPLAY_PARTNER is not null
                 )
         ),
         cte_tmp_phones as (
@@ -611,78 +611,78 @@ select_statement_2 := $$ with cte_swimlane_phones as (
                 PhonePTDPPNP is not null
         )
         select
-            distinct CPtE.ClientProductToEntityID,
-            pt.PhoneTypeID,
-            ph.PhoneID,
+            distinct cpte.clientproducttoentityid,
+            pt.phonetypeid,
+            ph.phoneid,
             'Profisee' as SourceCode,
             sysdate() as LastUpdateDate
         from
             cte_tmp_phones s
-            inner join Base.EntityType b on b.EntityTypeCode = 'CLPROD'
-            inner join base.Phone ph on ph.PhoneNumber = s.PhoneNumber
-            inner join base.PhoneType pt on pt.PhoneTypeCode = s.PhoneTypeCode
-            inner join base.ClientToProduct CtP on CtP.ClientToProductCode = s.ClientToProductCode
-            inner join base.ClientProductToEntity CPtE on CPtE.ClientToProductID = CtP.ClientToProductID
-            and CPtE.EntityTypeID = b.EntityTypeID
+            inner join base.entitytype b on b.entitytypecode = 'CLPROD'
+            inner join base.phone ph on ph.phonenumber = s.phonenumber
+            inner join base.phonetype pt on pt.phonetypecode = s.phonetypecode
+            inner join base.clienttoproduct CtP on ctp.clienttoproductcode = s.clienttoproductcode
+            inner join base.clientproducttoentity CPtE on cpte.clienttoproductid = ctp.clienttoproductid
+            and cpte.entitytypeid = b.entitytypeid
         where
-            s.DisplayPartnerCode = 'HG'$$;
+            s.displaypartnercode = 'HG'$$;
             
 select_statement_3 := $$with cte_json_data as (
-            SELECT
-                p.CREATE_DATE,
-                p.PROVIDERCODE AS ProviderCode,
-                flattened_office.value AS Office,
+            select
+                p.create_DATE,
+                p.providercode as ProviderCode,
+                flattened_office.value as Office,
                 Office:OFFICE_CODE as OfficeCode,
                 Office:PHONE_NUMBER as PhoneNumber,
                 customerproduct_customerproductcode as ClientToProductCode
-            FROM
-                raw.vw_provider_profile AS p,
-                LATERAL FLATTEN(input => p.provider_profile:OFFICE) AS flattened_office
-            WHERE
-                p.provider_profile IS NOT NULL
-                AND flattened_office.value IS NOT NULL
+            from
+                raw.vw_provider_profile as p,
+                LATERAL FLATTEN(input => p.provider_profile:OFFICE) as flattened_office
+            where
+                p.provider_profile is not null
+                and flattened_office.value is not null
         ),
         cte_tmp_phones as (
             select
-                t.OfficeCode,
-                t.ClientToProductCode,
-                et.EntityTypeCode,
+                t.officecode,
+                t.clienttoproductcode,
+                et.entitytypecode,
                 'PTODS' as PhoneTypeCode,
-                ph.PhoneID as PhoneID
+                ph.phoneid as PhoneID
             from
                 cte_json_data t
-                join Base.EntityType et on et.EntityTypeCode = 'OFFICE'
-                join BASE.OFFICE AS O ON O.OFFICECODE = T.OFFICECODE
-                join Base.OfficeToPhone op on op.OfficeID = o.OfficeID
-                join Base.Phone ph on ph.PhoneID = op.PhoneID
-                join Base.PhoneType pt on pt.PhoneTypeID = op.PhoneTypeID
-                and pt.PhoneTypeCode = 'Service'
+                join base.entitytype et on et.entitytypecode = 'OFFICE'
+                join base.office as O on o.officecode = t.officecode
+                join base.officetophone op on op.officeid = o.officeid
+                join base.phone ph on ph.phoneid = op.phoneid
+                join base.phonetype pt on pt.phonetypeid = op.phonetypeid
+                and pt.phonetypecode = 'Service'
         )
         select
-            distinct cpe.ClientProductToEntityID as ClientProductToEntityID,
-            p.PhoneID,
-            pt.PhoneTypeID,
+            distinct cpe.clientproducttoentityid as ClientProductToEntityID,
+            p.phoneid,
+            pt.phonetypeid,
             'Profisee' as SourceCode,
             sysdate() as LastUpdateDate
         from
-            cte_tmp_phones as s -- on convert(uniqueidentifier, hashbytes('SHA1',  concat(ClientToProductCode,b.EntityTypeCode,s.OfficeCode) ))=cpe.ClientProductToEntityID
+            cte_tmp_phones as s -- on convert(uniqueidentifier, hashbytes('SHA1',  concat(ClientToProductCode,b.entitytypecode,s.officecode) ))=cpe.clientproducttoentityid
             join base.office as o on o.officecode = s.officecode
             join clienttoproduct as cp on cp.clienttoproductcode = s.clienttoproductcode
-            join Base.Phone as p on s.PhoneID = p.PhoneID
-            join Base.PhoneType as pt on s.PhoneTypeCode = pt.PhoneTypeCode
-            join Base.EntityType as et on s.EntityTypeCode = et.EntityTypeCode
+            join base.phone as p on s.phoneid = p.phoneid
+            join base.phonetype as pt on s.phonetypecode = pt.phonetypecode
+            join base.entitytype as et on s.entitytypecode = et.entitytypecode
             join clientproducttoentity as cpe on cpe.entitytypeid = et.entitytypeid
             and cpe.entityid = o.officeid
             and cpe.clienttoproductid = cp.clienttoproductid $$;
---- Update Statement
+--- update Statement
     update_statement := '
-        UPDATE
+        update
         SET
-            SourceCode = source.SourceCode,
-            LastUpdateDate = source.LastUpdateDate';
---- Insert Statement
+            SourceCode = source.sourcecode,
+            LastUpdateDate = source.lastupdatedate';
+--- insert Statement
     insert_statement := ' 
-        INSERT(
+        insert(
             ClientProductEntityToPhoneID,
             ClientProductToEntityID,
             PhoneTypeID,
@@ -690,9 +690,9 @@ select_statement_3 := $$with cte_json_data as (
             SourceCode,
             LastUpdateDate
         )
-        VALUES
+        values
         (
-            UUID_STRING(),
+            uuid_string(),
             ClientProductToEntityID,
             PhoneTypeID,
             PhoneID,
@@ -700,49 +700,49 @@ select_statement_3 := $$with cte_json_data as (
             LastUpdateDate
         )';
 ---------------------------------------------------------
-    --------- 4. Actions (Inserts and Updates) --------------
+    --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------
-    merge_statement_1 := '     MERGE INTO BASE.CLIENTPRODUCTENTITYTOPHONE as target USING 
-                   (' || select_statement_1 || ') as source ON source.clientproducttoentityid = target.clientproducttoentityid
-                    AND source.PhoneTypeID = target.PhoneTypeID
-                    AND source.PhoneID = target.PhoneID
-                    WHEN MATCHED THEN' || update_statement || '
-                    WHEN NOT MATCHED THEN' || insert_statement;
-merge_statement_2 := '     MERGE INTO BASE.CLIENTPRODUCTENTITYTOPHONE as target USING 
-                   (' || select_statement_2 || ') as source ON source.clientproducttoentityid = target.clientproducttoentityid
-                    AND source.PhoneTypeID = target.PhoneTypeID
-                    AND source.PhoneID = target.PhoneID
-                    WHEN MATCHED THEN' || update_statement || '
-                    WHEN NOT MATCHED THEN' || insert_statement;
-merge_statement_3 := '     MERGE INTO BASE.CLIENTPRODUCTENTITYTOPHONE as target USING 
-                   (' || select_statement_3 || ') as source ON source.clientproducttoentityid = target.clientproducttoentityid
-                    AND source.PhoneTypeID = target.PhoneTypeID
-                    AND source.PhoneID = target.PhoneID
-                    WHEN MATCHED THEN' || update_statement || '
-                    WHEN NOT MATCHED THEN' || insert_statement;
+    merge_statement_1 := '     merge into base.clientproductentitytophone as target using 
+                   (' || select_statement_1 || ') as source on source.clientproducttoentityid = target.clientproducttoentityid
+                    and source.phonetypeid = target.phonetypeid
+                    and source.phoneid = target.phoneid
+                    WHEN MATCHED then' || update_statement || '
+                    when not matched then' || insert_statement;
+merge_statement_2 := '     merge into base.clientproductentitytophone as target using 
+                   (' || select_statement_2 || ') as source on source.clientproducttoentityid = target.clientproducttoentityid
+                    and source.phonetypeid = target.phonetypeid
+                    and source.phoneid = target.phoneid
+                    WHEN MATCHED then' || update_statement || '
+                    when not matched then' || insert_statement;
+merge_statement_3 := '     merge into base.clientproductentitytophone as target using 
+                   (' || select_statement_3 || ') as source on source.clientproducttoentityid = target.clientproducttoentityid
+                    and source.phonetypeid = target.phonetypeid
+                    and source.phoneid = target.phoneid
+                    WHEN MATCHED then' || update_statement || '
+                    when not matched then' || insert_statement;
 ---------------------------------------------------------
-    ------------------- 5. Execution ------------------------
+    ------------------- 5. execution ------------------------
     ---------------------------------------------------------
-    -- EXECUTE IMMEDIATE update_statement;
-    EXECUTE IMMEDIATE merge_statement_1;
-    EXECUTE IMMEDIATE merge_statement_2;
-    EXECUTE IMMEDIATE merge_statement_3;
+    -- execute immediate update_statement;
+    execute immediate merge_statement_1;
+    execute immediate merge_statement_2;
+    execute immediate merge_statement_3;
 ---------------------------------------------------------
-    --------------- 6. Status monitoring --------------------
+    --------------- 6. status monitoring --------------------
     ---------------------------------------------------------
-    status := 'Completed successfully';
+    status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;
 CALL BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE();

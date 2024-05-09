@@ -1,67 +1,67 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER(IsProviderDeltaProcessing BOOLEAN)
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER(IsProviderDeltaProcessing BOOLEAN)
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
---- Mid.Provider depends on:
--- MDM_TEAM.MST.Provider_Profile_Processing
--- Base.Provider
--- Base.ProviderToDegree
--- Base.Degree
--- Base.ProviderToProviderType
--- Base.ProviderType
--- Base.ProviderToProviderSubType
--- Base.ProviderSubType
--- Base.ProviderToDisplaySpecialty
--- Base.Specialty
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
+--- mid.provider depends on:
+-- mdm_team.mst.provider_profile_processing
+-- base.provider
+-- base.providertodegree
+-- base.degree
+-- base.providertoprovidertype
+-- base.providertype
+-- base.providertoprovidersubtype
+-- base.providersubtype
+-- base.providertodisplayspecialty
+-- base.specialty
 
-create_temp STRING; 
-insert_temp STRING; -- delta logic of insert to temporary table
-join_temp_delta STRING;
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
 
--- updates to temporary version of Mid.Provider
-update_temp_1 STRING;
-update_temp_2 STRING;
-update_temp_3 STRING;
-update_temp_4 STRING;
-update_temp_5 STRING;
-update_temp_6 STRING;
 
--- changes to Mid.Provider from temp version
-update_statement STRING;
-insert_statement STRING;
-select_statement STRING; 
-merge_statement STRING;
+create_temp string; 
+insert_temp string; -- delta logic of insert to temporary table
+join_temp_delta string;
 
-status STRING;
-    procedure_name varchar(50) default('sp_load_Provider');
-    execution_start DATETIME default getdate();
+-- updates to temporary version of mid.provider
+update_temp_1 string;
+update_temp_2 string;
+update_temp_3 string;
+update_temp_4 string;
+update_temp_5 string;
+update_temp_6 string;
+
+-- changes to mid.provider from temp version
+update_statement string;
+insert_statement string;
+select_statement string; 
+merge_statement string;
+
+status string;
+    procedure_name varchar(50) default('sp_load_provider');
+    execution_start datetime default getdate();
 
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
 
-BEGIN
+begin
          create_temp := $$
-                        CREATE OR REPLACE TEMPORARY TABLE Mid.TEMPProvider AS
-                        SELECT * FROM  Mid.Provider LIMIT 0;
+                        CREATE or REPLACE TEMPORARY TABLE mid.tempprovider as
+                        select * from  mid.provider LIMIT 0;
                         $$;
                         
          insert_temp := $$ 
-                      INSERT INTO Mid.TEMPProvider (
+                      insert INTO mid.tempprovider (
                           ProviderID,
                           ProviderCode,
                           ProviderTypeID,
@@ -89,160 +89,160 @@ BEGIN
                           SearchBoostSatisfaction,
                           SearchBoostAccessibility
                       )
-                      SELECT
-                        p.ProviderID,
-                        p.ProviderCode,
-                        p.ProviderTypeID,
-                        p.FirstName,
-                        p.MiddleName,
-                        p.LastName,
-                        p.CarePhilosophy,
-                        p.ProfessionalInterest,
-                        p.Suffix,
-                        p.Gender,
-                        p.NPI,
-                        p.AMAID,
-                        p.UPIN,
-                        p.MedicareID,
-                        p.DEANumber,
-                        p.TaxIDNumber,
-                        p.DateOfBirth,
-                        p.PlaceOfBirth,
-                        p.AcceptsNewPatients,
-                        p.HasElectronicMedicalRecords,
-                        p.HasElectronicPrescription,
-                        p.LegacyKey,
-                        IFNULL(p.ProviderLastUpdateDateOverall, p.LastUpdateDate),
-                        IFNULL(p.ProviderLastUpdateDateOverallSourceTable, p.LastUpdateDate),
-                        p.SearchBoostSatisfaction,
-                        p.SearchBoostAccessibility
-                       FROM (SELECT * FROM Base.Provider) AS p
+                      select
+                        p.providerid,
+                        p.providercode,
+                        p.providertypeid,
+                        p.firstname,
+                        p.middlename,
+                        p.lastname,
+                        p.carephilosophy,
+                        p.professionalinterest,
+                        p.suffix,
+                        p.gender,
+                        p.npi,
+                        p.amaid,
+                        p.upin,
+                        p.medicareid,
+                        p.deanumber,
+                        p.taxidnumber,
+                        p.dateofbirth,
+                        p.placeofbirth,
+                        p.acceptsnewpatients,
+                        p.haselectronicmedicalrecords,
+                        p.haselectronicprescription,
+                        p.legacykey,
+                        ifnull(p.providerlastupdatedateoverall, p.lastupdatedate),
+                        ifnull(p.providerlastupdatedateoverallsourcetable, p.lastupdatedate),
+                        p.searchboostsatisfaction,
+                        p.searchboostaccessibility
+                       from (select * from base.provider) as p
                    $$;
                    
-      IF (IsProviderDeltaProcessing) THEN
-        join_temp_delta := $$ INNER JOIN MDM_TEAM.MST.Provider_Profile_Processing as ppp ON p.providercode = ppp.ref_provider_code $$;
+      if (IsProviderDeltaProcessing) then
+        join_temp_delta := $$ inner join MDM_team.mst.Provider_Profile_Processing as ppp on p.providercode = ppp.ref_provider_code $$;
         insert_temp := insert_temp || join_temp_delta;
-      ELSE
+      else
         insert_temp := insert_temp;
-      END IF;
+      end if;
 
       ---------------------------------------------------------
       ----------------- 3. SQL Statements ---------------------
       ---------------------------------------------------------  
       select_statement := $$
-                          (SELECT * FROM Mid.TEMPProvider)
+                          (select * from mid.tempprovider)
                           $$;
 
       ---------------------------------------------------------
-      --------- 4. Actions (Inserts and Updates) --------------
+      --------- 4. actions (inserts and updates) --------------
       ---------------------------------------------------------
 
       update_temp_1 := $$ 
-                      UPDATE Mid.TEMPProvider p
-                      SET p.DegreeAbbreviation = s.DegreeAbbreviation
-                      FROM
+                      update mid.tempprovider p
+                      SET p.degreeabbreviation = s.degreeabbreviation
+                      from
                         (
-                          SELECT
-                            ptd.ProviderID,
-                            d.DegreeAbbreviation,
-                            ROW_NUMBER() OVER (
-                              PARTITION BY ptd.ProviderID
-                              ORDER BY
-                                ptd.DegreePriority ASC NULLS FIRST,
-                                ptd.LastUpdateDate DESC NULLS LAST,
-                                d.DegreeAbbreviation NULLS FIRST
-                            ) AS recID
-                          FROM  Base.ProviderToDegree ptd
-                          INNER JOIN Base.Degree d ON ptd.DegreeID = d.DegreeID
+                          select
+                            ptd.providerid,
+                            d.degreeabbreviation,
+                            row_number() over (
+                              partition by ptd.providerid
+                              order by
+                                ptd.degreepriority ASC NULLS FIRST,
+                                ptd.lastupdatedate desc NULLS LAST,
+                                d.degreeabbreviation NULLS FIRST
+                            ) as recID
+                          from  base.providertodegree ptd
+                          inner join base.degree d on ptd.degreeid = d.degreeid
                         ) s
-                      WHERE p.ProviderID = s.ProviderID AND recID = 1;
+                      where p.providerid = s.providerid and recID = 1;
                        $$;
 
       update_temp_2 := $$
-                      UPDATE Mid.TEMPProvider p
-                      SET p.ProviderTypeID = ptpt.ProviderTypeID
-                      FROM Base.ProviderToProviderType ptpt
-                      WHERE p.ProviderID = ptpt.ProviderID AND ptpt.ProviderTypeRank = 1;
+                      update mid.tempprovider p
+                      SET p.providertypeid = ptpt.providertypeid
+                      from base.providertoprovidertype ptpt
+                      where p.providerid = ptpt.providerid and ptpt.providertyperank = 1;
                        $$;
 
       update_temp_3 := $$
-                      UPDATE Mid.TEMPProvider p
-                      SET p.ProviderTypeID =(SELECT ProviderTypeID FROM Base.ProviderType WHERE ProviderTypeCode = 'ALT') 
-                      WHERE p.ProviderTypeID IS NULL;
+                      update mid.tempprovider p
+                      SET p.providertypeid =(select ProviderTypeID from base.providertype where ProviderTypeCode = 'ALT') 
+                      where p.providertypeid is null;
                        $$;
 
       update_temp_4 := $$
-                      UPDATE Mid.TEMPProvider p 
-                      SET p.Title = 'Dr.'
-                      FROM Base.ProviderToProviderSubType ptpst, Base.ProviderSubType pst
-                      WHERE p.ProviderID = ptpst.ProviderID AND ptpst.ProviderSubTypeID = pst.ProviderSubTypeID 
-                            AND pst.IsDoctor = 1 AND IFNULL(Title, '') != 'Dr.';
+                      update mid.tempprovider p 
+                      SET p.title = 'Dr.'
+                      from base.providertoprovidersubtype ptpst, base.providersubtype pst
+                      where p.providerid = ptpst.providerid and ptpst.providersubtypeid = pst.providersubtypeid 
+                            and pst.isdoctor = 1 and ifnull(Title, '') != 'Dr.';
                        $$;
 
 
       update_temp_5 := $$
-                        UPDATE Mid.TEMPProvider p 
-                        SET p.ProviderURL = 
+                        update mid.tempprovider p 
+                        SET p.providerurl = 
                           CASE
-                            WHEN pt.ProviderTypeCode = 'ALT' THEN REPLACE(REPLACE(
-                                '/' || 'providers/' || IFNULL(LOWER(p.FirstName), '') || '-' || IFNULL(LOWER(p.LastName), '') || '-' || IFNULL(LOWER(p.ProviderCode),''),
+                            WHEN pt.providertypecode = 'ALT' then REPLACE(REPLACE(
+                                '/' || 'providers/' || ifnull(lower(p.firstname), '') || '-' || ifnull(lower(p.lastname), '') || '-' || ifnull(lower(p.providercode),''),
                                 '''', ''), ' ', '-')
-                            WHEN pt.ProviderTypeCode = 'DOC' THEN REPLACE(REPLACE(
-                                '/' || 'physician/dr-' || IFNULL(LOWER(p.FirstName), '') || '-' || IFNULL(LOWER(p.LastName), '') || '-' || IFNULL(LOWER(p.ProviderCode), ''),
+                            WHEN pt.providertypecode = 'DOC' then REPLACE(REPLACE(
+                                '/' || 'physician/dr-' || ifnull(lower(p.firstname), '') || '-' || ifnull(lower(p.lastname), '') || '-' || ifnull(lower(p.providercode), ''),
                                 '''', ''), ' ', '-')
-                            WHEN pt.ProviderTypeCode = 'DENT' THEN REPLACE(REPLACE(
-                                '/' || 'dentist/dr-' || IFNULL(LOWER(p.FirstName), '') || '-' || IFNULL(LOWER(p.LastName), '') || '-' || IFNULL(LOWER(p.ProviderCode), ''),'''', ''), ' ', '-')
-                            ELSE REPLACE(REPLACE('/' || 'providers/' || IFNULL(LOWER(p.FirstName), '') || '-' || IFNULL(LOWER(p.LastName), '') || '-' || IFNULL(LOWER(p.ProviderCode), ''),
+                            WHEN pt.providertypecode = 'DENT' then REPLACE(REPLACE(
+                                '/' || 'dentist/dr-' || ifnull(lower(p.firstname), '') || '-' || ifnull(lower(p.lastname), '') || '-' || ifnull(lower(p.providercode), ''),'''', ''), ' ', '-')
+                            else REPLACE(REPLACE('/' || 'providers/' || ifnull(lower(p.firstname), '') || '-' || ifnull(lower(p.lastname), '') || '-' || ifnull(lower(p.providercode), ''),
                                 '''', ''), ' ', '-')
                           END
-                        FROM Base.ProviderToProviderType ptpt, Base.ProviderType pt
-                        WHERE p.ProviderID = ptpt.ProviderID AND ptpt.ProviderTypeRank = 1 AND ptpt.ProviderTypeID = pt.ProviderTypeID;
+                        from base.providertoprovidertype ptpt, base.providertype pt
+                        where p.providerid = ptpt.providerid and ptpt.providertyperank = 1 and ptpt.providertypeid = pt.providertypeid;
                        $$;
 
       update_temp_6 := $$
-                      UPDATE Mid.TEMPProvider p
-                      SET p.FFDisplaySpecialty = s.SpecialtyCode
-                      FROM Base.ProviderToDisplaySpecialty ptds, Base.Specialty s
-                      WHERE ptds.ProviderID = p.ProviderID AND s.SpecialtyID = ptds.SpecialtyID;
+                      update mid.tempprovider p
+                      SET p.ffdisplayspecialty = s.specialtycode
+                      from base.providertodisplayspecialty ptds, base.specialty s
+                      where ptds.providerid = p.providerid and s.specialtyid = ptds.specialtyid;
                        $$;
 
 
       update_statement := $$ 
-                        UPDATE SET
-                            target.AcceptsNewPatients = source.AcceptsNewPatients,
-                            target.AMAID = source.AMAID,
-                            target.CarePhilosophy = source.CarePhilosophy,
-                            target.DateOfBirth = source.DateOfBirth,
-                            target.DEANumber = source.DEANumber,
-                            target.DegreeAbbreviation = source.DegreeAbbreviation,
-                            target.ExpireCode = source.ExpireCode,
-                            target.FFDisplaySpecialty = source.FFDisplaySpecialty,
-                            target.FirstName = source.FirstName,
-                            target.Gender = source.Gender,
-                            target.HasElectronicMedicalRecords = source.HasElectronicMedicalRecords,
-                            target.HasElectronicPrescription = source.HasElectronicPrescription,
-                            target.LastName = source.LastName,
-                            target.LegacyKey = source.LegacyKey,
-                            target.MedicareID = source.MedicareID,
-                            target.MiddleName = source.MiddleName,
-                            target.NPI = source.NPI,
-                            target.PlaceOfBirth = source.PlaceOfBirth,
-                            target.ProfessionalInterest = source.ProfessionalInterest,
-                            target.ProviderCode = source.ProviderCode,
-                            target.ProviderLastUpdateDateOverall = source.ProviderLastUpdateDateOverall,
-                            target.ProviderLastUpdateDateOverallSourceTable = source.ProviderLastUpdateDateOverallSourceTable,
-                            target.ProviderTypeID = source.ProviderTypeID,
-                            target.ProviderURL = source.ProviderURL,
-                            target.SearchBoostAccessibility = source.SearchBoostAccessibility,
-                            target.SearchBoostSatisfaction = source.SearchBoostSatisfaction,
-                            target.Suffix = source.Suffix,
-                            target.TaxIDNumber = source.TaxIDNumber,
-                            target.Title = source.Title,
-                            target.UPIN = source.UPIN
+                        update SET
+                            target.acceptsnewpatients = source.acceptsnewpatients,
+                            target.amaid = source.amaid,
+                            target.carephilosophy = source.carephilosophy,
+                            target.dateofbirth = source.dateofbirth,
+                            target.deanumber = source.deanumber,
+                            target.degreeabbreviation = source.degreeabbreviation,
+                            target.expirecode = source.expirecode,
+                            target.ffdisplayspecialty = source.ffdisplayspecialty,
+                            target.firstname = source.firstname,
+                            target.gender = source.gender,
+                            target.haselectronicmedicalrecords = source.haselectronicmedicalrecords,
+                            target.haselectronicprescription = source.haselectronicprescription,
+                            target.lastname = source.lastname,
+                            target.legacykey = source.legacykey,
+                            target.medicareid = source.medicareid,
+                            target.middlename = source.middlename,
+                            target.npi = source.npi,
+                            target.placeofbirth = source.placeofbirth,
+                            target.professionalinterest = source.professionalinterest,
+                            target.providercode = source.providercode,
+                            target.providerlastupdatedateoverall = source.providerlastupdatedateoverall,
+                            target.providerlastupdatedateoverallsourcetable = source.providerlastupdatedateoverallsourcetable,
+                            target.providertypeid = source.providertypeid,
+                            target.providerurl = source.providerurl,
+                            target.searchboostaccessibility = source.searchboostaccessibility,
+                            target.searchboostsatisfaction = source.searchboostsatisfaction,
+                            target.suffix = source.suffix,
+                            target.taxidnumber = source.taxidnumber,
+                            target.title = source.title,
+                            target.upin = source.upin
                           $$;
 
         insert_statement := $$
-                            INSERT (
+                            insert (
                                       AcceptsNewPatients,
                                       AMAID,
                                       CarePhilosophy,
@@ -275,111 +275,111 @@ BEGIN
                                       Title,
                                       UPIN
                                  )
-                          VALUES (	
-                                source.AcceptsNewPatients,
-                                source.AMAID,
-                                source.CarePhilosophy,
-                                source.DateOfBirth,
-                                source.DEANumber,
-                                source.DegreeAbbreviation,
-                                source.ExpireCode,
-                                source.FFDisplaySpecialty,
-                                source.FirstName,
-                                source.Gender,
-                                source.HasElectronicMedicalRecords,
-                                source.HasElectronicPrescription,
-                                source.LastName,
-                                source.LegacyKey,
-                                source.MedicareID,
-                                source.MiddleName,
-                                source.NPI,
-                                source.PlaceOfBirth,
-                                source.ProfessionalInterest,
-                                source.ProviderCode,
-                                source.ProviderID,
-                                source.ProviderLastUpdateDateOverall,
-                                source.ProviderLastUpdateDateOverallSourceTable,
-                                source.ProviderTypeID,
-                                source.ProviderURL,
-                                source.SearchBoostAccessibility,
-                                source.SearchBoostSatisfaction,
-                                source.Suffix,
-                                source.TaxIDNumber,
-                                source.Title,
-                                source.UPIN
+                          values (	
+                                source.acceptsnewpatients,
+                                source.amaid,
+                                source.carephilosophy,
+                                source.dateofbirth,
+                                source.deanumber,
+                                source.degreeabbreviation,
+                                source.expirecode,
+                                source.ffdisplayspecialty,
+                                source.firstname,
+                                source.gender,
+                                source.haselectronicmedicalrecords,
+                                source.haselectronicprescription,
+                                source.lastname,
+                                source.legacykey,
+                                source.medicareid,
+                                source.middlename,
+                                source.npi,
+                                source.placeofbirth,
+                                source.professionalinterest,
+                                source.providercode,
+                                source.providerid,
+                                source.providerlastupdatedateoverall,
+                                source.providerlastupdatedateoverallsourcetable,
+                                source.providertypeid,
+                                source.providerurl,
+                                source.searchboostaccessibility,
+                                source.searchboostsatisfaction,
+                                source.suffix,
+                                source.taxidnumber,
+                                source.title,
+                                source.upin
                                 )
                             $$;
                      
 
       merge_statement := $$
-                        MERGE INTO Mid.PROVIDER AS target 
-                        USING $$|| select_statement ||$$ as source	
-                        ON source.ProviderID = target.ProviderID
-                        WHEN MATCHED AND MD5(IFNULL(CAST(target.AcceptsNewPatients AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.AcceptsNewPatients AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.AMAID AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.AMAID AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.CarePhilosophy AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.CarePhilosophy AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.DateOfBirth AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.DateOfBirth AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.DEANumber AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.DEANumber AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.DegreeAbbreviation AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.DegreeAbbreviation AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ExpireCode AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ExpireCode AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.FFDisplaySpecialty AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.FFDisplaySpecialty AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.FirstName AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.FirstName AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.Gender AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.Gender AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.HasElectronicMedicalRecords AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.HasElectronicMedicalRecords AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.HasElectronicPrescription AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.HasElectronicPrescription AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.LastName AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.LastName AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.LegacyKey AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.LegacyKey AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.MedicareID AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.MedicareID AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.MiddleName AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.MiddleName AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.NPI AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.NPI AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.PlaceOfBirth AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.PlaceOfBirth AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProfessionalInterest AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProfessionalInterest AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderCode AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderCode AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderLastUpdateDateOverall AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderLastUpdateDateOverall AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderLastUpdateDateOverallSourceTable AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderLastUpdateDateOverallSourceTable AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderTypeID AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderTypeID AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderURL AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderURL AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.SearchBoostAccessibility AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.SearchBoostAccessibility AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.SearchBoostSatisfaction AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.SearchBoostSatisfaction AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.Suffix AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.Suffix AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.TaxIDNumber AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.TaxIDNumber AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.Title AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.Title AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.UPIN AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.UPIN AS VARCHAR), '')) THEN $$ || update_statement || $$ 
-                        WHEN NOT MATCHED THEN $$ || insert_statement;
+                        merge into mid.provider as target 
+                        using $$|| select_statement ||$$ as source	
+                        on source.providerid = target.providerid
+                        WHEN MATCHED and MD5(ifnull(CAST(target.acceptsnewpatients as varchar), '')) <> MD5(ifnull(CAST(source.acceptsnewpatients as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.amaid as varchar), '')) <> MD5(ifnull(CAST(source.amaid as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.carephilosophy as varchar), '')) <> MD5(ifnull(CAST(source.carephilosophy as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.dateofbirth as varchar), '')) <> MD5(ifnull(CAST(source.dateofbirth as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.deanumber as varchar), '')) <> MD5(ifnull(CAST(source.deanumber as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.degreeabbreviation as varchar), '')) <> MD5(ifnull(CAST(source.degreeabbreviation as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.expirecode as varchar), '')) <> MD5(ifnull(CAST(source.expirecode as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.ffdisplayspecialty as varchar), '')) <> MD5(ifnull(CAST(source.ffdisplayspecialty as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.firstname as varchar), '')) <> MD5(ifnull(CAST(source.firstname as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.gender as varchar), '')) <> MD5(ifnull(CAST(source.gender as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.haselectronicmedicalrecords as varchar), '')) <> MD5(ifnull(CAST(source.haselectronicmedicalrecords as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.haselectronicprescription as varchar), '')) <> MD5(ifnull(CAST(source.haselectronicprescription as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.lastname as varchar), '')) <> MD5(ifnull(CAST(source.lastname as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.legacykey as varchar), '')) <> MD5(ifnull(CAST(source.legacykey as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.medicareid as varchar), '')) <> MD5(ifnull(CAST(source.medicareid as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.middlename as varchar), '')) <> MD5(ifnull(CAST(source.middlename as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.npi as varchar), '')) <> MD5(ifnull(CAST(source.npi as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.placeofbirth as varchar), '')) <> MD5(ifnull(CAST(source.placeofbirth as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.professionalinterest as varchar), '')) <> MD5(ifnull(CAST(source.professionalinterest as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providercode as varchar), '')) <> MD5(ifnull(CAST(source.providercode as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providerlastupdatedateoverall as varchar), '')) <> MD5(ifnull(CAST(source.providerlastupdatedateoverall as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providerlastupdatedateoverallsourcetable as varchar), '')) <> MD5(ifnull(CAST(source.providerlastupdatedateoverallsourcetable as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providertypeid as varchar), '')) <> MD5(ifnull(CAST(source.providertypeid as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providerurl as varchar), '')) <> MD5(ifnull(CAST(source.providerurl as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.searchboostaccessibility as varchar), '')) <> MD5(ifnull(CAST(source.searchboostaccessibility as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.searchboostsatisfaction as varchar), '')) <> MD5(ifnull(CAST(source.searchboostsatisfaction as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.suffix as varchar), '')) <> MD5(ifnull(CAST(source.suffix as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.taxidnumber as varchar), '')) <> MD5(ifnull(CAST(source.taxidnumber as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.title as varchar), '')) <> MD5(ifnull(CAST(source.title as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.upin as varchar), '')) <> MD5(ifnull(CAST(source.upin as varchar), '')) then $$ || update_statement || $$ 
+                        when not matched then $$ || insert_statement;
 
      ---------------------------------------------------------
-     ------------------- 5. Execution ------------------------
+     ------------------- 5. execution ------------------------
      --------------------------------------------------------- 
-     EXECUTE IMMEDIATE create_temp;        
-     EXECUTE IMMEDIATE insert_temp;
+     execute immediate create_temp;        
+     execute immediate insert_temp;
 
-     -- updates to temporary version of Mid.Provider
-     EXECUTE IMMEDIATE update_temp_1;
-     EXECUTE IMMEDIATE update_temp_2;
-     EXECUTE IMMEDIATE update_temp_3;
-     EXECUTE IMMEDIATE update_temp_4;
-     EXECUTE IMMEDIATE update_temp_5;
-     EXECUTE IMMEDIATE update_temp_6;
+     -- updates to temporary version of mid.provider
+     execute immediate update_temp_1;
+     execute immediate update_temp_2;
+     execute immediate update_temp_3;
+     execute immediate update_temp_4;
+     execute immediate update_temp_5;
+     execute immediate update_temp_6;
      
-     -- merge to final Mid.Prover table
-     EXECUTE IMMEDIATE merge_statement;
+     -- merge to final mid.prover table
+     execute immediate merge_statement;
 
      ---------------------------------------------------------
-    --------------- 6. Status monitoring --------------------
+    --------------- 6. status monitoring --------------------
     --------------------------------------------------------- 
     
-    status := 'Completed successfully';
+    status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

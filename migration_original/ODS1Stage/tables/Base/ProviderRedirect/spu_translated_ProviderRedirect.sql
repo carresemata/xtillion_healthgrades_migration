@@ -1,32 +1,32 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERREDIRECT()
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERREDIRECT()
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
--- Base.ProviderRedirect depends on:
---- Mid.Provider 
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
----------------------------------------------------------
-select_statement STRING;
-update_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderRedirect');
-    execution_start DATETIME default getdate();
-
+-- base.providerredirect depends on:
+--- mid.provider 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+update_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providerredirect');
+    execution_start datetime default getdate();
+
+
+---------------------------------------------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
@@ -34,52 +34,52 @@ BEGIN
 ---------------------------------------------------------     
 
 select_statement := $$
-                    SELECT p.ProviderCode, p.ProviderURL
-                    FROM Mid.Provider p
-                    INNER JOIN Base.ProviderRedirect pr ON p.ProviderCode = pr.ProviderCodeNew
-                    WHERE pr.ProviderURLNew IS NOT NULL
-                        AND p.ProviderURL != pr.ProviderURLNew
-                        AND pr.DeactivationReason NOT IN ('Deactivated', 'HomePageRedirect')
+                    select p.providercode, p.providerurl
+                    from mid.provider p
+                    inner join base.providerredirect pr on p.providercode = pr.providercodenew
+                    where pr.providerurlnew is not null
+                        and p.providerurl != pr.providerurlnew
+                        and pr.deactivationreason not IN ('Deactivated', 'HomePageRedirect')
                     $$;
 
 update_statement := $$ 
-                    UPDATE SET ProviderURLNew = source.ProviderURL
+                    update SET ProviderURLNew = source.providerurl
                     $$;
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.ProviderRedirect as target 
-                    USING ($$||select_statement||$$) as source 
-                    ON source.ProviderCode = target.ProviderCodeNew
-                    WHEN MATCHED THEN $$ ||update_statement
+merge_statement := $$ merge into base.providerredirect as target 
+                    using ($$||select_statement||$$) as source 
+                    on source.providercode = target.providercodenew
+                    WHEN MATCHED then $$ ||update_statement
                     $$;
 
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

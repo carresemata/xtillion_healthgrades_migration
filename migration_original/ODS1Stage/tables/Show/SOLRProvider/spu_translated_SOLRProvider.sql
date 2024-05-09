@@ -1,8 +1,8 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER(IsProviderDeltaProcessing BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER 
-    AS
+    EXECUTE as CALLER 
+    as
 DECLARE 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------

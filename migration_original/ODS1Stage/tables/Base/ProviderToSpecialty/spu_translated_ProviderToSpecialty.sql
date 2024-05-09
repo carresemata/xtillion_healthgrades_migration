@@ -1,35 +1,35 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOSPECIALTY()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOSPECIALTY()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderToSpecialty depends on: 
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.Specialty
+-- base.providertospecialty depends on: 
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.specialty
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderToSpecialty');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providertospecialty');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -37,37 +37,37 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT DISTINCT
-                            P.ProviderId,
-                            S.SpecialtyID,
-                            IFNULL(JSON.Specialty_SourceCode, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.Specialty_LastUpdatedate, CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            JSON.Specialty_SpecialtyRank AS SpecialtyRank,
-                            IFNULL(JSON.Specialty_SpecialtyRankCalculated, 2147483647) AS SpecialtyRankCalculated,
-                            JSON.Specialty_IsSearchable AS IsSearchable,
-                            IFNULL(JSON.Specialty_IsSearchableCalculated, 1) AS IsSearchableCalculated,
-                            IFNULL(JSON.Specialty_IsSpecialtyRedundant, 0) AS SpecialtyIsRedundant,
-                            JSON.Specialty_SpecialtyDCPCount AS SpecialtyDCPCount,
-                            JSON.Specialty_SpecialtyDCPMinFillThreshold AS SpecialtyDCPMinFillThreshold,
-                            JSON.Specialty_ProviderSpecialtyDCPCount AS ProviderSpecialtyDCPCount,
-                            JSON.Specialty_ProviderSpecialtyAveragePercentile AS ProviderSpecialtyAveragePercentile,
-                            JSON.Specialty_IsMeetsLowThreshold AS MeetsLowThreshold,
-                            JSON.Specialty_ProviderRawSpecialtyScore AS ProviderRawSpecialtyScore,
-                            JSON.Specialty_ScaledSpecialtyBoost AS ScaledSpecialtyBoost,
-                        FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                             LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                             LEFT JOIN Base.Specialty AS S ON S.SpecialtyCode = JSON.Specialty_SpecialtyCode
-                        WHERE
-                             PROVIDER_PROFILE IS NOT NULL
-                             AND SpecialtyID IS NOT NULL
-                             AND ProviderID IS NOT NULL 
-                        QUALIFY ROW_NUMBER() OVER( PARTITION BY ProviderID, Specialty_SpecialtyCode ORDER BY Specialty_SpecialtyRankCalculated, CREATE_DATE DESC) = 1 $$;
+--- select Statement
+select_statement := $$ select distinct
+                            p.providerid,
+                            s.specialtyid,
+                            ifnull(json.specialty_SourceCode, 'Profisee') as SourceCode,
+                            ifnull(json.specialty_LastUpdatedate, current_timestamp()) as LastUpdateDate,
+                            json.specialty_SpecialtyRank as SpecialtyRank,
+                            ifnull(json.specialty_SpecialtyRankCalculated, 2147483647) as SpecialtyRankCalculated,
+                            json.specialty_IsSearchable as IsSearchable,
+                            ifnull(json.specialty_IsSearchableCalculated, 1) as IsSearchableCalculated,
+                            ifnull(json.specialty_IsSpecialtyRedundant, 0) as SpecialtyIsRedundant,
+                            json.specialty_SpecialtyDCPCount as SpecialtyDCPCount,
+                            json.specialty_SpecialtyDCPMinFillThreshold as SpecialtyDCPMinFillThreshold,
+                            json.specialty_ProviderSpecialtyDCPCount as ProviderSpecialtyDCPCount,
+                            json.specialty_ProviderSpecialtyAveragePercentile as ProviderSpecialtyAveragePercentile,
+                            json.specialty_IsMeetsLowThreshold as MeetsLowThreshold,
+                            json.specialty_ProviderRawSpecialtyScore as ProviderRawSpecialtyScore,
+                            json.specialty_ScaledSpecialtyBoost as ScaledSpecialtyBoost,
+                        from raw.vw_PROVIDER_PROFILE as JSON
+                             left join base.provider as P on p.providercode = json.providercode
+                             left join base.specialty as S on s.specialtycode = json.specialty_SpecialtyCode
+                        where
+                             PROVIDER_PROFILE is not null
+                             and SpecialtyID is not null
+                             and ProviderID is not null 
+                        qualify row_number() over( partition by ProviderID, Specialty_SpecialtyCode order by Specialty_SpecialtyRankCalculated, CREATE_DATE desc) = 1 $$;
 
 
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                         (ProviderToSpecialtyID,
                         ProviderID,
                         SpecialtyID,
@@ -85,58 +85,58 @@ insert_statement := ' INSERT
                         MeetsLowThreshold,
                         ProviderRawSpecialtyScore,
                         ScaledSpecialtyBoost)
-                      VALUES 
-                        (UUID_STRING(),
-                        source.ProviderID,
-                        source.SpecialtyID,
-                        source.SourceCode,
-                        source.LastUpdateDate,
-                        source.SpecialtyRank,
-                        source.SpecialtyRankCalculated,
-                        source.IsSearchable,
-                        source.IsSearchableCalculated,
-                        source.SpecialtyIsRedundant,
-                        source.SpecialtyDCPCount,
-                        source.SpecialtyDCPMinFillThreshold,
-                        source.ProviderSpecialtyDCPCount,
-                        source.ProviderSpecialtyAveragePercentile,
-                        source.MeetsLowThreshold,
-                        source.ProviderRawSpecialtyScore,
-                        source.ScaledSpecialtyBoost)';
+                      values 
+                        (uuid_string(),
+                        source.providerid,
+                        source.specialtyid,
+                        source.sourcecode,
+                        source.lastupdatedate,
+                        source.specialtyrank,
+                        source.specialtyrankcalculated,
+                        source.issearchable,
+                        source.issearchablecalculated,
+                        source.specialtyisredundant,
+                        source.specialtydcpcount,
+                        source.specialtydcpminfillthreshold,
+                        source.providerspecialtydcpcount,
+                        source.providerspecialtyaveragepercentile,
+                        source.meetslowthreshold,
+                        source.providerrawspecialtyscore,
+                        source.scaledspecialtyboost)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.ProviderToSpecialty as target USING 
+merge_statement := ' merge into base.providertospecialty as target using 
                    ('||select_statement||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN MATCHED THEN DELETE
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then delete
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

@@ -1,42 +1,42 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ENTITYTOMEDICALTERM() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ENTITYTOMEDICALTERM() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
 
--- Base.EntityToMedicalTerm depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.MedicalTerm
---- Base.EntityType
---- Base.MedicalTermType
+-- base.entitytomedicalterm depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.medicalterm
+--- base.entitytype
+--- base.medicaltermtype
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING;
-    delete_statement_1 STRING;
-    merge_statement_1 STRING;
-    merge_statement_2 STRING;
-    select_statement_2 STRING;
-    merge_statement_3 STRING;
-    merge_statement_4 STRING;
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_EntityToMedicalTerm');
-    execution_start DATETIME default getdate();
+    select_statement_1 string;
+    delete_statement_1 string;
+    merge_statement_1 string;
+    merge_statement_2 string;
+    select_statement_2 string;
+    merge_statement_3 string;
+    merge_statement_4 string;
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_entitytomedicalterm');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -44,158 +44,158 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
 
-select_statement_1 := $$ WITH CTE_Swimlane AS (
-    SELECT
-        P.ProviderId,
-        JSON.ProviderCode,
-        P.ProviderId AS EntityId,
-        MT.MedicalTermId,
+select_statement_1 := $$ with CTE_Swimlane as (
+    select
+        p.providerid,
+        json.providercode,
+        p.providerid as EntityId,
+        mt.medicaltermid,
         -- ConditionCode
         -- DecileRank
         -- IsPreview
-        JSON.MEDICALPROCEDURE_LASTUPDATEDATE AS LastUpdateDate,
+        json.medicalprocedure_LASTUPDATEDATE as LastUpdateDate,
         -- MedicalTermRank
-        JSON.MEDICALPROCEDURE_NATIONALRANKINGA AS NationalRankingA,
-        JSON.MEDICALPROCEDURE_NATIONALRANKINGB AS NationalRankingB,
-        JSON.MEDICALPROCEDURE_PATIENTCOUNT AS PatientCount,
-        JSON.MEDICALPROCEDURE_PATIENTCOUNTISFEW AS PatientCountIsFew,
+        json.medicalprocedure_NATIONALRANKINGA as NationalRankingA,
+        json.medicalprocedure_NATIONALRANKINGB as NationalRankingB,
+        json.medicalprocedure_PATIENTCOUNT as PatientCount,
+        json.medicalprocedure_PATIENTCOUNTISFEW as PatientCountIsFew,
         -- Searchable
-        JSON.MEDICALPROCEDURE_SOURCECODE AS SourceCode
+        json.medicalprocedure_SOURCECODE as SourceCode
         -- SourceSearch
-    FROM
-        RAW.VW_PROVIDER_PROFILE AS JSON
-        LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-        LEFT JOIN Base.EntityToMedicalTerm AS ETMT ON ETMT.EntityId = P.ProviderId
-        INNER JOIN Base.MedicalTerm AS MT ON MT.MedicalTermID = ETMT.MedicalTermID
-        INNER JOIN Base.MedicalTermType AS MTT ON MTT.MedicalTermTypeId = MT.MedicalTermTypeId AND MTT.MedicalTermTypeCode = 'Condition'
-    WHERE 
-        PROVIDER_PROFILE IS NOT NULL 
-    QUALIFY row_number() over(partition by ProviderId order by CREATE_DATE desc) = 1
+    from
+        raw.vw_PROVIDER_PROFILE as JSON
+        left join base.provider as P on p.providercode = json.providercode
+        left join base.entitytomedicalterm as ETMT on etmt.entityid = p.providerid
+        inner join base.medicalterm as MT on mt.medicaltermid = etmt.medicaltermid
+        inner join base.medicaltermtype as MTT on mtt.medicaltermtypeid = mt.medicaltermtypeid and mtt.medicaltermtypecode = 'Condition'
+    where 
+        PROVIDER_PROFILE is not null 
+    qualify row_number() over(partition by ProviderId order by CREATE_DATE desc) = 1
 ),
 
-CTE_DeleteAll AS (
-    SELECT DISTINCT
+CTE_DeleteAll as (
+    select distinct
         EntityToMedicalTermId
-    FROM Raw.VW_PROVIDER_PROFILE AS Process 
-        INNER JOIN Base.Provider AS P ON P.ProviderCode = Process.ProviderCode
-        INNER JOIN Base.EntityToMedicalTerm AS ETMT ON ETMT.EntityId = P.ProviderId
-        INNER JOIN Base.MedicalTerm AS MT ON MT.MedicalTermID = ETMT.MedicalTermID AND MT.MedicalTermTypeId = (SELECT MedicalTermTypeId FROM Base.MedicalTermType WHERE MedicalTermTypeCode = 'Condition' )
+    from raw.vw_PROVIDER_PROFILE as Process 
+        inner join base.provider as P on p.providercode = process.providercode
+        inner join base.entitytomedicalterm as ETMT on etmt.entityid = p.providerid
+        inner join base.medicalterm as MT on mt.medicaltermid = etmt.medicaltermid and mt.medicaltermtypeid = (select MedicalTermTypeId from base.medicaltermtype where MedicalTermTypeCode = 'Condition' )
 ),
 
-CTE_DeleteSome AS (
-    SELECT DISTINCT
+CTE_DeleteSome as (
+    select distinct
         EntityToMedicalTermId
-    FROM Raw.VW_PROVIDER_PROFILE AS Process
-        INNER JOIN Base.Provider AS P ON P.ProviderCode = Process.ProviderCode
-        INNER JOIN Base.EntityToMedicalTerm AS ETMT ON ETMT.EntityId = P.ProviderId
-        INNER JOIN Base.MedicalTerm AS MT ON MT.MedicalTermID = ETMT.MedicalTermID AND MT.MedicalTermTypeId = (SELECT MedicalTermTypeId FROM Base.MedicalTermType WHERE MedicalTermTypeCode = 'Condition' )
-        LEFT JOIN CTE_swimlane AS S ON S.ProviderID = ETMT.EntityId AND S.MedicalTermID = MT.MedicalTermID
-    WHERE S.ProviderId IS NULL
+    from raw.vw_PROVIDER_PROFILE as Process
+        inner join base.provider as P on p.providercode = process.providercode
+        inner join base.entitytomedicalterm as ETMT on etmt.entityid = p.providerid
+        inner join base.medicalterm as MT on mt.medicaltermid = etmt.medicaltermid and mt.medicaltermtypeid = (select MedicalTermTypeId from base.medicaltermtype where MedicalTermTypeCode = 'Condition' )
+        left join CTE_swimlane as S on s.providerid = etmt.entityid and s.medicaltermid = mt.medicaltermid
+    where s.providerid is null
 ),
-CTE_Tmp2 AS (
-    SELECT
-        s.EntityID, 
-        s.MedicalTermID, 
-        (select EntityTypeID from Base.EntityType where EntityTypeCode = 'PROV') as EntityTypeID,  
-	    s.SourceCode, 
-        s.LastUpdateDate, 
-        s.PatientCount, 
-        s.PatientCountIsFew, 
-        s.NationalRankingA, 
-        s.NationalRankingB
-    FROM CTE_Swimlane AS S 
-    WHERE NOT EXISTS (
+CTE_Tmp2 as (
+    select
+        s.entityid, 
+        s.medicaltermid, 
+        (select EntityTypeID from base.entitytype where EntityTypeCode = 'PROV') as EntityTypeID,  
+	    s.sourcecode, 
+        s.lastupdatedate, 
+        s.patientcount, 
+        s.patientcountisfew, 
+        s.nationalrankinga, 
+        s.nationalrankingb
+    from CTE_Swimlane as S 
+    where not exists (
         select 1 
-        from Base.EntityToMedicalTerm as ETMT 
-            left join CTE_Swimlane AS S ON S.EntityId = ETMT.EntityId
-        where ETMT.EntityID=S.ProviderID and
-              ETMT.MedicalTermID=s.MedicalTermID) ) $$;
+        from base.entitytomedicalterm as ETMT 
+            left join CTE_Swimlane as S on s.entityid = etmt.entityid
+        where etmt.entityid=s.providerid and
+              etmt.medicaltermid=s.medicaltermid) ) $$;
 
 
-select_statement_2 := $$ WITH CTE_Swimlane AS (
-    SELECT
-        P.ProviderId,
-        JSON.ProviderCode,
-        P.ProviderId AS EntityId,
-        MT.MedicalTermId,
-        JSON.MEDICALPROCEDURE_MEDICALPROCEDURECODE AS ProcedureCode,
+select_statement_2 := $$ with CTE_Swimlane as (
+    select
+        p.providerid,
+        json.providercode,
+        p.providerid as EntityId,
+        mt.medicaltermid,
+        json.medicalprocedure_MEDICALPROCEDURECODE as ProcedureCode,
         -- DecileRank
         -- IsPreview
-        IFNULL(JSON.MEDICALPROCEDURE_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate,
+        ifnull(json.medicalprocedure_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
         -- MedicalTermRank
-        JSON.MEDICALPROCEDURE_NATIONALRANKINGA AS NationalRankingA,
-        JSON.MEDICALPROCEDURE_NATIONALRANKINGB AS NationalRankingB,
-        JSON.MEDICALPROCEDURE_PATIENTCOUNT AS PatientCount,
-        JSON.MEDICALPROCEDURE_PATIENTCOUNTISFEW AS PatientCountIsFew,
+        json.medicalprocedure_NATIONALRANKINGA as NationalRankingA,
+        json.medicalprocedure_NATIONALRANKINGB as NationalRankingB,
+        json.medicalprocedure_PATIENTCOUNT as PatientCount,
+        json.medicalprocedure_PATIENTCOUNTISFEW as PatientCountIsFew,
         -- Searchable
-        IFNULL(JSON.MEDICALPROCEDURE_SOURCECODE, 'Profisee') AS SourceCode
+        ifnull(json.medicalprocedure_SOURCECODE, 'Profisee') as SourceCode
         -- SourceSearch
-    FROM
-        RAW.VW_PROVIDER_PROFILE AS JSON
-        LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-        LEFT JOIN Base.EntityToMedicalTerm AS ETMT ON ETMT.EntityId = P.ProviderId
-        INNER JOIN Base.MedicalTerm AS MT ON MT.MedicalTermID = ETMT.MedicalTermID
-        INNER JOIN Base.MedicalTermType AS MTT ON MTT.MedicalTermTypeId = MT.MedicalTermTypeId AND MTT.MedicalTermTypeCode = 'Procedure'
-    WHERE 
-        PROVIDER_PROFILE IS NOT NULL 
-        AND JSON.MEDICALPROCEDURE_MEDICALPROCEDURECODE IS NOT NULL
-    QUALIFY row_number() over(partition by ProviderId, JSON.MEDICALPROCEDURE_MEDICALPROCEDURECODE order by CREATE_DATE desc) = 1
+    from
+        raw.vw_PROVIDER_PROFILE as JSON
+        left join base.provider as P on p.providercode = json.providercode
+        left join base.entitytomedicalterm as ETMT on etmt.entityid = p.providerid
+        inner join base.medicalterm as MT on mt.medicaltermid = etmt.medicaltermid
+        inner join base.medicaltermtype as MTT on mtt.medicaltermtypeid = mt.medicaltermtypeid and mtt.medicaltermtypecode = 'Procedure'
+    where 
+        PROVIDER_PROFILE is not null 
+        and json.medicalprocedure_MEDICALPROCEDURECODE is not null
+    qualify row_number() over(partition by ProviderId, json.medicalprocedure_MEDICALPROCEDURECODE order by CREATE_DATE desc) = 1
 ),
-CTE_Tmp2 AS (
-    SELECT
-        s.EntityID, 
-        s.MedicalTermID, 
-        (select EntityTypeID from Base.EntityType where EntityTypeCode = 'PROV') as EntityTypeID,  
-	    s.SourceCode, 
-        s.LastUpdateDate, 
-        s.PatientCount, 
-        s.PatientCountIsFew, 
-        s.NationalRankingA, 
-        s.NationalRankingB
-    FROM CTE_Swimlane AS S 
-    WHERE NOT EXISTS (
+CTE_Tmp2 as (
+    select
+        s.entityid, 
+        s.medicaltermid, 
+        (select EntityTypeID from base.entitytype where EntityTypeCode = 'PROV') as EntityTypeID,  
+	    s.sourcecode, 
+        s.lastupdatedate, 
+        s.patientcount, 
+        s.patientcountisfew, 
+        s.nationalrankinga, 
+        s.nationalrankingb
+    from CTE_Swimlane as S 
+    where not exists (
         select 1 
-        from Base.EntityToMedicalTerm as ETMT 
-            left join CTE_Swimlane AS S ON S.EntityId = ETMT.EntityId
-        where ETMT.EntityID=S.ProviderID and
-              ETMT.MedicalTermID=s.MedicalTermID)) $$;
+        from base.entitytomedicalterm as ETMT 
+            left join CTE_Swimlane as S on s.entityid = etmt.entityid
+        where etmt.entityid=s.providerid and
+              etmt.medicaltermid=s.medicaltermid)) $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-delete_statement_1 := 'DELETE FROM Base.EntityToMedicalTerm 
-            WHERE EntityToMedicalTermID IN 
-                (' || select_statement_1 || 'SELECT EntityToMedicalTermID FROM CTE_DeleteAll)
-            OR EntityToMedicalTermID IN 
-                (' || select_statement_1 || 'SELECT EntityToMedicalTermID FROM CTE_DeleteSome)';
+delete_statement_1 := 'delete from base.entitytomedicalterm 
+            where EntityToMedicalTermID IN 
+                (' || select_statement_1 || 'select EntityToMedicalTermID from CTE_DeleteAll)
+            or EntityToMedicalTermID IN 
+                (' || select_statement_1 || 'select EntityToMedicalTermID from CTE_DeleteSome)';
 
 
-merge_statement_1 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
-                   ('||select_statement_1 ||' SELECT * FROM CTE_swimlane ) as source 
-                   ON target.EntityID = source.EntityId AND target.MedicalTermID = source.MedicalTermID
-                   WHEN MATCHED AND 
-                                    IFNULL(target.PatientCountIsFew,0) <> IFNULL(source.PatientCountIsFew,0) 
-                                    OR IFNULL(target.NationalRankingA,0) <> IFNULL(source.NationalRankingA,0) 
-                                    OR IFNULL(target.PatientCount,0) <> IFNULL(source.PatientCount,0) 
-                                    OR IFNULL(target.NationalRankingB,0) <> IFNULL(source.NationalRankingB,0)
-                   THEN 
-                    UPDATE 
+merge_statement_1 := ' merge into base.entitytomedicalterm as target using 
+                   ('||select_statement_1 ||' select * from CTE_swimlane ) as source 
+                   on target.entityid = source.entityid and target.medicaltermid = source.medicaltermid
+                   WHEN MATCHED and 
+                                    ifnull(target.patientcountisfew,0) <> ifnull(source.patientcountisfew,0) 
+                                    or ifnull(target.nationalrankinga,0) <> ifnull(source.nationalrankinga,0) 
+                                    or ifnull(target.patientcount,0) <> ifnull(source.patientcount,0) 
+                                    or ifnull(target.nationalrankingb,0) <> ifnull(source.nationalrankingb,0)
+                   then 
+                    update 
                             SET 
-                                target.PatientCountIsFew = source.PatientCountIsFew, 
-                                target.LastUpdateDate = source.LastUpdateDate, 
-                                target.NationalRankingA = source.NationalRankingA, 
-                                target.PatientCount = source.PatientCount, 
-                                target.NationalRankingB = source.NationalRankingB, 
-                                target.SourceCode = source.SourceCode';
+                                target.patientcountisfew = source.patientcountisfew, 
+                                target.lastupdatedate = source.lastupdatedate, 
+                                target.nationalrankinga = source.nationalrankinga, 
+                                target.patientcount = source.patientcount, 
+                                target.nationalrankingb = source.nationalrankingb, 
+                                target.sourcecode = source.sourcecode';
 
-merge_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
-                   ('||select_statement_1 ||' SELECT * FROM CTE_Tmp2) as source 
-                   ON target.EntityID = source.EntityID AND target.MedicalTermID = source.MedicalTermID
-                   WHEN NOT MATCHED THEN 
-                    INSERT (EntityID, 
+merge_statement_2 := ' merge into base.entitytomedicalterm as target using 
+                   ('||select_statement_1 ||' select * from CTE_Tmp2) as source 
+                   on target.entityid = source.entityid and target.medicaltermid = source.medicaltermid
+                   when not matched then 
+                    insert (EntityID, 
                             MedicalTermID, 
                             EntityTypeID, 
                             SourceCode, 
@@ -204,39 +204,39 @@ merge_statement_2 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
                             PatientCountIsFew,
                             NationalRankingA, 
                             NationalRankingB)
-                    VALUES (source.EntityID, 
-                            source.MedicalTermID, 
-                            source.EntityTypeID,  
-                            source.SourceCode,
-                            source.LastUpdateDate, 
-                            source.PatientCount,
-                            source.PatientCountIsFew,  
-                            source.NationalRankingA, 
-                            source.NationalRankingB)';
+                    values (source.entityid, 
+                            source.medicaltermid, 
+                            source.entitytypeid,  
+                            source.sourcecode,
+                            source.lastupdatedate, 
+                            source.patientcount,
+                            source.patientcountisfew,  
+                            source.nationalrankinga, 
+                            source.nationalrankingb)';
                                 
 
 
-merge_statement_3 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
-                   ('||select_statement_2 ||' SELECT * FROM CTE_swimlane )   as source 
-                   ON target.EntityID = source.EntityId AND target.MedicalTermID = source.MedicalTermID
-                   WHEN MATCHED AND 
-                                    IFNULL(target.PatientCountIsFew,0) <> IFNULL(source.PatientCountIsFew,0) 
-    OR IFNULL(target.NationalRankingA,0) <> IFNULL(source.NationalRankingA,0)
-    OR IFNULL(target.PatientCount,0) <> IFNULL(source.PatientCount,0)
-    OR IFNULL(target.NationalRankingB,0) <> IFNULL(source.NationalRankingB,0)
-                   THEN UPDATE SET 
-                            target.PatientCountIsFew = source.PatientCountIsFew,
-                            target.LastUpdateDate = source.LastUpdateDate,
-                            target.NationalRankingA = source.NationalRankingA,
-                            target.PatientCount = source.PatientCount,
-                            target.NationalRankingB = source.NationalRankingB,
-                            target.SourceCode = source.SourceCode';
+merge_statement_3 := ' merge into base.entitytomedicalterm as target using 
+                   ('||select_statement_2 ||' select * from CTE_swimlane )   as source 
+                   on target.entityid = source.entityid and target.medicaltermid = source.medicaltermid
+                   WHEN MATCHED and 
+                                    ifnull(target.patientcountisfew,0) <> ifnull(source.patientcountisfew,0) 
+    or ifnull(target.nationalrankinga,0) <> ifnull(source.nationalrankinga,0)
+    or ifnull(target.patientcount,0) <> ifnull(source.patientcount,0)
+    or ifnull(target.nationalrankingb,0) <> ifnull(source.nationalrankingb,0)
+                   then update SET 
+                            target.patientcountisfew = source.patientcountisfew,
+                            target.lastupdatedate = source.lastupdatedate,
+                            target.nationalrankinga = source.nationalrankinga,
+                            target.patientcount = source.patientcount,
+                            target.nationalrankingb = source.nationalrankingb,
+                            target.sourcecode = source.sourcecode';
 
-merge_statement_4 := ' MERGE INTO Base.EntityToMedicalTerm as target USING 
-                   ('||select_statement_2 ||' SELECT * FROM CTE_Tmp2) as source 
-                   ON target.EntityID = source.EntityID AND target.MedicalTermID = source.MedicalTermID
-                   WHEN NOT MATCHED THEN 
-                    INSERT (EntityID, 
+merge_statement_4 := ' merge into base.entitytomedicalterm as target using 
+                   ('||select_statement_2 ||' select * from CTE_Tmp2) as source 
+                   on target.entityid = source.entityid and target.medicaltermid = source.medicaltermid
+                   when not matched then 
+                    insert (EntityID, 
                             MedicalTermID, 
                             EntityTypeID,  
                             SourceCode,
@@ -245,43 +245,43 @@ merge_statement_4 := ' MERGE INTO Base.EntityToMedicalTerm as target USING
                             PatientCountIsFew,  
                             NationalRankingA, 
                             NationalRankingB)
-                    VALUES (source.EntityID, 
-                            source.MedicalTermID, 
-                            source.EntityTypeID,  
-                            source.SourceCode,
-                            source.LastUpdateDate, 
-                            source.PatientCount,
-                            source.PatientCountIsFew,  
-                            source.NationalRankingA, 
-                            source.NationalRankingB)';
+                    values (source.entityid, 
+                            source.medicaltermid, 
+                            source.entitytypeid,  
+                            source.sourcecode,
+                            source.lastupdatedate, 
+                            source.patientcount,
+                            source.patientcountisfew,  
+                            source.nationalrankinga, 
+                            source.nationalrankingb)';
                             
                  
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE delete_statement_1 ;
-EXECUTE IMMEDIATE merge_statement_1 ;
-EXECUTE IMMEDIATE merge_statement_2 ;
-EXECUTE IMMEDIATE merge_statement_3 ;
-EXECUTE IMMEDIATE merge_statement_4 ;
+execute immediate delete_statement_1 ;
+execute immediate merge_statement_1 ;
+execute immediate merge_statement_2 ;
+execute immediate merge_statement_3 ;
+execute immediate merge_statement_4 ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

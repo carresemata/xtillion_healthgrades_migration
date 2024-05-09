@@ -1,39 +1,39 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ADDRESS() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ADDRESS() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.Address depends on: 
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
---- Base.Facility
---- Base.CityStatePostalCode
+-- base.address depends on: 
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- base.facility
+--- base.citystatepostalcode
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING; -- CTE and Select statement for the Merge
-    insert_statement_1 STRING; -- Insert statement for the Merge
-    merge_statement_1 STRING; -- Merge statement to final table
-    select_statement_2 STRING; -- CTE and Select statement for the Merge
-    insert_statement_2 STRING; -- Insert statement for the Merge
-    merge_statement_2 STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Address');
-    execution_start DATETIME default getdate();
+    select_statement_1 string; -- cte and select statement for the merge
+    insert_statement_1 string; -- insert statement for the merge
+    merge_statement_1 string; -- merge statement to final table
+    select_statement_2 string; -- cte and select statement for the merge
+    insert_statement_2 string; -- insert statement for the merge
+    merge_statement_2 string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_address');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -41,27 +41,27 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement_1 := $$ SELECT DISTINCT
-                                JSON.Address_AddressLine1 AS AddressLine1,
-                                JSON.Address_Latitude AS Latitude,
-                                JSON.Address_Longitude AS Longitude,
-                                CSPC.CityStatePostalCodeID 
+--- select Statement
+select_statement_1 := $$ select distinct
+                                json.address_AddressLine1 as AddressLine1,
+                                json.address_Latitude as Latitude,
+                                json.address_Longitude as Longitude,
+                                cspc.citystatepostalcodeid 
                                 
-                            FROM
-                                Raw.VW_FACILITY_PROFILE AS JSON 
-                                JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode
-                                JOIN Base.CityStatePostalCode AS CSPC ON JSON.Address_City = CSPC.City AND JSON.Address_State = CSPC.State AND JSON.Address_PostalCode = CSPC.PostalCode 
-                            WHERE
-                                JSON.FACILITY_PROFILE IS NOT NULL AND 
-                                NULLIF(Address_City,'') IS NOT NULL 
-                                AND NULLIF(Address_State,'') IS NOT NULL 
-                                AND NULLIF(Address_PostalCode,'') IS NOT NULL $$;
+                            from
+                                raw.vw_FACILITY_PROFILE as JSON 
+                                join base.facility as Facility on json.facilitycode = facility.facilitycode
+                                join base.citystatepostalcode as CSPC on json.address_City = cspc.city and json.address_State = cspc.state and json.address_PostalCode = cspc.postalcode 
+                            where
+                                json.facility_PROFILE is not null and 
+                                nullif(Address_City,'') is not null 
+                                and nullif(Address_State,'') is not null 
+                                and nullif(Address_PostalCode,'') is not null $$;
 
 
 
---- Insert Statement
-insert_statement_1 := $$ INSERT (
+--- insert Statement
+insert_statement_1 := $$ insert (
                                 AddressId, 
                                 NationId, 
                                 AddressLine1, 
@@ -70,39 +70,39 @@ insert_statement_1 := $$ INSERT (
                                 TimeZone, 
                                 CityStatePostalCodeId
                         )
-                        VALUES (
-                                UUID_STRING(),
+                        values (
+                                uuid_string(),
                                 '00415355-0000-0000-0000-000000000000',
-                                source.AddressLine1, 
-                                source.Latitude, 
-                                source.Longitude, 
-                                NULL, 
-                                source.CityStatePostalCodeId
+                                source.addressline1, 
+                                source.latitude, 
+                                source.longitude, 
+                                null, 
+                                source.citystatepostalcodeid
                         )$$;
 
-select_statement_2 := $$ SELECT DISTINCT
-                                    CSPC.CityStatePostalCodeID, 
-                                    CSPC.NationID, 
-                                    JSON.Address_AddressLine1 AS AddressLine1, 
-                                    JSON.Address_AddressLine2 AS AddressLine2, 
-                                    JSON.Address_Latitude AS Latitude, 
-                                    JSON.Address_Longitude AS Longitude, 
-                                    JSON.Address_TimeZone AS TimeZone, 
-                                    JSON.Address_Suite AS Suite
-                            FROM
-                                Raw.VW_OFFICE_PROFILE AS JSON 
-                                JOIN Base.CityStatePostalCode AS CSPC ON JSON.Address_PostalCode = CSPC.PostalCode AND JSON.Address_City = CSPC.City AND JSON.Address_State = CSPC.State
+select_statement_2 := $$ select distinct
+                                    cspc.citystatepostalcodeid, 
+                                    cspc.nationid, 
+                                    json.address_AddressLine1 as AddressLine1, 
+                                    json.address_AddressLine2 as AddressLine2, 
+                                    json.address_Latitude as Latitude, 
+                                    json.address_Longitude as Longitude, 
+                                    json.address_TimeZone as TimeZone, 
+                                    json.address_Suite as Suite
+                            from
+                                raw.vw_OFFICE_PROFILE as JSON 
+                                join base.citystatepostalcode as CSPC on json.address_PostalCode = cspc.postalcode and json.address_City = cspc.city and json.address_State = cspc.state
                                 
-                            WHERE
-                                JSON.OFFICE_PROFILE IS NOT NULL AND 
-                                    NULLIF(Address_City,'') IS NOT NULL 
-                                    AND NULLIF(Address_State,'') IS NOT NULL 
-                                    AND NULLIF(Address_PostalCode,'') IS NOT NULL
-                                    AND LENGTH(TRIM(UPPER(Address_AddressLine1)) || IFNULL(TRIM(UPPER(Address_AddressLine2)),'') || IFNULL(TRIM(UPPER(Address_Suite)),'')) > 0
-                                    AND CSPC.CityStatePostalCodeID IS NOT NULL
-                            QUALIFY ROW_NUMBER() OVER(PARTITION BY JSON.Address_AddressLine1, JSON.Address_AddressLine2, JSON.Address_Suite, CSPC.City, JSON.Address_State, JSON.Address_PostalCode ORDER BY CREATE_DATE DESC) = 1  $$;
+                            where
+                                json.office_PROFILE is not null and 
+                                    nullif(Address_City,'') is not null 
+                                    and nullif(Address_State,'') is not null 
+                                    and nullif(Address_PostalCode,'') is not null
+                                    and LENGTH(trim(upper(Address_AddressLine1)) || ifnull(trim(upper(Address_AddressLine2)),'') || ifnull(trim(upper(Address_Suite)),'')) > 0
+                                    and cspc.citystatepostalcodeid is not null
+                            qualify row_number() over(partition by json.address_AddressLine1, json.address_AddressLine2, json.address_Suite, cspc.city, json.address_State, json.address_PostalCode order by CREATE_DATE desc) = 1  $$;
 
-insert_statement_2 := $$INSERT (
+insert_statement_2 := $$insert (
                            AddressID, 
                            CityStatePostalCodeID, 
                            NationID, 
@@ -114,61 +114,61 @@ insert_statement_2 := $$INSERT (
                            Suite, 
                            LastUpdateDate 
                         )
-                        VALUES 
-                        (   UUID_STRING(),
-                            source.CityStatePostalCodeID, 
-                            source.NationID, 
-                            source.AddressLine1, 
-                            source.AddressLine2, 
-                            source.Latitude, 
-                            source.Longitude, 
-                            source.TimeZone, 
-                            source.Suite, 
-                            CURRENT_TIMESTAMP()
+                        values 
+                        (   uuid_string(),
+                            source.citystatepostalcodeid, 
+                            source.nationid, 
+                            source.addressline1, 
+                            source.addressline2, 
+                            source.latitude, 
+                            source.longitude, 
+                            source.timezone, 
+                            source.suite, 
+                            current_timestamp()
                            
                         );$$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement_1 := ' MERGE INTO Base.Address as target USING 
+merge_statement_1 := ' merge into base.address as target using 
                    ('||select_statement_1||') as source 
-                   ON source.AddressLine1 = target.AddressLine1 AND source.CityStatePostalCodeId = target.CityStatePostalCodeId 
-                   WHEN NOT MATCHED THEN '||insert_statement_1;
+                   on source.addressline1 = target.addressline1 and source.citystatepostalcodeid = target.citystatepostalcodeid 
+                   when not matched then '||insert_statement_1;
 
-merge_statement_2 := $$ MERGE INTO Base.Address as target USING 
+merge_statement_2 := $$ merge into base.address as target using 
                    ($$||select_statement_2||$$) as source 
-                   ON IFF(TRIM(UPPER(source.AddressLine1)) IS NULL, '', TRIM(UPPER(source.AddressLine1))) = IFF(TRIM(UPPER(target.AddressLine1)) IS NULL, '', TRIM(UPPER(target.AddressLine1)))
-                   AND IFF(TRIM(UPPER(source.AddressLine2)) IS NULL, '', TRIM(UPPER(source.AddressLine2))) = IFF(TRIM(UPPER(target.AddressLine2)) IS NULL, '', TRIM(UPPER(target.AddressLine2)))
-                   AND IFF(TRIM(UPPER(source.Suite)) IS NULL, '', TRIM(UPPER(source.Suite))) = IFF(TRIM(UPPER(target.Suite)) IS NULL, '', TRIM(UPPER(target.Suite)))
-                   AND source.CityStatePostalCodeID = target.CityStatePostalCodeID
-                   WHEN NOT MATCHED THEN $$||insert_statement_2;
+                   on iff(trim(upper(source.addressline1)) is null, '', trim(upper(source.addressline1))) = iff(trim(upper(target.addressline1)) is null, '', trim(upper(target.addressline1)))
+                   and iff(trim(upper(source.addressline2)) is null, '', trim(upper(source.addressline2))) = iff(trim(upper(target.addressline2)) is null, '', trim(upper(target.addressline2)))
+                   and iff(trim(upper(source.suite)) is null, '', trim(upper(source.suite))) = iff(trim(upper(target.suite)) is null, '', trim(upper(target.suite)))
+                   and source.citystatepostalcodeid = target.citystatepostalcodeid
+                   when not matched then $$||insert_statement_2;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement_2 ;
-EXECUTE IMMEDIATE merge_statement_1 ;
+execute immediate merge_statement_2 ;
+execute immediate merge_statement_1 ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

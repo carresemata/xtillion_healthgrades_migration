@@ -1,77 +1,77 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity() -- Parameters
     RETURNS STRING
     LANGUAGE SQL EXECUTE
-    AS CALLER
-    AS DECLARE 
+    as CALLER
+    as declare 
     ---------------------------------------------------------
-    --------------- 0. Table dependencies -------------------
+    --------------- 0. table dependencies -------------------
     ---------------------------------------------------------
     
-    --- Base.ClientProductToEntity depends on:
-    --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (Base.vw_swimlane_base_client)
-    --- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
-    --- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
-    --- MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING (RAW.VW_PRACTICE_PROFILE)
-    --- BASE.ENTITYTYPE
-    --- BASE.CLIENTTOPRODUCT
-    --- BASE.FACILITY
-    --- BASE.OFFICE
-    --- BASE.PROVIDER
-    --- BASE.RELATIONSHIPTYPE
-    --- BASE.PRODUCT
-    --- BASE.PRACTICE
+    --- base.clientproducttoentity depends on:
+    --- mdm_team.mst.customer_product_profile_processing (base.vw_swimlane_base_client)
+    --- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+    --- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+    --- mdm_team.mst.practice_profile_processing (raw.vw_practice_profile)
+    --- base.entitytype
+    --- base.clienttoproduct
+    --- base.facility
+    --- base.office
+    --- base.provider
+    --- base.relationshiptype
+    --- base.product
+    --- base.practice
 
     ---------------------------------------------------------
-    --------------- 1. Declaring variables ------------------
+    --------------- 1. declaring variables ------------------
     ---------------------------------------------------------
-    select_statement_1 STRING;
-    select_statement_2 STRING;
-    select_statement_3 STRING;
-    select_statement_4 STRING;
-    select_statement_5 STRING;
-    update_statement STRING;
-    insert_statement STRING;
-    merge_statement_1 STRING;
-    merge_statement_2 STRING;
-    merge_statement_3 STRING;
-    merge_statement_4 STRING;
-    merge_statement_5 STRING;
-    prefix STRING;
-    suffix STRING;
-    status STRING;
-    procedure_name varchar(50) default('sp_load_ClientProductToEntity');
-    execution_start DATETIME default getdate();
+    select_statement_1 string;
+    select_statement_2 string;
+    select_statement_3 string;
+    select_statement_4 string;
+    select_statement_5 string;
+    update_statement string;
+    insert_statement string;
+    merge_statement_1 string;
+    merge_statement_2 string;
+    merge_statement_3 string;
+    merge_statement_4 string;
+    merge_statement_5 string;
+    prefix string;
+    suffix string;
+    status string;
+    procedure_name varchar(50) default('sp_load_clientproducttoentity');
+    execution_start datetime default getdate();
 
     ---------------------------------------------------------
-    --------------- 2.Conditionals if any -------------------
+    --------------- 2.conditionals if any -------------------
     ---------------------------------------------------------
-    BEGIN 
+    begin 
     ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------
     ---------------------------------------------------------
-    --- Select Statement
-    -- If no conditionals
+    --- select Statement
+    -- if no conditionals
     --------------------------------–------spuMergeCustomerProduct--------------------------------–------
     select_statement_1 := $$  
-    SELECT
+    select
         distinct 
-        cp.ClientToProductID,
-        b.EntityTypeID,
-        cp.ClientToProductID as EntityID,
-        ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
-    FROM
+        cp.clienttoproductid,
+        b.entitytypeid,
+        cp.clienttoproductid as EntityID,
+        ifnull(s.lastupdatedate, sysdate()) as LastUpdateDate
+    from
         base.vw_swimlane_base_client s
-        join base.clienttoproduct as cp on s.CUSTOMERPRODUCTCODE = cp.clienttoproductcode
-        JOIN Base.EntityType b on b.EntityTypeCode = 'CLPROD'
+        join base.clienttoproduct as cp on s.customerproductcode = cp.clienttoproductcode
+        join base.entitytype b on b.entitytypecode = 'CLPROD'
     where
         (
-            cp.ClientToProductID is not null
-            and s.CLIENTCODE is not null
-            and s.PRODUCTCODE is not null
+            cp.clienttoproductid is not null
+            and s.clientcode is not null
+            and s.productcode is not null
         ) $$;
     --------------------------------–------spuMergeFacilityCustomerProduct--------------------------------–------
     select_statement_2 := $$ with cte_swimlane as (
-            SELECT
+            select
                 facilityid as FacilityID,
                 vfp.facilitycode as FacilityCode,
                 cp.clienttoproductid,
@@ -87,38 +87,38 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity()
                 ) as RowRank,
                 'Reltio' as SourceCode,
                 sysdate() as LastUpdateDate
-            FROM
+            from
                 raw.vw_facility_profile as vfp
-                JOIN base.facility as f on vfp.facilitycode = f.facilitycode
-                JOIN base.clienttoproduct as cp on cp.clienttoproductcode = vfp.customerproduct_customerproductcode
-            WHERE
+                join base.facility as f on vfp.facilitycode = f.facilitycode
+                join base.clienttoproduct as cp on cp.clienttoproductcode = vfp.customerproduct_customerproductcode
+            where
                 customerproduct_customerproductcode is not null
         )
-        SELECT
-            distinct s.ClientToProductID,
-            b.EntityTypeID,
-            s.FacilityID as EntityID,
-            s.SourceCode,
-            s.LastUpdateDate
-        FROM
+        select
+            distinct s.clienttoproductid,
+            b.entitytypeid,
+            s.facilityid as EntityID,
+            s.sourcecode,
+            s.lastupdatedate
+        from
             cte_swimlane s
-            INNER JOIN Base.EntityType b ON b.EntityTypeCode = 'FAC'
-            INNER JOIN Base.ClientToProduct cp ON s.ClientToProductID = cp.ClientToProductID
-            INNER JOIN Base.Facility o ON s.FacilityID = o.FacilityID
-            LEFT JOIN Base.ClientProductToEntity T ON T.ClientToProductID = s.ClientToProductID
-            AND T.EntityID = o.FacilityID
-            AND T.entitytypeid = b.entitytypeid
-        WHERE
-            s.RowRank = 1
-            AND (
-                s.ClientToProductID is not null
-                and s.FacilityID is not null
+            inner join base.entitytype b on b.entitytypecode = 'FAC'
+            inner join base.clienttoproduct cp on s.clienttoproductid = cp.clienttoproductid
+            inner join base.facility o on s.facilityid = o.facilityid
+            left join base.clientproducttoentity T on t.clienttoproductid = s.clienttoproductid
+            and t.entityid = o.facilityid
+            and t.entitytypeid = b.entitytypeid
+        where
+            s.rowrank = 1
+            and (
+                s.clienttoproductid is not null
+                and s.facilityid is not null
             )
-            AND T.ClientProductToEntityId IS NULL
-            AND S.ClientToProductCode IS NOT NULL $$;
+            and t.clientproducttoentityid is null
+            and s.clienttoproductcode is not null $$;
     --------------------------------–------spuMergeProviderCustomerProduct--------------------------------–------
             select_statement_3 := $$        with cte_swimlane as (
-            SELECT
+            select
                 p.providerid,
                 vw.providercode,
                 left(
@@ -136,19 +136,19 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity()
                 vw.facility_lastupdatedate as LastUpdateDate,
                 vw.create_date,
                 vw.facility_sourcecode as SourceCode,
-                provider_profile:FACILITY [0] :CUSTOMER_PRODUCT:IS_EMPLOYED AS IsEmployed,
+                provider_profile:FACILITY [0] :CUSTOMER_PRODUCT:IS_EMPLOYED as IsEmployed,
                 row_number() over(
-                    partition by p.ProviderID,
+                    partition by p.providerid,
                     vw.customerproduct_customerproductcode
                     order by
                         vw.create_date desc,
                         case
-                            when IFNULL(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1') then 1
+                            when ifnull(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1') then 1
                             else 0
                         end desc
                 ) as RowRank,
                 row_number() over(
-                    partition by p.ProviderID,
+                    partition by p.providerid,
                     REPLACE(
                         substring(
                             vw.customerproduct_customerproductcode,(
@@ -162,91 +162,91 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity()
                     order by
                         vw.create_date desc,
                         case
-                            when iFnull(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1') then 1
+                            when ifnull(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1') then 1
                             else 0
                         end desc
                 ) as RowRank1
-            FROM
+            from
                 raw.vw_provider_profile as vw
-                JOIN base.provider as p on vw.providercode = p.providercode
-                JOIN base.ClientToProduct as cp on vw.customerproduct_customerproductcode = cp.clienttoproductcode
+                join base.provider as p on vw.providercode = p.providercode
+                join base.clienttoproduct as cp on vw.customerproduct_customerproductcode = cp.clienttoproductcode
             where
                 vw.customerproduct_customerproductcode is not null
         )
-        SELECT
+        select
             distinct 
-            s.ClientToProductID,
-            b.EntityTypeID,
-            s.ProviderID as EntityID,
+            s.clienttoproductid,
+            b.entitytypeid,
+            s.providerid as EntityID,
             IsEmployed as IsEntityEmployed,
-            ifnull(s.SourceCode, 'Profisee') as SourceCode,
-            ifnull(s.LastUpdateDate, sysdate()) as LastUpdateDate
-        FROM
+            ifnull(s.sourcecode, 'Profisee') as SourceCode,
+            ifnull(s.lastupdatedate, sysdate()) as LastUpdateDate
+        from
             cte_swimlane as s
-            JOIN Base.EntityType b on b.EntityTypeCode = 'PROV'
-            JOIN base.ClientToProduct as cp on s.ClientTOProductID = cp.ClientToProductID
-            JOIN base.Provider as p on s.ProviderID = p.ProviderID
+            join base.entitytype b on b.entitytypecode = 'PROV'
+            join base.clienttoproduct as cp on s.clienttoproductid = cp.clienttoproductid
+            join base.provider as p on s.providerid = p.providerid
         where
-            s.RowRank = 1
-            and (s.ClientToProductID is not null)$$;
+            s.rowrank = 1
+            and (s.clienttoproductid is not null)$$;
     --------------------------------–------spuMergeProviderOfficeCustomerProduct--------------------------------–------
     select_statement_4 := $$         with cte_swimlane as (
-        SELECT
-            DISTINCT 
-            pID.ProviderID,
-            O.OfficeID,
+        select
+            distinct 
+            pid.providerid,
+            o.officeid,
             x.office_officecode,
-            x.ProviderCode,
-            X.OFFICE_LastUpdateDate,
+            x.providercode,
+            x.office_LastUpdateDate,
             x.office_SourceCode,
             x.customerproduct_customerproductcode as ClientToProductCode,
-            rt.RelationshipTypeID,
-            cp.ClientToProductID,
+            rt.relationshiptypeid,
+            cp.clienttoproductid,
             row_number() over(
-                partition by pID.ProviderID,
+                partition by pid.providerid,
                 OfficeCode
                 order by
-                    x.CREATE_DATE desc
+                    x.create_DATE desc
             ) as RowRank
-        FROM
-            raw.vw_provider_profile AS x
-            JOIN Base.Provider AS pID ON pID.ProviderCode = x.ProviderCode
-            JOIN Base.Office as O on O.OFFICECODE = x.office_officecode
-            JOIN Base.RelationshipType rt on rt.RelationshipTypeCode = 'PROVTOOFF'
-            JOIN Base.ClientToProduct as cp on cp.ClientToProductCode = x.customerproduct_customerproductcode
+        from
+            raw.vw_provider_profile as x
+            join base.provider as pID on pid.providercode = x.providercode
+            join base.office as O on o.officecode = x.office_officecode
+            join base.relationshiptype rt on rt.relationshiptypecode = 'PROVTOOFF'
+            join base.clienttoproduct as cp on cp.clienttoproductcode = x.customerproduct_customerproductcode
         where
             x.office_officecode is not null
     )
-SELECT
+select
     distinct 
-    cp.ClientToProductID,
-    et.EntityTypeID,
-    T.OfficeID AS EntityID,
+    cp.clienttoproductid,
+    et.entitytypeid,
+    t.officeid as EntityID,
     'Profisee' as SourceCode,
-    SYSDATE() as LastUpdateDate
-FROM
+    sysdate() as LastUpdateDate
+from
     cte_swimlane T
-    JOIN Base.EntityType et on et.EntityTypeCode = 'OFFICE'
-    JOIN Base.ClientToProduct cp on T.ClientToProductID = cp.ClientToProductID
-    JOIN Base.Office o on o.OfficeID = T.OfficeID
-    JOIN Base.Product PR on PR.ProductID = cp.ProductID
+    join base.entitytype et on et.entitytypecode = 'OFFICE'
+    join base.clienttoproduct cp on t.clienttoproductid = cp.clienttoproductid
+    join base.office o on o.officeid = t.officeid
+    join base.product PR on pr.productid = cp.productid
 where
     ProductTypeCode = 'Practice' $$;
     --------------------------------–------spuMergePracticeCustomerProduct--------------------------------–------
     select_statement_5 := $$ cte_swimlane as (
  select 
-    p.PracticeID as EntityID,
-    x.PracticeCode,
-    x.CustomerProduct_CustomerProductCode as ClientToProductCode,
-    cp.ClientToProductID,
-    b.EntityTypeID
+    p.practiceid as EntityID,
+    x.practicecode,
+    x.customerproduct_CustomerProductCode as ClientToProductCode,
+    cp.clienttoproductid,
+    b.entitytypeid
     sysdate() as LastUpdateDate,
-    row_number() over(partition by x.PracticeID order by x.CREATE_DATE desc) as RowRank
+    row_number() over(partition by x.practiceid order by x.create_DATE desc) as RowRank
 from
     raw.vw_practice_profile as x
     join base.practice as p on x.practicecode = p.practicecode
     join base.clienttoproduct as cp on cp.clienttoproductcode = x.customerproduct_customerproductcode
-    join Base.EntityType b on b.EntityTypeCode='PRAC'
+    join base.entitytype b on b.entitytypecode='PRAC'
     )
     select
         ClientToProductID,
@@ -254,13 +254,13 @@ from
         EntityID,
         LastUpdateDate
         RowRank
-    FROM 
+    from 
         cte_swimlane
-    Where rowrank = 1 $$;
+    where rowrank = 1 $$;
 
-    --- Insert Statement
+    --- insert Statement
     insert_statement := ' 
-        INSERT
+        insert
             (
                 ClientProductToEntityID,
                 ClientToProductID,
@@ -268,21 +268,21 @@ from
                 EntityID,
                 LastUpdateDate
             )
-        VALUES(
-                UUID_STRING(),
-                source.ClientToProductID,
-                source.EntityTypeID,
-                source.EntityID,
-                source.LastUpdateDate
+        values(
+                uuid_string(),
+                source.clienttoproductid,
+                source.entitytypeid,
+                source.entityid,
+                source.lastupdatedate
             )';
     ---------------------------------------------------------
-    --------- 4. Actions (Inserts and Updates) --------------
+    --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------
-    prefix := 'MERGE INTO BASE.ClientProductToEntity as target USING (';
-    suffix := ') as source on source.ClientToProductID = target.ClientToProductID
-                    and source.EntityTypeID = target.EntityTypeID
-                    and source.EntityID = target.EntityID
-                    WHEN NOT MATCHED THEN' || insert_statement;
+    prefix := 'merge into base.clientproducttoentity as target using (';
+    suffix := ') as source on source.clienttoproductid = target.clienttoproductid
+                    and source.entitytypeid = target.entitytypeid
+                    and source.entityid = target.entityid
+                    when not matched then' || insert_statement;
                     
     merge_statement_1 := prefix || select_statement_1 || suffix;
     merge_statement_2:= prefix || select_statement_2 || suffix;
@@ -291,21 +291,21 @@ from
     merge_statement_5:= prefix || select_statement_5 || suffix;
 
     ---------------------------------------------------------
-    ------------------- 5. Execution ------------------------
+    ------------------- 5. execution ------------------------
     -------------------------------------------------------
     -- return merge_statement_1;
-    EXECUTE IMMEDIATE merge_statement_1;
-    EXECUTE IMMEDIATE merge_statement_2;
-    EXECUTE IMMEDIATE merge_statement_3;
-    EXECUTE IMMEDIATE merge_statement_4;
-    --Deprecated
-    -- EXECUTE IMMEDIATE merge_statement_5;
+    execute immediate merge_statement_1;
+    execute immediate merge_statement_2;
+    execute immediate merge_statement_3;
+    execute immediate merge_statement_4;
+    --deprecated
+    -- execute immediate merge_statement_5;
     ---------------------------------------------------------
-    --------------- 6. Status monitoring --------------------
+    --------------- 6. status monitoring --------------------
     ---------------------------------------------------------
-    status:= 'Completed successfully';
-RETURN status;
-EXCEPTION
-    WHEN OTHER THEN status:= 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
-RETURN status;
-END;
+    status:= 'completed successfully';
+return status;
+exception
+    when other then status:= 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
+return status;
+end;

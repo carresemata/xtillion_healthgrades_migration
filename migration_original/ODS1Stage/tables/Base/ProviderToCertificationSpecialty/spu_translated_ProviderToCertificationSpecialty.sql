@@ -1,40 +1,40 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCERTIFICATIONSPECIALTY()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCERTIFICATIONSPECIALTY()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderToCertificationSpecialty depends on: 
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.CertificationBoard
---- Base.CertificationSpecialty
---- Base.CertificationAgency
---- Base.CertificationStatus
---- Base.MocLevel
---- Base.MocPathway
+-- base.providertocertificationspecialty depends on: 
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.certificationboard
+--- base.certificationspecialty
+--- base.certificationagency
+--- base.certificationstatus
+--- base.moclevel
+--- base.mocpathway
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderToCertificationSpecialty');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providertocertificationspecialty');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -42,41 +42,41 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
--- Select Statement
-select_statement := $$  SELECT DISTINCT
-                            P.ProviderId,
-                            CS.CertificationSpecialtyID,
-                            IFNULL(JSON.CERTIFICATIONSPECIALTY_SOURCECODE, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.CERTIFICATIONSPECIALTY_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate,
-                            CB.CertificationBoardID, 
-                            CA.CertificationAgencyID,
+-- select Statement
+select_statement := $$  select distinct
+                            p.providerid,
+                            cs.certificationspecialtyid,
+                            ifnull(json.certificationspecialty_SOURCECODE, 'Profisee') as SourceCode,
+                            ifnull(json.certificationspecialty_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+                            cb.certificationboardid, 
+                            ca.certificationagencyid,
                             --CertificationSpecialtyRank
-                            CST.CertificationStatusID,
+                            cst.certificationstatusid,
                             -- CertificationStatusDate, 
-                            JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONEFFECTIVEDATE AS CertificationEffectiveDate, 
-                            JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONEXPIRATIONDATE AS CertificationExpirationDate, 
+                            json.certificationspecialty_CERTIFICATIONEFFECTIVEDATE as CertificationEffectiveDate, 
+                            json.certificationspecialty_CERTIFICATIONEXPIRATIONDATE as CertificationExpirationDate, 
                             -- IsSearchable, 
                             -- CertificationAgencyVerified, 
-                            MP.MOCPathwayID, 
-                            ML.MOCLevelID
-                        FROM Raw.VW_PROVIDER_PROFILE AS JSON
-                            INNER JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                            INNER JOIN Base.CertificationSpecialty AS CS ON CS.CertificationSpecialtyCode = JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONSPECIALTYCODE
-                            INNER JOIN Base.CertificationBoard AS CB ON CB.CertificationBoardCode = JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONBOARDCODE
-                            INNER JOIN Base.CertificationAgency AS CA ON CA.CertificationAgencyCode = JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONAGENCYCODE
-                            INNER JOIN Base.CertificationStatus AS CST ON CST.CertificationStatusCode = JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONSTATUSCODE
-                            INNER JOIN Base.MOCPathway AS MP ON MP.MOCPathwayCode = JSON.CERTIFICATIONSPECIALTY_MOCPATHWAYCODE
-                            INNER JOIN Base.MOCLevel AS ML ON ML.MOCLevelCode = JSON.CERTIFICATIONSPECIALTY_MOCLEVELCODE
-                        WHERE
-                            PROVIDER_PROFILE IS NOT NULL AND
-                            PROVIDERID IS NOT NULL AND
-                            CERTIFICATIONSPECIALTYID IS NOT NULL AND
-                            CERTIFICATIONBOARDID IS NOT NULL AND
-                            CERTIFICATIONAGENCYID IS NOT NULL 
-                        QUALIFY row_number() over(partition by PROVIDERID, JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONAGENCYCODE, JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONBOARDCODE, JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONSPECIALTYCODE order by JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONEFFECTIVEDATE desc, JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONEXPIRATIONDATE desc, case when JSON.CERTIFICATIONSPECIALTY_CERTIFICATIONSTATUSCODE = 'C' then 1 else 9 end, CREATE_DATE desc) = 1 $$;
+                            mp.mocpathwayid, 
+                            ml.moclevelid
+                        from raw.vw_PROVIDER_PROFILE as JSON
+                            inner join base.provider as P on p.providercode = json.providercode
+                            inner join base.certificationspecialty as CS on cs.certificationspecialtycode = json.certificationspecialty_CERTIFICATIONSPECIALTYCODE
+                            inner join base.certificationboard as CB on cb.certificationboardcode = json.certificationspecialty_CERTIFICATIONBOARDCODE
+                            inner join base.certificationagency as CA on ca.certificationagencycode = json.certificationspecialty_CERTIFICATIONAGENCYCODE
+                            inner join base.certificationstatus as CST on cst.certificationstatuscode = json.certificationspecialty_CERTIFICATIONSTATUSCODE
+                            inner join base.mocpathway as MP on mp.mocpathwaycode = json.certificationspecialty_MOCPATHWAYCODE
+                            inner join base.moclevel as ML on ml.moclevelcode = json.certificationspecialty_MOCLEVELCODE
+                        where
+                            PROVIDER_PROFILE is not null and
+                            PROVIDERID is not null and
+                            CERTIFICATIONSPECIALTYID is not null and
+                            CERTIFICATIONBOARDID is not null and
+                            CERTIFICATIONAGENCYID is not null 
+                        qualify row_number() over(partition by PROVIDERID, json.certificationspecialty_CERTIFICATIONAGENCYCODE, json.certificationspecialty_CERTIFICATIONBOARDCODE, json.certificationspecialty_CERTIFICATIONSPECIALTYCODE order by json.certificationspecialty_CERTIFICATIONEFFECTIVEDATE desc, json.certificationspecialty_CERTIFICATIONEXPIRATIONDATE desc, case when json.certificationspecialty_CERTIFICATIONSTATUSCODE = 'C' then 1 else 9 end, CREATE_DATE desc) = 1 $$;
 
--- Insert Statement
-insert_statement := ' INSERT (
+-- insert Statement
+insert_statement := ' insert (
                         ProviderToCertificationSpecialtyID, 
                         ProviderID, 
                         CertificationSpecialtyID, 
@@ -93,59 +93,59 @@ insert_statement := ' INSERT (
                         --CertificationAgencyVerified, 
                         MOCPathwayID, 
                         MOCLevelID)
-                     VALUES (
-                       UUID_STRING(),
-                       source.ProviderID, 
-                       source.CertificationSpecialtyID, 
-                       source.SourceCode, 
-                       source.LastUpdateDate, 
-                       source.CertificationBoardID, 
-                       source.CertificationAgencyID, 
-                       --source.CertificationSpecialtyRank, 
-                       source.CertificationStatusID, 
-                       --source.CertificationStatusDate, 
-                       source.CertificationEffectiveDate, 
-                       source.CertificationExpirationDate, 
-                       --source.IsSearchable, 
-                       --source.CertificationAgencyVerified, 
-                       source.MOCPathwayID, 
-                       source.MOCLevelID )';
+                     values (
+                       uuid_string(),
+                       source.providerid, 
+                       source.certificationspecialtyid, 
+                       source.sourcecode, 
+                       source.lastupdatedate, 
+                       source.certificationboardid, 
+                       source.certificationagencyid, 
+                       --source.certificationspecialtyrank, 
+                       source.certificationstatusid, 
+                       --source.certificationstatusdate, 
+                       source.certificationeffectivedate, 
+                       source.certificationexpirationdate, 
+                       --source.issearchable, 
+                       --source.certificationagencyverified, 
+                       source.mocpathwayid, 
+                       source.moclevelid )';
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := 'MERGE INTO Base.ProviderToCertificationSpecialty AS target
-USING ('||select_statement||') AS source
-ON  source.ProviderID = target.ProviderID AND
-    source.CertificationSpecialtyID = target.CertificationSpecialtyID AND
-    source.CertificationBoardID = target.CertificationBoardID AND
-    source.CertificationAgencyID = target.CertificationAgencyID AND
-    source.CertificationStatusID = target.CertificationStatusID
-WHEN MATCHED THEN DELETE
-WHEN NOT MATCHED THEN' || insert_statement;
+merge_statement := 'merge into base.providertocertificationspecialty as target
+using ('||select_statement||') as source
+on  source.providerid = target.providerid and
+    source.certificationspecialtyid = target.certificationspecialtyid and
+    source.certificationboardid = target.certificationboardid and
+    source.certificationagencyid = target.certificationagencyid and
+    source.certificationstatusid = target.certificationstatusid
+WHEN MATCHED then delete
+when not matched then' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

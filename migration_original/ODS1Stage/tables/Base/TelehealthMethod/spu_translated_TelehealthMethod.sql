@@ -1,34 +1,34 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_TELEHEALTHMETHOD()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_TELEHEALTHMETHOD()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.TeleHealthMethod depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.TeleHealthMethodType
+-- base.telehealthmethod depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.telehealthmethodtype
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_TelehealthMethod');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_telehealthmethod');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -36,73 +36,73 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT DISTINCT
-                            TMT.TelehealthMethodTypeId,
-                            JSON.TELEHEALTH_TELEHEALTHMETHODCODE AS TeleHealthMethod,
-                            JSON.TELEHEALTH_TELEHEALTHVENDORNAME AS ServiceName,
-                            IFNULL(JSON.Telehealth_SourceCode, 'Profisee') AS SourceCode,
-                            CASE WHEN IFNULL(JSON.TeleHealth_HasTelehealth, 'N') IN ('yes', 'true', '1', 'Y', 'T') THEN 'TRUE' ELSE 'FALSE' END AS HasTeleHealth,
-                            JSON.Telehealth_LastUpdateDate AS LastUpdatedDate
-                        FROM
-                            RAW.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.TelehealthMethodType AS TMT ON TMT.MethodTypeCode = JSON.Telehealth_TelehealthMethodCode
-                        WHERE
-                            PROVIDER_PROFILE IS NOT NULL AND
-                            HasTeleHealth = 'TRUE' AND
-                            TelehealthMethod IS NOT NULL$$;
+--- select Statement
+select_statement := $$ select distinct
+                            tmt.telehealthmethodtypeid,
+                            json.telehealth_TELEHEALTHMETHODCODE as TeleHealthMethod,
+                            json.telehealth_TELEHEALTHVENDORNAME as ServiceName,
+                            ifnull(json.telehealth_SourceCode, 'Profisee') as SourceCode,
+                            CASE WHEN ifnull(json.telehealth_HasTelehealth, 'N') IN ('yes', 'true', '1', 'Y', 'T') then 'TRUE' else 'FALSE' END as HasTeleHealth,
+                            json.telehealth_LastUpdateDate as LastUpdatedDate
+                        from
+                            raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.telehealthmethodtype as TMT on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
+                        where
+                            PROVIDER_PROFILE is not null and
+                            HasTeleHealth = 'TRUE' and
+                            TelehealthMethod is not null$$;
 
 
 
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                             (TelehealthMethodId,
                             TelehealthMethodTypeId, 
                             TelehealthMethod, 
                             ServiceName, 
                             SourceCode, 
                             LastUpdatedDate)
-                      VALUES 
-                            (UUID_STRING(),
-                            source.TelehealthMethodTypeId, 
-                            source.TelehealthMethod, 
-                            source.ServiceName, 
-                            source.SourceCode, 
-                            source.LastUpdatedDate)';
+                      values 
+                            (uuid_string(),
+                            source.telehealthmethodtypeid, 
+                            source.telehealthmethod, 
+                            source.servicename, 
+                            source.sourcecode, 
+                            source.lastupdateddate)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.Telehealthmethod as target USING 
+merge_statement := ' merge into base.telehealthmethod as target using 
                    ('||select_statement||') as source 
-                   ON source.TelehealthMethodTypeId = target.TelehealthMethodTypeId
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.telehealthmethodtypeid = target.telehealthmethodtypeid
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;
