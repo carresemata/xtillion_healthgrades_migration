@@ -20,7 +20,7 @@ declare
 --- base.cohorttocondition
 --- base.cohortprocedure
 --- base.providertofacilitytomedicalterm
---- ermart1.facility.procedure
+--- ermart1.facility_procedure
 --- show.solrfacility
 
 ---------------------------------------------------------
