@@ -27,7 +27,7 @@ def table_dependencies():
                     with open(f'spu_translated_{table}.sql', 'r') as f:
                         content = f.read()
                         # Check if the section exists
-                        match = re.search(r'0. Table dependencies(.*?)1.', content, re.DOTALL)
+                        match = re.search(r'0. table dependencies(.*?)1.', content, re.DOTALL | re.IGNORECASE)
                         if match:
                             dependencies_section = match.group(1)
                             # Remove words inside brackets
@@ -106,6 +106,8 @@ def table_dependencies():
 
     # Create sp_dependencies.json where the empty dependencies are removed
     sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
+    # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
+    sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : deps for table, deps in sp_dependencies.items()}
     with open('sp_dependencies.json', 'w') as f:
         json.dump(sp_dependencies, f, indent=4)
 
