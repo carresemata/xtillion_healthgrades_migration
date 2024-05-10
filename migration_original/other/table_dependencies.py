@@ -106,8 +106,10 @@ def table_dependencies():
 
     # Create sp_dependencies.json where the empty dependencies are removed
     sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
+    # remove all items that are not in keys
+    sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
     # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
-    sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : deps for table, deps in sp_dependencies.items()}
+    sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
     with open('sp_dependencies.json', 'w') as f:
         json.dump(sp_dependencies, f, indent=4)
 
