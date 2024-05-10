@@ -1,899 +1,899 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLASTUPDATEDATE()
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLASTUPDATEDATE()
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
---- Base.ProviderLastUpdateDate depends on:
--- MDM_TEAM.MST.Provider_Profile_Processing
--- Base.Provider
--- Base.ProviderToAboutMe
--- Base.ProviderAppointmentAvailabilityStatement
--- Base.ProviderEmail
--- Base.ProviderLicense
--- Base.ProviderToOffice
--- Base.ProviderToProviderType
--- Base.ProviderToSubStatus
--- Base.ProviderToAppointmentAvailability
--- Base.ProviderToCertificationSpecialty
--- Base.ProviderToFacility
--- Base.ProviderImage
--- Base.ProviderMalpractice
--- Base.ProviderToOrganization
--- Base.ClientProductToEntity
--- Base.ClientToProduct
--- Base.Product
--- Base.ProviderToDegree
--- Base.ProviderToEducationInstitution
--- Base.ProviderToLanguage
--- Base.ProviderMedia
--- Base.ProviderToSpecialty
--- Base.ProviderVideo
--- Base.ProviderToTelehealthMethod
--- Base.EntityToMedicalTerm
--- Base.MedicalTerm
--- Base.MedicalTermType
--- Base.ProviderToProviderSubType
--- Base.ProviderTraining
--- Base.ProviderIdentification
--- Base.EntityType
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
----------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-update_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderLastUpdateDate');
-    execution_start DATETIME default getdate();
-
+--- base.providerlastupdatedate depends on:
+-- mdm_team.mst.provider_profile_processing
+-- base.provider
+-- base.providertoaboutme
+-- base.providerappointmentavailabilitystatement
+-- base.provideremail
+-- base.providerlicense
+-- base.providertooffice
+-- base.providertoprovidertype
+-- base.providertosubstatus
+-- base.providertoappointmentavailability
+-- base.providertocertificationspecialty
+-- base.providertofacility
+-- base.providerimage
+-- base.providermalpractice
+-- base.providertoorganization
+-- base.clientproducttoentity
+-- base.clienttoproduct
+-- base.product
+-- base.providertodegree
+-- base.providertoeducationinstitution
+-- base.providertolanguage
+-- base.providermedia
+-- base.providertospecialty
+-- base.providervideo
+-- base.providertotelehealthmethod
+-- base.entitytomedicalterm
+-- base.medicalterm
+-- base.medicaltermtype
+-- base.providertoprovidersubtype
+-- base.providertraining
+-- base.provideridentification
+-- base.entitytype
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+insert_statement string;
+update_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providerlastupdatedate');
+    execution_start datetime default getdate();
+
+
+---------------------------------------------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
-BEGIN
+begin
 -- no conditionals
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 select_statement := $$
-                    WITH CTE_Provider AS (
-                        SELECT ppp.ProviderID
-                        FROM MDM_TEAM.MST.Provider_Profile_Processing ppp 
-                        INNER JOIN Base.Provider p ON p.ProviderCode = ppp.ref_Provider_Code
+                    with CTE_Provider as (
+                        select ppp.providerid
+                        from MDM_team.mst.Provider_Profile_Processing ppp 
+                        inner join base.provider p on p.providercode = ppp.ref_Provider_Code
                     ),
                     
-                    CTE_Demographics AS (
-                        SELECT p.ProviderID, p.SourceCode, p.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.Provider p ON p.ProviderID = cte_p.ProviderID
+                    CTE_Demographics as (
+                        select p.providerid, p.sourcecode, p.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.provider p on p.providerid = cte_p.providerid
                     ),
                     
-                    CTE_AboutMe AS (
-                        SELECT ptam.ProviderID, ptam.SourceCode, ptam.LastUpdatedDate AS LastUpdateDate
-                        FROM CTE_Provider p
-                        INNER JOIN Base.ProviderToAboutMe ptam ON ptam.ProviderID = p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptam.ProviderID ORDER BY ptam.LastUpdatedDate DESC) = 1
+                    CTE_AboutMe as (
+                        select ptam.providerid, ptam.sourcecode, ptam.lastupdateddate as LastUpdateDate
+                        from CTE_Provider p
+                        inner join base.providertoaboutme ptam on ptam.providerid = p.providerid
+                        qualify row_number() over (partition by ptam.providerid order by ptam.lastupdateddate desc) = 1
                     ),
                     
-                    CTE_AppointmentAvailabilityStatement AS (
-                        SELECT paas.ProviderID, paas.SourceCode, paas.LastUpdatedDate AS LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderAppointmentAvailabilityStatement paas ON paas.ProviderID = cte_p.ProviderID
+                    CTE_AppointmentAvailabilityStatement as (
+                        select paas.providerid, paas.sourcecode, paas.lastupdateddate as LastUpdateDate
+                        from CTE_Provider cte_p
+                        inner join base.providerappointmentavailabilitystatement paas on paas.providerid = cte_p.providerid
                     ),
                     
-                    CTE_Email AS (
-                        SELECT pe.ProviderID, pe.SourceCode, pe.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderEmail pe ON pe.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pe.ProviderID ORDER BY pe.LastUpdateDate DESC) = 1
+                    CTE_Email as (
+                        select pe.providerid, pe.sourcecode, pe.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.provideremail pe on pe.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pe.providerid order by pe.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_License AS (
-                        SELECT pl.ProviderID, pl.SourceCode, pl.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderLicense pl ON pl.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pl.ProviderID ORDER BY pl.LastUpdateDate DESC) = 1
+                    CTE_License as (
+                        select pl.providerid, pl.sourcecode, pl.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providerlicense pl on pl.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pl.providerid order by pl.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Office AS (
-                        SELECT pto.ProviderID, pto.SourceCode, pto.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToOffice pto ON pto.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pto.ProviderID ORDER BY pto.LastUpdateDate DESC) = 1
+                    CTE_Office as (
+                        select pto.providerid, pto.sourcecode, pto.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertooffice pto on pto.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pto.providerid order by pto.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_ProviderType AS (
-                        SELECT ptpt.ProviderID, ptpt.SourceCode, ptpt.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToProviderType ptpt ON ptpt.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptpt.ProviderID ORDER BY ptpt.LastUpdateDate DESC) = 1
+                    CTE_ProviderType as (
+                        select ptpt.providerid, ptpt.sourcecode, ptpt.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertoprovidertype ptpt on ptpt.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptpt.providerid order by ptpt.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Status AS (
-                        SELECT ptss.ProviderID, ptss.SourceCode, ptss.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToSubStatus ptss ON ptss.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptss.ProviderID ORDER BY ptss.LastUpdateDate DESC) = 1
+                    CTE_Status as (
+                        select ptss.providerid, ptss.sourcecode, ptss.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertosubstatus ptss on ptss.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptss.providerid order by ptss.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_AppointmentAvailability AS (
-                        SELECT ptaa.ProviderID, ptaa.SourceCode, ptaa.LastUpdatedDate AS LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToAppointmentAvailability ptaa ON ptaa.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptaa.ProviderID ORDER BY ptaa.LastUpdatedDate DESC) = 1
+                    CTE_AppointmentAvailability as (
+                        select ptaa.providerid, ptaa.sourcecode, ptaa.lastupdateddate as LastUpdateDate
+                        from CTE_Provider cte_p
+                        inner join base.providertoappointmentavailability ptaa on ptaa.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptaa.providerid order by ptaa.lastupdateddate desc) = 1
                     ),
                     
-                    CTE_CertificationSpecialty AS (
-                        SELECT ptcs.ProviderID, ptcs.SourceCode, ptcs.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToCertificationSpecialty ptcs ON ptcs.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptcs.ProviderID ORDER BY ptcs.LastUpdateDate DESC) = 1
+                    CTE_CertificationSpecialty as (
+                        select ptcs.providerid, ptcs.sourcecode, ptcs.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertocertificationspecialty ptcs on ptcs.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptcs.providerid order by ptcs.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Facility AS (
-                        SELECT ptf.ProviderID, ptf.SourceCode, ptf.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToFacility ptf ON ptf.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptf.ProviderID ORDER BY ptf.LastUpdateDate DESC) = 1
+                    CTE_Facility as (
+                        select ptf.providerid, ptf.sourcecode, ptf.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertofacility ptf on ptf.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptf.providerid order by ptf.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Image AS (
-                        SELECT i.ProviderID, i.SourceCode, i.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderImage i ON i.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY i.ProviderID ORDER BY i.LastUpdateDate DESC) = 1
+                    CTE_Image as (
+                        select i.providerid, i.sourcecode, i.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providerimage i on i.providerid = cte_p.providerid
+                        qualify row_number() over (partition by i.providerid order by i.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Malpractice AS (
-                        SELECT m.ProviderID, m.SourceCode, m.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderMalpractice m ON m.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY m.ProviderID ORDER BY m.LastUpdateDate DESC) = 1
+                    CTE_Malpractice as (
+                        select m.providerid, m.sourcecode, m.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providermalpractice m on m.providerid = cte_p.providerid
+                        qualify row_number() over (partition by m.providerid order by m.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Organization AS (
-                        SELECT pto.ProviderID, pto.SourceCode, pto.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToOrganization pto ON pto.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pto.ProviderID ORDER BY pto.LastUpdateDate DESC) = 1
+                    CTE_Organization as (
+                        select pto.providerid, pto.sourcecode, pto.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertoorganization pto on pto.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pto.providerid order by pto.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Sponsorship AS (
-                        SELECT cpte.EntityID AS ProviderID, ctp.ClientToProductCode AS SourceCode, cpte.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ClientProductToEntity cpte ON cpte.EntityID = cte_p.ProviderID
-                        INNER JOIN Base.EntityType et ON et.EntityTypeCode = 'PROV'
-                        INNER JOIN Base.ClientToProduct ctp ON cpte.ClientToProductID = ctp.ClientToProductID
-                        INNER JOIN Base.Product prod ON prod.ProductID = ctp.ProductID AND prod.ProductCode != 'LID'
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY cpte.EntityID ORDER BY cpte.LastUpdateDate DESC) = 1
+                    CTE_Sponsorship as (
+                        select cpte.entityid as ProviderID, ctp.clienttoproductcode as SourceCode, cpte.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.clientproducttoentity cpte on cpte.entityid = cte_p.providerid
+                        inner join base.entitytype et on et.entitytypecode = 'PROV'
+                        inner join base.clienttoproduct ctp on cpte.clienttoproductid = ctp.clienttoproductid
+                        inner join base.product prod on prod.productid = ctp.productid and prod.productcode != 'LID'
+                        qualify row_number() over (partition by cpte.entityid order by cpte.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Degree AS (
-                        SELECT ptd.ProviderID, ptd.SourceCode, ptd.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToDegree ptd ON ptd.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptd.ProviderID ORDER BY ptd.LastUpdateDate DESC) = 1
+                    CTE_Degree as (
+                        select ptd.providerid, ptd.sourcecode, ptd.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertodegree ptd on ptd.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptd.providerid order by ptd.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Education AS (
-                        SELECT ptei.ProviderID, ptei.SourceCode, ptei.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToEducationInstitution ptei ON ptei.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptei.ProviderID ORDER BY ptei.LastUpdateDate DESC) = 1
+                    CTE_Education as (
+                        select ptei.providerid, ptei.sourcecode, ptei.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertoeducationinstitution ptei on ptei.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptei.providerid order by ptei.lastupdatedate desc) = 1
                     ), 
                     
-                    CTE_HealthInsurance AS (
-                        SELECT pthi.ProviderID, pthi.SourceCode, pthi.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN ProviderToHealthInsurance pthi ON pthi.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pthi.ProviderID ORDER BY pthi.LastUpdateDate DESC) = 1
+                    CTE_HealthInsurance as (
+                        select pthi.providerid, pthi.sourcecode, pthi.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join ProviderToHealthInsurance pthi on pthi.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pthi.providerid order by pthi.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Language AS (
-                        SELECT ptl.ProviderID, ptl.SourceCode, ptl.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToLanguage ptl ON ptl.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptl.ProviderID ORDER BY ptl.LastUpdateDate DESC) = 1
+                    CTE_Language as (
+                        select ptl.providerid, ptl.sourcecode, ptl.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertolanguage ptl on ptl.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptl.providerid order by ptl.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Media AS (
-                        SELECT pm.ProviderID, pm.SourceCode, pm.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderMedia pm ON pm.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pm.ProviderID ORDER BY pm.LastUpdateDate DESC) = 1
+                    CTE_Media as (
+                        select pm.providerid, pm.sourcecode, pm.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providermedia pm on pm.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pm.providerid order by pm.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Specialty AS (
-                        SELECT ps.ProviderID, ps.SourceCode, ps.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToSpecialty ps ON ps.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ps.ProviderID ORDER BY ps.LastUpdateDate DESC) = 1
+                    CTE_Specialty as (
+                        select ps.providerid, ps.sourcecode, ps.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertospecialty ps on ps.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ps.providerid order by ps.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Video AS (
-                        SELECT pv.ProviderID, pv.SourceCode, pv.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderVideo pv ON pv.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pv.ProviderID ORDER BY pv.LastUpdateDate DESC) = 1
+                    CTE_Video as (
+                        select pv.providerid, pv.sourcecode, pv.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providervideo pv on pv.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pv.providerid order by pv.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Telehealth AS (
-                        SELECT pt.ProviderID, pt.SourceCode, pt.LastUpdatedDate AS LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToTelehealthMethod pt ON pt.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pt.ProviderID ORDER BY pt.LastUpdatedDate DESC) = 1
+                    CTE_Telehealth as (
+                        select pt.providerid, pt.sourcecode, pt.lastupdateddate as LastUpdateDate
+                        from CTE_Provider cte_p
+                        inner join base.providertotelehealthmethod pt on pt.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pt.providerid order by pt.lastupdateddate desc) = 1
                     ),
                     
-                    CTE_Condition AS (
-                        SELECT etmt.EntityID AS ProviderID, etmt.SourceCode, etmt.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.EntityToMedicalTerm etmt ON etmt.EntityID = cte_p.ProviderID
-                        INNER JOIN Base.MedicalTerm mt ON mt.MedicalTermID = etmt.MedicalTermID
-                        INNER JOIN Base.MedicalTermType mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID AND mtt.MedicalTermTypeCode = 'Condition'
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY etmt.EntityID ORDER BY etmt.LastUpdateDate DESC) = 1
+                    CTE_Condition as (
+                        select etmt.entityid as ProviderID, etmt.sourcecode, etmt.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.entitytomedicalterm etmt on etmt.entityid = cte_p.providerid
+                        inner join base.medicalterm mt on mt.medicaltermid = etmt.medicaltermid
+                        inner join base.medicaltermtype mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid and mtt.medicaltermtypecode = 'Condition'
+                        qualify row_number() over (partition by etmt.entityid order by etmt.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Procedure AS (
-                        SELECT etmt.EntityID AS ProviderID, etmt.SourceCode, etmt.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.EntityToMedicalTerm etmt ON etmt.EntityID = cte_p.ProviderID
-                        INNER JOIN Base.MedicalTerm mt ON mt.MedicalTermID = etmt.MedicalTermID
-                        INNER JOIN Base.MedicalTermType mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID AND mtt.MedicalTermTypeCode = 'Procedure'
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY etmt.EntityID ORDER BY etmt.LastUpdateDate DESC) = 1
+                    CTE_Procedure as (
+                        select etmt.entityid as ProviderID, etmt.sourcecode, etmt.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.entitytomedicalterm etmt on etmt.entityid = cte_p.providerid
+                        inner join base.medicalterm mt on mt.medicaltermid = etmt.medicaltermid
+                        inner join base.medicaltermtype mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid and mtt.medicaltermtypecode = 'Procedure'
+                        qualify row_number() over (partition by etmt.entityid order by etmt.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_ProviderSubType AS (
-                        SELECT ptpst.ProviderID, ptpst.SourceCode, ptpst.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderToProviderSubType ptpst ON ptpst.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY ptpst.ProviderID ORDER BY ptpst.LastUpdateDate DESC) = 1
+                    CTE_ProviderSubType as (
+                        select ptpst.providerid, ptpst.sourcecode, ptpst.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertoprovidersubtype ptpst on ptpst.providerid = cte_p.providerid
+                        qualify row_number() over (partition by ptpst.providerid order by ptpst.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Training AS (
-                        SELECT pt.ProviderID, pt.SourceCode, pt.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderTraining pt ON pt.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pt.ProviderID ORDER BY pt.LastUpdateDate DESC) = 1
+                    CTE_Training as (
+                        select pt.providerid, pt.sourcecode, pt.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.providertraining pt on pt.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pt.providerid order by pt.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_Identification AS (
-                        SELECT pid.ProviderID, pid.SourceCode, pid.LastUpdateDate
-                        FROM CTE_Provider cte_p
-                        INNER JOIN Base.ProviderIdentification pid ON pid.ProviderID = cte_p.ProviderID
-                        QUALIFY ROW_NUMBER() OVER (PARTITION BY pid.ProviderID ORDER BY pid.LastUpdateDate DESC) = 1
+                    CTE_Identification as (
+                        select pid.providerid, pid.sourcecode, pid.lastupdatedate
+                        from CTE_Provider cte_p
+                        inner join base.provideridentification pid on pid.providerid = cte_p.providerid
+                        qualify row_number() over (partition by pid.providerid order by pid.lastupdatedate desc) = 1
                     ),
                     
-                    CTE_DemographicsXML AS (
-                        SELECT 
-                        cte_p.ProviderID,
+                    CTE_DemographicsXML as (
+                        select 
+                        cte_p.providerid,
                         utils.p_json_to_xml(
-                            ARRAY_AGG(
+                            array_agg(
                                 '{ '||
-                                IFF(cte_d.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_d.SourceCode || '"' || ',', '') ||
-                                IFF(cte_d.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_d.LastUpdateDate || '"', '')
+                                iff(cte_d.sourcecode is not null, '"SourceCode":' || '"' || cte_d.sourcecode || '"' || ',', '') ||
+                                iff(cte_d.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_d.lastupdatedate || '"', '')
                                 ||' }'
-                            )::VARCHAR, 
+                            )::varchar, 
                             'Demographics', 
                             ''
-                        ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Demographics cte_d ON cte_d.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                        ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Demographics cte_d on cte_d.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_AboutMeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_AboutMeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                 '{ '||
-                                IFF(cte_am.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_am.SourceCode || '"' || ',', '') ||
-                                IFF(cte_am.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_am.LastUpdateDate || '"', '')
+                                iff(cte_am.sourcecode is not null, '"SourceCode":' || '"' || cte_am.sourcecode || '"' || ',', '') ||
+                                iff(cte_am.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_am.lastupdatedate || '"', '')
                                 ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'AboutMe', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_AboutMe cte_am ON cte_am.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_AboutMe cte_am on cte_am.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_AppointmentAvailabilityStatementXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_AppointmentAvailabilityStatementXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                 '{ '||
-                                IFF(cte_aas.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_aas.SourceCode || '"' || ',', '') ||
-                                IFF(cte_aas.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_aas.LastUpdateDate || '"', '')
+                                iff(cte_aas.sourcecode is not null, '"SourceCode":' || '"' || cte_aas.sourcecode || '"' || ',', '') ||
+                                iff(cte_aas.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_aas.lastupdatedate || '"', '')
                                 ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'AppointmentAvailabilityStatement', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_AppointmentAvailabilityStatement cte_aas ON cte_aas.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_AppointmentAvailabilityStatement cte_aas on cte_aas.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_EmailXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_EmailXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                 '{ '||
-                                IFF(cte_e.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_e.SourceCode || '"' || ',', '') ||
-                                IFF(cte_e.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_e.LastUpdateDate || '"', '')
+                                iff(cte_e.sourcecode is not null, '"SourceCode":' || '"' || cte_e.sourcecode || '"' || ',', '') ||
+                                iff(cte_e.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_e.lastupdatedate || '"', '')
                                 ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Email', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Email cte_e ON cte_e.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Email cte_e on cte_e.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_LicenseXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_LicenseXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                 '{ '||
-                                IFF(cte_l.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_l.SourceCode || '"' || ',', '') ||
-                                IFF(cte_l.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_l.LastUpdateDate || '"', '')
+                                iff(cte_l.sourcecode is not null, '"SourceCode":' || '"' || cte_l.sourcecode || '"' || ',', '') ||
+                                iff(cte_l.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_l.lastupdatedate || '"', '')
                                 ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'License', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_License cte_l ON cte_l.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_License cte_l on cte_l.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_OfficeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_OfficeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_o.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_o.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_o.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_o.LastUpdateDate || '"', '')
+                                    iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
+                                    iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Office', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Office cte_o ON cte_o.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Office cte_o on cte_o.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_ProviderTypeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_ProviderTypeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_pt.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_pt.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_pt.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_pt.LastUpdateDate || '"', '')
+                                    iff(cte_pt.sourcecode is not null, '"SourceCode":' || '"' || cte_pt.sourcecode || '"' || ',', '') ||
+                                    iff(cte_pt.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_pt.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'ProviderType', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_ProviderType cte_pt ON cte_pt.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_ProviderType cte_pt on cte_pt.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_StatusXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_StatusXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_s.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_s.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_s.LastUpdateDate || '"', '')
+                                    iff(cte_s.sourcecode is not null, '"SourceCode":' || '"' || cte_s.sourcecode || '"' || ',', '') ||
+                                    iff(cte_s.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_s.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Status', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Status cte_s ON cte_s.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Status cte_s on cte_s.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_AppointmentAvailabilityXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_AppointmentAvailabilityXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_aa.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_aa.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_aa.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_aa.LastUpdateDate || '"', '')
+                                    iff(cte_aa.sourcecode is not null, '"SourceCode":' || '"' || cte_aa.sourcecode || '"' || ',', '') ||
+                                    iff(cte_aa.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_aa.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'AppointmentAvailability', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_AppointmentAvailability cte_aa ON cte_aa.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_AppointmentAvailability cte_aa on cte_aa.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_CertificationSpecialtyXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_CertificationSpecialtyXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_cs.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_cs.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_cs.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_cs.LastUpdateDate || '"', '')
+                                    iff(cte_cs.sourcecode is not null, '"SourceCode":' || '"' || cte_cs.sourcecode || '"' || ',', '') ||
+                                    iff(cte_cs.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_cs.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'CertificationSpecialty', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_CertificationSpecialty cte_cs ON cte_cs.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_CertificationSpecialty cte_cs on cte_cs.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_FacilityXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_FacilityXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_f.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_f.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_f.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_f.LastUpdateDate || '"', '')
+                                    iff(cte_f.sourcecode is not null, '"SourceCode":' || '"' || cte_f.sourcecode || '"' || ',', '') ||
+                                    iff(cte_f.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_f.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Facility', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Facility cte_f ON cte_f.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Facility cte_f on cte_f.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_ImageXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_ImageXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_i.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_i.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_i.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_i.LastUpdateDate || '"', '')
+                                    iff(cte_i.sourcecode is not null, '"SourceCode":' || '"' || cte_i.sourcecode || '"' || ',', '') ||
+                                    iff(cte_i.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_i.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Image', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Image cte_i ON cte_i.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Image cte_i on cte_i.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_MalpracticeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_MalpracticeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_m.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_m.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_m.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_m.LastUpdateDate || '"', '')
+                                    iff(cte_m.sourcecode is not null, '"SourceCode":' || '"' || cte_m.sourcecode || '"' || ',', '') ||
+                                    iff(cte_m.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_m.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Malpractice', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Malpractice cte_m ON cte_m.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Malpractice cte_m on cte_m.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_OrganizationXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_OrganizationXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{ '||
-                                    IFF(cte_o.SourceCode IS NOT NULL, '"SourceCode":' || '"' || cte_o.SourceCode || '"' || ',', '') ||
-                                    IFF(cte_o.LastUpdateDate IS NOT NULL, '"LastUpdateDate":' || '"' || cte_o.LastUpdateDate || '"', '')
+                                    iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
+                                    iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
                                     ||' }'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Organization', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Organization cte_o ON cte_o.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Organization cte_o on cte_o.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_SponsorshipXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_SponsorshipXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":"' || cte_s.SourceCode || '"', '') ||
-                                    IFF(cte_s.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_s.LastUpdateDate || '"', '')
+                                    iff(cte_s.sourcecode is not null, '"SourceCode":"' || cte_s.sourcecode || '"', '') ||
+                                    iff(cte_s.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_s.lastupdatedate || '"', '')
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Sponsorship', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Sponsorship cte_s ON cte_s.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Sponsorship cte_s on cte_s.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_DegreeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_DegreeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_d.SourceCode IS NOT NULL, '"SourceCode":"' || cte_d.SourceCode || '"', '') ||
-                                    IFF(cte_d.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_d.LastUpdateDate || '"', '')
+                                    iff(cte_d.sourcecode is not null, '"SourceCode":"' || cte_d.sourcecode || '"', '') ||
+                                    iff(cte_d.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_d.lastupdatedate || '"', '')
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Degree', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Degree cte_d ON cte_d.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Degree cte_d on cte_d.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_EducationXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_EducationXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_e.SourceCode IS NOT NULL, '"SourceCode":"' || cte_e.SourceCode || '"', '') ||
-                                    IFF(cte_e.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_e.LastUpdateDate || '"', '')
+                                    iff(cte_e.sourcecode is not null, '"SourceCode":"' || cte_e.sourcecode || '"', '') ||
+                                    iff(cte_e.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_e.lastupdatedate || '"', '')
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Education', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Education cte_e ON cte_e.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Education cte_e on cte_e.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_HealthInsuranceXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_HealthInsuranceXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_hi.SourceCode IS NOT NULL, '"SourceCode":"' || cte_hi.SourceCode || '"', '') ||
-                                    IFF(cte_hi.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_hi.LastUpdateDate || '"', '') 
+                                    iff(cte_hi.sourcecode is not null, '"SourceCode":"' || cte_hi.sourcecode || '"', '') ||
+                                    iff(cte_hi.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_hi.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'HealthInsurance', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_HealthInsurance cte_hi ON cte_hi.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_HealthInsurance cte_hi on cte_hi.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_LanguageXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_LanguageXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_l.SourceCode IS NOT NULL, '"SourceCode":"' || cte_l.SourceCode || '"', '') ||
-                                    IFF(cte_l.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_l.LastUpdateDate || '"', '') 
+                                    iff(cte_l.sourcecode is not null, '"SourceCode":"' || cte_l.sourcecode || '"', '') ||
+                                    iff(cte_l.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_l.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Language', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Language cte_l ON cte_l.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Language cte_l on cte_l.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_MediaXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_MediaXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_m.SourceCode IS NOT NULL, '"SourceCode":"' || cte_m.SourceCode || '"', '') ||
-                                    IFF(cte_m.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_m.LastUpdateDate || '"', '') 
+                                    iff(cte_m.sourcecode is not null, '"SourceCode":"' || cte_m.sourcecode || '"', '') ||
+                                    iff(cte_m.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_m.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Media', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Media cte_m ON cte_m.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Media cte_m on cte_m.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
                     
-                    CTE_SpecialtyXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_SpecialtyXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_s.SourceCode IS NOT NULL, '"SourceCode":"' || cte_s.SourceCode || '"', '') ||
-                                    IFF(cte_s.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_s.LastUpdateDate || '"', '') 
+                                    iff(cte_s.sourcecode is not null, '"SourceCode":"' || cte_s.sourcecode || '"', '') ||
+                                    iff(cte_s.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_s.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Specialty', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Specialty cte_s ON cte_s.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Specialty cte_s on cte_s.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_VideoXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_VideoXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_v.SourceCode IS NOT NULL, '"SourceCode":"' || cte_v.SourceCode || '"', '') ||
-                                    IFF(cte_v.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_v.LastUpdateDate || '"', '') 
+                                    iff(cte_v.sourcecode is not null, '"SourceCode":"' || cte_v.sourcecode || '"', '') ||
+                                    iff(cte_v.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_v.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Video', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Video cte_v ON cte_v.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Video cte_v on cte_v.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_TelehealthXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_TelehealthXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_th.SourceCode IS NOT NULL, '"SourceCode":"' || cte_th.SourceCode || '"', '') ||
-                                    IFF(cte_th.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_th.LastUpdateDate || '"', '') 
+                                    iff(cte_th.sourcecode is not null, '"SourceCode":"' || cte_th.sourcecode || '"', '') ||
+                                    iff(cte_th.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_th.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Telehealth', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Telehealth cte_th ON cte_th.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Telehealth cte_th on cte_th.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_ConditionXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_ConditionXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_c.SourceCode IS NOT NULL, '"SourceCode":"' || cte_c.SourceCode || '"', '') ||
-                                    IFF(cte_c.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_c.LastUpdateDate || '"', '') 
+                                    iff(cte_c.sourcecode is not null, '"SourceCode":"' || cte_c.sourcecode || '"', '') ||
+                                    iff(cte_c.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_c.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Condition', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Condition cte_c ON cte_c.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Condition cte_c on cte_c.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_ProcedureXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_ProcedureXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_pr.SourceCode IS NOT NULL, '"SourceCode":"' || cte_pr.SourceCode || '"', '') ||
-                                    IFF(cte_pr.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_pr.LastUpdateDate || '"', '') 
+                                    iff(cte_pr.sourcecode is not null, '"SourceCode":"' || cte_pr.sourcecode || '"', '') ||
+                                    iff(cte_pr.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_pr.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Procedure', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Procedure cte_pr ON cte_pr.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Procedure cte_pr on cte_pr.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_ProviderSubTypeXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_ProviderSubTypeXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_pst.SourceCode IS NOT NULL, '"SourceCode":"' || cte_pst.SourceCode || '"', '') ||
-                                    IFF(cte_pst.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_pst.LastUpdateDate || '"', '') 
+                                    iff(cte_pst.sourcecode is not null, '"SourceCode":"' || cte_pst.sourcecode || '"', '') ||
+                                    iff(cte_pst.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_pst.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'ProviderSubType', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_ProviderSubType cte_pst ON cte_pst.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_ProviderSubType cte_pst on cte_pst.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_TrainingXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_TrainingXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_t.SourceCode IS NOT NULL, '"SourceCode":"' || cte_t.SourceCode || '"', '') ||
-                                    IFF(cte_t.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_t.LastUpdateDate || '"', '') 
+                                    iff(cte_t.sourcecode is not null, '"SourceCode":"' || cte_t.sourcecode || '"', '') ||
+                                    iff(cte_t.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_t.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Training', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Training cte_t ON cte_t.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Training cte_t on cte_t.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_IdentificationXML AS (
-                        SELECT 
-                            cte_p.ProviderID,
+                    CTE_IdentificationXML as (
+                        select 
+                            cte_p.providerid,
                             utils.p_json_to_xml(
-                                ARRAY_AGG(
+                                array_agg(
                                     '{' ||
-                                    IFF(cte_i.SourceCode IS NOT NULL, '"SourceCode":"' || cte_i.SourceCode || '"', '') ||
-                                    IFF(cte_i.LastUpdateDate IS NOT NULL, ',"LastUpdateDate":"' || cte_i.LastUpdateDate || '"', '') 
+                                    iff(cte_i.sourcecode is not null, '"SourceCode":"' || cte_i.sourcecode || '"', '') ||
+                                    iff(cte_i.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_i.lastupdatedate || '"', '') 
                                     || '}'
-                                )::VARCHAR, 
+                                )::varchar, 
                                 'Identification', 
                                 ''
-                            ) AS XML
-                        FROM CTE_Provider cte_p
-                        INNER JOIN CTE_Identification cte_i ON cte_i.ProviderID = cte_p.ProviderID
-                        GROUP BY cte_p.ProviderID
+                            ) as XML
+                        from CTE_Provider cte_p
+                        inner join CTE_Identification cte_i on cte_i.providerid = cte_p.providerid
+                        group by cte_p.providerid
                     ),
                     
-                    CTE_FinalXML AS (
-                        SELECT DISTINCT
-                            cte_p.ProviderID,
+                    CTE_FinalXML as (
+                        select distinct
+                            cte_p.providerid,
                             '<LastUpdateDateBySwimlane>' || 
-                            COALESCE(cte_d.XML, '') ||
-                            COALESCE(cte_am.XML, '') ||
-                            COALESCE(cte_aas.XML, '') ||
-                            COALESCE(cte_e.XML, '') ||
-                            COALESCE(cte_l.XML, '') ||
-                            COALESCE(cte_o.XML, '') ||
-                            COALESCE(cte_pt.XML, '') ||
-                            COALESCE(cte_s.XML, '') ||
-                            COALESCE(cte_aa.XML, '') ||
-                            COALESCE(cte_cs.XML, '') ||
-                            COALESCE(cte_f.XML, '') ||
-                            COALESCE(cte_i.XML, '') ||
-                            COALESCE(cte_m.XML, '') ||
-                            COALESCE(cte_org.XML, '') ||
-                            COALESCE(cte_sp.XML, '') ||
-                            COALESCE(cte_deg.XML, '') ||
-                            COALESCE(cte_edu.XML, '') ||
-                            COALESCE(cte_hi.XML, '') ||
-                            COALESCE(cte_lang.XML, '') ||
-                            COALESCE(cte_med.XML, '') ||
-                            COALESCE(cte_spec.XML, '') ||
-                            COALESCE(cte_v.XML, '') ||
-                            COALESCE(cte_th.XML, '') ||
-                            COALESCE(cte_c.XML, '') ||
-                            COALESCE(cte_pr.XML, '') ||
-                            COALESCE(cte_pst.XML, '') ||
-                            COALESCE(cte_t.XML, '') ||
-                            COALESCE(cte_iid.XML, '') ||
-                            '</LastUpdateDateBySwimlane>' AS LastUpdateDatePayload
-                        FROM CTE_Provider cte_p
-                        LEFT JOIN CTE_DemographicsXML cte_d ON cte_d.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_AboutMeXML cte_am ON cte_am.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_AppointmentAvailabilityStatementXML cte_aas ON cte_aas.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_EmailXML cte_e ON cte_e.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_LicenseXML cte_l ON cte_l.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_OfficeXML cte_o ON cte_o.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_ProviderTypeXML cte_pt ON cte_pt.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_StatusXML cte_s ON cte_s.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_AppointmentAvailabilityXML cte_aa ON cte_aa.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_CertificationSpecialtyXML cte_cs ON cte_cs.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_FacilityXML cte_f ON cte_f.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_ImageXML cte_i ON cte_i.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_MalpracticeXML cte_m ON cte_m.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_OrganizationXML cte_org ON cte_org.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_SponsorshipXML cte_sp ON cte_sp.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_DegreeXML cte_deg ON cte_deg.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_EducationXML cte_edu ON cte_edu.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_HealthInsuranceXML cte_hi ON cte_hi.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_LanguageXML cte_lang ON cte_lang.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_MediaXML cte_med ON cte_med.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_SpecialtyXML cte_spec ON cte_spec.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_VideoXML cte_v ON cte_v.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_TelehealthXML cte_th ON cte_th.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_ConditionXML cte_c ON cte_c.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_ProcedureXML cte_pr ON cte_pr.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_ProviderSubTypeXML cte_pst ON cte_pst.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_TrainingXML cte_t ON cte_t.ProviderID = cte_p.ProviderID
-                        LEFT JOIN CTE_IdentificationXML cte_iid ON cte_iid.ProviderID = cte_p.ProviderID
+                            COALESCE(cte_d.xml, '') ||
+                            COALESCE(cte_am.xml, '') ||
+                            COALESCE(cte_aas.xml, '') ||
+                            COALESCE(cte_e.xml, '') ||
+                            COALESCE(cte_l.xml, '') ||
+                            COALESCE(cte_o.xml, '') ||
+                            COALESCE(cte_pt.xml, '') ||
+                            COALESCE(cte_s.xml, '') ||
+                            COALESCE(cte_aa.xml, '') ||
+                            COALESCE(cte_cs.xml, '') ||
+                            COALESCE(cte_f.xml, '') ||
+                            COALESCE(cte_i.xml, '') ||
+                            COALESCE(cte_m.xml, '') ||
+                            COALESCE(cte_org.xml, '') ||
+                            COALESCE(cte_sp.xml, '') ||
+                            COALESCE(cte_deg.xml, '') ||
+                            COALESCE(cte_edu.xml, '') ||
+                            COALESCE(cte_hi.xml, '') ||
+                            COALESCE(cte_lang.xml, '') ||
+                            COALESCE(cte_med.xml, '') ||
+                            COALESCE(cte_spec.xml, '') ||
+                            COALESCE(cte_v.xml, '') ||
+                            COALESCE(cte_th.xml, '') ||
+                            COALESCE(cte_c.xml, '') ||
+                            COALESCE(cte_pr.xml, '') ||
+                            COALESCE(cte_pst.xml, '') ||
+                            COALESCE(cte_t.xml, '') ||
+                            COALESCE(cte_iid.xml, '') ||
+                            '</LastUpdateDateBySwimlane>' as LastUpdateDatePayload
+                        from CTE_Provider cte_p
+                        left join CTE_DemographicsXML cte_d on cte_d.providerid = cte_p.providerid
+                        left join CTE_AboutMeXML cte_am on cte_am.providerid = cte_p.providerid
+                        left join CTE_AppointmentAvailabilityStatementXML cte_aas on cte_aas.providerid = cte_p.providerid
+                        left join CTE_EmailXML cte_e on cte_e.providerid = cte_p.providerid
+                        left join CTE_LicenseXML cte_l on cte_l.providerid = cte_p.providerid
+                        left join CTE_OfficeXML cte_o on cte_o.providerid = cte_p.providerid
+                        left join CTE_ProviderTypeXML cte_pt on cte_pt.providerid = cte_p.providerid
+                        left join CTE_StatusXML cte_s on cte_s.providerid = cte_p.providerid
+                        left join CTE_AppointmentAvailabilityXML cte_aa on cte_aa.providerid = cte_p.providerid
+                        left join CTE_CertificationSpecialtyXML cte_cs on cte_cs.providerid = cte_p.providerid
+                        left join CTE_FacilityXML cte_f on cte_f.providerid = cte_p.providerid
+                        left join CTE_ImageXML cte_i on cte_i.providerid = cte_p.providerid
+                        left join CTE_MalpracticeXML cte_m on cte_m.providerid = cte_p.providerid
+                        left join CTE_OrganizationXML cte_org on cte_org.providerid = cte_p.providerid
+                        left join CTE_SponsorshipXML cte_sp on cte_sp.providerid = cte_p.providerid
+                        left join CTE_DegreeXML cte_deg on cte_deg.providerid = cte_p.providerid
+                        left join CTE_EducationXML cte_edu on cte_edu.providerid = cte_p.providerid
+                        left join CTE_HealthInsuranceXML cte_hi on cte_hi.providerid = cte_p.providerid
+                        left join CTE_LanguageXML cte_lang on cte_lang.providerid = cte_p.providerid
+                        left join CTE_MediaXML cte_med on cte_med.providerid = cte_p.providerid
+                        left join CTE_SpecialtyXML cte_spec on cte_spec.providerid = cte_p.providerid
+                        left join CTE_VideoXML cte_v on cte_v.providerid = cte_p.providerid
+                        left join CTE_TelehealthXML cte_th on cte_th.providerid = cte_p.providerid
+                        left join CTE_ConditionXML cte_c on cte_c.providerid = cte_p.providerid
+                        left join CTE_ProcedureXML cte_pr on cte_pr.providerid = cte_p.providerid
+                        left join CTE_ProviderSubTypeXML cte_pst on cte_pst.providerid = cte_p.providerid
+                        left join CTE_TrainingXML cte_t on cte_t.providerid = cte_p.providerid
+                        left join CTE_IdentificationXML cte_iid on cte_iid.providerid = cte_p.providerid
                     )
 
-                    SELECT ProviderID, LastUpdateDatePayload
-                    FROM CTE_FinalXML
+                    select ProviderID, LastUpdateDatePayload
+                    from CTE_FinalXML
                     $$;
 
 
 insert_statement := $$ 
-                    INSERT
+                    insert
                         (
                         ProviderID, 
                         LastUpdateDatePayload
                         )
-                     VALUES 
+                     values 
                         (
-                        source.ProviderID, 
-                        TO_VARIANT(source.LastUpdateDatePayload)
+                        source.providerid, 
+                        TO_VARIANT(source.lastupdatedatepayload)
                         )
                      $$;
 
 update_statement := $$
-                    UPDATE SET target.LastUpdateDatePayload = TO_VARIANT(source.LastUpdateDatePayload)
+                    update SET target.lastupdatedatepayload = TO_VARIANT(source.lastupdatedatepayload)
                     $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.ProviderLastUpdateDate as target 
-                    USING ($$||select_statement||$$) as source 
-                   ON source.ProviderId = target.ProviderId
-                   WHEN MATCHED THEN $$||update_statement||$$
-                   WHEN NOT MATCHED THEN $$ ||insert_statement;
+merge_statement := $$ merge into base.providerlastupdatedate as target 
+                    using ($$||select_statement||$$) as source 
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then $$||update_statement||$$
+                   when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

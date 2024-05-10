@@ -1,134 +1,134 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERMALPRACTICE(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERMALPRACTICE(IsProviderDeltaProcessing BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Mid.ProviderMalpractice depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
---- Base.Provider
---- Base.ProviderMalpractice
---- Base.MalpracticeClaimType
---- Base.MalpracticeState
---- Base.State
+-- mid.providermalpractice depends on: 
+--- mdm_team.mst.provider_profile_processing
+--- base.provider
+--- base.providermalpractice
+--- base.malpracticeclaimtype
+--- base.malpracticestate
+--- base.state
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderMalpractice');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providermalpractice');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
+begin
+    if (IsProviderDeltaProcessing) then
            select_statement := '
-          WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
-    ELSE
+          with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    MDM_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
+    else
            select_statement := '
-           WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    Base.Provider AS p
-                ORDER BY
-                    p.ProviderID),';
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
             
-    END IF;
+    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
 
--- If conditionals:
+-- if conditionals:
 select_statement := select_statement || 
-                    $$ CTE_ProviderMalpractice AS (
-                            SELECT
-                                DISTINCT pm.ProviderMalpracticeID,
-                                pm.ProviderID,
-                                mct.MalpracticeClaimTypeCode,
-                                mct.MalpracticeClaimTypeDescription,
-                                pm.ClaimNumber,
-                                pm.ClaimDate,
-                                pm.ClaimYear,
+                    $$ CTE_ProviderMalpractice as (
+                            select
+                                distinct pm.providermalpracticeid,
+                                pm.providerid,
+                                mct.malpracticeclaimtypecode,
+                                mct.malpracticeclaimtypedescription,
+                                pm.claimnumber,
+                                pm.claimdate,
+                                pm.claimyear,
                                 CASE
-                                    WHEN pm.ClaimAmount IS NOT NULL THEN CAST(pm.ClaimAmount AS VARCHAR(50))
-                                    ELSE pm.MalpracticeClaimRange
-                                END AS ClaimAmount,
-                                pm.Complaint,
-                                pm.IncidentDate,
-                                pm.ClosedDate,
-                                pm.ClaimState,
-                                st.StateName AS ClaimStateFull,
-                                pm.LicenseNumber,
-                                pm.ReportDate,
-                                0 AS ActionCode
-                            FROM
-                                CTE_ProviderBatch AS pb
-                                JOIN Base.ProviderMalpractice AS pm ON pm.ProviderID = pb.ProviderID
-                                JOIN Base.MalpracticeClaimType AS mct ON pm.MalpracticeClaimTypeID = mct.MalpracticeClaimTypeID
-                                JOIN Base.MalpracticeState AS ms ON pm.ClaimState = ms.State
-                                AND IFNULL(ms.Active, 1) = 1
-                                LEFT JOIN Base.State AS st ON pm.ClaimState = st.State
+                                    WHEN pm.claimamount is not null then CAST(pm.claimamount as varchar(50))
+                                    else pm.malpracticeclaimrange
+                                END as ClaimAmount,
+                                pm.complaint,
+                                pm.incidentdate,
+                                pm.closeddate,
+                                pm.claimstate,
+                                st.statename as ClaimStateFull,
+                                pm.licensenumber,
+                                pm.reportdate,
+                                0 as ActionCode
+                            from
+                                CTE_ProviderBatch as pb
+                                join base.providermalpractice as pm on pm.providerid = pb.providerid
+                                join base.malpracticeclaimtype as mct on pm.malpracticeclaimtypeid = mct.malpracticeclaimtypeid
+                                join base.malpracticestate as ms on pm.claimstate = ms.state
+                                and ifnull(ms.active, 1) = 1
+                                left join base.state as st on pm.claimstate = st.state
                         ),
-                        -- Insert Action
-                        CTE_Action_1 AS (
-                            SELECT
-                                cte.ProviderMalpracticeID,
-                                1 AS ActionCode
-                            FROM
-                                CTE_ProviderMalpractice AS cte
-                                LEFT JOIN Mid.ProviderMalpractice AS mid ON cte.ProviderMalpracticeID = mid.ProviderMalpracticeID
-                            WHERE
-                                mid.ProviderMalpracticeID IS NULL
+                        -- insert Action
+                        CTE_Action_1 as (
+                            select
+                                cte.providermalpracticeid,
+                                1 as ActionCode
+                            from
+                                CTE_ProviderMalpractice as cte
+                                left join mid.providermalpractice as mid on cte.providermalpracticeid = mid.providermalpracticeid
+                            where
+                                mid.providermalpracticeid is null
                         ),
-                        -- Update Action
-                        CTE_Action_2 AS (
-                            SELECT
-                                cte.ProviderMalpracticeID,
-                                2 AS ActionCode
-                            FROM
-                                CTE_ProviderMalpractice AS cte
-                                JOIN Mid.ProviderMalpractice AS mid ON cte.ProviderMalpracticeID = mid.ProviderMalpracticeID
-                            WHERE
-                                MD5(IFNULL(cte.ProviderID::VARCHAR, '')) <> MD5(IFNULL(mid.ProviderID::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.MalpracticeClaimTypeCode::VARCHAR, '')) <> MD5(IFNULL(mid.MalpracticeClaimTypeCode::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.MalpracticeClaimTypeDescription::VARCHAR, '')) <> MD5(IFNULL(mid.MalpracticeClaimTypeDescription::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimNumber::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimNumber::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimDate::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimDate::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimYear::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimYear::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimAmount::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimAmount::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.Complaint::VARCHAR, '')) <> MD5(IFNULL(mid.Complaint::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.IncidentDate::VARCHAR, '')) <> MD5(IFNULL(mid.IncidentDate::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClosedDate::VARCHAR, '')) <> MD5(IFNULL(mid.ClosedDate::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimState::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimState::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ClaimStateFull::VARCHAR, '')) <> MD5(IFNULL(mid.ClaimStateFull::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.LicenseNumber::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseNumber::VARCHAR, ''))
-                                OR MD5(IFNULL(cte.ReportDate::VARCHAR, '')) <> MD5(IFNULL(mid.ReportDate::VARCHAR, ''))
+                        -- update Action
+                        CTE_Action_2 as (
+                            select
+                                cte.providermalpracticeid,
+                                2 as ActionCode
+                            from
+                                CTE_ProviderMalpractice as cte
+                                join mid.providermalpractice as mid on cte.providermalpracticeid = mid.providermalpracticeid
+                            where
+                                MD5(ifnull(cte.providerid::varchar, '')) <> MD5(ifnull(mid.providerid::varchar, ''))
+                                or MD5(ifnull(cte.malpracticeclaimtypecode::varchar, '')) <> MD5(ifnull(mid.malpracticeclaimtypecode::varchar, ''))
+                                or MD5(ifnull(cte.malpracticeclaimtypedescription::varchar, '')) <> MD5(ifnull(mid.malpracticeclaimtypedescription::varchar, ''))
+                                or MD5(ifnull(cte.claimnumber::varchar, '')) <> MD5(ifnull(mid.claimnumber::varchar, ''))
+                                or MD5(ifnull(cte.claimdate::varchar, '')) <> MD5(ifnull(mid.claimdate::varchar, ''))
+                                or MD5(ifnull(cte.claimyear::varchar, '')) <> MD5(ifnull(mid.claimyear::varchar, ''))
+                                or MD5(ifnull(cte.claimamount::varchar, '')) <> MD5(ifnull(mid.claimamount::varchar, ''))
+                                or MD5(ifnull(cte.complaint::varchar, '')) <> MD5(ifnull(mid.complaint::varchar, ''))
+                                or MD5(ifnull(cte.incidentdate::varchar, '')) <> MD5(ifnull(mid.incidentdate::varchar, ''))
+                                or MD5(ifnull(cte.closeddate::varchar, '')) <> MD5(ifnull(mid.closeddate::varchar, ''))
+                                or MD5(ifnull(cte.claimstate::varchar, '')) <> MD5(ifnull(mid.claimstate::varchar, ''))
+                                or MD5(ifnull(cte.claimstatefull::varchar, '')) <> MD5(ifnull(mid.claimstatefull::varchar, ''))
+                                or MD5(ifnull(cte.licensenumber::varchar, '')) <> MD5(ifnull(mid.licensenumber::varchar, ''))
+                                or MD5(ifnull(cte.reportdate::varchar, '')) <> MD5(ifnull(mid.reportdate::varchar, ''))
                         )
-                        SELECT
-                            DISTINCT A0.ProviderMalpracticeID,
+                        select
+                            distinct A0.ProviderMalpracticeID,
                             A0.ProviderID,
                             A0.MalpracticeClaimTypeCode,
                             A0.MalpracticeClaimTypeDescription,
@@ -143,41 +143,41 @@ select_statement := select_statement ||
                             A0.ClaimStateFull,
                             A0.LicenseNumber,
                             A0.ReportDate,
-                            IFNULL(
+                            ifnull(
                                 A1.ActionCode,
-                                IFNULL(A2.ActionCode, A0.ActionCode)
-                            ) AS ActionCode
-                        FROM
-                            CTE_ProviderMalpractice AS A0
-                            LEFT JOIN CTE_Action_1 AS A1 ON A0.ProviderMalpracticeID = A1.ProviderMalpracticeID
-                            LEFT JOIN CTE_Action_2 AS A2 ON A0.ProviderMalpracticeID = A2.ProviderMalpracticeID
-                        WHERE
-                            IFNULL(
+                                ifnull(A2.ActionCode, A0.ActionCode)
+                            ) as ActionCode
+                        from
+                            CTE_ProviderMalpractice as A0
+                            left join CTE_Action_1 as A1 on A0.ProviderMalpracticeID = A1.ProviderMalpracticeID
+                            left join CTE_Action_2 as A2 on A0.ProviderMalpracticeID = A2.ProviderMalpracticeID
+                        where
+                            ifnull(
                                 A1.ActionCode,
-                                IFNULL(A2.ActionCode, A0.ActionCode)
+                                ifnull(A2.ActionCode, A0.ActionCode)
                             ) <> 0 $$;
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                      SET 
-                        ProviderMalpracticeID = source.ProviderMalpracticeID,
-                        ProviderID = source.ProviderID,
-                        MalpracticeClaimTypeCode = source.MalpracticeClaimTypeCode,
-                        MalpracticeClaimTypeDescription = source.MalpracticeClaimTypeDescription,
-                        ClaimNumber = source.ClaimNumber,
-                        ClaimDate = source.ClaimDate,
-                        ClaimYear = source.ClaimYear,
-                        ClaimAmount = source.ClaimAmount,
-                        Complaint = source.Complaint,
-                        IncidentDate = source.IncidentDate,
-                        ClosedDate = source.ClosedDate,
-                        ClaimState = source.ClaimState,
-                        ClaimStateFull = source.ClaimStateFull,
-                        LicenseNumber = source.LicenseNumber,
-                        ReportDate = source.ReportDate';
+                        ProviderMalpracticeID = source.providermalpracticeid,
+                        ProviderID = source.providerid,
+                        MalpracticeClaimTypeCode = source.malpracticeclaimtypecode,
+                        MalpracticeClaimTypeDescription = source.malpracticeclaimtypedescription,
+                        ClaimNumber = source.claimnumber,
+                        ClaimDate = source.claimdate,
+                        ClaimYear = source.claimyear,
+                        ClaimAmount = source.claimamount,
+                        Complaint = source.complaint,
+                        IncidentDate = source.incidentdate,
+                        ClosedDate = source.closeddate,
+                        ClaimState = source.claimstate,
+                        ClaimStateFull = source.claimstatefull,
+                        LicenseNumber = source.licensenumber,
+                        ReportDate = source.reportdate';
 
---- Insert Statement
-insert_statement := ' INSERT  (
+--- insert Statement
+insert_statement := ' insert  (
                         ProviderMalpracticeID,
                         ProviderID,
                         MalpracticeClaimTypeCode,
@@ -193,56 +193,56 @@ insert_statement := ' INSERT  (
                         ClaimStateFull,
                         LicenseNumber,
                         ReportDate)
-                      VALUES (
-                        source.ProviderMalpracticeID,
-                        source.ProviderID,
-                        source.MalpracticeClaimTypeCode,
-                        source.MalpracticeClaimTypeDescription,
-                        source.ClaimNumber,
-                        source.ClaimDate,
-                        source.ClaimYear,
-                        source.ClaimAmount,
-                        source.Complaint,
-                        source.IncidentDate,
-                        source.ClosedDate,
-                        source.ClaimState,
-                        source.ClaimStateFull,
-                        source.LicenseNumber,
-                        source.ReportDate)';
+                      values (
+                        source.providermalpracticeid,
+                        source.providerid,
+                        source.malpracticeclaimtypecode,
+                        source.malpracticeclaimtypedescription,
+                        source.claimnumber,
+                        source.claimdate,
+                        source.claimyear,
+                        source.claimamount,
+                        source.complaint,
+                        source.incidentdate,
+                        source.closeddate,
+                        source.claimstate,
+                        source.claimstatefull,
+                        source.licensenumber,
+                        source.reportdate)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Mid.Providermalpractice as target USING 
+merge_statement := ' merge into mid.providermalpractice as target using 
                    ('||select_statement||') as source 
-                   ON source.ProviderMalpracticeID = target.ProviderMalpracticeID
-                   WHEN MATCHED AND source.ActionCode = 2 THEN '||update_statement|| '
-                   WHEN NOT MATCHED AND source.ActionCode = 1 THEN '||insert_statement;
+                   on source.providermalpracticeid = target.providermalpracticeid
+                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
+                   when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

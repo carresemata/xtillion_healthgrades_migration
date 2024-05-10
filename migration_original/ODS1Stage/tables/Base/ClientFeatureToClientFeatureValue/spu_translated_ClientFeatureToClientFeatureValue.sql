@@ -1,42 +1,42 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTFEATURETOCLIENTFEATUREVALUE() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTFEATURETOCLIENTFEATUREVALUE() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
---- BASE.CLIENTFEATURETOCLIENTFEATUREVALUE depends on:
---- BASE.CLIENTFEATURE
---- BASE.CLIENTFEATUREVALUE
---- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING  (BASE.vw_SWIMLANE_BASE_CLIENT)
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ClientFeatureToClientFeatureValue');
-    execution_start DATETIME default getdate();
+--- base.clientfeaturetoclientfeaturevalue depends on:
+--- base.clientfeature
+--- base.clientfeaturevalue
+--- mdm_team.mst.customer_product_profile_processing  (base.vw_swimlane_base_client)
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_clientfeaturetoclientfeaturevalue');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
--- If no conditionals:
+--- select Statement
+-- if no conditionals:
 select_statement := $$with cte_swimlane as (
     select
         *,
@@ -58,7 +58,7 @@ cte_tmp_features as (
     where
         FeatureFCBFN = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCBFN' as ClientFeatureCode,
@@ -68,7 +68,7 @@ cte_tmp_features as (
     where
         FeatureFCBFN = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -78,7 +78,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVCLT = 'FVCLT'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -88,7 +88,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVFAC = 'FVFAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
@@ -98,7 +98,7 @@ cte_tmp_features as (
     where
         FeatureFCCCP_FVOFFICE = 'FVOFFICE'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
@@ -108,7 +108,7 @@ cte_tmp_features as (
     where
         FeatureFCDTP = 'FVPPN'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
@@ -118,7 +118,7 @@ cte_tmp_features as (
     where
         FeatureFCDTP = 'FVPTN'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
@@ -128,7 +128,7 @@ cte_tmp_features as (
     where
         FeatureFCMWC = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
@@ -138,7 +138,7 @@ cte_tmp_features as (
     where
         FeatureFCMWC = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
@@ -148,7 +148,7 @@ cte_tmp_features as (
     where
         FeatureFCNPA = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
@@ -158,7 +158,7 @@ cte_tmp_features as (
     where
         FeatureFCNPA = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -168,7 +168,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVCLT'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -178,7 +178,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVFAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
@@ -188,7 +188,7 @@ cte_tmp_features as (
     where
         FeatureFCBRL = 'FVOFFICE'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
@@ -198,7 +198,7 @@ cte_tmp_features as (
     where
         FeatureFCEPR = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
@@ -208,7 +208,7 @@ cte_tmp_features as (
     where
         FeatureFCEPR = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
@@ -218,7 +218,7 @@ cte_tmp_features as (
     where
         FeatureFCOOACP = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
@@ -228,7 +228,7 @@ cte_tmp_features as (
     where
         FeatureFCOOACP = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCLOT' as ClientFeatureCode,
@@ -238,7 +238,7 @@ cte_tmp_features as (
     where
         FeatureFCLOT = 'FVCUS'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCMAR' as ClientFeatureCode,
@@ -248,7 +248,7 @@ cte_tmp_features as (
     where
         FeatureFCMAR = 'FVFAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
@@ -258,7 +258,7 @@ cte_tmp_features as (
     where
         FeatureFCDOA = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
@@ -268,7 +268,7 @@ cte_tmp_features as (
     where
         FeatureFCDOA = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
@@ -278,7 +278,7 @@ cte_tmp_features as (
     where
         FeatureFCDOS_FVFAX = 'FVFAX'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
@@ -288,7 +288,7 @@ cte_tmp_features as (
     where
         FeatureFCDOS_FVMMPEML = 'FVMMPEML'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCEOARD' as ClientFeatureCode,
@@ -298,7 +298,7 @@ cte_tmp_features as (
     where
         FeatureFCEOARD = 'FVAQSTD'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOBT' as ClientFeatureCode,
@@ -308,7 +308,7 @@ cte_tmp_features as (
     where
         FeatureFCOBT = 'FVRAPT'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -318,7 +318,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVDFC = 'FVDFC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -328,7 +328,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVDPR = 'FVDPR'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -338,7 +338,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVMT = 'FVMT'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
@@ -348,7 +348,7 @@ cte_tmp_features as (
     where
         FeatureFCODC_FVPSR = 'FVPSR'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOAS' as ClientFeatureCode,
@@ -358,7 +358,7 @@ cte_tmp_features as (
     where
         FeatureFCOAS = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCSPC' as ClientFeatureCode,
@@ -368,7 +368,7 @@ cte_tmp_features as (
     where
         FeatureFCSPC = 'FVABR1'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCPNI' as ClientFeatureCode,
@@ -378,7 +378,7 @@ cte_tmp_features as (
     where
         FeatureFCPNI = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
@@ -388,7 +388,7 @@ cte_tmp_features as (
     where
         FeatureFCPQM = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
@@ -398,7 +398,7 @@ cte_tmp_features as (
     where
         FeatureFCPQM = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -408,7 +408,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPOFFICE = 'FVCPOFFICE'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -418,7 +418,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOCC = 'FVCPTOCC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -428,7 +428,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOFAC = 'FVCPTOFAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -438,7 +438,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOPRAC = 'FVCPTOPRAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -448,7 +448,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVCPTOPROV = 'FVCPTOPROV'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -458,7 +458,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPRACOFF = 'FVPRACOFF'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -468,7 +468,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPROVFAC = 'FVPROVFAC'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
@@ -478,7 +478,7 @@ cte_tmp_features as (
     where
         FeatureFCREL_FVPROVOFF = 'FVPROVOFF'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
@@ -488,7 +488,7 @@ cte_tmp_features as (
     where
         FeatureFCOOPSR = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
@@ -498,7 +498,7 @@ cte_tmp_features as (
     where
         FeatureFCOOPSR = 'FVYES'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
@@ -508,7 +508,7 @@ cte_tmp_features as (
     where
         FeatureFCOOMT = 'FVNO'
         and RowRank = 1
-    UNION ALL
+    union all
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
@@ -519,54 +519,54 @@ cte_tmp_features as (
         FeatureFCOOMT = 'FVYES'
         and RowRank = 1
 )
-SELECT DISTINCT 
-            UUID_STRING() as ClientFeatureToClientFeatureValueID,
+select distinct 
+            uuid_string() as ClientFeatureToClientFeatureValueID,
             ClientFeatureId,
             ClientFeatureValueId,
             'Reltio' as SourceCode,
-            CURRENT_TIMESTAMP() as LastUpdateDate
-        FROM
-            cte_tmp_features AS T
-            INNER JOIN Base.ClientFeature AS CF ON CF.ClientFeatureCode = T.ClientFeatureCode
-            INNER JOIN Base.ClientFeatureValue AS CFV ON CFV.ClientFeatureValueCode = T.ClientFeatureValueCode
+            current_timestamp() as LastUpdateDate
+        from
+            cte_tmp_features as T
+            inner join base.clientfeature as CF on cf.clientfeaturecode = t.clientfeaturecode
+            inner join base.clientfeaturevalue as CFV on cfv.clientfeaturevaluecode = t.clientfeaturevaluecode
 $$;
 
---- Insert Statement
-insert_statement := '  INSERT (ClientFeatureToClientFeatureValueID, ClientFeatureID, ClientFeatureValueID, SourceCode, LastUpdateDate)
-    VALUES (Source.ClientFeatureToClientFeatureValueID, Source.ClientFeatureID, Source.ClientFeatureValueID, Source.SourceCode, Source.LastUpdateDate);';
+--- insert Statement
+insert_statement := '  insert (ClientFeatureToClientFeatureValueID, ClientFeatureID, ClientFeatureValueID, SourceCode, LastUpdateDate)
+    values (source.clientfeaturetoclientfeaturevalueid, source.clientfeatureid, source.clientfeaturevalueid, source.sourcecode, source.lastupdatedate);';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO BASE.CLIENTFEATURETOCLIENTFEATUREVALUE as target USING 
-                   ('||select_statement||') AS Source
-                    ON Target.ClientFeatureID = Source.ClientFeatureID AND Target.ClientFeatureValueID = Source.ClientFeatureValueID
-                   WHEN NOT MATCHED THEN'||insert_statement;
+merge_statement := ' merge into base.clientfeaturetoclientfeaturevalue as target using 
+                   ('||select_statement||') as Source
+                    on target.clientfeatureid = source.clientfeatureid and target.clientfeaturevalueid = source.clientfeaturevalueid
+                   when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

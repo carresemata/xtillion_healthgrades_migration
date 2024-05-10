@@ -1,38 +1,38 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYIMAGE() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYIMAGE() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.FacilityImage depends on: 
---- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
---- Base.Facility
---- Base.EntityType
---- Base.MediaImageType
---- Base.MediaSize
---- Base.MediaReviewLevel
+-- base.facilityimage depends on: 
+--- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- base.facility
+--- base.entitytype
+--- base.mediaimagetype
+--- base.mediasize
+--- base.mediareviewlevel
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_FacilityImage');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_facilityimage');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -40,33 +40,33 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT DISTINCT
-                            SHA1(TO_VARCHAR(Facility.FacilityID) || Entity.EntityTypeCode || Image_TypeCode || Image_FileName) AS FacilityImageID,
-                            Facility.FacilityId,
-                            JSON.Image_FileName AS FileName,
-                            JSON.Image_Path AS ImagePath,
-                            MIT.MediaImageTypeId,
-                            MS.MediaSizeId,
-                            MRL.MediaReviewLevelID,
-                            'MergeFacilityImage' AS SourceCode
+--- select Statement
+select_statement := $$ select distinct
+                            SHA1(to_varchar(facility.facilityid) || entity.entitytypecode || Image_TypeCode || Image_FileName) as FacilityImageID,
+                            facility.facilityid,
+                            json.image_FileName as FileName,
+                            json.image_Path as ImagePath,
+                            mit.mediaimagetypeid,
+                            ms.mediasizeid,
+                            mrl.mediareviewlevelid,
+                            'MergeFacilityImage' as SourceCode
                             
-                        FROM Raw.VW_FACILITY_PROFILE AS JSON
-                        LEFT JOIN Base.Facility AS Facility ON JSON.FacilityCode = Facility.FacilityCode 
-                        LEFT JOIN Base.EntityType Entity ON Entity.EntityTypeCode = 'FAC'
-                        LEFT JOIN Base.MediaImageType AS MIT ON MIT.MediaImageTypeCode = JSON.Image_TypeCode
-                        LEFT JOIN Base.MediaSize AS MS ON MS.MediaSizeCode = JSON.Image_SizeCode
-                        LEFT JOIN Base.MediaReviewLevel AS MRL ON MRL.MediaReviewLevelCode = JSON.Image_ReviewLevel
-                        WHERE 
-                            FACILITY_PROFILE IS NOT NULL AND
-                            FileName IS NOT NULL AND
-                            FacilityID IS NOT NULL
-                        QUALIFY ROW_NUMBER() OVER(PARTITION BY Facility.FacilityID, MediaImageTypeID, MediaSizeid ORDER BY CREATE_DATE DESC) = 1 $$;
+                        from raw.vw_FACILITY_PROFILE as JSON
+                        left join base.facility as Facility on json.facilitycode = facility.facilitycode 
+                        left join base.entitytype Entity on entity.entitytypecode = 'FAC'
+                        left join base.mediaimagetype as MIT on mit.mediaimagetypecode = json.image_TypeCode
+                        left join base.mediasize as MS on ms.mediasizecode = json.image_SizeCode
+                        left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_ReviewLevel
+                        where 
+                            FACILITY_PROFILE is not null and
+                            FileName is not null and
+                            FacilityID is not null
+                        qualify row_number() over(partition by facility.facilityid, MediaImageTypeID, MediaSizeid order by CREATE_DATE desc) = 1 $$;
 
 
 
---- Insert Statement
-insert_statement := ' INSERT  
+--- insert Statement
+insert_statement := ' insert  
                         (FacilityImageID, 
                         FacilityID, 
                         FileName, 
@@ -76,50 +76,50 @@ insert_statement := ' INSERT
                         MediaReviewLevelID, 
                         SourceCode, 
                         LastUpdateDate)
-                      VALUES 
-                        (source.FacilityImageID, 
-                        source.FacilityID, 
-                        source.FileName, 
-                        source.ImagePath, 
-                        source.MediaImageTypeID, 
-                        source.MediaSizeID, 
-                        source.MediaReviewLevelID, 
-                        source.SourceCode, 
-                        CURRENT_TIMESTAMP())';
+                      values 
+                        (source.facilityimageid, 
+                        source.facilityid, 
+                        source.filename, 
+                        source.imagepath, 
+                        source.mediaimagetypeid, 
+                        source.mediasizeid, 
+                        source.mediareviewlevelid, 
+                        source.sourcecode, 
+                        current_timestamp())';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Base.FacilityImage as target USING 
+merge_statement := ' merge into base.facilityimage as target using 
                    ('||select_statement||') as source 
-                   ON source.Facilityid = target.Facilityid
-                   WHEN MATCHED THEN DELETE
-                   WHEN NOT MATCHED THEN '||insert_statement;
+                   on source.facilityid = target.facilityid
+                   WHEN MATCHED then delete
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

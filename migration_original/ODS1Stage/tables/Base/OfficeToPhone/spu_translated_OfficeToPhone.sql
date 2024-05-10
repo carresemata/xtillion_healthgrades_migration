@@ -1,61 +1,61 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICETOPHONE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICETOPHONE()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
+    EXECUTE as CALLER
+    as  
 
-DECLARE 
-
----------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
--- BASE.OfficeToPhone depends on:
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- Base.Office
---- Base.PhoneType
+declare 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_OfficeToPhone');
-    execution_start DATETIME default getdate();
+-- base.officetophone depends on:
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- base.office
+--- base.phonetype
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_officetophone');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
-    -- Select Statement
-    select_statement := $$  SELECT DISTINCT
-                            PT.PhoneTypeID,
+    -- select Statement
+    select_statement := $$  select distinct
+                            pt.phonetypeid,
                             -- PhoneId
-                            O.OfficeId,
-                            IFNULL(JSON.PHONE_SOURCECODE , 'Reltio') AS SourceCode,
-                            IFNULL(JSON.PHONE_LASTUPDATEDATE , CURRENT_TIMESTAMP()) AS LastUpdateDate,
-                            1 AS PhoneRank
-                        FROM RAW.VW_OFFICE_PROFILE AS JSON
-                            LEFT JOIN Base.Office AS O ON O.OfficeCode = JSON.OfficeCode
-                            LEFT JOIN Base.PhoneType AS PT ON PT.PHONETYPECODE = JSON.PHONE_PHONETYPECODE
-                        WHERE
-                            OFFICE_PROFILE IS NOT NULL
-                            AND OFFICEID IS NOT NULL 
-                            AND PhonetypeId IS NOT NULL
-                        QUALIFY row_number() over(partition by OfficeID, JSON.PHONE_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
+                            o.officeid,
+                            ifnull(json.phone_SOURCECODE , 'Reltio') as SourceCode,
+                            ifnull(json.phone_LASTUPDATEDATE , current_timestamp()) as LastUpdateDate,
+                            1 as PhoneRank
+                        from raw.vw_OFFICE_PROFILE as JSON
+                            left join base.office as O on o.officecode = json.officecode
+                            left join base.phonetype as PT on pt.phonetypecode = json.phone_PHONETYPECODE
+                        where
+                            OFFICE_PROFILE is not null
+                            and OFFICEID is not null 
+                            and PhonetypeId is not null
+                        qualify row_number() over(partition by OfficeID, json.phone_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
 
 
-    -- Insert Statement
-insert_statement := ' INSERT  
+    -- insert Statement
+insert_statement := ' insert  
                             (OfficeToPhoneID,
                             PhoneTypeID,
                             --PhoneID,
@@ -63,47 +63,47 @@ insert_statement := ' INSERT
                             SourceCode,
                             LastUpdateDate,
                             PhoneRank)
-                    VALUES 
-                          (UUID_STRING(),
-                            source.PhoneTypeID,
-                            --source.PhoneID,
-                            source.OfficeID,
-                            source.SourceCode,
-                            source.LastUpdateDate,
-                            source.PhoneRank)';
+                    values 
+                          (uuid_string(),
+                            source.phonetypeid,
+                            --source.phoneid,
+                            source.officeid,
+                            source.sourcecode,
+                            source.lastupdatedate,
+                            source.phonerank)';
 
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
-merge_statement := ' MERGE INTO Base.OfficeToPhone AS target 
-USING ('||select_statement||') AS source
-ON source.OfficeId = target.OfficeId AND source.PhoneTypeId = target.PhoneTypeId
-WHEN MATCHED THEN DELETE 
-WHEN NOT MATCHED THEN'||insert_statement;
+merge_statement := ' merge into base.officetophone as target 
+using ('||select_statement||') as source
+on source.officeid = target.officeid and source.phonetypeid = target.phonetypeid
+WHEN MATCHED then delete 
+when not matched then'||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

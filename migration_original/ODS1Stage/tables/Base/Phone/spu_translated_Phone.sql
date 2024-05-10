@@ -1,43 +1,43 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PHONE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PHONE()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
--- Base.Phone depends on:
---- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (RAW.VW_CUSTOMER_PRODUCT_PROFILE and Base.vw_Swimlane_base_client)
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING (RAW.VW_FACILITY_PROFILE)
---- Base.Facility
---- Base.ClientToProduct
---- Base.SyndicationPartner
---- Base.Office
---- Base.PhoneType
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING; 
-    merge_statement_1 STRING; 
-    select_statement_2 STRING; 
-    merge_statement_2 STRING;
-    select_statement_3 STRING; 
-    merge_statement_3 STRING;
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Phone');
-    execution_start DATETIME default getdate();
+-- base.phone depends on:
+--- mdm_team.mst.customer_product_profile_processing (raw.vw_customer_product_profile and base.vw_swimlane_base_client)
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- base.facility
+--- base.clienttoproduct
+--- base.syndicationpartner
+--- base.office
+--- base.phonetype
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+
+    select_statement_1 string; 
+    merge_statement_1 string; 
+    select_statement_2 string; 
+    merge_statement_2 string;
+    select_statement_3 string; 
+    merge_statement_3 string;
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_phone');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -45,9 +45,9 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement_1 := $$ WITH cte_swimlane AS (
-    SELECT
+--- select Statement
+select_statement_1 := $$ with cte_swimlane as (
+    select
         *
     from
         base.vw_swimlane_base_client qualify dense_rank() over(
@@ -57,35 +57,35 @@ select_statement_1 := $$ WITH cte_swimlane AS (
         ) = 1
 ),
 
-CTE_Swimlane_Phones AS (
-    SELECT
-        S.CUSTOMERPRODUCTCODE AS ClientToProductcode,
-        S.ProductCode,
-        JSON.DISPLAYPARTNER_REFDISPLAYPARTNERCODE AS DisplayPartnerCode,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTDES END AS PhonePTDES,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTDESM END AS PhonePTDESM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTDEST END AS PhonePTDEST,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTEMP END AS PhonePTEMP,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTEMPM END AS PhonePTEMPM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTEMPT END AS PhonePTEMPT,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTHOS END AS PhonePTHOS,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTHOSM END AS PhonePTHOSM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTHOST END AS PhonePTHOST,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMTR END AS PhonePTMTR,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMTRT END AS PhonePTMTRT,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMTRM END AS PhonePTMTRM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMWC END AS PhonePTMWC,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMWCT END AS PhonePTMWCT,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTMWCM END AS PhonePTMWCM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTPSR END AS PhonePTPSR,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTPSRD END AS PhonePTPSRD,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTPSRM END AS PhonePTPSRM,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTPSRT END AS PhonePTPSRT,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTDPPEP END AS PhonePTDPPEP,
-        CASE WHEN S.ProductCode='MAP' THEN NULL ELSE JSON.DISPLAYPARTNER_PHONEPTDPPNP END AS PhonePTDPPNP 
-    FROM CTE_swimlane AS S
-        LEFT JOIN RAW.VW_CUSTOMER_PRODUCT_PROFILE AS JSON ON JSON.CustomerProductCode = S.CustomerProductCode
-        INNER JOIN Base.SyndicationPartner As SP ON SP.SyndicationPartnerCode = JSON.DISPLAYPARTNER_REFDISPLAYPARTNERCODE
+CTE_Swimlane_Phones as (
+    select
+        s.customerproductcode as ClientToProductcode,
+        s.productcode,
+        json.displaypartner_REFDISPLAYPARTNERCODE as DisplayPartnerCode,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTDES END as PhonePTDES,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTDESM END as PhonePTDESM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTDEST END as PhonePTDEST,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTEMP END as PhonePTEMP,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTEMPM END as PhonePTEMPM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTEMPT END as PhonePTEMPT,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTHOS END as PhonePTHOS,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTHOSM END as PhonePTHOSM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTHOST END as PhonePTHOST,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMTR END as PhonePTMTR,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMTRT END as PhonePTMTRT,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMTRM END as PhonePTMTRM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMWC END as PhonePTMWC,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMWCT END as PhonePTMWCT,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTMWCM END as PhonePTMWCM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTPSR END as PhonePTPSR,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTPSRD END as PhonePTPSRD,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTPSRM END as PhonePTPSRM,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTPSRT END as PhonePTPSRT,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTDPPEP END as PhonePTDPPEP,
+        CASE WHEN s.productcode='MAP' then null else json.displaypartner_PHONEPTDPPNP END as PhonePTDPPNP 
+    from CTE_swimlane as S
+        left join raw.vw_CUSTOMER_PRODUCT_PROFILE as JSON on json.customerproductcode = s.customerproductcode
+        inner join base.syndicationpartner as SP on sp.syndicationpartnercode = json.displaypartner_REFDISPLAYPARTNERCODE
 ),
 cte_tmp_phones as (
         select
@@ -298,94 +298,94 @@ cte_tmp_phones as (
         where
             PhonePTDPPNP is not null
     ),
-CTE_NotExists AS (
-    SELECT 1 
-    FROM Base.Phone as p 
-        LEFT JOIN CTE_Tmp_Phones As cte ON cte.PhoneNumber = p.PhoneNumber
-    WHERE cte.DisplayPartnerCode = 'HG'
+CTE_NotExists as (
+    select 1 
+    from base.phone as p 
+        left join CTE_Tmp_Phones as cte on cte.phonenumber = p.phonenumber
+    where cte.displaypartnercode = 'HG'
 )
-SELECT 
-    UUID_STRING() AS PhoneId,
+select 
+    uuid_string() as PhoneId,
     PhoneNumber
-FROM CTE_TMP_PHONES
-WHERE NOT EXISTS (SELECT * FROM CTE_NOTEXISTS) $$;
+from CTE_TMP_PHONES
+where not exists (select * from CTE_NOTEXISTS) $$;
 
 
 
-select_statement_2 := $$ SELECT DISTINCT
-                            UUID_STRING() AS PhoneId,
-                            O.OfficeId,
-                            JSON.PHONE_PHONETYPECODE As PhoneTypecode,
-                            CASE  WHEN JSON.PHONE_PHONENUMBER NOT LIKE '%ext.%' THEN JSON.PHONE_PHONENUMBER ELSE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(JSON.PHONE_PHONENUMBER, 'ext', 'x'), '(', ''), ')', ''), '.', ''), '-', ''), ' ', '') END AS PhoneNumberReformat,
-                            CASE WHEN LENGTH(PhoneNumberReformat) > 15 THEN SUBSTRING(PhoneNumberReformat, 1, POSITION('x' IN PhoneNumberReformat)) ELSE PhoneNumberReformat END AS PhoneNumber,
+select_statement_2 := $$ select distinct
+                            uuid_string() as PhoneId,
+                            o.officeid,
+                            json.phone_PHONETYPECODE as PhoneTypecode,
+                            CASE  WHEN json.phone_PHONENUMBER not LIKE '%ext.%' then json.phone_PHONENUMBER else REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(json.phone_PHONENUMBER, 'ext', 'x'), '(', ''), ')', ''), '.', ''), '-', ''), ' ', '') END as PhoneNumberReformat,
+                            CASE WHEN LENGTH(PhoneNumberReformat) > 15 then SUBSTRING(PhoneNumberReformat, 1, POSITION('x' IN PhoneNumberReformat)) else PhoneNumberReformat END as PhoneNumber,
                             -- PhoneNumberCustomerProduct  
                             -- PhoneRank
-                            IFNULL(JSON.PHONE_SOURCECODE, 'Profisee') As SourceCode,
-                            JSON.PHONE_LASTUPDATEDATE AS LastUpdateDate,
-                            PT.PhoneTypeID,
-                            row_number() over(partition by O.OfficeID, JSON.PHONE_PHONENUMBER, pt.PhoneTypeID order by JSON.PHONE_LASTUPDATEDATE desc) as PhoneRowRank
-                        FROM RAW.VW_OFFICE_PROFILE AS JSON
-                            LEFT JOIN Base.Office AS O ON O.OfficeCode = JSON.OfficeCode
-                            LEFT JOIN Base.PhoneType AS PT ON PT.PHONETYPECODE = JSON.PHONE_PHONETYPECODE
-                        WHERE
-                            OFFICE_PROFILE IS NOT NULL
-                            AND OFFICEID IS NOT NULL 
-                            AND PhonetypeId IS NOT NULL
-                        QUALIFY row_number() over(partition by OfficeID, JSON.PHONE_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
+                            ifnull(json.phone_SOURCECODE, 'Profisee') as SourceCode,
+                            json.phone_LASTUPDATEDATE as LastUpdateDate,
+                            pt.phonetypeid,
+                            row_number() over(partition by o.officeid, json.phone_PHONENUMBER, pt.phonetypeid order by json.phone_LASTUPDATEDATE desc) as PhoneRowRank
+                        from raw.vw_OFFICE_PROFILE as JSON
+                            left join base.office as O on o.officecode = json.officecode
+                            left join base.phonetype as PT on pt.phonetypecode = json.phone_PHONETYPECODE
+                        where
+                            OFFICE_PROFILE is not null
+                            and OFFICEID is not null 
+                            and PhonetypeId is not null
+                        qualify row_number() over(partition by OfficeID, json.phone_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
 
 
                         
-select_statement_3 := $$ WITH CTE_Swimlane AS (
-    SELECT DISTINCT
-        F.FacilityId,
-        JSON.FacilityCode,
-        CP.ClientToProductId,
-        JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
+select_statement_3 := $$ with CTE_Swimlane as (
+    select distinct
+        f.facilityid,
+        json.facilitycode,
+        cp.clienttoproductid,
+        json.customerproduct_CUSTOMERPRODUCTCODE as ClientToProductCode,
         -- ReltioEntityId
-        PARSE_JSON(JSON.CUSTOMERPRODUCT_DISPLAYPARTNER) AS DisplayPartnerJSON,
+        PARSE_JSON(json.customerproduct_DISPLAYPARTNER) as DisplayPartnerJSON,
         -- FeatureFCCIURL
-        JSON.CUSTOMERPRODUCT_FEATUREFCCLURL AS FeatureFCCLURL,
-        JSON.CUSTOMERPRODUCT_FEATUREFCCLLOGO AS FeatuerFCCLLOGO,
-        JSON.CUSTOMERPRODUCT_FEATUREFCFLOGO AS FeatureFCFLogo,
-        JSON.CUSTOMERPRODUCT_FEATUREFCFURL AS FeatureFCFURL,
+        json.customerproduct_FEATUREFCCLURL as FeatureFCCLURL,
+        json.customerproduct_FEATUREFCCLLOGO as FeatuerFCCLLOGO,
+        json.customerproduct_FEATUREFCFLOGO as FeatureFCFLogo,
+        json.customerproduct_FEATUREFCFURL as FeatureFCFURL,
         row_number() over(partition by FacilityID order by CREATE_DATE desc) as RowRank,
-        IFNULL(JSON.CUSTOMERPRODUCT_SOURCECODE, 'Profisee') AS SourceCode,
-        IFNULL(JSON.CUSTOMERPRODUCT_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate
-    FROM RAW.VW_FACILITY_PROFILE AS JSON
-        JOIN Base.Facility AS F ON F.FacilityCode = JSON.FacilityCode
-        JOIN Base.ClientToProduct as cp on cp.ClientToProductCode = JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE
-    WHERE FACILITY_PROFILE IS NOT NULL
-          AND JSON.FACILITYCODE IS NOT NULL
+        ifnull(json.customerproduct_SOURCECODE, 'Profisee') as SourceCode,
+        ifnull(json.customerproduct_LASTUPDATEDATE, sysdate()) as LastUpdateDate
+    from raw.vw_FACILITY_PROFILE as JSON
+        join base.facility as F on f.facilitycode = json.facilitycode
+        join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CUSTOMERPRODUCTCODE
+    where FACILITY_PROFILE is not null
+          and json.facilitycode is not null
 ),
-CTE_Swimlane_Phones AS (
-    SELECT
-        S.FacilityCode,
-        S.ClientToProductCode,
-        S.RowRank,
-        S.LastUpdateDate,
-        TO_VARCHAR(S.DisplayPartnerJSON:DISPLAY_PARTNER_CODE) AS DisplayPartnerCode,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFDS) AS PhonePTFDS,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFDSM) AS PhonePTFDSM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFDST) AS PhonePTFDST,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMC) AS PhonePTFMC,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMCM) AS PhonePTFMCM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMCT) AS PhonePTFMCT,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMT) AS PhonePTFMT,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMTM) AS PhonePTFMTM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFMTT) AS PhonePTFMTT,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFSR) AS PhonePTFSR,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFSRD) AS PhonePTFSRD,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFSRDM) AS PhonePTFSRDM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFSRM) AS PhonePTFSRM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFSRT) AS PhonePTFSRT,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTHFS) AS PhonePTHFS,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTHFSM) AS PhonePTHFSM,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTHFST) AS PhonePTHFST,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTUFS) AS PhonePTUFS,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFDPPEP) AS PhonePTFDPPEP,
-        TO_VARCHAR(S.DisplayPartnerJSON:PHONE_PTFDPPNP) AS PhonePTFDPPNP
-    FROM CTE_Swimlane AS S
-        INNER JOIN Base.SyndicationPartner AS SP ON SP.SyndicationPartnerCode = S.DisplayPartnerJSON:DISPLAY_PARTNER_CODE
+CTE_Swimlane_Phones as (
+    select
+        s.facilitycode,
+        s.clienttoproductcode,
+        s.rowrank,
+        s.lastupdatedate,
+        to_varchar(s.displaypartnerjson:DISPLAY_PARTNER_CODE) as DisplayPartnerCode,
+        to_varchar(s.displaypartnerjson:PHONE_PTFDS) as PhonePTFDS,
+        to_varchar(s.displaypartnerjson:PHONE_PTFDSM) as PhonePTFDSM,
+        to_varchar(s.displaypartnerjson:PHONE_PTFDST) as PhonePTFDST,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMC) as PhonePTFMC,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMCM) as PhonePTFMCM,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMCT) as PhonePTFMCT,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMT) as PhonePTFMT,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMTM) as PhonePTFMTM,
+        to_varchar(s.displaypartnerjson:PHONE_PTFMTT) as PhonePTFMTT,
+        to_varchar(s.displaypartnerjson:PHONE_PTFSR) as PhonePTFSR,
+        to_varchar(s.displaypartnerjson:PHONE_PTFSRD) as PhonePTFSRD,
+        to_varchar(s.displaypartnerjson:PHONE_PTFSRDM) as PhonePTFSRDM,
+        to_varchar(s.displaypartnerjson:PHONE_PTFSRM) as PhonePTFSRM,
+        to_varchar(s.displaypartnerjson:PHONE_PTFSRT) as PhonePTFSRT,
+        to_varchar(s.displaypartnerjson:PHONE_PTHFS) as PhonePTHFS,
+        to_varchar(s.displaypartnerjson:PHONE_PTHFSM) as PhonePTHFSM,
+        to_varchar(s.displaypartnerjson:PHONE_PTHFST) as PhonePTHFST,
+        to_varchar(s.displaypartnerjson:PHONE_PTUFS) as PhonePTUFS,
+        to_varchar(s.displaypartnerjson:PHONE_PTFDPPEP) as PhonePTFDPPEP,
+        to_varchar(s.displaypartnerjson:PHONE_PTFDPPNP) as PhonePTFDPPNP
+    from CTE_Swimlane as S
+        inner join base.syndicationpartner as SP on sp.syndicationpartnercode = s.displaypartnerjson:DISPLAY_PARTNER_CODE
 ),
 
 cte_tmp_phones as (
@@ -629,83 +629,83 @@ cte_tmp_phones as (
         where
             PhonePTFDPPNP is not null
     ),
-CTE_NotExists AS (
-    SELECT 1 
-    FROM Base.Phone as p 
-        LEFT JOIN CTE_Tmp_Phones As cte ON cte.PhoneNumber = p.PhoneNumber
-    WHERE cte.DisplayPartnerCode = 'HG'
+CTE_NotExists as (
+    select 1 
+    from base.phone as p 
+        left join CTE_Tmp_Phones as cte on cte.phonenumber = p.phonenumber
+    where cte.displaypartnercode = 'HG'
 )
-SELECT DISTINCT
-    UUID_STRING() AS PhoneId,
+select distinct
+    uuid_string() as PhoneId,
     PhoneNumber,
     LastUpdateDate
-FROM CTE_TMP_PHONES
-WHERE NOT EXISTS (SELECT * FROM CTE_NOTEXISTS)$$;
+from CTE_TMP_PHONES
+where not exists (select * from CTE_NOTEXISTS)$$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement_1 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_1 := ' merge into base.phone as target using 
                    ('||select_statement_1||') as source 
-                   ON source.PhoneId = target.PhoneId
-                   WHEN NOT MATCHED THEN
-                    INSERT (PhoneId,
+                   on source.phoneid = target.phoneid
+                   when not matched then
+                    insert (PhoneId,
                             PhoneNumber,
                             LastUpdateDate)
-                    VALUES (source.PhoneId,
-                            source.PhoneNumber,
-                            SYSDATE())';
+                    values (source.phoneid,
+                            source.phonenumber,
+                            sysdate())';
 
-merge_statement_2 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_2 := ' merge into base.phone as target using 
                    ('||select_statement_2||') as source 
-                   ON source.PhoneId = target.PhoneId
-                   WHEN NOT MATCHED THEN
-                    INSERT (PhoneId,
+                   on source.phoneid = target.phoneid
+                   when not matched then
+                    insert (PhoneId,
                             PhoneNumber,
                             SourceCode,
                             LastUpdateDate)
-                    VALUES (source.PhoneId,
-                            source.PhoneNumber,
-                            source.SourceCode,
-                            source.LastUpdateDate)';
+                    values (source.phoneid,
+                            source.phonenumber,
+                            source.sourcecode,
+                            source.lastupdatedate)';
 
-merge_statement_3 := ' MERGE INTO Base.Phone as target USING 
+merge_statement_3 := ' merge into base.phone as target using 
                    ('||select_statement_3||') as source 
-                   ON source.PhoneId = target.PhoneId
-                   WHEN NOT MATCHED THEN
-                    INSERT (PhoneId,
+                   on source.phoneid = target.phoneid
+                   when not matched then
+                    insert (PhoneId,
                             PhoneNumber,
                             LastUpdateDate)
-                    VALUES (source.PhoneId,
-                            source.PhoneNumber,
-                            source.LastUpdateDate)';                            
+                    values (source.phoneid,
+                            source.phonenumber,
+                            source.lastupdatedate)';                            
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement_1 ;
-EXECUTE IMMEDIATE merge_statement_2 ;
-EXECUTE IMMEDIATE merge_statement_3 ;
+execute immediate merge_statement_1 ;
+execute immediate merge_statement_2 ;
+execute immediate merge_statement_3 ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

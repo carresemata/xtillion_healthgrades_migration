@@ -1,66 +1,66 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICETOADDRESS()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICETOADDRESS()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
+    EXECUTE as CALLER
+    as  
 
-DECLARE 
-
----------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
--- BASE.OfficeToAddress depends on:
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- Base.Office
---- Base.AddressType
+declare 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_OfficeToAddress');
-    execution_start DATETIME default getdate();
+-- base.officetoaddress depends on:
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- base.office
+--- base.addresstype
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_officetoaddress');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
-    -- Select Statement
-    select_statement := $$  SELECT DISTINCT
-                                    AT.AddressTypeID,
-                                    O.OfficeID,
+    -- select Statement
+    select_statement := $$  select distinct
+                                    at.addresstypeid,
+                                    o.officeid,
                                     -- addressId
-                                    JSON.ADDRESS_SOURCECODE AS SourceCode,
+                                    json.address_SOURCECODE as SourceCode,
                                     -- isderived
-                                    JSON.ADDRESS_LASTUPDATEDATE AS LastUpdateDate
-                            FROM
-                                Raw.VW_OFFICE_PROFILE AS JSON 
-                                LEFT JOIN Base.AddressType AS AT ON AT.AddressTypeCode = JSON.ADDRESS_ADDRESSTYPECODE
-                                LEFT JOIN Base.Office AS O ON O.OFFICECODE = JSON.OfficeCode
+                                    json.address_LASTUPDATEDATE as LastUpdateDate
+                            from
+                                raw.vw_OFFICE_PROFILE as JSON 
+                                left join base.addresstype as AT on at.addresstypecode = json.address_ADDRESSTYPECODE
+                                left join base.office as O on o.officecode = json.officecode
                                 
-                            WHERE
-                                    JSON.OFFICE_PROFILE IS NOT NULL  
-                                    AND OfficeId IS NOT NULL 
-                                    AND NULLIF(JSON.ADDRESS_CITY,'') IS NOT NULL 
-                                    AND NULLIF(JSON.ADDRESS_STATE,'') IS NOT NULL 
-                                    AND NULLIF(JSON.ADDRESS_POSTALCODE,'') IS NOT NULL
-                                    AND LENGTH(TRIM(UPPER(JSON.Address_AddressLine1)) || IFNULL(TRIM(UPPER(JSON.Address_AddressLine2)),'') || IFNULL(TRIM(UPPER(JSON.Address_Suite)),'')) > 0
-                            QUALIFY row_number() over(partition by OfficeID, JSON.ADDRESS_ADDRESSLINE1, JSON.ADDRESS_ADDRESSLINE2, JSON.ADDRESS_SUITE, JSON.ADDRESS_CITY, JSON.ADDRESS_STATE, JSON.ADDRESS_POSTALCODE order by CREATE_DATE desc) = 1$$;
+                            where
+                                    json.office_PROFILE is not null  
+                                    and OfficeId is not null 
+                                    and nullif(json.address_CITY,'') is not null 
+                                    and nullif(json.address_STATE,'') is not null 
+                                    and nullif(json.address_POSTALCODE,'') is not null
+                                    and LENGTH(trim(upper(json.address_AddressLine1)) || ifnull(trim(upper(json.address_AddressLine2)),'') || ifnull(trim(upper(json.address_Suite)),'')) > 0
+                            qualify row_number() over(partition by OfficeID, json.address_ADDRESSLINE1, json.address_ADDRESSLINE2, json.address_SUITE, json.address_CITY, json.address_STATE, json.address_POSTALCODE order by CREATE_DATE desc) = 1$$;
 
 
-    -- Insert Statement
-insert_statement := ' INSERT  
+    -- insert Statement
+insert_statement := ' insert  
                             (OfficeToAddressID,
                             AddressTypeID,
                             OfficeID,
@@ -68,47 +68,47 @@ insert_statement := ' INSERT
                             SourceCode,
                             --IsDerived,
                             LastUpdateDate)
-                    VALUES 
-                          (UUID_STRING(),
-                            source.AddressTypeID,
-                            source.OfficeID,
+                    values 
+                          (uuid_string(),
+                            source.addresstypeid,
+                            source.officeid,
                             --AddressID,
-                            source.SourceCode,
+                            source.sourcecode,
                             --IsDerived,
-                            source.LastUpdateDate)';
+                            source.lastupdatedate)';
 
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
-merge_statement := ' MERGE INTO Base.OfficeToAddress AS target 
-USING ('||select_statement||') AS source
-ON source.OfficeId = target.OfficeId AND source.AddressTypeId = target.AddressTypeId
-WHEN MATCHED THEN DELETE 
-WHEN NOT MATCHED THEN'||insert_statement;
+merge_statement := ' merge into base.officetoaddress as target 
+using ('||select_statement||') as source
+on source.officeid = target.officeid and source.addresstypeid = target.addresstypeid
+WHEN MATCHED then delete 
+when not matched then'||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

@@ -1,135 +1,135 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSANCTION(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSANCTION(IsProviderDeltaProcessing BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Mid.ProviderSanction depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
---- Base.Provider
---- Base.ProviderSanction
---- Base.SanctionType
---- Base.SanctionCategory
---- Base.SanctionAction
---- Base.StateReportingAgency
---- Base.SanctionActionType
---- Base.State
+-- mid.providersanction depends on: 
+--- mdm_team.mst.provider_profile_processing
+--- base.provider
+--- base.providersanction
+--- base.sanctiontype
+--- base.sanctioncategory
+--- base.sanctionaction
+--- base.statereportingagency
+--- base.sanctionactiontype
+--- base.state
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderSanction');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providersanction');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
+begin
+    if (IsProviderDeltaProcessing) then
            select_statement := '
-          WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
-    ELSE
+          with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    MDM_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
+    else
            select_statement := '
-           WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    Base.Provider AS p
-                ORDER BY
-                    p.ProviderID),';
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
             
-    END IF;
+    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
 
--- If conditionals:
+-- if conditionals:
 select_statement := select_statement || 
-                    $$ CTE_ProviderSanction AS (
-                            SELECT
-                                ps.ProviderSanctionID,
-                                ps.ProviderID,
-                                ps.SanctionDescription,
-                                ps.SanctionDate,
-                                ps.SanctionReinstatementDate AS ReinstatementDate,
-                                st.SanctionTypeCode,
-                                st.SanctionTypeDescription,
-                                sra.State,
-                                sc.SanctionCategoryCode,
-                                sc.SanctionCategoryDescription,
-                                sa.SanctionActionCode,
-                                sa.SanctionActionDescription,
-                                sat.SanctionActionTypeCode,
-                                sat.SanctionActionTypeDescription,
-                                s.StateName AS StateFull,
-                                0 AS ActionCode
-                            FROM
-                                CTE_ProviderBatch AS pb
-                                JOIN Base.ProviderSanction AS ps ON ps.ProviderID = pb.ProviderID
-                                JOIN Base.SanctionType AS st ON ps.SanctionTypeID = st.SanctionTypeID
-                                JOIN Base.SanctionCategory AS sc ON ps.SanctionCategoryID = sc.SanctionCategoryID
-                                JOIN Base.SanctionAction AS sa ON ps.SanctionActionID = sa.SanctionActionID
-                                JOIN Base.StateReportingAgency AS sra ON ps.StateReportingAgencyID = sra.StateReportingAgencyID
-                                LEFT JOIN Base.SanctionActionType AS sat ON sa.SanctionActionTypeID = sat.SanctionActionTypeID
-                                LEFT JOIN Base.State AS s ON sra.State = s.State
+                    $$ CTE_ProviderSanction as (
+                            select
+                                ps.providersanctionid,
+                                ps.providerid,
+                                ps.sanctiondescription,
+                                ps.sanctiondate,
+                                ps.sanctionreinstatementdate as ReinstatementDate,
+                                st.sanctiontypecode,
+                                st.sanctiontypedescription,
+                                sra.state,
+                                sc.sanctioncategorycode,
+                                sc.sanctioncategorydescription,
+                                sa.sanctionactioncode,
+                                sa.sanctionactiondescription,
+                                sat.sanctionactiontypecode,
+                                sat.sanctionactiontypedescription,
+                                s.statename as StateFull,
+                                0 as ActionCode
+                            from
+                                CTE_ProviderBatch as pb
+                                join base.providersanction as ps on ps.providerid = pb.providerid
+                                join base.sanctiontype as st on ps.sanctiontypeid = st.sanctiontypeid
+                                join base.sanctioncategory as sc on ps.sanctioncategoryid = sc.sanctioncategoryid
+                                join base.sanctionaction as sa on ps.sanctionactionid = sa.sanctionactionid
+                                join base.statereportingagency as sra on ps.statereportingagencyid = sra.statereportingagencyid
+                                left join base.sanctionactiontype as sat on sa.sanctionactiontypeid = sat.sanctionactiontypeid
+                                left join base.state as s on sra.state = s.state
                         ),
-                        -- Insert Action
-                        CTE_Action_1 AS (
-                            SELECT
-                                cte.ProviderSanctionID,
-                                1 AS ActionCode
-                            FROM
-                                CTE_ProviderSanction AS cte
-                                LEFT JOIN Mid.ProviderSanction AS mid ON cte.ProviderSanctionID = mid.ProviderSanctionID
-                            WHERE
-                                mid.ProviderSanctionID IS NULL
+                        -- insert Action
+                        CTE_Action_1 as (
+                            select
+                                cte.providersanctionid,
+                                1 as ActionCode
+                            from
+                                CTE_ProviderSanction as cte
+                                left join mid.providersanction as mid on cte.providersanctionid = mid.providersanctionid
+                            where
+                                mid.providersanctionid is null
                         ),
-                        -- Update Action
-                        CTE_Action_2 AS (
-                            SELECT
-                                cte.ProviderSanctionID,
-                                2 AS ActionCode
-                            FROM
-                                CTE_ProviderSanction AS cte
-                                JOIN Mid.ProviderSanction AS mid ON cte.ProviderSanctionID = mid.ProviderSanctionID
-                           WHERE 
-                                MD5(IFNULL(cte.ProviderID::VARCHAR,'')) <> MD5(IFNULL(mid.ProviderID::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionDescription::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionDate::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionDate::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.ReinstatementDate::VARCHAR,'')) <> MD5(IFNULL(mid.ReinstatementDate::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionTypeCode::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionTypeCode::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionTypeDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionTypeDescription::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionCategoryCode::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionCategoryCode::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionCategoryDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionCategoryDescription::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionActionCode::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionActionCode::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionActionDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionActionDescription::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionActionTypeCode::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionActionTypeCode::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.SanctionActionTypeDescription::VARCHAR,'')) <> MD5(IFNULL(mid.SanctionActionTypeDescription::VARCHAR,'')) OR
-                                MD5(IFNULL(cte.StateFull::VARCHAR,'')) <> MD5(IFNULL(mid.StateFull::VARCHAR,'')) 
+                        -- update Action
+                        CTE_Action_2 as (
+                            select
+                                cte.providersanctionid,
+                                2 as ActionCode
+                            from
+                                CTE_ProviderSanction as cte
+                                join mid.providersanction as mid on cte.providersanctionid = mid.providersanctionid
+                           where 
+                                MD5(ifnull(cte.providerid::varchar,'')) <> MD5(ifnull(mid.providerid::varchar,'')) or
+                                MD5(ifnull(cte.sanctiondescription::varchar,'')) <> MD5(ifnull(mid.sanctiondescription::varchar,'')) or
+                                MD5(ifnull(cte.sanctiondate::varchar,'')) <> MD5(ifnull(mid.sanctiondate::varchar,'')) or
+                                MD5(ifnull(cte.reinstatementdate::varchar,'')) <> MD5(ifnull(mid.reinstatementdate::varchar,'')) or
+                                MD5(ifnull(cte.sanctiontypecode::varchar,'')) <> MD5(ifnull(mid.sanctiontypecode::varchar,'')) or
+                                MD5(ifnull(cte.sanctiontypedescription::varchar,'')) <> MD5(ifnull(mid.sanctiontypedescription::varchar,'')) or
+                                MD5(ifnull(cte.sanctioncategorycode::varchar,'')) <> MD5(ifnull(mid.sanctioncategorycode::varchar,'')) or
+                                MD5(ifnull(cte.sanctioncategorydescription::varchar,'')) <> MD5(ifnull(mid.sanctioncategorydescription::varchar,'')) or
+                                MD5(ifnull(cte.sanctionactioncode::varchar,'')) <> MD5(ifnull(mid.sanctionactioncode::varchar,'')) or
+                                MD5(ifnull(cte.sanctionactiondescription::varchar,'')) <> MD5(ifnull(mid.sanctionactiondescription::varchar,'')) or
+                                MD5(ifnull(cte.sanctionactiontypecode::varchar,'')) <> MD5(ifnull(mid.sanctionactiontypecode::varchar,'')) or
+                                MD5(ifnull(cte.sanctionactiontypedescription::varchar,'')) <> MD5(ifnull(mid.sanctionactiontypedescription::varchar,'')) or
+                                MD5(ifnull(cte.statefull::varchar,'')) <> MD5(ifnull(mid.statefull::varchar,'')) 
                         )
-                        SELECT
-                            DISTINCT A0.ProviderSanctionID,
+                        select
+                            distinct A0.ProviderSanctionID,
                             A0.ProviderID,
                             A0.SanctionDescription,
                             A0.SanctionDate,
@@ -143,40 +143,40 @@ select_statement := select_statement ||
                             A0.SanctionActionTypeCode,
                             A0.SanctionActionTypeDescription,
                             A0.StateFull,
-                            IFNULL(
+                            ifnull(
                                 A1.ActionCode,
-                                IFNULL(A2.ActionCode, A0.ActionCode)
-                            ) AS ActionCode
-                        FROM
-                            CTE_ProviderSanction AS A0
-                            LEFT JOIN CTE_Action_1 AS A1 ON A0.ProviderSanctionID = A1.ProviderSanctionID
-                            LEFT JOIN CTE_Action_2 AS A2 ON A0.ProviderSanctionID = A2.ProviderSanctionID
-                        WHERE
-                            IFNULL(
+                                ifnull(A2.ActionCode, A0.ActionCode)
+                            ) as ActionCode
+                        from
+                            CTE_ProviderSanction as A0
+                            left join CTE_Action_1 as A1 on A0.ProviderSanctionID = A1.ProviderSanctionID
+                            left join CTE_Action_2 as A2 on A0.ProviderSanctionID = A2.ProviderSanctionID
+                        where
+                            ifnull(
                                 A1.ActionCode,
-                                IFNULL(A2.ActionCode, A0.ActionCode)
+                                ifnull(A2.ActionCode, A0.ActionCode)
                             ) <> 0 $$;
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                      SET 
-                        ProviderSanctionID = source.ProviderSanctionID,
-                        ProviderID = source.ProviderID,
-                        SanctionDescription = source.SanctionDescription,
-                        SanctionDate = source.SanctionDate,
-                        ReinstatementDate = source.ReinstatementDate,
-                        SanctionTypeCode = source.SanctionTypeCode,
-                        SanctionTypeDescription = source.SanctionTypeDescription,
-                        SanctionCategoryCode = source.SanctionCategoryCode,
-                        SanctionCategoryDescription = source.SanctionCategoryDescription,
-                        SanctionActionCode = source.SanctionActionCode,
-                        SanctionActionDescription = source.SanctionActionDescription,
-                        SanctionActionTypeCode = source.SanctionActionTypeCode,
-                        SanctionActionTypeDescription = source.SanctionActionTypeDescription,
-                        StateFull = source.StateFull';
+                        ProviderSanctionID = source.providersanctionid,
+                        ProviderID = source.providerid,
+                        SanctionDescription = source.sanctiondescription,
+                        SanctionDate = source.sanctiondate,
+                        ReinstatementDate = source.reinstatementdate,
+                        SanctionTypeCode = source.sanctiontypecode,
+                        SanctionTypeDescription = source.sanctiontypedescription,
+                        SanctionCategoryCode = source.sanctioncategorycode,
+                        SanctionCategoryDescription = source.sanctioncategorydescription,
+                        SanctionActionCode = source.sanctionactioncode,
+                        SanctionActionDescription = source.sanctionactiondescription,
+                        SanctionActionTypeCode = source.sanctionactiontypecode,
+                        SanctionActionTypeDescription = source.sanctionactiontypedescription,
+                        StateFull = source.statefull';
 
---- Insert Statement
-insert_statement := ' INSERT  (
+--- insert Statement
+insert_statement := ' insert  (
                             ProviderSanctionID,
                             ProviderID,
                             SanctionDescription,
@@ -191,55 +191,55 @@ insert_statement := ' INSERT  (
                             SanctionActionTypeCode,
                             SanctionActionTypeDescription,
                             StateFull)
-                      VALUES (
-                            source.ProviderSanctionID,
-                            source.ProviderID,
-                            source.SanctionDescription,
-                            source.SanctionDate,
-                            source.ReinstatementDate,
-                            source.SanctionTypeCode,
-                            source.SanctionTypeDescription,
-                            source.SanctionCategoryCode,
-                            source.SanctionCategoryDescription,
-                            source.SanctionActionCode,
-                            source.SanctionActionDescription,
-                            source.SanctionActionTypeCode,
-                            source.SanctionActionTypeDescription,
-                            source.StateFull)';
+                      values (
+                            source.providersanctionid,
+                            source.providerid,
+                            source.sanctiondescription,
+                            source.sanctiondate,
+                            source.reinstatementdate,
+                            source.sanctiontypecode,
+                            source.sanctiontypedescription,
+                            source.sanctioncategorycode,
+                            source.sanctioncategorydescription,
+                            source.sanctionactioncode,
+                            source.sanctionactiondescription,
+                            source.sanctionactiontypecode,
+                            source.sanctionactiontypedescription,
+                            source.statefull)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Mid.ProviderSanction as target USING 
+merge_statement := ' merge into mid.providersanction as target using 
                    ('||select_statement||') as source 
-                   ON source.ProviderSanctionID = target.ProviderSanctionID
-                   WHEN MATCHED AND source.ActionCode = 2 THEN '||update_statement|| '
-                   WHEN NOT MATCHED AND source.ActionCode = 1 THEN '||insert_statement;
+                   on source.providersanctionid = target.providersanctionid
+                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
+                   when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

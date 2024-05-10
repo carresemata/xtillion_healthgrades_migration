@@ -1,108 +1,108 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOLANGUAGE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOLANGUAGE()
 RETURNS STRING
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS
-DECLARE
+EXECUTE as CALLER
+as
+declare
 --------------------------------------------------------
---------------- 0. Table dependencies -------------------
---------------------------------------------------------
-
--- Base.ProviderToLanguage depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.Language
-
---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 --------------------------------------------------------
 
-select_statement STRING; -- CTE and Select statement for the Merge
-insert_statement STRING; -- Insert statement for the Merge
-merge_statement STRING; -- Merge statement to final table
-status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderToLanguage');
-    execution_start DATETIME default getdate();
+-- base.providertolanguage depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.language
+
+--------------------------------------------------------
+--------------- 1. declaring variables ------------------
+--------------------------------------------------------
+
+select_statement string; -- cte and select statement for the merge
+insert_statement string; -- insert statement for the merge
+merge_statement string; -- merge statement to final table
+status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providertolanguage');
+    execution_start datetime default getdate();
 
 
 --------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 --------------------------------------------------------
 
-BEGIN
+begin
     -- no conditionals
 
 --------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 --------------------------------------------------------
 
---- Select Statement
+--- select Statement
 select_statement := $$ 
-SELECT DISTINCT
-    P.ProviderId,
-    L.LanguageId,
-    IFNULL(JSON.Language_SourceCode, 'Profisee') AS SourceCode,
-    IFNULL(JSON.Language_LastUpdateDate, CURRENT_TIMESTAMP()) AS LastUpdateDate 
+select distinct
+    p.providerid,
+    l.languageid,
+    ifnull(json.language_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.language_LastUpdateDate, current_timestamp()) as LastUpdateDate 
 
-FROM Raw.VW_PROVIDER_PROFILE AS JSON
-    LEFT JOIN Base.Provider P ON JSON.ProviderCode = P.ProviderCode
-    LEFT JOIN Base.Language L ON JSON.Language_LanguageCode = L.LanguageCode
+from raw.vw_PROVIDER_PROFILE as JSON
+    left join base.provider P on json.providercode = p.providercode
+    left join base.language L on json.language_LanguageCode = l.languagecode
     
-WHERE JSON.PROVIDER_PROFILE IS NOT NULL
-  AND JSON.Language_LanguageCode IS NOT NULL
-  AND ProviderID IS NOT NULL
-  AND LanguageID IS NOT NULL
-  AND JSON.Language_LanguageCode != 'LN0000C3A1' -- Discard English
-QUALIFY ROW_NUMBER() OVER (PARTITION BY ProviderId, JSON.Language_LanguageCode ORDER BY CREATE_DATE DESC) = 1
+where json.provider_PROFILE is not null
+  and json.language_LanguageCode is not null
+  and ProviderID is not null
+  and LanguageID is not null
+  and json.language_LanguageCode != 'LN0000C3A1' -- Discard English
+qualify row_number() over (partition by ProviderId, json.language_LanguageCode order by CREATE_DATE desc) = 1
 $$;
 
---- Insert Statement
-insert_statement := $$  INSERT 
+--- insert Statement
+insert_statement := $$  insert 
                             (ProviderToLanguageId, 
                             ProviderId, 
                             LanguageId, 
                             SourceCode, 
                             LastUpdateDate)
-                        VALUES 
-                            (UUID_STRING(), 
-                            source.ProviderId, 
-                            source.LanguageId, 
-                            source.SourceCode, 
-                            source.LastUpdateDate)
+                        values 
+                            (uuid_string(), 
+                            source.providerid, 
+                            source.languageid, 
+                            source.sourcecode, 
+                            source.lastupdatedate)
                         $$;
 
 --------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 --------------------------------------------------------
 
-merge_statement := $$ MERGE INTO Base.ProviderToLanguage AS target
-                        USING ($$||select_statement||$$) AS source
-                        ON source.ProviderId = target.ProviderId 
-                        WHEN MATCHED THEN DELETE
-                        WHEN NOT MATCHED THEN $$||insert_statement;
+merge_statement := $$ merge into base.providertolanguage as target
+                        using ($$||select_statement||$$) as source
+                        on source.providerid = target.providerid 
+                        WHEN MATCHED then delete
+                        when not matched then $$||insert_statement;
 
 --------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 --------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

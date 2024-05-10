@@ -1,37 +1,37 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_GEOGRAPHICAREA() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_GEOGRAPHICAREA() 
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
+    EXECUTE as CALLER
+    as  
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Mid.GeographicArea depends on: 
---- Base.GeographicArea
---- Base.GeographicAreaType
+-- mid.geographicarea depends on: 
+--- base.geographicarea
+--- base.geographicareatype
 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
  
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_GeographicArea');
-    execution_start DATETIME default getdate();
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_geographicarea');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -39,127 +39,127 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$WITH CTE_geoArea AS (
-                    SELECT
+--- select Statement
+select_statement := $$with CTE_geoArea as (
+                    select
                         GEOGRAPHICAREAID,
                         GEOGRAPHICAREACODE,
                         GEOGRAPHICAREATYPECODE,
                         CASE
-                            WHEN GeoAreaType.GeographicAreaTypeCode = 'CITYST' THEN CONCAT(
-                                GeoArea.GeographicAreaValue1,
+                            WHEN geoareatype.geographicareatypecode = 'CITYST' then CONCAT(
+                                geoarea.geographicareavalue1,
                                 ',',
-                                GeoArea.GeographicAreaValue2
+                                geoarea.geographicareavalue2
                             )
-                            ELSE GeoArea.GeographicAreaValue1
-                        END AS GeographicAreaValue,
-                        0 AS ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
-                    FROM
-                        Base.GeographicArea GeoArea
-                        JOIN Base.GeographicAreaType GeoAreaType ON GeoArea.GEOGRAPHICAREATYPEID = GeoAreaType.GEOGRAPHICAREATYPEID
+                            else geoarea.geographicareavalue1
+                        END as GeographicAreaValue,
+                        0 as ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
+                    from
+                        base.geographicarea GeoArea
+                        join base.geographicareatype GeoAreaType on geoarea.geographicareatypeid = geoareatype.geographicareatypeid
                     ),
-                    -- Insert Action
-                    CTE_Action_1 AS (
-                        SELECT
-                            CTE_geoArea.GeographicAreaID,
-                            1 AS ActionCode
-                        FROM
+                    -- insert Action
+                    CTE_Action_1 as (
+                        select
+                            CTE_geoarea.geographicareaid,
+                            1 as ActionCode
+                        from
                             CTE_geoArea
-                            LEFT JOIN Mid.GeographicArea GeoArea ON CTE_geoArea.GeographicAreaID = GeoArea.GeographicAreaID
-                            AND CTE_geoArea.GeographicAreaCode = GeoArea.GeographicAreaCode
-                            AND CTE_geoArea.GEOGRAPHICAREATYPECODE = GeoArea.GEOGRAPHICAREATYPECODE
-                            AND CTE_geoArea.GeographicAreaValue = GeoArea.GeographicAreaValue
-                        WHERE
-                            GeoArea.GeographicAreaID IS NULL
+                            left join mid.geographicarea GeoArea on CTE_geoarea.geographicareaid = geoarea.geographicareaid
+                            and CTE_geoarea.geographicareacode = geoarea.geographicareacode
+                            and CTE_geoarea.geographicareatypecode = geoarea.geographicareatypecode
+                            and CTE_geoarea.geographicareavalue = geoarea.geographicareavalue
+                        where
+                            geoarea.geographicareaid is null
                     ),
-                    -- Update Action
-                    CTE_Action_2 AS (
-                        SELECT
-                            CTE_geoArea.GeographicAreaID,
-                            2 AS ActionCode
-                        FROM
+                    -- update Action
+                    CTE_Action_2 as (
+                        select
+                            CTE_geoarea.geographicareaid,
+                            2 as ActionCode
+                        from
                             CTE_geoArea
-                            JOIN Mid.GeographicArea GeoArea ON CTE_geoArea.GeographicAreaID = GeoArea.GeographicAreaID
-                            AND CTE_geoArea.GeographicAreaCode = GeoArea.GeographicAreaCode
-                        WHERE
+                            join mid.geographicarea GeoArea on CTE_geoarea.geographicareaid = geoarea.geographicareaid
+                            and CTE_geoarea.geographicareacode = geoarea.geographicareacode
+                        where
                             MD5(
-                                IFNULL(CTE_geoArea.GEOGRAPHICAREACODE::VARCHAR, '''')
+                                ifnull(CTE_geoarea.geographicareacode::varchar, '''')
                             ) <> MD5(
-                                IFNULL(CTE_geoArea.GEOGRAPHICAREACODE::VARCHAR, '''')
+                                ifnull(CTE_geoarea.geographicareacode::varchar, '''')
                             )
-                            OR MD5(
-                                IFNULL(CTE_geoArea.GeographicAreaValue::VARCHAR, '''')
+                            or MD5(
+                                ifnull(CTE_geoarea.geographicareavalue::varchar, '''')
                             ) <> MD5(
-                                IFNULL(CTE_geoArea.GeographicAreaValue::VARCHAR, '''')
+                                ifnull(CTE_geoarea.geographicareavalue::varchar, '''')
                             )
                     )
-                    SELECT
+                    select
                         A0.GEOGRAPHICAREAID,
                         A0.GEOGRAPHICAREACODE,
                         A0.GEOGRAPHICAREATYPECODE,
                         A0.GeographicAreaValue,
-                        IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode
-                    FROM
+                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
+                    from
                         CTE_geoArea A0
-                        LEFT JOIN CTE_ACTION_1 A1 ON A0.GeographicAreaID = A1.GeographicAreaID
-                        LEFT JOIN CTE_ACTION_2 A2 ON A0.GeographicAreaID = A2.GeographicAreaID
-                    WHERE 
-                        IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
+                        left join CTE_ACTION_1 A1 on A0.GeographicAreaID = A1.GeographicAreaID
+                        left join CTE_ACTION_2 A2 on A0.GeographicAreaID = A2.GeographicAreaID
+                    where 
+                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
                     $$;
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                         SET
-                            GEOGRAPHICAREAID = source.GEOGRAPHICAREAID , 
-                            GEOGRAPHICAREACODE = source.GEOGRAPHICAREACODE , 
-                            GEOGRAPHICAREATYPECODE = source.GEOGRAPHICAREATYPECODE , 
-                            GEOGRAPHICAREAVALUE = source.GEOGRAPHICAREAVALUE ';
+                            GEOGRAPHICAREAID = source.geographicareaid , 
+                            GEOGRAPHICAREACODE = source.geographicareacode , 
+                            GEOGRAPHICAREATYPECODE = source.geographicareatypecode , 
+                            GEOGRAPHICAREAVALUE = source.geographicareavalue ';
 
---- Insert Statement
-insert_statement := ' INSERT
+--- insert Statement
+insert_statement := ' insert
                             (   GEOGRAPHICAREAID,
                                 GEOGRAPHICAREACODE,
                                 GEOGRAPHICAREATYPECODE,
                                 GEOGRAPHICAREAVALUE)
-                       VALUES
-                            (   source.GEOGRAPHICAREAID,
-                                source.GEOGRAPHICAREACODE,
-                                source.GEOGRAPHICAREATYPECODE,
-                                source.GEOGRAPHICAREAVALUE);';
+                       values
+                            (   source.geographicareaid,
+                                source.geographicareacode,
+                                source.geographicareatypecode,
+                                source.geographicareavalue);';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Mid.GeographicArea as target USING 
+merge_statement := ' merge into mid.geographicarea as target using 
                    ('||select_statement||') as source 
-                   ON source.GEOGRAPHICAREAID = target.GEOGRAPHICAREAID AND source.GEOGRAPHICAREACODE = target.GEOGRAPHICAREACODE
-                   WHEN MATCHED AND source.ActionCode = 2 THEN '||update_statement|| '
-                   WHEN NOT MATCHED AND source.ActionCode = 1 THEN '||insert_statement;
+                   on source.geographicareaid = target.geographicareaid and source.geographicareacode = target.geographicareacode
+                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
+                   when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

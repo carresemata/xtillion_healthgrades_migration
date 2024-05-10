@@ -1,34 +1,34 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_MARKET()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_MARKET()
 RETURNS STRING
 LANGUAGE SQL EXECUTE
-AS CALLER
-AS DECLARE 
+as CALLER
+as declare 
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
---- Base.Market depends on:
--- Base.GeographicArea
--- Base.MarketMaster (empty in SQL Server?)
--- Base.Source
--- dbo.RequestedMarketLocationsMissingFromODS2 (external schema)
+--- base.market depends on:
+-- base.geographicarea
+-- base.marketmaster (empty in sql server?)
+-- base.source
+-- dbo.requestedmarketlocationsmissingfromods2 (external schema)
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_Market');
-    execution_start DATETIME default getdate();
+select_statement string;
+insert_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_market');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- no conditionals
 
 ---------------------------------------------------------
@@ -36,28 +36,28 @@ BEGIN
 ---------------------------------------------------------     
 
 select_statement := $$                 
-                    SELECT DISTINCT
-                        mkm.MarketGUID AS MarketID,
-                        mkm.GeographicAreaGUID AS GeographicAreaID,
-                        mkm.LineOfServiceGUID AS LineOfServiceID,
-                        mkm.MarketCode,
-                        mkm.LegacyClientMarketID AS LegacyKey,
-                        'ClientMarketID' AS LegacyKeyName,
-                        s.SourceCode,
-                        mkm.LastUpdateDate
-                    FROM Base.MarketMaster AS mkm
-                        INNER JOIN Base.GeographicArea ga ON mkm.GeographicAreaGUID = ga.GeographicAreaID
-                        INNER JOIN dbo.RequestedMarketLocationsMissingFromODS2 missing ON ga.GeographicAreaValue1 = missing.GeographicAreaValue1
-                            AND IFNULL(ga.GeographicAreaValue2,'') = IFNULL(missing.GeographicAreaValue2, '')
-                        LEFT JOIN Base.Market bm ON mkm.MarketGUID = bm.MarketID
-                        LEFT JOIN Base.Source s ON mkm.SYSTEM_SRC_GUID = s.SourceID
-                    WHERE mkm.EndDate > DATEADD(day, -180, CURRENT_DATE()) OR mkm.EndDate IS NULL
-                        AND bm.MarketID IS NULL
+                    select distinct
+                        mkm.marketguid as MarketID,
+                        mkm.geographicareaguid as GeographicAreaID,
+                        mkm.lineofserviceguid as LineOfServiceID,
+                        mkm.marketcode,
+                        mkm.legacyclientmarketid as LegacyKey,
+                        'ClientMarketID' as LegacyKeyName,
+                        s.sourcecode,
+                        mkm.lastupdatedate
+                    from base.marketmaster as mkm
+                        inner join base.geographicarea ga on mkm.geographicareaguid = ga.geographicareaid
+                        inner join dbo.requestedmarketlocationsmissingfromods2 missing on ga.geographicareavalue1 = missing.geographicareavalue1
+                            and ifnull(ga.geographicareavalue2,'') = ifnull(missing.geographicareavalue2, '')
+                        left join base.market bm on mkm.marketguid = bm.marketid
+                        left join base.source s on mkm.system_SRC_GUID = s.sourceid
+                    where mkm.enddate > DATEADD(day, -180, CURRENT_DATE()) or mkm.enddate is null
+                        and bm.marketid is null
                     $$;
 
 
 insert_statement := $$ 
-                    INSERT
+                    insert
                         (
                         MarketID, 
                         GeographicAreaID, 
@@ -68,50 +68,50 @@ insert_statement := $$
                         SourceCode,
                         LastUpdateDate
                         )
-                     VALUES 
+                     values 
                         (
-                        source.MarketID, 
-                        source.GeographicAreaID, 
-                        source.LineOfServiceID, 
-                        source.MarketCode, 
-                        source.LegacyKey, 
-                        source.LegacyKeyName, 
-                        source.SourceCode,
-                        source.LastUpdateDate
+                        source.marketid, 
+                        source.geographicareaid, 
+                        source.lineofserviceid, 
+                        source.marketcode, 
+                        source.legacykey, 
+                        source.legacykeyname, 
+                        source.sourcecode,
+                        source.lastupdatedate
                         )
                      $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.Market as target 
-                    USING ($$||select_statement||$$) as source 
-                   ON source.MarketId = target.MarketId
-                   WHEN NOT MATCHED THEN $$ ||insert_statement;
+merge_statement := $$ merge into base.market as target 
+                    using ($$||select_statement||$$) as source 
+                   on source.marketid = target.marketid
+                   when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

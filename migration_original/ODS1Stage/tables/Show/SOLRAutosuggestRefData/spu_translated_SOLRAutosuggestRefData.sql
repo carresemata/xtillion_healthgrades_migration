@@ -1,77 +1,77 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRAutosuggestRefData()
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRAutosuggestRefData()
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
-DECLARE 
+EXECUTE as CALLER
+as 
+declare 
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
---- Show.SOLRAutosuggestRefData depends on:
--- Base.Gender
--- Base.Suffix
--- Base.ProviderType
--- Base.SubStatus
--- Base.IdentificationType
--- Base.Position
--- Base.Language
--- Base.AboutMe
--- Base.AppointmentAvailability
--- Base.HGProcedureGroup
--- Base.SpecialtyGroup
--- Base.CertificationBoard
--- Base.CertificationAgency
--- Base.CertificationStatus
--- Base.SurveySuppressionReason2
--- Base.LocationType
--- Base.Nation
--- Base.LicenseType
--- Base.HealthInsurancePlan
--- Base.ClientToProduct
--- Base.Client
--- Base.Product
--- Base.ProductGroup
--- Base.EducationInstitutionType
--- Base.HealthInsurancePlanToPlanType
--- Base.HealthInsurancePlanType
--- Base.HealthInsurancePayor
--- Base.CertificationAgencyToBoardToSpecialty
--- Base.CertificationSpecialty
--- Base.DisplayStatus
--- Base.PopularSearchTerm (from DBO schema)
+--- show.solrautosuggestrefdata depends on:
+-- base.gender
+-- base.suffix
+-- base.providertype
+-- base.substatus
+-- base.identificationtype
+-- base.position
+-- base.language
+-- base.aboutme
+-- base.appointmentavailability
+-- base.hgproceduregroup
+-- base.specialtygroup
+-- base.certificationboard
+-- base.certificationagency
+-- base.certificationstatus
+-- base.surveysuppressionreason2
+-- base.locationtype
+-- base.nation
+-- base.licensetype
+-- base.healthinsuranceplan
+-- base.clienttoproduct
+-- base.client
+-- base.product
+-- base.productgroup
+-- base.educationinstitutiontype
+-- base.healthinsuranceplantoplantype
+-- base.healthinsuranceplantype
+-- base.healthinsurancepayor
+-- base.certificationagencytoboardtospecialty
+-- base.certificationspecialty
+-- base.displaystatus
+-- base.popularsearchterm (from dbo schema)
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-create_temp_statement STRING;
+create_temp_statement string;
 
-select_statement_union STRING;
--- These are the xml selects
-select_statement_payor STRING;
-select_statement_product STRING;
-select_statement_certspec STRING;
-select_statement_dispstatus STRING;
-    procedure_name varchar(50) default('sp_load_SOLRAutosuggestRefData');
-    execution_start DATETIME default getdate();
+select_statement_union string;
+-- these are the xml selects
+select_statement_payor string;
+select_statement_product string;
+select_statement_certspec string;
+select_statement_dispstatus string;
+    procedure_name varchar(50) default('sp_load_solrautosuggestrefdata');
+    execution_start datetime default getdate();
 
 
-insert_statement_union STRING; 
--- These are the xml inserts
-insert_statement_payor STRING; 
-insert_statement_product STRING;
-insert_statement_certspec STRING;
-insert_statement_dispstatus STRING;
+insert_statement_union string; 
+-- these are the xml inserts
+insert_statement_payor string; 
+insert_statement_product string;
+insert_statement_certspec string;
+insert_statement_dispstatus string;
 
--- Main statements from the temp table
-select_statement STRING; -- Select statement for the Merge
-insert_statement STRING; -- Insert statement for the Merge
-update_statement STRING; -- Update statement for the Merge
-merge_statement STRING; -- Merge statement to final table
-status STRING; -- Status monitoring
-BEGIN
+-- main statements from the temp table
+select_statement string; -- select statement for the merge
+insert_statement string; -- insert statement for the merge
+update_statement string; -- update statement for the merge
+merge_statement string; -- merge statement to final table
+status string; -- status monitoring
+begin
 
 ---------------------------------------------------------
 --------------- 2.Conditionals if any -------------------
@@ -82,321 +82,321 @@ BEGIN
 ---------------------------------------------------------  
 
 create_temp_statement := $$
-                         CREATE OR REPLACE TEMPORARY TABLE SHOW.TEMPAutosuggestRefData AS
-                         SELECT Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML, UpdatedDate, UpdatedSource
-                         FROM SHOW.SOLRAutosuggestRefData
+                         CREATE or REPLACE TEMPORARY TABLE show.tempautosuggestrefdata as
+                         select Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML, UpdatedDate, UpdatedSource
+                         from show.solrautosuggestrefdata
                          LIMIT 0;
                          $$;
 
 select_statement_union :=   $$
-                            SELECT Code, Description, Definition, Rank, TermID, AutoType
-                            FROM
+                            select Code, Description, Definition, Rank, TermID, AutoType
+                            from
                                 (
-                                SELECT 
-                                    GenderCode AS Code,
-                                    GenderDescription AS Description, 
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    GenderID AS TermID,
-                                    'GENDER' AS AutoType
-                                FROM Base.Gender
+                                select 
+                                    GenderCode as Code,
+                                    GenderDescription as Description, 
+                                    null as Definition,
+                                    null as Rank,
+                                    GenderID as TermID,
+                                    'GENDER' as AutoType
+                                from base.gender
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    SuffixAbbreviation AS Code,
-                                    NULL AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    SuffixID AS TermID,
-                                    'SUFFIX' AS AutoType
-                                FROM Base.Suffix
+                                select
+                                    SuffixAbbreviation as Code,
+                                    null as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    SuffixID as TermID,
+                                    'SUFFIX' as AutoType
+                                from base.suffix
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    ProviderTypeCode AS Code,
-                                    ProviderTypeDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    ProviderTypeID AS TermID,
-                                    'PROVIDERTYPE' AS AutoType
-                                FROM Base.ProviderType
+                                select
+                                    ProviderTypeCode as Code,
+                                    ProviderTypeDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    ProviderTypeID as TermID,
+                                    'PROVIDERTYPE' as AutoType
+                                from base.providertype
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    SubStatusCode AS Code,
-                                    SubStatusDescription AS Description,
-                                    NULL AS Definition,
-                                    SubStatusRank AS Rank,
-                                    SubStatusID AS TermID,
-                                    'SUBSTATUS' AS AutoType
-                                FROM Base.SubStatus
+                                select
+                                    SubStatusCode as Code,
+                                    SubStatusDescription as Description,
+                                    null as Definition,
+                                    SubStatusRank as Rank,
+                                    SubStatusID as TermID,
+                                    'SUBSTATUS' as AutoType
+                                from base.substatus
                             
-                                UNION
+                                union
                                 
-                                SELECT
-                                    IdentificationTypeCode AS Code,
-                                    IdentificationTypeDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    IdentificationTypeID AS TermID,
-                                    'IDENTIFICATIONTYPE' AS AutoType
-                                FROM Base.IdentificationType
+                                select
+                                    IdentificationTypeCode as Code,
+                                    IdentificationTypeDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    IdentificationTypeID as TermID,
+                                    'IDENTIFICATIONTYPE' as AutoType
+                                from base.identificationtype
                                 
-                                UNION 
+                                union 
                                 
-                                SELECT
-                                    PositionCode AS Code,
-                                    PositionDescription AS Description,
-                                    NULL AS Definition,
-                                    refRank AS Rank,
-                                    PositionID AS TermID,
-                                    'POSITION' AS AutoType
-                                FROM Base.Position
+                                select
+                                    PositionCode as Code,
+                                    PositionDescription as Description,
+                                    null as Definition,
+                                    refRank as Rank,
+                                    PositionID as TermID,
+                                    'POSITION' as AutoType
+                                from base.position
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    LanguageCode AS Code,
-                                    LanguageName AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    LanguageID AS TermID,
-                                    'LANGUAGE' AS AutoType
-                                FROM Base.Language
+                                select
+                                    LanguageCode as Code,
+                                    LanguageName as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    LanguageID as TermID,
+                                    'LANGUAGE' as AutoType
+                                from base.language
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    AboutMeCode AS Code,
-                                    AboutMeDescription AS Description,
-                                    NULL AS Definition,
-                                    DisplayOrder AS Rank,
-                                    AboutMeID AS TermID,
-                                    'ABOUTME' AS AutoType
-                                FROM Base.AboutMe
+                                select
+                                    AboutMeCode as Code,
+                                    AboutMeDescription as Description,
+                                    null as Definition,
+                                    DisplayOrder as Rank,
+                                    AboutMeID as TermID,
+                                    'ABOUTME' as AutoType
+                                from base.aboutme
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    AppointmentAvailabilityCode AS Code,
-                                    AppointmentAvailabilityDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    AppointmentAvailabilityID AS TermID,
-                                    'APPOINTMEMT' AS AutoType
-                                FROM Base.AppointmentAvailability
+                                select
+                                    AppointmentAvailabilityCode as Code,
+                                    AppointmentAvailabilityDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    AppointmentAvailabilityID as TermID,
+                                    'APPOINTMEMT' as AutoType
+                                from base.appointmentavailability
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    HGProcedureGroupCode AS Code,
-                                    HGProcedureGroupDisplayDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    HGProcedureGroupID AS TermID,
-                                    'PROCGROUP' AS AutoType
-                                FROM Base.HGProcedureGroup
-                                WHERE IsActive = 1
+                                select
+                                    HGProcedureGroupCode as Code,
+                                    HGProcedureGroupDisplayDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    HGProcedureGroupID as TermID,
+                                    'PROCGROUP' as AutoType
+                                from base.hgproceduregroup
+                                where IsActive = 1
                             
-                                UNION
+                                union
                                 
-                                SELECT
-                                    SpecialtyGroupCode AS Code,
-                                    SpecialtyGroupDescription AS Description,
-                                    NULL AS Definition,
-                                    Rank AS Rank,
-                                    SpecialtyGroupID AS TermID,
-                                    'SPECGROUP' AS AutoType
-                                FROM Base.SpecialtyGroup
+                                select
+                                    SpecialtyGroupCode as Code,
+                                    SpecialtyGroupDescription as Description,
+                                    null as Definition,
+                                    Rank as Rank,
+                                    SpecialtyGroupID as TermID,
+                                    'SPECGROUP' as AutoType
+                                from base.specialtygroup
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    CertificationBoardCode AS Code,
-                                    CertificationBoardDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    CertificationBoardID AS TermID,
-                                    'CERTBOARD' AS AutoType
-                                FROM Base.CertificationBoard
+                                select
+                                    CertificationBoardCode as Code,
+                                    CertificationBoardDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    CertificationBoardID as TermID,
+                                    'CERTBOARD' as AutoType
+                                from base.certificationboard
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    CertificationAgencyCode AS Code,
-                                    CertificationAgencyDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    CertificationAgencyID AS TermID,
-                                    'CERTAGENCY' AS AutoType
-                                FROM Base.CertificationAgency
+                                select
+                                    CertificationAgencyCode as Code,
+                                    CertificationAgencyDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    CertificationAgencyID as TermID,
+                                    'CERTAGENCY' as AutoType
+                                from base.certificationagency
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    CertificationStatusCode AS Code,
-                                    CertificationStatusDescription AS Description,
-                                    NULL AS Definition,
-                                    Rank AS Rank,
-                                    CertificationStatusID AS TermID,
-                                    'CERTSTATUS' AS AutoType
-                                FROM Base.CertificationStatus
+                                select
+                                    CertificationStatusCode as Code,
+                                    CertificationStatusDescription as Description,
+                                    null as Definition,
+                                    Rank as Rank,
+                                    CertificationStatusID as TermID,
+                                    'CERTSTATUS' as AutoType
+                                from base.certificationstatus
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    SuppressionReasonCode AS Code,
-                                    SuppressionReasonDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    SurveySuppressionReasonID AS TermID,
-                                    'SURVEYSUPPRESSREASON' AS AutoType
-                                FROM Base.SurveySuppressionReason2
+                                select
+                                    SuppressionReasonCode as Code,
+                                    SuppressionReasonDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    SurveySuppressionReasonID as TermID,
+                                    'SURVEYSUPPRESSREASON' as AutoType
+                                from base.surveysuppressionreason2
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    LocationTypeCode AS Code,
-                                    LocationTypeDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    LocationTypeID AS TermID,
-                                    'LOCATIONTYPE' AS AutoType
-                                FROM Base.LocationType
+                                select
+                                    LocationTypeCode as Code,
+                                    LocationTypeDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    LocationTypeID as TermID,
+                                    'LOCATIONTYPE' as AutoType
+                                from base.locationtype
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    NationCode AS Code,
-                                    NationName AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    NationID AS TermID,
-                                    'NATION' AS AutoType
-                                FROM Base.Nation
+                                select
+                                    NationCode as Code,
+                                    NationName as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    NationID as TermID,
+                                    'NATION' as AutoType
+                                from base.nation
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    LicenseTypeCode AS Code,
-                                    LicenseTypeDescription AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    LicenseTypeID AS TermID,
-                                    'LICENSETYPE' AS AutoType
-                                FROM Base.LicenseType
+                                select
+                                    LicenseTypeCode as Code,
+                                    LicenseTypeDescription as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    LicenseTypeID as TermID,
+                                    'LICENSETYPE' as AutoType
+                                from base.licensetype
                                 
-                                UNION
+                                union
                                 
-                                SELECT 
-                                    PlanCode AS Code,
-                                    PLanDisplayName AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    HealthInsurancePlanID AS TermID,
-                                    'INSURANCEPLAN' AS AutoType
-                                FROM Base.HealthInsurancePlan
+                                select 
+                                    PlanCode as Code,
+                                    PLanDisplayName as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    HealthInsurancePlanID as TermID,
+                                    'INSURANCEPLAN' as AutoType
+                                from base.healthinsuranceplan
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    c.ClientCode AS Code,
-                                    c.ClientName AS Description,
-                                    p.ProductCode AS Definition,
-                                    NULL AS Rank,
-                                    c.ClientID AS TermID,
-                                    'CLIENT' AS AutoType
-                                FROM Base.ClientToProduct cp
-                                JOIN Base.Client c ON cp.ClientID = c.ClientID
-                                JOIN Base.Product p ON cp.ProductID = p.ProductID
-                                JOIN Base.ProductGroup pg ON p.ProductGroupID = pg.ProductGroupID
-                                WHERE cp.ActiveFlag = 1
+                                select
+                                    c.clientcode as Code,
+                                    c.clientname as Description,
+                                    p.productcode as Definition,
+                                    null as Rank,
+                                    c.clientid as TermID,
+                                    'CLIENT' as AutoType
+                                from base.clienttoproduct cp
+                                join base.client c on cp.clientid = c.clientid
+                                join base.product p on cp.productid = p.productid
+                                join base.productgroup pg on p.productgroupid = pg.productgroupid
+                                where cp.activeflag = 1
                             
-                                UNION
+                                union
                                 
-                                SELECT
-                                    EducationInstitutionTypeCode AS Code,
-                                    EducationInstitutionTypeCode AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    EducationInstitutionTypeID AS TermID,
-                                    'EDUCATIONTYPE' AS AutoType
-                                FROM Base.EducationInstitutionType
+                                select
+                                    EducationInstitutionTypeCode as Code,
+                                    EducationInstitutionTypeCode as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    EducationInstitutionTypeID as TermID,
+                                    'EDUCATIONTYPE' as AutoType
+                                from base.educationinstitutiontype
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'DOCSPECLABEL' AS Code,
-                                    'Specialties' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'DOCSPECLABEL' as Code,
+                                    'Specialties' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'ALTSPECLABEL' AS Code,
-                                    'Specialties' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'ALTSPECLABEL' as Code,
+                                    'Specialties' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'DENTSPECLABEL' AS Code,
-                                    'Practice Areas' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'DENTSPECLABEL' as Code,
+                                    'Practice Areas' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'DOCPRACSPECLABEL' AS Code,
-                                    'Practicing Specialties' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'DOCPRACSPECLABEL' as Code,
+                                    'Practicing Specialties' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'ALTPRACSPECLABEL' AS Code,
-                                    'Practicing Specialties' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'ALTPRACSPECLABEL' as Code,
+                                    'Practicing Specialties' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                                 
-                                SELECT
-                                    'DENTPRACSPECLABEL' AS Code,
-                                    'Practice Areas' AS Description,
-                                    NULL AS Definition,
-                                    NULL AS Rank,
-                                    UUID_STRING() AS TermID,
-                                    'SPECLABEL' AS AutoType
+                                select
+                                    'DENTPRACSPECLABEL' as Code,
+                                    'Practice Areas' as Description,
+                                    null as Definition,
+                                    null as Rank,
+                                    uuid_string() as TermID,
+                                    'SPECLABEL' as AutoType
                                 
-                                UNION
+                                union
                             
-                                -- * THIS IS THE TABLE THAT CAME FROM DBO SCHEMA * --
-                                SELECT
-                                    TermCode AS Code,
-                                    TermDescription AS Description,
-                                    TermType AS Definition,
-                                    Rank AS Rank,
-                                    PopularSearchTermID AS TermID,
-                                    'POPULARSEARCHTERM' AS AutoType
-                                FROM Base.PopularSearchTerm
+                                -- * THIS is THE TABLE THAT CAME from DBO SCHEMA * --
+                                select
+                                    TermCode as Code,
+                                    TermDescription as Description,
+                                    TermType as Definition,
+                                    Rank as Rank,
+                                    PopularSearchTermID as TermID,
+                                    'POPULARSEARCHTERM' as AutoType
+                                from base.popularsearchterm
                             
                                 ) a;
 
@@ -404,237 +404,237 @@ select_statement_union :=   $$
 
 select_statement_payor := $$
 
-                          WITH cte_base AS (
-                            SELECT DISTINCT d.InsurancePayorCode, e.HealthInsurancePlanID, c.ProductName
-                            FROM Base.HealthInsurancePlanToPlanType c 
-                            JOIN Base.HealthInsurancePlan e ON e.HealthInsurancePlanID=c.HealthInsurancePlanID
-                            JOIN Base.HealthInsurancePlanType f ON f.HealthInsurancePlanTypeID=c.HealthInsurancePlanTypeID
-                            JOIN Base.HealthInsurancePayor d ON d.HealthInsurancePayorID=e.HealthInsurancePayorID
+                          with cte_base as (
+                            select distinct d.insurancepayorcode, e.healthinsuranceplanid, c.productname
+                            from base.healthinsuranceplantoplantype c 
+                            join base.healthinsuranceplan e on e.healthinsuranceplanid=c.healthinsuranceplanid
+                            join base.healthinsuranceplantype f on f.healthinsuranceplantypeid=c.healthinsuranceplantypeid
+                            join base.healthinsurancepayor d on d.healthinsurancepayorid=e.healthinsurancepayorid
                           ),
                         
-                         cte_rel AS (
-                            SELECT
-                              pay.InsurancePayorCode AS InsurancePayorCode,
-                              ipr.InsuranceProductCode AS productCd,
-                              ipr.HealthInsurancePlanToPlanTypeID AS productId,
-                              ipl.PlanCode AS planCd,
-                              ipl.PlanName AS planNm,
-                              ipt.PlanTypeCode AS planTpCd,
-                              ipt.PlanTypeDescription AS planTpNm,
-                              b.ProductName  AS pktdokPlNm
-                            FROM Base.HealthInsurancePlanToPlanType ipr 
-                              JOIN Base.HealthInsurancePlan ipl ON ipr.HealthInsurancePlanID = ipl.HealthInsurancePlanID
-                              JOIN Base.HealthInsurancePlanType ipt ON ipr.HealthInsurancePlanTypeID = ipt.HealthInsurancePlanTypeID
-                              JOIN Base.HealthInsurancePayor pay ON pay.HealthInsurancePayorID = ipl.HealthInsurancePayorID
-                              LEFT JOIN cte_base b ON b.InsurancePayorCode = pay.InsurancePayorCode AND b.HealthInsurancePlanID = ipr.HealthInsurancePlanID 
+                         cte_rel as (
+                            select
+                              pay.insurancepayorcode as InsurancePayorCode,
+                              ipr.insuranceproductcode as productCd,
+                              ipr.healthinsuranceplantoplantypeid as productId,
+                              ipl.plancode as planCd,
+                              ipl.planname as planNm,
+                              ipt.plantypecode as planTpCd,
+                              ipt.plantypedescription as planTpNm,
+                              b.productname  as pktdokPlNm
+                            from base.healthinsuranceplantoplantype ipr 
+                              join base.healthinsuranceplan ipl on ipr.healthinsuranceplanid = ipl.healthinsuranceplanid
+                              join base.healthinsuranceplantype ipt on ipr.healthinsuranceplantypeid = ipt.healthinsuranceplantypeid
+                              join base.healthinsurancepayor pay on pay.healthinsurancepayorid = ipl.healthinsurancepayorid
+                              left join cte_base b on b.insurancepayorcode = pay.insurancepayorcode and b.healthinsuranceplanid = ipr.healthinsuranceplanid 
                           ),
                         
-                          cte_rel_xml AS (
-                              SELECT 
+                          cte_rel_xml as (
+                              select 
                                 InsurancePayorCode,
                                 TO_VARIANT(utils.p_json_to_xml(
-                                    ARRAY_AGG(
+                                    array_agg(
                                     REPLACE(
                                     '{ '||
-                                    IFF(cte_rel.productCd IS NOT NULL, '"productCd":' || '"' || cte_rel.productCd || '"' || ',', '') ||
-                                    IFF(cte_rel.productId IS NOT NULL, '"productId":' || '"' || cte_rel.productId || '"' || ',', '') ||
-                                    IFF(cte_rel.planCd IS NOT NULL, '"planCd":' || '"' || cte_rel.planCd || '"' || ',', '') ||
-                                    IFF(cte_rel.planNm IS NOT NULL, '"planNm":' || '"' || replace(cte_rel.planNm,'\"','') || '"' || ',', '') || -- 
-                                    IFF(cte_rel.planTpCd IS NOT NULL, '"planTpCd":' || '"' || cte_rel.planTpCd || '"' || ',', '') ||
-                                    IFF(cte_rel.planTpNm IS NOT NULL, '"planTpNm":' || '"' || cte_rel.planTpNm || '"' || ',', '') ||
-                                    IFF(cte_rel.pktdokPlNm IS NOT NULL, '"pktdokPlNm":' || '"' || replace(cte_rel.pktdokPlNm,'\"','') || '"', '') --
+                                    iff(cte_rel.productcd is not null, '"productCd":' || '"' || cte_rel.productcd || '"' || ',', '') ||
+                                    iff(cte_rel.productid is not null, '"productId":' || '"' || cte_rel.productid || '"' || ',', '') ||
+                                    iff(cte_rel.plancd is not null, '"planCd":' || '"' || cte_rel.plancd || '"' || ',', '') ||
+                                    iff(cte_rel.plannm is not null, '"planNm":' || '"' || replace(cte_rel.plannm,'\"','') || '"' || ',', '') || -- 
+                                    iff(cte_rel.plantpcd is not null, '"planTpCd":' || '"' || cte_rel.plantpcd || '"' || ',', '') ||
+                                    iff(cte_rel.plantpnm is not null, '"planTpNm":' || '"' || cte_rel.plantpnm || '"' || ',', '') ||
+                                    iff(cte_rel.pktdokplnm is not null, '"pktdokPlNm":' || '"' || replace(cte_rel.pktdokplnm,'\"','') || '"', '') --
                                     ||' }'
                                     ,'\'','\\\'')
-                                    )::VARCHAR,
+                                    )::varchar,
                                     'insuranceL',
                                     'insurance'
-                                )) AS RelationshipXML
-                                FROM cte_rel
-                                GROUP BY InsurancePayorCode
+                                )) as RelationshipXML
+                                from cte_rel
+                                group by InsurancePayorCode
                             )
                         
-                            SELECT 
-                                ip.InsurancePayorCode AS Code, -- col 1
-                                ip.PayorName AS Description, -- col 2
-                                NULL AS Definition, -- col 3
-                                NULL AS Rank, -- col 4
-                                ip.HealthInsurancePayorID AS TermID, -- col 5
-                                'INSURANCEPAYOR' AS AutoType, -- col 6 
-                                r.RelationshipXML AS RelationshipXML
-                            FROM Base.HealthInsurancePayor ip
-                            LEFT JOIN cte_rel_xml r ON r.InsurancePayorCode = ip.InsurancePayorCode;
+                            select 
+                                ip.insurancepayorcode as Code, -- col 1
+                                ip.payorname as Description, -- col 2
+                                null as Definition, -- col 3
+                                null as Rank, -- col 4
+                                ip.healthinsurancepayorid as TermID, -- col 5
+                                'INSURANCEPAYOR' as AutoType, -- col 6 
+                                r.relationshipxml as RelationshipXML
+                            from base.healthinsurancepayor ip
+                            left join cte_rel_xml r on r.insurancepayorcode = ip.insurancepayorcode;
                           $$;
 
 select_statement_product := $$
-                            WITH cte_rel AS (
-                            SELECT
-                              ip.HealthInsurancePlanToPlanTypeID,
-                              ipa.InsurancePayorCode AS payorCd,
-                              ipa.PayorName AS payorNm,
-                              ipl.PlanCode AS planCd,
-                              ipl.PlanName AS planNm,
-                              ipt.PlanTypeCode AS planTpCd,
-                              ipt.PlanTypeDescription AS planTpNm,
-                            FROM Base.HealthInsurancePayor ipa 
-                                 INNER JOIN Base.HealthInsurancePlan ipl ON ipa.HealthInsurancePayorID = ipl.HealthInsurancePayorID
-                                 INNER JOIN Base.HealthInsurancePlanToPlanType ip ON ip.HealthInsurancePlanID = ipl.HealthInsurancePlanID 
-                                 INNER JOIN Base.HealthInsurancePlanType ipt ON ip.HealthInsurancePlanTypeID = ipt.HealthInsurancePlanTypeID
+                            with cte_rel as (
+                            select
+                              ip.healthinsuranceplantoplantypeid,
+                              ipa.insurancepayorcode as payorCd,
+                              ipa.payorname as payorNm,
+                              ipl.plancode as planCd,
+                              ipl.planname as planNm,
+                              ipt.plantypecode as planTpCd,
+                              ipt.plantypedescription as planTpNm,
+                            from base.healthinsurancepayor ipa 
+                                 inner join base.healthinsuranceplan ipl on ipa.healthinsurancepayorid = ipl.healthinsurancepayorid
+                                 inner join base.healthinsuranceplantoplantype ip on ip.healthinsuranceplanid = ipl.healthinsuranceplanid 
+                                 inner join base.healthinsuranceplantype ipt on ip.healthinsuranceplantypeid = ipt.healthinsuranceplantypeid
                             ),
                         
-                            cte_rel_xml AS (
-                              SELECT 
+                            cte_rel_xml as (
+                              select 
                                 HealthInsurancePlanToPlanTypeID,
                                 TO_VARIANT(utils.p_json_to_xml(
-                                    ARRAY_AGG(
+                                    array_agg(
                                     REPLACE(
                                     '{ '||
-                                    IFF(cte_rel.payorCd IS NOT NULL, '"payorCd":' || '"' || cte_rel.payorCd || '"' || ',', '') ||
-                                    IFF(cte_rel.payorNm IS NOT NULL, '"payorNm":' || '"' || cte_rel.payorNm || '"' || ',', '') ||
-                                    IFF(cte_rel.planCd IS NOT NULL, '"planCd":' || '"' || cte_rel.planCd || '"' || ',', '') ||
-                                    IFF(cte_rel.planNm IS NOT NULL, '"planNm":' || '"' || replace(cte_rel.planNm,'\"','') || '"' || ',', '') || 
-                                    IFF(cte_rel.planTpCd IS NOT NULL, '"planTpCd":' || '"' || cte_rel.planTpCd || '"' || ',', '') ||
-                                    IFF(cte_rel.planTpNm IS NOT NULL, '"planTpNm":' || '"' || cte_rel.planTpNm || '"' || ',', '') 
+                                    iff(cte_rel.payorcd is not null, '"payorCd":' || '"' || cte_rel.payorcd || '"' || ',', '') ||
+                                    iff(cte_rel.payornm is not null, '"payorNm":' || '"' || cte_rel.payornm || '"' || ',', '') ||
+                                    iff(cte_rel.plancd is not null, '"planCd":' || '"' || cte_rel.plancd || '"' || ',', '') ||
+                                    iff(cte_rel.plannm is not null, '"planNm":' || '"' || replace(cte_rel.plannm,'\"','') || '"' || ',', '') || 
+                                    iff(cte_rel.plantpcd is not null, '"planTpCd":' || '"' || cte_rel.plantpcd || '"' || ',', '') ||
+                                    iff(cte_rel.plantpnm is not null, '"planTpNm":' || '"' || cte_rel.plantpnm || '"' || ',', '') 
                                     ||' }'
                                     ,'\'','\\\'')
-                                    )::VARCHAR,
+                                    )::varchar,
                                     'insuranceL',
                                     'insurance'
-                                )) AS RelationshipXML
-                                FROM cte_rel
-                                GROUP BY HealthInsurancePlanToPlanTypeID
+                                )) as RelationshipXML
+                                from cte_rel
+                                group by HealthInsurancePlanToPlanTypeID
                              )
                         
-                            SELECT 
-                                ipr.InsuranceProductCode AS Code, -- col 1
-                                NULL AS Description, -- col 2
-                                NULL AS Definition, -- col 3
-                                NULL AS Rank, -- col 4
-                                ipr.HealthInsurancePlanToPlanTypeID AS TermID, -- col 5
-                                'INSURANCEPRODUCT' AS AutoType, -- col 6 
-                                r.RelationshipXML AS RelationshipXML
-                            FROM Base.HealthInsurancePlanToPlanType ipr 
-                            LEFT JOIN cte_rel_xml r ON r.HealthInsurancePlanToPlanTypeID = ipr.HealthInsurancePlanToPlanTypeID;
+                            select 
+                                ipr.insuranceproductcode as Code, -- col 1
+                                null as Description, -- col 2
+                                null as Definition, -- col 3
+                                null as Rank, -- col 4
+                                ipr.healthinsuranceplantoplantypeid as TermID, -- col 5
+                                'INSURANCEPRODUCT' as AutoType, -- col 6 
+                                r.relationshipxml as RelationshipXML
+                            from base.healthinsuranceplantoplantype ipr 
+                            left join cte_rel_xml r on r.healthinsuranceplantoplantypeid = ipr.healthinsuranceplantoplantypeid;
     
                             $$;
 
 select_statement_certspec := $$
 
-                            WITH cte_rel AS (
-                                SELECT
-                                DISTINCT RTRIM(b.CertificationAgencyCode) AS caCd, 
-                                         b.CertificationAgencyDescription AS caD, 
-                                         RTRIM(c.CertificationBoardCode) AS cbCd, 
-                                         c.CertificationBoardDescription AS cbD,
-                                         a.CertificationSpecialtyID as CertificationSpecialtyID
-                                FROM Base.CertificationAgencyToBoardToSpecialty a
-                                JOIN Base.CertificationAgency b ON a.CertificationagencyID = b.CertificationAgencyID
-                                JOIN Base.CertificationBoard c ON a.CertificationBoardID = c.CertificationBoardID
+                            with cte_rel as (
+                                select
+                                distinct RTRIM(b.certificationagencycode) as caCd, 
+                                         b.certificationagencydescription as caD, 
+                                         RTRIM(c.certificationboardcode) as cbCd, 
+                                         c.certificationboarddescription as cbD,
+                                         a.certificationspecialtyid as CertificationSpecialtyID
+                                from base.certificationagencytoboardtospecialty a
+                                join base.certificationagency b on a.certificationagencyid = b.certificationagencyid
+                                join base.certificationboard c on a.certificationboardid = c.certificationboardid
                             ),
                         
-                            cte_rel_xml AS (
-                              SELECT 
+                            cte_rel_xml as (
+                              select 
                                 CertificationSpecialtyID,
                                 TO_VARIANT(utils.p_json_to_xml(
-                                    ARRAY_AGG(
+                                    array_agg(
                                     REPLACE(
                                     '{ '||
-                                    IFF(cte_rel.caCD IS NOT NULL, '"caD":' || '"' || cte_rel.caCD || '"' || ',', '') ||
-                                    IFF(cte_rel.caD IS NOT NULL, '"caD":' || '"' || cte_rel.caD || '"' || ',', '') ||
-                                    IFF(cte_rel.cbCd IS NOT NULL, '"cbCd":' || '"' || cte_rel.cbCd || '"' || ',', '') ||
-                                    IFF(cte_rel.cbD IS NOT NULL, '"cbD":' || '"' || replace(cte_rel.cbD,'\"','') || '"' || ',', '') 
+                                    iff(cte_rel.cacd is not null, '"caD":' || '"' || cte_rel.cacd || '"' || ',', '') ||
+                                    iff(cte_rel.cad is not null, '"caD":' || '"' || cte_rel.cad || '"' || ',', '') ||
+                                    iff(cte_rel.cbcd is not null, '"cbCd":' || '"' || cte_rel.cbcd || '"' || ',', '') ||
+                                    iff(cte_rel.cbd is not null, '"cbD":' || '"' || replace(cte_rel.cbd,'\"','') || '"' || ',', '') 
                                     ||' }'
                                     ,'\'','\\\'')
-                                    )::VARCHAR,
+                                    )::varchar,
                                     'certL',
                                     'cert'
-                                )) AS RelationshipXML
-                                FROM cte_rel
-                                GROUP BY CertificationSpecialtyID
+                                )) as RelationshipXML
+                                from cte_rel
+                                group by CertificationSpecialtyID
                              )
                         
-                            SELECT 
-                                CertificationSpecialtyCode AS Code, -- col 1
-                                CertificationSpecialtyDescription AS Description, -- col 2
-                                NULL AS Definition, -- col 3
-                                NULL AS Rank, -- col 4
-                                s.CertificationSpecialtyID AS TermID, -- col 5
-                                'CERTIFICATIONSPEC' AS AutoType, -- col 6 
-                                r.RelationshipXML AS RelationshipXML
-                            FROM Base.CertificationSpecialty s 
-                            LEFT JOIN cte_rel_xml r ON r.CertificationSpecialtyID = s.CertificationSpecialtyID;
+                            select 
+                                CertificationSpecialtyCode as Code, -- col 1
+                                CertificationSpecialtyDescription as Description, -- col 2
+                                null as Definition, -- col 3
+                                null as Rank, -- col 4
+                                s.certificationspecialtyid as TermID, -- col 5
+                                'CERTIFICATIONSPEC' as AutoType, -- col 6 
+                                r.relationshipxml as RelationshipXML
+                            from base.certificationspecialty s 
+                            left join cte_rel_xml r on r.certificationspecialtyid = s.certificationspecialtyid;
                             $$;
 
 select_statement_dispstatus := $$
                     
-                            WITH cte_rel AS (
-                                SELECT SubStatusCode AS SubStatusCode, 
-                                       SubStatusDescription AS SubStatusDesc,
-                                       b.DisplayStatusCode AS DisplayStatusCode
-                                FROM Base.SubStatus a
-                                JOIN Base.DisplayStatus b ON b.DisplayStatusID = a.DisplayStatusID
+                            with cte_rel as (
+                                select SubStatusCode as SubStatusCode, 
+                                       SubStatusDescription as SubStatusDesc,
+                                       b.displaystatuscode as DisplayStatusCode
+                                from base.substatus a
+                                join base.displaystatus b on b.displaystatusid = a.displaystatusid
                             ),
                         
-                            cte_rel_xml AS (
-                              SELECT 
+                            cte_rel_xml as (
+                              select 
                                 DisplayStatusCode,
                                 TO_VARIANT(utils.p_json_to_xml(
-                                    ARRAY_AGG(
+                                    array_agg(
                                     REPLACE(
                                     '{ '||
-                                    IFF(cte_rel.SubStatusCode IS NOT NULL, '"SubStatusCode":' || '"' || cte_rel.SubStatusCode || '"' || ',', '') ||
-                                    IFF(cte_rel.SubStatusDesc IS NOT NULL, '"SubStatusDesc":' || '"' || cte_rel.SubStatusDesc || '"' || ',', '')
+                                    iff(cte_rel.substatuscode is not null, '"SubStatusCode":' || '"' || cte_rel.substatuscode || '"' || ',', '') ||
+                                    iff(cte_rel.substatusdesc is not null, '"SubStatusDesc":' || '"' || cte_rel.substatusdesc || '"' || ',', '')
                                     ||' }'
                                     ,'\'','\\\'')
-                                    )::VARCHAR,
+                                    )::varchar,
                                     'subStatusL',
                                     'subStatus'
-                                )) AS RelationshipXML
-                                FROM cte_rel
-                                GROUP BY DisplayStatusCode
+                                )) as RelationshipXML
+                                from cte_rel
+                                group by DisplayStatusCode
                              )
                         
-                            SELECT 
-                                ds.DisplayStatusCode AS Code, -- col 1
-                                DisplayStatusDescription AS Description, -- col 2
-                                NULL AS Definition, -- col 3
-                                DisplayStatusRank AS Rank, -- col 4
-                                DisplayStatusID AS TermID, -- col 5
-                                'DISPLAYSTATUS' AS AutoType, -- col 6 
-                                r.RelationshipXML AS RelationshipXML
-                            FROM Base.DisplayStatus ds 
-                            LEFT JOIN cte_rel_xml r ON r.DisplayStatusCode = ds.DisplayStatusCode;
+                            select 
+                                ds.displaystatuscode as Code, -- col 1
+                                DisplayStatusDescription as Description, -- col 2
+                                null as Definition, -- col 3
+                                DisplayStatusRank as Rank, -- col 4
+                                DisplayStatusID as TermID, -- col 5
+                                'DISPLAYSTATUS' as AutoType, -- col 6 
+                                r.relationshipxml as RelationshipXML
+                            from base.displaystatus ds 
+                            left join cte_rel_xml r on r.displaystatuscode = ds.displaystatuscode;
     
                             $$;
         
                         
 insert_statement_union := $$
-                          INSERT INTO SHOW.TEMPAutosuggestRefData (Code, Description, Definition, Rank, TermID, AutoType) 
+                          insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType) 
                           $$
                           || select_statement_union;
 
 insert_statement_payor := $$
-                          INSERT INTO SHOW.TEMPAutosuggestRefData (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
+                          insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
                           $$
                           || select_statement_payor;
 
 insert_statement_product := $$
-                          INSERT INTO SHOW.TEMPAutosuggestRefData (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
+                          insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
                           $$
                           || select_statement_product;
 
 insert_statement_certspec := $$
-                          INSERT INTO SHOW.TEMPAutosuggestRefData (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
+                          insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
                           $$
                           || select_statement_certspec;
 
 insert_statement_dispstatus := $$
-                          INSERT INTO SHOW.TEMPAutosuggestRefData (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
+                          insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
                           $$
                           || select_statement_dispstatus;
 
 
 insert_statement :=     $$
-                        INSERT (
+                        insert (
                                    Code,
                                    Description,
                                    Definition,
@@ -645,74 +645,74 @@ insert_statement :=     $$
                                    UpdatedDate,
                                    UpdatedSource
                                  )
-                          VALUES (	
-                                   source.Code,
-                                   source.Description,
-                                   source.Definition,
-                                   source.Rank,
-                                   source.TermID,
-                                   source.AutoType,
-                                   source.RelationshipXML,
-                                   CURRENT_TIMESTAMP(),
+                          values (	
+                                   source.code,
+                                   source.description,
+                                   source.definition,
+                                   source.rank,
+                                   source.termid,
+                                   source.autotype,
+                                   source.relationshipxml,
+                                   current_timestamp(),
                                    CURRENT_USER()
                                 )
                         $$;
 
 update_statement :=     $$
-                        UPDATE SET target.Code = source.Code,
-                                     target.Description = source.Description,
-                                     target.Definition = source.Definition,
-                                     target.Rank = source.Rank,
-                                     target.TermID = source.TermID,
-                                     target.AutoType = source.AutoType,
-                                     target.RelationshipXML = source.RelationshipXML,
-                                     target.UpdatedDate = CURRENT_TIMESTAMP(),
-                                     target.UpdatedSource = CURRENT_USER()
+                        update SET target.code = source.code,
+                                     target.description = source.description,
+                                     target.definition = source.definition,
+                                     target.rank = source.rank,
+                                     target.termid = source.termid,
+                                     target.autotype = source.autotype,
+                                     target.relationshipxml = source.relationshipxml,
+                                     target.updateddate = current_timestamp(),
+                                     target.updatedsource = CURRENT_USER()
                         $$;
 
 merge_statement :=      $$
-                        MERGE INTO SHOW.SOLRAutosuggestRefData AS target 
-                        USING (
-                              SELECT Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML, UpdatedDate, UpdatedSource
-                              FROM SHOW.TEMPAUTOSUGGESTREFDATA
-                              ) AS source
-                        ON source.TermID = target.TermID
-                        WHEN MATCHED AND source.Code = target.Code AND source.Description = target.Description
-                            AND source.Definition = target.Definition AND source.Rank = target.Rank 
-                            AND source.AutoType = target.AutoType THEN $$ || update_statement || $$ 
-                        WHEN NOT MATCHED THEN $$ || insert_statement;
+                        merge into show.solrautosuggestrefdata as target 
+                        using (
+                              select Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML, UpdatedDate, UpdatedSource
+                              from show.tempautosuggestrefdata
+                              ) as source
+                        on source.termid = target.termid
+                        WHEN MATCHED and source.code = target.code and source.description = target.description
+                            and source.definition = target.definition and source.rank = target.rank 
+                            and source.autotype = target.autotype then $$ || update_statement || $$ 
+                        when not matched then $$ || insert_statement;
 
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE create_temp_statement; 
+execute immediate create_temp_statement; 
 -- inserting xmls to temp table
-EXECUTE IMMEDIATE insert_statement_union; 
-EXECUTE IMMEDIATE insert_statement_payor;
-EXECUTE IMMEDIATE insert_statement_product;
-EXECUTE IMMEDIATE insert_statement_certspec;
-EXECUTE IMMEDIATE insert_statement_dispstatus;
+execute immediate insert_statement_union; 
+execute immediate insert_statement_payor;
+execute immediate insert_statement_product;
+execute immediate insert_statement_certspec;
+execute immediate insert_statement_dispstatus;
 -- final merge from temp
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
                           
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

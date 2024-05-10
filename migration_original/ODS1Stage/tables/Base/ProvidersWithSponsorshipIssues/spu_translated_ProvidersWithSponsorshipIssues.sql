@@ -1,134 +1,134 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLSWITHSPONSORSHIPISSUES()
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLSWITHSPONSORSHIPISSUES()
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
---- Base.ProvidersWithSponsorshipIssues depends on:
--- Mid.ProviderSponsorship
--- Mid.Provider
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
----------------------------------------------------------
-select_statement STRING;
-insert_statement STRING;
-update_statement STRING;
-merge_statement STRING;
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProvidersWithSponsorshipIssues');
-    execution_start DATETIME default getdate();
-
+--- base.providerswithsponsorshipissues depends on:
+-- mid.providersponsorship
+-- mid.provider
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+select_statement string;
+insert_statement string;
+update_statement string;
+merge_statement string;
+status string;
+    procedure_name varchar(50) default('sp_load_providerswithsponsorshipissues');
+    execution_start datetime default getdate();
+
+
+---------------------------------------------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
-BEGIN
+begin
 -- no conditionals
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 select_statement := $$
-                    WITH CTE_ProviderWithMultipleSponsorships AS (
-                        SELECT ProviderCode
-                        FROM Mid.ProviderSponsorship
-                        WHERE ProductCode <> 'LID'
-                        GROUP BY ProviderCode
-                        HAVING COUNT(DISTINCT ClientCode) > 1
+                    with CTE_ProviderWithMultipleSponsorships as (
+                        select ProviderCode
+                        from mid.providersponsorship
+                        where ProductCode <> 'LID'
+                        group by ProviderCode
+                        having COUNT(distinct ClientCode) > 1
                     ),
                     
-                    CTE_ProviderWithNullOfficeCode AS (
-                        SELECT DISTINCT ProviderCode
-                        FROM Mid.ProviderSponsorship
-                        WHERE ProductCode = 'PDCPRAC' AND OfficeCode IS NULL
+                    CTE_ProviderWithNullOfficeCode as (
+                        select distinct ProviderCode
+                        from mid.providersponsorship
+                        where ProductCode = 'PDCPRAC' and OfficeCode is null
                     ),
                     
-                    CTE_ProviderWithNullPhoneXML AS (
-                        SELECT DISTINCT ps.ProviderCode
-                        FROM Mid.ProviderSponsorship ps
-                        JOIN Mid.Provider p ON p.ProviderCode = ps.ProviderCode
-                        WHERE ps.ProductCode IN ('PDCHSP', 'PDCPRAC') AND ps.PhoneXML IS NULL
+                    CTE_ProviderWithNullPhoneXML as (
+                        select distinct ps.providercode
+                        from mid.providersponsorship ps
+                        join mid.provider p on p.providercode = ps.providercode
+                        where ps.productcode IN ('PDCHSP', 'PDCPRAC') and ps.phonexml is null
                     ),
                     
-                    CTE_ProviderWithNullFacilityCode AS (
-                        SELECT DISTINCT ps.ProviderCode
-                        FROM Mid.ProviderSponsorship ps
-                        JOIN Mid.Provider p ON p.ProviderCode = ps.ProviderCode
-                        WHERE ps.ProductCode = 'PDCHSP' AND ps.FacilityCode IS NULL
+                    CTE_ProviderWithNullFacilityCode as (
+                        select distinct ps.providercode
+                        from mid.providersponsorship ps
+                        join mid.provider p on p.providercode = ps.providercode
+                        where ps.productcode = 'PDCHSP' and ps.facilitycode is null
                     ),
                     
-                    CTE_AllIssues AS (
-                        SELECT ProviderCode, 'Non-LID Provider has more than one sponsorship record in ODS1Stage.Mid.ProviderSponsorship' AS IssueDescription
-                        FROM CTE_ProviderWithMultipleSponsorships
-                        UNION ALL
-                        SELECT ProviderCode, 'PDCPRAC Provider has a null OfficeCode in ODS1Stage.Mid.ProviderSponsorship'
-                        FROM CTE_ProviderWithNullOfficeCode 
-                        UNION ALL
-                        SELECT ProviderCode, 'PDCHSP/PDCPRAC Provider has a null PhoneXML in ODS1Stage.Mid.ProviderSponsorship'
-                        FROM CTE_ProviderWithNullPhoneXML
-                        UNION ALL
-                        SELECT ProviderCode, 'PDCHSP Provider has a null FacilityCode in ODS1Stage.Mid.ProviderSponsorship'
-                        FROM CTE_ProviderWithNullFacilityCode
+                    CTE_AllIssues as (
+                        select ProviderCode, 'Non-LID Provider has more than one sponsorship record in ODS1stage.mid.ProviderSponsorship' as IssueDescription
+                        from CTE_ProviderWithMultipleSponsorships
+                        union all
+                        select ProviderCode, 'PDCPRAC Provider has a null OfficeCode in ODS1stage.mid.ProviderSponsorship'
+                        from CTE_ProviderWithNullOfficeCode 
+                        union all
+                        select ProviderCode, 'PDCHSP/PDCPRAC Provider has a null PhoneXML in ODS1stage.mid.ProviderSponsorship'
+                        from CTE_ProviderWithNullPhoneXML
+                        union all
+                        select ProviderCode, 'PDCHSP Provider has a null FacilityCode in ODS1stage.mid.ProviderSponsorship'
+                        from CTE_ProviderWithNullFacilityCode
                     )
                     
-                    SELECT ProviderCode, IssueDescription
-                    FROM CTE_AllIssues
+                    select ProviderCode, IssueDescription
+                    from CTE_AllIssues
                     $$;
 
 insert_statement := $$ 
-                    INSERT
+                    insert
                         (
                         ProviderCode, 
                         IssueDescription
                         )
-                     VALUES 
+                     values 
                         (
-                        source.ProviderCode,
-                        source.IssueDescription
+                        source.providercode,
+                        source.issuedescription
                         )
                      $$;
 
 update_statement := $$
-                    UPDATE SET target.IssueDescription= source.IssueDescription
+                    update SET target.issuedescription= source.issuedescription
                     $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := $$ MERGE INTO Base.ProvidersWithSponsorshipIssues as target 
-                    USING ($$||select_statement||$$) as source 
-                    ON source.ProviderCode = target.ProviderCode
-                    WHEN MATCHED THEN $$||update_statement||$$
-                    WHEN NOT MATCHED THEN $$ ||insert_statement;
+merge_statement := $$ merge into base.providerswithsponsorshipissues as target 
+                    using ($$||select_statement||$$) as source 
+                    on source.providercode = target.providercode
+                    WHEN MATCHED then $$||update_statement||$$
+                    when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

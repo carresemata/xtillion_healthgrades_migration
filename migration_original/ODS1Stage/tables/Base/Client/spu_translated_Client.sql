@@ -1,69 +1,69 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
---- BASE.CLIENT depends on:   
---- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING (BASE.vw_SWIMLANE_BASE_CLIENT)
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_Client');
-    execution_start DATETIME default getdate();
+--- base.client depends on:   
+--- mdm_team.mst.customer_product_profile_processing (base.vw_swimlane_base_client)
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_client');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement := $$ SELECT
-         DISTINCT
-        swimlane.ClientCode,
-        UUID_STRING() AS clientid,
+--- select Statement
+select_statement := $$ select
+         distinct
+        swimlane.clientcode,
+        uuid_string() as clientid,
         case
-            when swimlane.CustomerName is null
-            and c.ClientName is null then swimlane.ClientCode
-            when swimlane.CustomerName is null
-            and c.ClientName is not null then c.ClientName
-            else swimlane.CustomerName
+            when swimlane.customername is null
+            and c.clientname is null then swimlane.clientcode
+            when swimlane.customername is null
+            and c.clientname is not null then c.clientname
+            else swimlane.customername
         end as ClientName,
-        ifnull(swimlane.LastUpdateDate, current_timestamp()) as LastUpdateDate,
-        ifnull(swimlane.SourceCode, 'Profisee') as SourceCode
-    FROM
-        base.swimlane_base_client AS swimlane
-        LEFT JOIN Base.Client AS c ON c.ClientCode = swimlane.ClientCode QUALIFY dense_rank() over(
-            partition by swimlane.CLIENTCODE
+        ifnull(swimlane.lastupdatedate, current_timestamp()) as LastUpdateDate,
+        ifnull(swimlane.sourcecode, 'Profisee') as SourceCode
+    from
+        base.swimlane_base_client as swimlane
+        left join base.client as c on c.clientcode = swimlane.clientcode qualify dense_rank() over(
+            partition by swimlane.clientcode
             order by
-                swimlane.LastUpdateDate desc
+                swimlane.lastupdatedate desc
         ) = 1 $$;
 
---- Update Statement
+--- update Statement
 update_statement := '
-UPDATE
+update
 SET
-    ClientName = source.ClientName,
-    LastUpdateDate = source.LastUpdateDate';
+    ClientName = source.clientname,
+    LastUpdateDate = source.lastupdatedate';
 
---- Insert Statement
+--- insert Statement
 insert_statement := ' insert
     (
         ClientID,
@@ -72,50 +72,50 @@ insert_statement := ' insert
         SourceCode,
         LastUpdateDate
     )
-VALUES
+values
     (
-        source.ClientID,
-        source.ClientCode,
-        source.ClientName,
-        source.SourceCode,
-        source.LastUpdateDate
+        source.clientid,
+        source.clientcode,
+        source.clientname,
+        source.sourcecode,
+        source.lastupdatedate
     )';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO BASE.CLIENT as target USING 
+merge_statement := ' merge into base.client as target using 
                    ('||select_statement||') as source 
-                   ON source.clientid = target.clientid
-                   WHEN MATCHED THEN '||update_statement||'
-                   WHEN NOT MATCHED AND source.clientid IS NOT NULL
-                    AND source.clientcode IS NOT NULL THEN'||insert_statement;
+                   on source.clientid = target.clientid
+                   WHEN MATCHED then '||update_statement||'
+                   when not matched and source.clientid is not null
+                    and source.clientcode is not null then'||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
--- EXECUTE IMMEDIATE update_statement;                    
-EXECUTE IMMEDIATE merge_statement;
+-- execute immediate update_statement;                    
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

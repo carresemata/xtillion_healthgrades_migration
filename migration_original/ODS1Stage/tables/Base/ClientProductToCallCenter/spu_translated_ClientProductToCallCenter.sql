@@ -1,112 +1,112 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTTOCALLCENTER() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTTOCALLCENTER() -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
---- Base.ClientProductToCallCenter depends on:
---- BASE.CLIENTTOPRODUCT
---- BASE.CALLCENTER
---- BASE.PRODUCT
---- BASE.CLIENT
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
-    select_statement STRING; -- CTE and Select statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ClientProductToCallCenter');
-    execution_start DATETIME default getdate();
+--- base.clientproducttocallcenter depends on:
+--- base.clienttoproduct
+--- base.callcenter
+--- base.product
+--- base.client
+
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+
+    select_statement string; -- cte and select statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_clientproducttocallcenter');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
--- If no conditionals:
-select_statement := $$WITH cte_product_id_pdchsp AS (
-        SELECT
-            CPCC.ClientToProductID
-        FROM
-            Base.ClientProductToCallCenter AS CPCC
-            JOIN Base.ClientToProduct AS CTP ON CPCC.ClientToProductID = CTP.ClientToProductID
-            JOIN Base.CallCenter AS CC ON CPCC.CallCenterID = CC.CallCenterID
-            JOIN Base.Product AS P ON CTP.ProductID = P.ProductID
-        WHERE
-            P.ProductCode IN ('MAP', 'PDCHSP')
+--- select Statement
+-- if no conditionals:
+select_statement := $$with cte_product_id_pdchsp as (
+        select
+            cpcc.clienttoproductid
+        from
+            base.clientproducttocallcenter as CPCC
+            join base.clienttoproduct as CTP on cpcc.clienttoproductid = ctp.clienttoproductid
+            join base.callcenter as CC on cpcc.callcenterid = cc.callcenterid
+            join base.product as P on ctp.productid = p.productid
+        where
+            p.productcode IN ('MAP', 'PDCHSP')
     )
-    SELECT
-        CP.ClientToProductID,
-        '36334343-0000-0000-0000-000000000000' AS CallCenterID,
-        1 AS ActiveFlag,
-        CP.SourceCode,
-        GETDATE() AS LastUpdateDate
-    FROM
-        Base.ClientToProduct AS CP
-        JOIN Base.Product AS P ON CP.ProductID = P.ProductID
-        JOIN Base.Client AS c ON c.ClientID = CP.ClientID
-        LEFT JOIN cte_product_id_pdchsp AS CTE ON CP.ClientToProductID = CTE.ClientToProductID
-    WHERE
+    select
+        cp.clienttoproductid,
+        '36334343-0000-0000-0000-000000000000' as CallCenterID,
+        1 as ActiveFlag,
+        cp.sourcecode,
+        getdate() as LastUpdateDate
+    from
+        base.clienttoproduct as CP
+        join base.product as P on cp.productid = p.productid
+        join base.client as c on c.clientid = cp.clientid
+        left join cte_product_id_pdchsp as CTE on cp.clienttoproductid = cte.clienttoproductid
+    where
     (
-        P.ProductCode IN ('PDCHSP')
-        OR (
-            P.ProductCode IN ('MAP')
-            AND ClientCode IN ('COMO', 'PAGE1SLN')
+        p.productcode IN ('PDCHSP')
+        or (
+            p.productcode IN ('MAP')
+            and ClientCode IN ('COMO', 'PAGE1SLN')
         )
     )
 $$;
 
---- Insert Statement
-insert_statement := ' INSERT (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
-    VALUES (UUID_String(),Source.ClientToProductID, Source.CallCenterID, Source.ActiveFlag, Source.SourceCode, Source.LastUpdateDate)';
+--- insert Statement
+insert_statement := ' insert (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
+    values (uuid_string(),source.clienttoproductid, source.callcenterid, source.activeflag, source.sourcecode, source.lastupdatedate)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO BASE.CLIENTPRODUCTTOCALLCENTER as target USING 
+merge_statement := ' merge into base.clientproducttocallcenter as target using 
                    ('||select_statement||') as source 
-                   ON source.ClientToProductID = target.ClientToProductID
-                   AND source.CallCenterID = target.CallCenterID
-                   WHEN NOT MATCHED THEN'||insert_statement;
+                   on source.clienttoproductid = target.clienttoproductid
+                   and source.callcenterid = target.callcenterid
+                   when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

@@ -1,176 +1,176 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY(IsProviderDeltaProcessing BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.ProviderToDisplaySpecialty depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.ProviderToSpecialty
---- Base.DisplaySpecialtyRule
---- Base.DisplaySpecialtyRuleToSpecialty
---- Base.ProviderToCertificationSpecialty
---- Base.DisplaySpecialtyRuleToCertificationSpecialty
---- Base.ProviderToClinicalFocus
---- Base.DisplaySpecialtyRuleToClinicalFocus
+-- base.providertodisplayspecialty depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.providertospecialty
+--- base.displayspecialtyrule
+--- base.displayspecialtyruletospecialty
+--- base.providertocertificationspecialty
+--- base.displayspecialtyruletocertificationspecialty
+--- base.providertoclinicalfocus
+--- base.displayspecialtyruletoclinicalfocus
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    delete_statement STRING;
-    truncate_statement STRING;
-    select_statement STRING; -- CTE and Select statement for the insert
-    insert_statement STRING; -- Insert statement 
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderToDisplaySpecialty');
-    execution_start DATETIME default getdate();
+    delete_statement string;
+    truncate_statement string;
+    select_statement string; -- cte and select statement for the insert
+    insert_statement string; -- insert statement 
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providertodisplayspecialty');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
-           delete_statement := 'DELETE FROM Base.ProviderToDisplaySpecialty 
-                                    WHERE ProviderID IN 
-                                        (SELECT p.ProviderID
-                                        FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                                        JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode)';
+begin
+    if (IsProviderDeltaProcessing) then
+           delete_statement := 'delete from base.providertodisplayspecialty 
+                                    where ProviderID IN 
+                                        (select p.providerid
+                                        from MDM_team.mst.Provider_Profile_Processing as ppp
+                                        join base.provider as p on ppp.ref_provider_code = p.providercode)';
 
            select_statement := '
-           WITH CTE_ProviderBatch AS (
-                SELECT p.ProviderID
-                FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode
+           with CTE_ProviderBatch as (
+                select p.providerid
+                from MDM_team.mst.Provider_Profile_Processing as ppp
+                join base.provider as p on ppp.ref_provider_code = p.providercode
             ),';
-    ELSE
-           truncate_statement := 'TRUNCATE TABLE Base.ProviderToDisplaySpecialty';
+    else
+           truncate_statement := 'truncate TABLE base.providertodisplayspecialty';
            
            select_statement := '
-           WITH CTE_ProviderBatch AS (
-                SELECT ProviderId
-                FROM Base.Provider),';
-    END IF;
+           with CTE_ProviderBatch as (
+                select ProviderId
+                from base.provider),';
+    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
 
--- If conditionals:
+-- if conditionals:
 select_statement := select_statement || 
-                    $$ CTE_ProviderBatch AS (
-                                SELECT ProviderId
-                                FROM Base.Provider),
+                    $$ CTE_ProviderBatch as (
+                                select ProviderId
+                                from base.provider),
                                 
-                            CTE_NotExists AS (
-                              SELECT 1
-                              FROM Base.ProviderToSpecialty pts
-                              LEFT JOIN Base.DisplaySpecialtyRule AS dsr ON pts.specialtyid = dsr.specialtyid
-                              LEFT JOIN Base.Provider AS P ON p.providerid = pts.providerid
-                              LEFT JOIN Base.DisplaySpecialtyRuleToSpecialty dsrs
-                                ON dsrs.DisplaySpecialtyRuleID = dsr.DisplaySpecialtyRuleID
-                                AND dsrs.SpecialtyID = pts.SpecialtyID
-                              WHERE pts.ProviderID = p.ProviderID
-                                AND pts.IsSearchableCalculated = 1
-                                AND dsrs.SpecialtyID IS NULL
+                            CTE_NotExists as (
+                              select 1
+                              from base.providertospecialty pts
+                              left join base.displayspecialtyrule as dsr on pts.specialtyid = dsr.specialtyid
+                              left join base.provider as P on p.providerid = pts.providerid
+                              left join base.displayspecialtyruletospecialty dsrs
+                                on dsrs.displayspecialtyruleid = dsr.displayspecialtyruleid
+                                and dsrs.specialtyid = pts.specialtyid
+                              where pts.providerid = p.providerid
+                                and pts.issearchablecalculated = 1
+                                and dsrs.specialtyid is null
                             ),
-                            CTE_ProviderDisplay AS (
-                              SELECT DISTINCT c.DisplaySpecialtyRuleID, a.ProviderID
-                              FROM Base.ProviderToSpecialty a
-                              JOIN CTE_ProviderBatch b ON b.ProviderID = a.ProviderID
-                              JOIN Base.DisplaySpecialtyRule c ON c.SpecialtyID = a.SpecialtyID
-                              WHERE a.IsSearchableCalculated = 1 AND
-                                    NOT EXISTS (SELECT * FROM CTE_NotExists)
+                            CTE_ProviderDisplay as (
+                              select distinct c.displayspecialtyruleid, a.providerid
+                              from base.providertospecialty a
+                              join CTE_ProviderBatch b on b.providerid = a.providerid
+                              join base.displayspecialtyrule c on c.specialtyid = a.specialtyid
+                              where a.issearchablecalculated = 1 and
+                                    not exists (select * from CTE_NotExists)
                             ),
-                            CTE_ProviderCerts AS (
-                                SELECT DISTINCT
-                                    Cert.ProviderId,
-                                    Dis.DisplaySpecialtyRuleID
-                                FROM Base.ProviderToCertificationSpecialty AS Cert
-                                JOIN CTE_ProviderDisplay AS CTE ON Cert.ProviderId = CTE.ProviderId
-                                JOIN Base.DisplaySpecialtyRuleToCertificationSpecialty AS Dis ON Dis.DisplaySpecialtyRuleID = CTE.DisplaySpecialtyRuleID
+                            CTE_ProviderCerts as (
+                                select distinct
+                                    cert.providerid,
+                                    dis.displayspecialtyruleid
+                                from base.providertocertificationspecialty as Cert
+                                join CTE_ProviderDisplay as CTE on cert.providerid = cte.providerid
+                                join base.displayspecialtyruletocertificationspecialty as Dis on dis.displayspecialtyruleid = cte.displayspecialtyruleid
                             ),
-                            CTE_ProviderCF AS (
-                                SELECT DISTINCT
-                                    CF.ProviderId,
-                                    DisCF.DisplaySpecialtyRuleID
-                                FROM Base.ProviderToClinicalFocus AS CF
-                                JOIN CTE_ProviderDisplay AS CTE ON CTE.ProviderId = CF.ProviderId
-                                JOIN Base.DisplaySpecialtyRuleToClinicalFocus AS DisCF ON DisCF.DisplaySpecialtyRuleID = CTE.DisplaySpecialtyRuleID
+                            CTE_ProviderCF as (
+                                select distinct
+                                    cf.providerid,
+                                    discf.displayspecialtyruleid
+                                from base.providertoclinicalfocus as CF
+                                join CTE_ProviderDisplay as CTE on cte.providerid = cf.providerid
+                                join base.displayspecialtyruletoclinicalfocus as DisCF on discf.displayspecialtyruleid = cte.displayspecialtyruleid
                             ),
-                            CTE_ProviderPrimarySpec AS (
-                                SELECT
-                                    ProvSpec.ProviderID,
-                                    SpecRule.DisplayspecialtyRuleId
-                                FROM Base.ProviderToSpecialty AS ProvSpec
-                                JOIN CTE_ProviderDisplay AS CTE ON CTE.ProviderId = ProvSpec.ProviderId
-                                JOIN Base.DisplaySpecialtyRule AS SpecRule ON SpecRule.DisplaySpecialtyRuleID = CTE.DisplaySpecialtyRuleID
+                            CTE_ProviderPrimarySpec as (
+                                select
+                                    provspec.providerid,
+                                    specrule.displayspecialtyruleid
+                                from base.providertospecialty as ProvSpec
+                                join CTE_ProviderDisplay as CTE on cte.providerid = provspec.providerid
+                                join base.displayspecialtyrule as SpecRule on specrule.displayspecialtyruleid = cte.displayspecialtyruleid
                             )
-                            SELECT DISTINCT
-                                ProvDS.ProviderID,
-                                SpecRule.SpecialtyId
-                            FROM CTE_ProviderDisplay AS ProvDS
-                                JOIN Base.DisplaySpecialtyRule AS SpecRule ON SpecRule.DisplaySpecialtyRuleID = ProvDS.ProviderId
-                                LEFT JOIN CTE_ProviderCerts AS ProvCert ON ProvCert.ProviderId = ProvDS.ProviderId AND ProvCert.DisplaySpecialtyRuleID = SpecRule.DisplaySpecialtyRuleID
-                                LEFT JOIN CTE_ProviderCF AS ProvCF ON ProvCF.ProviderID = ProvDS.ProviderID AND ProvCF.DisplaySpecialtyRuleID = SpecRule.DisplaySpecialtyRuleID
-                                LEFT JOIN CTE_ProviderPrimarySpec AS ProvPrimSpec ON ProvPrimSpec.ProviderId = ProvDS.ProviderID AND ProvPrimSpec.DisplaySpecialtyRuleID = SpecRule.DisplaySpecialtyRuleID 
+                            select distinct
+                                provds.providerid,
+                                specrule.specialtyid
+                            from CTE_ProviderDisplay as ProvDS
+                                join base.displayspecialtyrule as SpecRule on specrule.displayspecialtyruleid = provds.providerid
+                                left join CTE_ProviderCerts as ProvCert on provcert.providerid = provds.providerid and provcert.displayspecialtyruleid = specrule.displayspecialtyruleid
+                                left join CTE_ProviderCF as ProvCF on provcf.providerid = provds.providerid and provcf.displayspecialtyruleid = specrule.displayspecialtyruleid
+                                left join CTE_ProviderPrimarySpec as ProvPrimSpec on provprimspec.providerid = provds.providerid and provprimspec.displayspecialtyruleid = specrule.displayspecialtyruleid 
                             
-                            WHERE (((((SpecRule.IsCertificationSpecialtyRequired = 1 and ProvCert.ProviderID is not null) or (SpecRule.IsCertificationSpecialtyRequired = 0))
-                            			or ((SpecRule.IsClinicalFocuRequired = 1 and ProvCF.ProviderID is not null) or (SpecRule.IsClinicalFocuRequired = 0)))) 
-                            			and SpecRule.DisplaySpecialtyRuleCondition = 'AND')
-                            			OR (((((SpecRule.IsCertificationSpecialtyRequired = 1 and ProvCert.ProviderID is not null) or (SpecRule.IsCertificationSpecialtyRequired = 0))
-                            			or ((SpecRule.IsClinicalFocuRequired = 1 and ProvCF.ProviderID is not null) or (SpecRule.IsClinicalFocuRequired = 0)))) 
-                            			and SpecRule.DisplaySpecialtyRuleCondition = 'OR')  
-                             QUALIFY row_number() over (partition by ProvDS.ProviderID order by SpecRule.DisplaySpecialtyRuleRank, case when SpecRule.IsPrimaryRequired = 1 and ProvPrimSpec.ProviderID is not null then 1 else 2 end, SpecRule.DisplaySpecialtyRuleTieBreaker) = 1    $$;
+                            where (((((specrule.iscertificationspecialtyrequired = 1 and provcert.providerid is not null) or (specrule.iscertificationspecialtyrequired = 0))
+                            			or ((specrule.isclinicalfocurequired = 1 and provcf.providerid is not null) or (specrule.isclinicalfocurequired = 0)))) 
+                            			and specrule.displayspecialtyrulecondition = 'and')
+                            			or (((((specrule.iscertificationspecialtyrequired = 1 and provcert.providerid is not null) or (specrule.iscertificationspecialtyrequired = 0))
+                            			or ((specrule.isclinicalfocurequired = 1 and provcf.providerid is not null) or (specrule.isclinicalfocurequired = 0)))) 
+                            			and specrule.displayspecialtyrulecondition = 'or')  
+                             qualify row_number() over (partition by provds.providerid order by specrule.displayspecialtyrulerank, case when specrule.isprimaryrequired = 1 and provprimspec.providerid is not null then 1 else 2 end, specrule.displayspecialtyruletiebreaker) = 1    $$;
 
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-insert_statement := ' INSERT INTO Base.ProviderToDisplaySpecialty 
+insert_statement := ' insert INTO base.providertodisplayspecialty 
                         (ProviderID,
                         SpecialtyId) ' ||select_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-IF (IsProviderDeltaProcessing) THEN
-    EXECUTE IMMEDIATE delete_statement;
-ELSE
-    EXECUTE IMMEDIATE truncate_statement;
-END IF;
+if (isproviderdeltaprocessing) then
+    execute immediate delete_statement;
+else
+    execute immediate truncate_statement;
+end if;
     
-EXECUTE IMMEDIATE insert_statement ;
+execute immediate insert_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

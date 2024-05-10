@@ -1,45 +1,45 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCENTITYRELATIONSHIP()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCENTITYRELATIONSHIP()
 RETURNS STRING
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS  
-DECLARE 
+EXECUTE as CALLER
+as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
---- Base.ClientProductEntityRelationship depends on:
--- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
--- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
--- Base.Provider
--- Base.Facility
--- Base.Office
--- Base.RelationshipType
--- Base.ClientToProduct
--- Base.EntityType
--- Base.ClientProductToEntity
--- Base.Practice
+--- base.clientproductentityrelationship depends on:
+-- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+-- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+-- base.provider
+-- base.facility
+-- base.office
+-- base.relationshiptype
+-- base.clienttoproduct
+-- base.entitytype
+-- base.clientproducttoentity
+-- base.practice
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-select_statement_facility STRING;
-select_statement_office STRING;
-select_statement_practice STRING;
-insert_statement STRING; 
-merge_statement_facility STRING;
-merge_statement_office STRING;
-merge_statement_practice STRING;
-status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ClientProductEntityRelationship');
-    execution_start DATETIME default getdate();
+select_statement_facility string;
+select_statement_office string;
+select_statement_practice string;
+insert_statement string; 
+merge_statement_facility string;
+merge_statement_office string;
+merge_statement_practice string;
+status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_clientproductentityrelationship');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
 
-BEGIN
+begin
 -- no conditionals
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -47,132 +47,132 @@ BEGIN
 
 ------------ spuMergeProviderFacilityCustomerProduct ------------
 select_statement_facility := $$
-                            WITH CTE_swimlane AS (
-                                    SELECT DISTINCT
+                            with CTE_swimlane as (
+                                    select distinct
                                     -- ReltioEntityId (deprecated)
-                                    p.ProviderID,
-                                    f.FacilityID,
+                                    p.providerid,
+                                    f.facilityid,
                                     -- SourceID (unused)
-                                    IFNULL(CUSTOMERPRODUCT_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate,
-                                    IFNULL(CUSTOMERPRODUCT_SOURCECODE, 'Profisee') AS SourceCode,
-                                    JSON.PROVIDERCODE, 
-                                    JSON.FACILITY_FACILITYCODE AS FacilityCode,
-                                    JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
-                                    cp.ClientToProductID,
-                                    rt.RelationshipTypeID,
-                                    rt.RelationshipTypeCode,
-                                    ROW_NUMBER() OVER(PARTITION BY p.ProviderID, f.FacilityID ORDER BY CREATE_DATE DESC) AS RowRank
-                                FROM RAW.VW_PROVIDER_PROFILE AS JSON
-                                LEFT JOIN Base.Provider p ON p.ProviderCode = JSON.ProviderCode
-                                INNER JOIN Base.Facility f ON f.FacilityCode = JSON.Facility_FacilityCode
-                                LEFT JOIN Base.RelationshipType rt ON rt.RelationshipTypeCode='PROVTOFAC'
-                                INNER JOIN Base.ClientToProduct cp ON cp.ClientToProductCode = JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE
-                                WHERE JSON.PROVIDER_PROFILE IS NOT NULL
+                                    ifnull(CUSTOMERPRODUCT_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+                                    ifnull(CUSTOMERPRODUCT_SOURCECODE, 'Profisee') as SourceCode,
+                                    json.providercode, 
+                                    json.facility_FACILITYCODE as FacilityCode,
+                                    json.customerproduct_CUSTOMERPRODUCTCODE as ClientToProductCode,
+                                    cp.clienttoproductid,
+                                    rt.relationshiptypeid,
+                                    rt.relationshiptypecode,
+                                    row_number() over(partition by p.providerid, f.facilityid order by CREATE_DATE desc) as RowRank
+                                from raw.vw_PROVIDER_PROFILE as JSON
+                                left join base.provider p on p.providercode = json.providercode
+                                inner join base.facility f on f.facilitycode = json.facility_FacilityCode
+                                left join base.relationshiptype rt on rt.relationshiptypecode='PROVTOFAC'
+                                inner join base.clienttoproduct cp on cp.clienttoproductcode = json.customerproduct_CUSTOMERPRODUCTCODE
+                                where json.provider_PROFILE is not null
                             )
                             
-                            SELECT 
-                                s.RelationshipTypeID,
-                                cptep.ClientProductToEntityID AS ParentID,
-                                cptef.ClientProductToEntityID AS ChildID,
-                                s.SourceCode,
-                                s.LastUpdateDate
-                            FROM CTE_Swimlane s
-                            INNER JOIN Base.EntityType prov ON prov.EntityTypeCode='PROV'
-                            INNER JOIN Base.EntityType fac ON fac.EntityTypeCode='FAC'
-                            INNER JOIN Base.ClientProductToEntity cptep ON s.ProviderID = cptep.EntityID
-                                AND prov.EntityTypeID = cptep.EntityTypeID 
-                            INNER JOIN Base.ClientProductToEntity cptef ON s.FacilityID = cptef.EntityID
-                                AND fac.EntityTypeID = cptef.EntityTypeID
-                            WHERE s.RowRank = 1 AND cptep.ClientToProductID = cptef.ClientToProductID
+                            select 
+                                s.relationshiptypeid,
+                                cptep.clientproducttoentityid as ParentID,
+                                cptef.clientproducttoentityid as ChildID,
+                                s.sourcecode,
+                                s.lastupdatedate
+                            from CTE_Swimlane s
+                            inner join base.entitytype prov on prov.entitytypecode='PROV'
+                            inner join base.entitytype fac on fac.entitytypecode='FAC'
+                            inner join base.clientproducttoentity cptep on s.providerid = cptep.entityid
+                                and prov.entitytypeid = cptep.entitytypeid 
+                            inner join base.clientproducttoentity cptef on s.facilityid = cptef.entityid
+                                and fac.entitytypeid = cptef.entitytypeid
+                            where s.rowrank = 1 and cptep.clienttoproductid = cptef.clienttoproductid
                             $$;
 
 
 ------------ spuMergeProviderOfficeCustomerProduct ------------
 select_statement_office := $$
-                            WITH CTE_swimlane AS (
-                                    SELECT DISTINCT
+                            with CTE_swimlane as (
+                                    select distinct
                                     -- ReltioEntityId (deprecated)
-                                    p.ProviderID,
-                                    o.OfficeID,
+                                    p.providerid,
+                                    o.officeid,
                                     -- SourceID (unused)
-                                    IFNULL(CUSTOMERPRODUCT_LASTUPDATEDATE, SYSDATE()) AS LastUpdateDate,
-                                    IFNULL(CUSTOMERPRODUCT_SOURCECODE, 'Profisee') AS SourceCode,
-                                    JSON.PROVIDERCODE, 
-                                    JSON.OFFICE_OFFICECODE AS OfficeCode,
-                                    JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
-                                    cp.ClientToProductID,
-                                    rt.RelationshipTypeID,
-                                    rt.RelationshipTypeCode,
-                                    ROW_NUMBER() OVER(PARTITION BY p.ProviderID, o.OfficeID ORDER BY CREATE_DATE DESC) AS RowRank
-                                FROM RAW.VW_PROVIDER_PROFILE AS JSON
-                                LEFT JOIN Base.Provider p ON p.ProviderCode = JSON.ProviderCode
-                                INNER JOIN Base.Office o ON o.OfficeCode = JSON.Office_OfficeCode
-                                LEFT JOIN Base.RelationshipType rt ON rt.RelationshipTypeCode='PROVTOOFF'
-                                INNER JOIN Base.ClientToProduct cp ON cp.ClientToProductCode = JSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE
-                                WHERE JSON.PROVIDER_PROFILE IS NOT NULL
+                                    ifnull(CUSTOMERPRODUCT_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+                                    ifnull(CUSTOMERPRODUCT_SOURCECODE, 'Profisee') as SourceCode,
+                                    json.providercode, 
+                                    json.office_OFFICECODE as OfficeCode,
+                                    json.customerproduct_CUSTOMERPRODUCTCODE as ClientToProductCode,
+                                    cp.clienttoproductid,
+                                    rt.relationshiptypeid,
+                                    rt.relationshiptypecode,
+                                    row_number() over(partition by p.providerid, o.officeid order by CREATE_DATE desc) as RowRank
+                                from raw.vw_PROVIDER_PROFILE as JSON
+                                left join base.provider p on p.providercode = json.providercode
+                                inner join base.office o on o.officecode = json.office_OfficeCode
+                                left join base.relationshiptype rt on rt.relationshiptypecode='PROVTOOFF'
+                                inner join base.clienttoproduct cp on cp.clienttoproductcode = json.customerproduct_CUSTOMERPRODUCTCODE
+                                where json.provider_PROFILE is not null
                             )
                             
-                            SELECT 
-                                s.RelationshipTypeID,
-                                cptep.ClientProductToEntityID AS ParentID,
-                                cpteo.ClientProductToEntityID AS ChildID,
-                                s.SourceCode,
-                                s.LastUpdateDate
-                            FROM CTE_Swimlane s
-                            INNER JOIN Base.EntityType prov ON prov.EntityTypeCode='PROV'
-                            INNER JOIN Base.EntityType off ON off.EntityTypeCode='OFFICE'
-                            INNER JOIN Base.ClientProductToEntity cptep ON s.ProviderID = cptep.EntityID
-                                AND prov.EntityTypeID = cptep.EntityTypeID 
-                            INNER JOIN Base.ClientProductToEntity cpteo ON s.OfficeID = cpteo.EntityID
-                                AND off.EntityTypeID = cpteo.EntityTypeID
-                            WHERE s.RowRank = 1 AND cptep.ClientToProductID = cpteo.ClientToProductID
+                            select 
+                                s.relationshiptypeid,
+                                cptep.clientproducttoentityid as ParentID,
+                                cpteo.clientproducttoentityid as ChildID,
+                                s.sourcecode,
+                                s.lastupdatedate
+                            from CTE_Swimlane s
+                            inner join base.entitytype prov on prov.entitytypecode='PROV'
+                            inner join base.entitytype off on off.entitytypecode='OFFICE'
+                            inner join base.clientproducttoentity cptep on s.providerid = cptep.entityid
+                                and prov.entitytypeid = cptep.entitytypeid 
+                            inner join base.clientproducttoentity cpteo on s.officeid = cpteo.entityid
+                                and off.entitytypeid = cpteo.entitytypeid
+                            where s.rowrank = 1 and cptep.clienttoproductid = cpteo.clienttoproductid
                             $$;
 
 ------------ spuMergePracticeOfficeCustomerProduct ------------
 select_statement_practice := $$
-                            WITH CTE_swimlane AS (
-                                SELECT DISTINCT
+                            with CTE_swimlane as (
+                                select distinct
                                 -- ReltioEntityId (deprecated)
-                                o.OfficeID,
-                                p.PracticeID,
+                                o.officeid,
+                                p.practiceid,
                                 -- SourceID (unused)
-                                SYSDATE() AS LastUpdateDate,
-                                'Profisee' AS SourceCode,
-                                JSON.PRACTICE_PRACTICECODE AS PracticeCode, 
-                                JSON.OFFICECODE AS OfficeCode,
-                                ProviderJSON.CUSTOMERPRODUCT_CUSTOMERPRODUCTCODE AS ClientToProductCode,
-                                cp.ClientToProductID,
-                                rt.RelationshipTypeID,
-                                rt.RelationshipTypeCode,
-                                ROW_NUMBER() OVER(PARTITION BY o.OfficeID ORDER BY JSON.CREATE_DATE DESC) AS RowRank
-                            FROM RAW.VW_OFFICE_PROFILE AS JSON
-                            LEFT JOIN Base.Practice p ON p.PracticeCode = JSON.PRACTICE_PRACTICECODE
-                            INNER JOIN Base.Office o ON o.OfficeCode = JSON.OFFICECODE
-                            LEFT JOIN Base.RelationshipType rt ON rt.RelationshipTypeCode='PRACTOOFF'
-                            LEFT JOIN RAW.VW_PROVIDER_PROFILE ProviderJSON ON JSON.OFFICECODE = ProviderJSON.OFFICE_OFFICECODE
-                            INNER JOIN Base.ClientToProduct cp ON cp.ClientToProductCode = ClientToProductCode
-                            WHERE JSON.OFFICE_PROFILE IS NOT NULL
+                                sysdate() as LastUpdateDate,
+                                'Profisee' as SourceCode,
+                                json.practice_PRACTICECODE as PracticeCode, 
+                                json.officecode as OfficeCode,
+                                providerjson.customerproduct_CUSTOMERPRODUCTCODE as ClientToProductCode,
+                                cp.clienttoproductid,
+                                rt.relationshiptypeid,
+                                rt.relationshiptypecode,
+                                row_number() over(partition by o.officeid order by json.create_DATE desc) as RowRank
+                            from raw.vw_OFFICE_PROFILE as JSON
+                            left join base.practice p on p.practicecode = json.practice_PRACTICECODE
+                            inner join base.office o on o.officecode = json.officecode
+                            left join base.relationshiptype rt on rt.relationshiptypecode='PRACTOOFF'
+                            left join raw.vw_PROVIDER_PROFILE ProviderJSON on json.officecode = providerjson.office_OFFICECODE
+                            inner join base.clienttoproduct cp on cp.clienttoproductcode = ClientToProductCode
+                            where json.office_PROFILE is not null
                         )
                         
-                        SELECT 
-                            s.RelationshipTypeID,
-                            cptep.ClientProductToEntityID AS ParentID,
-                            cpteo.ClientProductToEntityID AS ChildID,
-                            s.SourceCode,
-                            s.LastUpdateDate
-                        FROM CTE_Swimlane s
-                        INNER JOIN Base.EntityType prac ON prac.EntityTypeCode='PRAC'
-                        INNER JOIN Base.EntityType off ON off.EntityTypeCode='OFFICE'
-                        INNER JOIN Base.ClientProductToEntity cptep ON s.PracticeID = cptep.EntityID
-                            AND prac.EntityTypeID = cptep.EntityTypeID 
-                        INNER JOIN Base.ClientProductToEntity cpteo ON s.OfficeID = cpteo.EntityID
-                            AND off.EntityTypeID = cpteo.EntityTypeID
-                        WHERE s.RowRank = 1 AND cptep.ClientToProductID = cpteo.ClientToProductID
+                        select 
+                            s.relationshiptypeid,
+                            cptep.clientproducttoentityid as ParentID,
+                            cpteo.clientproducttoentityid as ChildID,
+                            s.sourcecode,
+                            s.lastupdatedate
+                        from CTE_Swimlane s
+                        inner join base.entitytype prac on prac.entitytypecode='PRAC'
+                        inner join base.entitytype off on off.entitytypecode='OFFICE'
+                        inner join base.clientproducttoentity cptep on s.practiceid = cptep.entityid
+                            and prac.entitytypeid = cptep.entitytypeid 
+                        inner join base.clientproducttoentity cpteo on s.officeid = cpteo.entityid
+                            and off.entitytypeid = cpteo.entitytypeid
+                        where s.rowrank = 1 and cptep.clienttoproductid = cpteo.clienttoproductid
                         $$;
 
                 
 insert_statement := $$ 
-                    INSERT  
+                    insert  
                         (
                          ClientProductEntityRelationshipID, 
                          RelationshipTypeID, 
@@ -181,67 +181,67 @@ insert_statement := $$
                          SourceCode,
                          LastUpdateDate
                          )
-                    VALUES 
+                    values 
                         (
-                        UUID_STRING(),
-                        source.RelationshipTypeID,
-                        source.ParentID,
-                        source.ChildID,
-                        source.SourceCode,
-                        source.LastUpdateDate
+                        uuid_string(),
+                        source.relationshiptypeid,
+                        source.parentid,
+                        source.childid,
+                        source.sourcecode,
+                        source.lastupdatedate
                         )
                     $$;
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement_facility := $$ MERGE INTO Base.ClientProductEntityRelationship as target USING 
+merge_statement_facility := $$ merge into base.clientproductentityrelationship as target using 
                            ($$||select_statement_facility||$$) as source 
-                           ON source.RelationshipTypeID = target.RelationshipTypeID
-                            AND source.ParentID = target.ParentID AND source.ChildID = target.ChildID
-                           WHEN NOT MATCHED THEN $$||insert_statement;
+                           on source.relationshiptypeid = target.relationshiptypeid
+                            and source.parentid = target.parentid and source.childid = target.childid
+                           when not matched then $$||insert_statement;
                            
 
-merge_statement_office := $$ MERGE INTO Base.ClientProductEntityRelationship as target USING 
+merge_statement_office := $$ merge into base.clientproductentityrelationship as target using 
                            ($$||select_statement_office||$$) as source 
-                           ON source.RelationshipTypeID = target.RelationshipTypeID
-                            AND source.ParentID = target.ParentID AND source.ChildID = target.ChildID
-                           WHEN NOT MATCHED THEN $$||insert_statement;
+                           on source.relationshiptypeid = target.relationshiptypeid
+                            and source.parentid = target.parentid and source.childid = target.childid
+                           when not matched then $$||insert_statement;
 
 
-merge_statement_practice := $$ MERGE INTO Base.ClientProductEntityRelationship as target USING 
+merge_statement_practice := $$ merge into base.clientproductentityrelationship as target using 
                            ($$||select_statement_practice||$$) as source 
-                           ON source.RelationshipTypeID = target.RelationshipTypeID
-                            AND source.ParentID = target.ParentID AND source.ChildID = target.ChildID
-                           WHEN NOT MATCHED THEN $$||insert_statement;
+                           on source.relationshiptypeid = target.relationshiptypeid
+                            and source.parentid = target.parentid and source.childid = target.childid
+                           when not matched then $$||insert_statement;
 
     
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement_facility;
-EXECUTE IMMEDIATE merge_statement_office;
-EXECUTE IMMEDIATE merge_statement_practice;
+execute immediate merge_statement_facility;
+execute immediate merge_statement_office;
+execute immediate merge_statement_practice;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

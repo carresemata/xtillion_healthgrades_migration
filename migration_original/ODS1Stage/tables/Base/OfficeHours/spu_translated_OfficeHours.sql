@@ -1,38 +1,38 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICEHOURS()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICEHOURS()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Base.OfficeHours depends on: 
---- MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING (RAW.VW_OFFICE_PROFILE)
---- Base.Office
---- Base.DaysOfWeek
+-- base.officehours depends on: 
+--- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- base.office
+--- base.daysofweek
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING; -- CTE and Select statement for the Merge
-    select_statement_2 STRING; 
-    update_statement STRING; -- Update statement for the Merge
-    update_clause STRING; -- where condition for update
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_OfficeHours');
-    execution_start DATETIME default getdate();
+    select_statement_1 string; -- cte and select statement for the merge
+    select_statement_2 string; 
+    update_statement string; -- update statement for the merge
+    update_clause string; -- where condition for update
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_officehours');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
+begin
     -- no conditionals
 
 
@@ -40,44 +40,44 @@ BEGIN
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
-select_statement_1 := $$ WITH CTE_Swimlane AS (
-SELECT
-	O.OfficeID,
-	DW.DaysOfWeekId,
-	IFNULL(JSON.HOURS_LastUpdateDate, SYSDATE()) AS LastUpdateDate,
-	TO_TIME(JSON.HOURS_ClosingTime) AS OfficeHoursClosingTime, 
-	TO_TIME(JSON.HOURS_OpeningTime) AS OfficeHoursOpeningTime,  
-	case when JSON.HOURS_IsClosed is null and JSON.HOURS_OpeningTime is not null then 0 when JSON.HOURS_IsClosed is null then 1 else JSON.HOURS_IsClosed end as OfficeIsClosed,
-	IFNULL(JSON.HOURS_IsOpen24Hours, 0) as OfficeIsOpen24Hours, 
-	IFNULL( JSON.HOURS_SourceCode , 'Profisee' ) AS SourceCode, 
-	JSON.OfficeCode,
-    row_number() over(partition by O.OfficeID, JSON.HOURS_DaysOfWeekCode order by CREATE_DATE desc) AS RowRank 
+--- select Statement
+select_statement_1 := $$ with CTE_Swimlane as (
+select
+	o.officeid,
+	dw.daysofweekid,
+	ifnull(json.hours_LastUpdateDate, sysdate()) as LastUpdateDate,
+	TO_TIME(json.hours_ClosingTime) as OfficeHoursClosingTime, 
+	TO_TIME(json.hours_OpeningTime) as OfficeHoursOpeningTime,  
+	case when json.hours_IsClosed is null and json.hours_OpeningTime is not null then 0 when json.hours_IsClosed is null then 1 else json.hours_IsClosed end as OfficeIsClosed,
+	ifnull(json.hours_IsOpen24Hours, 0) as OfficeIsOpen24Hours, 
+	ifnull( json.hours_SourceCode , 'Profisee' ) as SourceCode, 
+	json.officecode,
+    row_number() over(partition by o.officeid, json.hours_DaysOfWeekCode order by CREATE_DATE desc) as RowRank 
 
-FROM RAW.VW_OFFICE_PROFILE AS JSON
-	LEFT JOIN Base.Office AS O ON O.OfficeCode = JSON.OfficeCode
-	LEFT JOIN Base.DaysOfWeek AS DW ON DW.DaysOfWeekCode = 
-JSON.HOURS_DaysOfWeekCode
-WHERE OFFICE_PROFILE IS NOT NULL ),
+from raw.vw_OFFICE_PROFILE as JSON
+	left join base.office as O on o.officecode = json.officecode
+	left join base.daysofweek as DW on dw.daysofweekcode = 
+json.hours_DaysOfWeekCode
+where OFFICE_PROFILE is not null ),
 
-CTE_NotExists AS (
+CTE_NotExists as (
 select 1
                 from CTE_swimlane as s
-                inner join Base.Office as O on O.OfficeId = S.OfficeId
-                inner join Base.DaysOfWeek as DW on DW.DaysOfWeekID = S.DaysOfWeekId
-                inner join Base.OfficeHours as OH on OH.OfficeId = S.OfficeID and OH.DaysOfWeekID = DW.DaysOfWeekID
-                where OH.OfficeID = O.OfficeID and OH.DaysOfWeekID = DW.DaysOfWeekID
+                inner join base.office as O on o.officeid = s.officeid
+                inner join base.daysofweek as DW on dw.daysofweekid = s.daysofweekid
+                inner join base.officehours as OH on oh.officeid = s.officeid and oh.daysofweekid = dw.daysofweekid
+                where oh.officeid = o.officeid and oh.daysofweekid = dw.daysofweekid
 ),
 
-CTE_DeleteOfficeHours AS (
-SELECT DISTINCT
-	O.OfficeID
-FROM CTE_Swimlane AS S
-	INNER JOIN Base.Office AS O ON O.OfficeCode = S.OfficeCode 
-	INNER JOIN Base.DaysOfWeek AS DW ON DW.DaysOfWeekID = S.DaysOfWeekId
-WHERE NOT EXISTS (SELECT * FROM CTE_NotExists)) $$;
+CTE_DeleteOfficeHours as (
+select distinct
+	o.officeid
+from CTE_Swimlane as S
+	inner join base.office as O on o.officecode = s.officecode 
+	inner join base.daysofweek as DW on dw.daysofweekid = s.daysofweekid
+where not exists (select * from CTE_NotExists)) $$;
 
-select_statement_2 := select_statement_1 || $$ SELECT DISTINCT
+select_statement_2 := select_statement_1 || $$ select distinct
 	OfficeID, 
 	SourceCode, 
 	DaysOfWeekID, 
@@ -86,36 +86,36 @@ select_statement_2 := select_statement_1 || $$ SELECT DISTINCT
 	OfficeIsClosed, 
 	OfficeIsOpen24Hours, 
 	LastUpdateDate
-FROM CTE_swimlane
-WHERE 
-	OfficeID IS NOT NULL AND
-	DaysOfWeekID IS NOT NULL AND
-	OfficeIsClosed IS NOT NULL AND
-	OfficeIsOpen24Hours IS NOT NULL AND
+from CTE_swimlane
+where 
+	OfficeID is not null and
+	DaysOfWeekID is not null and
+	OfficeIsClosed is not null and
+	OfficeIsOpen24Hours is not null and
 	RowRank = 1  $$;
 
 
 
---- Update Statement
-update_statement := ' UPDATE
+--- update Statement
+update_statement := ' update
 					SET
-	target.SourceCode = source.SourceCode, 
-	target.OfficeHoursOpeningTime = source.OfficeHoursOpeningTime, 
-	target.OfficeHoursClosingTime = source.OfficeHoursClosingTime, 
-	target.OfficeIsClosed = source.OfficeIsClosed, 
-	target.OfficeIsOpen24Hours = source.OfficeIsOpen24Hours, 
-	target.LastUpdateDate = source.LastUpdateDate';
+	target.sourcecode = source.sourcecode, 
+	target.officehoursopeningtime = source.officehoursopeningtime, 
+	target.officehoursclosingtime = source.officehoursclosingtime, 
+	target.officeisclosed = source.officeisclosed, 
+	target.officeisopen24Hours = source.officeisopen24Hours, 
+	target.lastupdatedate = source.lastupdatedate';
                             
--- Update Clause
-update_clause := $$ target.SourceCode != source.SourceCode
-or IFNULL(target.OfficeHoursOpeningTime, '08:00:00.0000000') != IFNULL(source.OfficeHoursOpeningTime, '08:00:00.0000000')
-or IFNULL(target.OfficeHoursClosingTime, '17:00:00.0000000') != IFNULL(source.OfficeHoursClosingTime, '17:00:00.0000000')
-or IFNULL(target.OfficeIsClosed, 1) != IFNULL(source.OfficeIsClosed, 1)
-or IFNULL(target.OfficeIsOpen24Hours, 0) != IFNULL(source.OfficeIsOpen24Hours, 0)
+-- update Clause
+update_clause := $$ target.sourcecode != source.sourcecode
+or ifnull(target.officehoursopeningtime, '08:00:00.0000000') != ifnull(source.officehoursopeningtime, '08:00:00.0000000')
+or ifnull(target.officehoursclosingtime, '17:00:00.0000000') != ifnull(source.officehoursclosingtime, '17:00:00.0000000')
+or ifnull(target.officeisclosed, 1) != ifnull(source.officeisclosed, 1)
+or ifnull(target.officeisopen24Hours, 0) != ifnull(source.officeisopen24Hours, 0)
                     $$;                        
         
---- Insert Statement
-insert_statement := 'INSERT ( 
+--- insert Statement
+insert_statement := 'insert ( 
     OfficeHoursID, 
 	OfficeID, 
 	SourceCode, 
@@ -126,52 +126,52 @@ insert_statement := 'INSERT (
 	OfficeIsOpen24Hours, 
 	LastUpdateDate)
 
-VALUES (
-    UUID_STRING(),
-    source.OfficeID, 
-	source.SourceCode, 
-	source.DaysOfWeekID, 
-	source.OfficeHoursOpeningTime, 
-	source.OfficeHoursClosingTime,
-	source.OfficeIsClosed, 
-	source.OfficeIsOpen24Hours, 
-	source.LastUpdateDate)';
+values (
+    uuid_string(),
+    source.officeid, 
+	source.sourcecode, 
+	source.daysofweekid, 
+	source.officehoursopeningtime, 
+	source.officehoursclosingtime,
+	source.officeisclosed, 
+	source.officeisopen24Hours, 
+	source.lastupdatedate)';
 
 
     
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := ' MERGE INTO Base.OfficeHours as target USING 
+merge_statement := ' merge into base.officehours as target using 
                    ('||select_statement_2 ||') as source 
-                   ON source.Officeid = target.officeid
-		           WHEN MATCHED AND target.OfficeID IN (' || select_statement_1 || ' SELECT OfficeId FROM CTE_DeleteOfficeHours ) THEN DELETE
-                   WHEN MATCHED AND' || update_clause || 'THEN '||update_statement|| '
-                   WHEN NOT MATCHED THEN '||insert_statement ;
+                   on source.officeid = target.officeid
+		           WHEN MATCHED and target.officeid IN (' || select_statement_1 || ' select OfficeId from CTE_DeleteOfficeHours ) then delete
+                   WHEN MATCHED and' || update_clause || 'then '||update_statement|| '
+                   when not matched then '||insert_statement ;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

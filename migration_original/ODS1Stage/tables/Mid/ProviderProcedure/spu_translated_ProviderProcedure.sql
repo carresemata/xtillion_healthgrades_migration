@@ -1,110 +1,110 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERPROCEDURE(IsProviderDeltaProcessing BOOLEAN)
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERPROCEDURE(IsProviderDeltaProcessing BOOLEAN)
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
-DECLARE
+declare
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
----------------------------------------------------------
-
---- Mid.ProviderProcedure depends on:
--- MDM_TEAM.MST.Provider_Profile_Processing
--- Base.Provider
--- Base.EntityToMedicalTerm
--- Base.MedicalTerm
--- Base.EntityType
--- Base.MedicalTermSet
--- Base.MedicalTermType
-
----------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
+--- mid.providerprocedure depends on:
+-- mdm_team.mst.provider_profile_processing
+-- base.provider
+-- base.entitytomedicalterm
+-- base.medicalterm
+-- base.entitytype
+-- base.medicaltermset
+-- base.medicaltermtype
 
-source_table STRING; 
-select_statement STRING; 
-insert_statement STRING;
-update_statement STRING;
-merge_statement STRING; 
-status STRING;
-    procedure_name varchar(50) default('sp_load_ProviderProcedure');
-    execution_start DATETIME default getdate();
+---------------------------------------------------------
+--------------- 1. declaring variables ------------------
+---------------------------------------------------------
+
+
+source_table string; 
+select_statement string; 
+insert_statement string;
+update_statement string;
+merge_statement string; 
+status string;
+    procedure_name varchar(50) default('sp_load_providerprocedure');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------  
-BEGIN
+begin
 
-    IF (IsProviderDeltaProcessing) THEN
-        source_table := $$ MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                            JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode $$;
-    ELSE
-        source_table := $$ Base.Provider $$;
-END IF;
+    if (IsProviderDeltaProcessing) then
+        source_table := $$ MDM_team.mst.Provider_Profile_Processing as ppp
+                            join base.provider as p on ppp.ref_provider_code = p.providercode $$;
+    else
+        source_table := $$ base.provider $$;
+end if;
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
 
     select_statement := $$
-                        (WITH CTE_ProviderBatch AS (
-                        SELECT p.ProviderID
-                        FROM $$ ||source_table|| $$
-                        ORDER BY p.ProviderID
+                        (with CTE_ProviderBatch as (
+                        select p.providerid
+                        from $$ ||source_table|| $$
+                        order by p.providerid
                         ),
                     
-                        CTE_ProviderProcedure AS (
-                            SELECT
-                                etmt.EntityToMedicalTermID AS ProviderToProcedureID,
-                                etmt.EntityID AS ProviderID,
-                                mt.MedicalTermCode AS ProcedureCode,
-                                mt.MedicalTermDescription1 AS ProcedureDescription,
-                                mt.MedicalTermDescription2 AS ProcedureGroupDescription,
-                                mt.LegacyKey,
+                        CTE_ProviderProcedure as (
+                            select
+                                etmt.entitytomedicaltermid as ProviderToProcedureID,
+                                etmt.entityid as ProviderID,
+                                mt.medicaltermcode as ProcedureCode,
+                                mt.medicaltermdescription1 as ProcedureDescription,
+                                mt.medicaltermdescription2 as ProcedureGroupDescription,
+                                mt.legacykey,
                                 CASE
-                                    WHEN mpp.ProviderToProcedureID IS NULL THEN 1
-                                    ELSE 0
-                                END AS ActionCode
-                            FROM CTE_ProviderBatch AS pb
-                            INNER JOIN Base.EntityToMedicalTerm AS etmt ON etmt.EntityID = pb.ProviderID
-                            INNER JOIN Base.MedicalTerm AS mt ON mt.MedicalTermID = etmt.MedicalTermID
-                            INNER JOIN Base.EntityType AS et ON et.EntityTypeID = etmt.EntityTypeID
-                            INNER JOIN Base.MedicalTermSet AS mts ON mts.MedicalTermSetID = mt.MedicalTermSetID
-                            INNER JOIN Base.MedicalTermType AS mtt ON mtt.MedicalTermTypeID = mt.MedicalTermTypeID
-                            LEFT JOIN Mid.ProviderProcedure AS mpp ON etmt.EntityToMedicalTermID = mpp.ProviderToProcedureID
+                                    WHEN mpp.providertoprocedureid is null then 1
+                                    else 0
+                                END as ActionCode
+                            from CTE_ProviderBatch as pb
+                            inner join base.entitytomedicalterm as etmt on etmt.entityid = pb.providerid
+                            inner join base.medicalterm as mt on mt.medicaltermid = etmt.medicaltermid
+                            inner join base.entitytype as et on et.entitytypeid = etmt.entitytypeid
+                            inner join base.medicaltermset as mts on mts.medicaltermsetid = mt.medicaltermsetid
+                            inner join base.medicaltermtype as mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid
+                            left join mid.providerprocedure as mpp on etmt.entitytomedicaltermid = mpp.providertoprocedureid
                         )
                         
-                        SELECT
-                            pp.ProviderToProcedureID,
-                            pp.ProviderID,
-                            pp.ProcedureCode,
-                            pp.ProcedureDescription,
-                            pp.ProcedureGroupDescription,
-                            pp.LegacyKey,
-                            pp.ActionCode
-                        FROM CTE_ProviderProcedure pp)
+                        select
+                            pp.providertoprocedureid,
+                            pp.providerid,
+                            pp.procedurecode,
+                            pp.proceduredescription,
+                            pp.proceduregroupdescription,
+                            pp.legacykey,
+                            pp.actioncode
+                        from CTE_ProviderProcedure pp)
                         $$;
       
 
       ---------------------------------------------------------
-      --------- 4. Actions (Inserts and Updates) --------------
+      --------- 4. actions (inserts and updates) --------------
       ---------------------------------------------------------
 
       update_statement := $$
-                         UPDATE SET 
-                            target.LegacyKey = source.LegacyKey,
-                            target.ProcedureCode = source.ProcedureCode,
-                            target.ProcedureDescription = source.ProcedureDescription,
-                            target.ProcedureGroupDescription = source.ProcedureGroupDescription,
-                            target.ProviderID = source.ProviderID
+                         update SET 
+                            target.legacykey = source.legacykey,
+                            target.procedurecode = source.procedurecode,
+                            target.proceduredescription = source.proceduredescription,
+                            target.proceduregroupdescription = source.proceduregroupdescription,
+                            target.providerid = source.providerid
                           $$;
 
       
       insert_statement := $$
-                         INSERT
+                         insert
                          ( 
                          LegacyKey,
                          ProcedureCode,
@@ -113,54 +113,54 @@ END IF;
                          ProviderID,
                          ProviderToProcedureID
                          )
-                         VALUES 
+                         values 
                          (
-                         source.LegacyKey,
-                         source.ProcedureCode,
-                         source.ProcedureDescription,
-                         source.ProcedureGroupDescription,
-                         source.ProviderID,
-                         source.ProviderToProcedureID
+                         source.legacykey,
+                         source.procedurecode,
+                         source.proceduredescription,
+                         source.proceduregroupdescription,
+                         source.providerid,
+                         source.providertoprocedureid
                          )
                          $$;
 
 
      merge_statement := $$
-                        MERGE INTO Mid.ProviderProcedure as target
-                        USING $$ || select_statement || $$ AS source
-                        ON source.ProviderToProcedureID = target.ProviderToProcedureID
-                        WHEN MATCHED AND MD5(IFNULL(CAST(target.LegacyKey AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.LegacyKey AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProcedureCode AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProcedureCode AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProcedureDescription AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProcedureDescription AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProcedureGroupDescription AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProcedureGroupDescription AS VARCHAR), '')) OR 
-                                        MD5(IFNULL(CAST(target.ProviderID AS VARCHAR), '')) <> MD5(IFNULL(CAST(source.ProviderID AS VARCHAR), '')) 
-                                        THEN $$ || update_statement || $$
-                        WHEN MATCHED AND source.ProviderToProcedureID = target.ProviderToProcedureID AND target.ProviderToProcedureID IS NULL THEN DELETE
-                        WHEN NOT MATCHED THEN $$ || insert_statement;
+                        merge into mid.providerprocedure as target
+                        using $$ || select_statement || $$ as source
+                        on source.providertoprocedureid = target.providertoprocedureid
+                        WHEN MATCHED and MD5(ifnull(CAST(target.legacykey as varchar), '')) <> MD5(ifnull(CAST(source.legacykey as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.procedurecode as varchar), '')) <> MD5(ifnull(CAST(source.procedurecode as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.proceduredescription as varchar), '')) <> MD5(ifnull(CAST(source.proceduredescription as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.proceduregroupdescription as varchar), '')) <> MD5(ifnull(CAST(source.proceduregroupdescription as varchar), '')) or 
+                                        MD5(ifnull(CAST(target.providerid as varchar), '')) <> MD5(ifnull(CAST(source.providerid as varchar), '')) 
+                                        then $$ || update_statement || $$
+                        WHEN MATCHED and source.providertoprocedureid = target.providertoprocedureid and target.providertoprocedureid is null then delete
+                        when not matched then $$ || insert_statement;
         
 
     ---------------------------------------------------------
-    ------------------- 5. Execution ------------------------
+    ------------------- 5. execution ------------------------
     --------------------------------------------------------- 
      
-    EXECUTE IMMEDIATE merge_statement;
+    execute immediate merge_statement;
                         
     ---------------------------------------------------------
-    --------------- 6. Status monitoring --------------------
+    --------------- 6. status monitoring --------------------
     --------------------------------------------------------- 
     
-    status := 'Completed successfully';
+    status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;  
+            return status;
+end;  

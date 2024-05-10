@@ -1,69 +1,69 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERVIDEO()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERVIDEO()
 RETURNS STRING
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS
-DECLARE
+EXECUTE as CALLER
+as
+declare
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
--- Base.ProviderVideo depends on:
---- MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING (RAW.VW_PROVIDER_PROFILE)
---- Base.Provider
---- Base.MediaVideoHost
---- Base.MediaReviewLevel
---- Base.MediaContextType
+-- base.providervideo depends on:
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- base.provider
+--- base.mediavideohost
+--- base.mediareviewlevel
+--- base.mediacontexttype
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-select_statement STRING; -- CTE and Select statement for the Merge
-insert_statement STRING; -- Insert statement for the Merge
-merge_statement STRING; -- Merge statement to final table
-status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderVideo');
-    execution_start DATETIME default getdate();
+select_statement string; -- cte and select statement for the merge
+insert_statement string; -- insert statement for the merge
+merge_statement string; -- merge statement to final table
+status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providervideo');
+    execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------
 
-BEGIN
+begin
 -- No conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
--- Select Statement
-select_statement := $$ SELECT 
-                            P.ProviderId, 
-                            JSON.VIDEO_SRCIDENTIFIER AS ExternalIdentifier,
-                            MH.MediaVideoHostId,
-                            MR.MediaReviewLevelId,
-                            IFNULL(JSON.Video_SourceCode, 'Profisee') AS SourceCode,
-                            IFNULL(JSON.Video_LastUpdateDate, SYSDATE()) AS LastUpdateDate,
-                            MC.MediaContextTypeId
+-- select Statement
+select_statement := $$ select 
+                            p.providerid, 
+                            json.video_SRCIDENTIFIER as ExternalIdentifier,
+                            mh.mediavideohostid,
+                            mr.mediareviewlevelid,
+                            ifnull(json.video_SourceCode, 'Profisee') as SourceCode,
+                            ifnull(json.video_LastUpdateDate, sysdate()) as LastUpdateDate,
+                            mc.mediacontexttypeid
                         
-                        FROM RAW.VW_PROVIDER_PROFILE AS JSON
-                            LEFT JOIN Base.Provider AS P ON P.ProviderCode = JSON.ProviderCode
-                            LEFT JOIN Base.MediaVideoHost AS MH ON MH.MediaVideohostCode = JSON.VIDEO_REFMEDIAVIDEOHOSTCODE
-                            LEFT JOIN Base.MediaReviewLevel AS MR ON JSON.VIDEO_REFMEDIAREVIEWLEVELCODE = MR.MediaReviewLevelCode
-                            LEFT JOIN Base.MediaContextType AS MC ON JSON.VIDEO_REFMEDIACONTEXTTYPECODE = MC.MediaContextTypeCode
-                        WHERE PROVIDER_PROFILE IS NOT NULL
-                            AND PROVIDERID IS NOT NULL
-                            AND JSON.VIDEO_SRCIDENTIFIER IS NOT NULL
-                            AND MEDIAVIDEOHOSTID IS NOT NULL
-                            AND MEDIAREVIEWLEVELID IS NOT NULL
-                            AND MEDIACONTEXTTYPEID IS NOT NULL
-                        QUALIFY row_number() over(partition by ProviderId, JSON.VIDEO_REFMEDIACONTEXTTYPECODE, JSON.VIDEO_REFMEDIAVIDEOHOSTCODE order by CREATE_DATE desc) = 1 $$;
+                        from raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.provider as P on p.providercode = json.providercode
+                            left join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
+                            left join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
+                            left join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
+                        where PROVIDER_PROFILE is not null
+                            and PROVIDERID is not null
+                            and json.video_SRCIDENTIFIER is not null
+                            and MEDIAVIDEOHOSTID is not null
+                            and MEDIAREVIEWLEVELID is not null
+                            and MEDIACONTEXTTYPEID is not null
+                        qualify row_number() over(partition by ProviderId, json.video_REFMEDIACONTEXTTYPECODE, json.video_REFMEDIAVIDEOHOSTCODE order by CREATE_DATE desc) = 1 $$;
 
--- Insert Statement
-insert_statement := 'INSERT 
+-- insert Statement
+insert_statement := 'insert 
                         (PROVIDERVIDEOID, 
                         PROVIDERID, 
                         EXTERNALIDENTIFIER, 
@@ -72,48 +72,48 @@ insert_statement := 'INSERT
                         SOURCECODE, 
                         LASTUPDATEDATE, 
                         MEDIACONTEXTTYPEID)
-                    VALUES 
-                        (UUID_STRING(), 
-                        source.PROVIDERID, 
-                        source.EXTERNALIDENTIFIER, 
-                        source.MEDIAVIDEOHOSTID, 
-                        source.MEDIAREVIEWLEVELID, 
-                        source.SOURCECODE, 
-                        source.LASTUPDATEDATE, 
-                        source.MEDIACONTEXTTYPEID)';
+                    values 
+                        (uuid_string(), 
+                        source.providerid, 
+                        source.externalidentifier, 
+                        source.mediavideohostid, 
+                        source.mediareviewlevelid, 
+                        source.sourcecode, 
+                        source.lastupdatedate, 
+                        source.mediacontexttypeid)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
-merge_statement := 'MERGE INTO Base.PROVIDERVIDEO AS TARGET
-USING ('||select_statement||') AS SOURCE
-ON TARGET.PROVIDERID = SOURCE.PROVIDERID
-WHEN MATCHED THEN DELETE
-WHEN NOT MATCHED THEN ' || insert_statement;
+merge_statement := 'merge into base.providervideo as TARGET
+using ('||select_statement||') as SOURCE
+on target.providerid = source.providerid
+WHEN MATCHED then delete
+when not matched then ' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 ---------------------------------------------------------
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

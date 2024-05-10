@@ -1,112 +1,112 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERLICENSE(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERLICENSE(IsProviderDeltaProcessing BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
     
--- Mid.ProviderLicense depends on: 
---- MDM_TEAM.MST.Provider_Profile_Processing
---- Base.Provider
---- Base.ProviderLicense
---- Base.State
+-- mid.providerlicense depends on: 
+--- mdm_team.mst.provider_profile_processing
+--- base.provider
+--- base.providerlicense
+--- base.state
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement STRING;
-    select_statement STRING; -- CTE and Select statement for the Merge
-    update_statement STRING; -- Update statement for the Merge
-    insert_statement STRING; -- Insert statement for the Merge
-    merge_statement STRING; -- Merge statement to final table
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderLicense');
-    execution_start DATETIME default getdate();
+    truncate_statement string;
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providerlicense');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
+begin
+    if (IsProviderDeltaProcessing) then
            select_statement := '
-          WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                    JOIN Base.Provider AS P On p.providercode = ppp.ref_provider_code),';
-    ELSE
-           truncate_statement := 'TRUNCATE TABLE Mid.ProviderLicense';
-           EXECUTE IMMEDIATE truncate_statement;
+          with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    MDM_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
+    else
+           truncate_statement := 'truncate TABLE mid.providerlicense';
+           execute immediate truncate_statement;
            select_statement := '
-           WITH CTE_ProviderBatch AS (
-                SELECT
-                    p.ProviderID
-                FROM
-                    Base.Provider AS p
-                ORDER BY
-                    p.ProviderID),';
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
             
-    END IF;
+    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
 
--- If conditionals:
+-- if conditionals:
 select_statement := select_statement || 
-                    $$ CTE_ProviderLicense AS (
-                        SELECT
-                            pl.ProviderID,
-                            pl.LicenseNumber,
-                            pl.LicenseEffectiveDate,
-                            pl.LicenseTerminationDate,
-                            st.State,
-                            st.StateName,
-                            pl.LicenseType,
-                            0 AS ActionCode
-                        FROM
-                            CTE_ProviderBatch AS pb
-                            JOIN Base.ProviderLicense AS pl ON pl.ProviderID = pb.ProviderID
-                            JOIN Base.State AS st ON st.StateID = pl.StateID
+                    $$ CTE_ProviderLicense as (
+                        select
+                            pl.providerid,
+                            pl.licensenumber,
+                            pl.licenseeffectivedate,
+                            pl.licenseterminationdate,
+                            st.state,
+                            st.statename,
+                            pl.licensetype,
+                            0 as ActionCode
+                        from
+                            CTE_ProviderBatch as pb
+                            join base.providerlicense as pl on pl.providerid = pb.providerid
+                            join base.state as st on st.stateid = pl.stateid
                     ),
-                    -- Insert Action
-                    CTE_Action_1 AS (
-                        SELECT
-                            cte.ProviderID,
-                            1 AS ActionCode
-                        FROM
-                            CTE_ProviderLicense AS cte
-                            LEFT JOIN Mid.ProviderLicense AS mid ON cte.ProviderID = mid.ProviderID
-                        WHERE
-                            mid.ProviderID IS NULL
+                    -- insert Action
+                    CTE_Action_1 as (
+                        select
+                            cte.providerid,
+                            1 as ActionCode
+                        from
+                            CTE_ProviderLicense as cte
+                            left join mid.providerlicense as mid on cte.providerid = mid.providerid
+                        where
+                            mid.providerid is null
                     ),
-                    -- Update Action
-                    CTE_Action_2 AS (
-                        SELECT
-                            cte.ProviderID,
-                            2 AS ActionCode
-                        FROM
-                            CTE_ProviderLicense AS cte
-                            JOIN Mid.ProviderLicense AS mid ON cte.ProviderID = mid.ProviderID
-                        WHERE
-                            MD5(IFNULL(cte.LicenseNumber::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseNumber::VARCHAR, ''))
-                            OR MD5(IFNULL(cte.LicenseEffectiveDate::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseEffectiveDate::VARCHAR, ''))
-                            OR MD5(IFNULL(cte.LicenseTerminationDate::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseTerminationDate::VARCHAR, ''))
-                            OR MD5(IFNULL(cte.State::VARCHAR, '')) <> MD5(IFNULL(mid.State::VARCHAR, ''))
-                            OR MD5(IFNULL(cte.StateName::VARCHAR, '')) <> MD5(IFNULL(mid.StateName::VARCHAR, ''))
-                            OR MD5(IFNULL(cte.LicenseType::VARCHAR, '')) <> MD5(IFNULL(mid.LicenseType::VARCHAR, ''))
+                    -- update Action
+                    CTE_Action_2 as (
+                        select
+                            cte.providerid,
+                            2 as ActionCode
+                        from
+                            CTE_ProviderLicense as cte
+                            join mid.providerlicense as mid on cte.providerid = mid.providerid
+                        where
+                            MD5(ifnull(cte.licensenumber::varchar, '')) <> MD5(ifnull(mid.licensenumber::varchar, ''))
+                            or MD5(ifnull(cte.licenseeffectivedate::varchar, '')) <> MD5(ifnull(mid.licenseeffectivedate::varchar, ''))
+                            or MD5(ifnull(cte.licenseterminationdate::varchar, '')) <> MD5(ifnull(mid.licenseterminationdate::varchar, ''))
+                            or MD5(ifnull(cte.state::varchar, '')) <> MD5(ifnull(mid.state::varchar, ''))
+                            or MD5(ifnull(cte.statename::varchar, '')) <> MD5(ifnull(mid.statename::varchar, ''))
+                            or MD5(ifnull(cte.licensetype::varchar, '')) <> MD5(ifnull(mid.licensetype::varchar, ''))
                     )
-                    SELECT DISTINCT
+                    select distinct
                         A0.ProviderID,
                         A0.LicenseNumber,
                         A0.LicenseEffectiveDate,
@@ -114,33 +114,33 @@ select_statement := select_statement ||
                         A0.State,
                         A0.StateName,
                         A0.LicenseType,
-                        IFNULL(
+                        ifnull(
                             A1.ActionCode,
-                            IFNULL(A2.ActionCode, A0.ActionCode)
-                        ) AS ActionCode
-                    FROM
-                        CTE_ProviderLicense AS A0
-                        LEFT JOIN CTE_Action_1 AS A1 ON A0.ProviderID = A1.ProviderID
-                        LEFT JOIN CTE_Action_2 AS A2 ON A0.ProviderID = A2.ProviderID
-                    WHERE
-                        IFNULL(
+                            ifnull(A2.ActionCode, A0.ActionCode)
+                        ) as ActionCode
+                    from
+                        CTE_ProviderLicense as A0
+                        left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID
+                        left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID
+                    where
+                        ifnull(
                             A1.ActionCode,
-                            IFNULL(A2.ActionCode, A0.ActionCode)
+                            ifnull(A2.ActionCode, A0.ActionCode)
                         ) <> 0 $$;
 
---- Update Statement
-update_statement := ' UPDATE 
+--- update Statement
+update_statement := ' update 
                      SET 
-                        ProviderID = source.ProviderID,
-                        LicenseNumber = source.LicenseNumber,
-                        LicenseEffectiveDate = source.LicenseEffectiveDate,
-                        LicenseTerminationDate = source.LicenseTerminationDate,
-                        State = source.State,
-                        StateName = source.StateName,
-                        LicenseType = source.LicenseType';
+                        ProviderID = source.providerid,
+                        LicenseNumber = source.licensenumber,
+                        LicenseEffectiveDate = source.licenseeffectivedate,
+                        LicenseTerminationDate = source.licenseterminationdate,
+                        State = source.state,
+                        StateName = source.statename,
+                        LicenseType = source.licensetype';
 
---- Insert Statement
-insert_statement := ' INSERT  (
+--- insert Statement
+insert_statement := ' insert  (
                             ProviderID,
                             LicenseNumber,
                             LicenseEffectiveDate,
@@ -148,48 +148,48 @@ insert_statement := ' INSERT  (
                             State,
                             StateName,
                             LicenseType)
-                      VALUES (
-                            source.ProviderID,
-                            source.LicenseNumber,
-                            source.LicenseEffectiveDate,
-                            source.LicenseTerminationDate,
-                            source.State,
-                            source.StateName,
-                            source.LicenseType)';
+                      values (
+                            source.providerid,
+                            source.licensenumber,
+                            source.licenseeffectivedate,
+                            source.licenseterminationdate,
+                            source.state,
+                            source.statename,
+                            source.licensetype)';
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' MERGE INTO Mid.ProviderLicense as target USING 
+merge_statement := ' merge into mid.providerlicense as target using 
                    ('||select_statement||') as source 
-                   ON source.ProviderID = target.ProviderID AND source.LicenseNumber = target.LicenseNumber AND source.LicenseType = target.LicenseType
-                   WHEN MATCHED AND source.ActionCode = 2 THEN '||update_statement|| '
-                   WHEN NOT MATCHED AND source.ActionCode = 1 THEN '||insert_statement;
+                   on source.providerid = target.providerid and source.licensenumber = target.licensenumber and source.licensetype = target.licensetype
+                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
+                   when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement ;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

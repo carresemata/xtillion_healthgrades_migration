@@ -1,15 +1,15 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE(IsProviderDeltaProcessing BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-DECLARE 
+    EXECUTE as CALLER
+    as  
+declare 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.providerpracticeoffice depends on:
--- MDM_TEAM.MST.Provider_Profile_Processing
+-- mdm_team.mst.provider_profile_processing
 -- base.officetoaddress
 -- base.practice
 -- base.officetophone
@@ -24,45 +24,45 @@ DECLARE
 -- base.citystatepostalcode
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-delta_select_statement STRING; -- CTE and Select statement for delta
-select_statement STRING; -- CTE and Select statement for the Merge
-update_statement STRING; -- Main Update statement for the Merge
-insert_statement STRING; -- Insert statement for the Merge
-merge_statement STRING; -- Merge statement to final table
-status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_ProviderPracticeOffice');
-    execution_start DATETIME default getdate();
+delta_select_statement string; -- cte and select statement for delta
+select_statement string; -- cte and select statement for the merge
+update_statement string; -- main update statement for the merge
+insert_statement string; -- insert statement for the merge
+merge_statement string; -- merge statement to final table
+status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_providerpracticeoffice');
+    execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
+--------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
    
-BEGIN
-    IF (IsProviderDeltaProcessing) THEN
-       EXECUTE IMMEDIATE $$ TRUNCATE TABLE Mid.ProviderPracticeOffice $$;
+begin
+    if (IsProviderDeltaProcessing) then
+       execute immediate $$ truncate TABLE mid.providerpracticeoffice $$;
        delta_select_statement :=  $$        
-                            WITH CTE_ProviderBatch AS (
-                            SELECT p.ProviderID
-                            FROM MDM_TEAM.MST.Provider_Profile_Processing as ppp
-                            JOIN Base.Provider as p on ppp.ref_provider_code = p.providercode), 
+                            with CTE_ProviderBatch as (
+                            select p.providerid
+                            from MDM_team.mst.Provider_Profile_Processing as ppp
+                            join base.provider as p on ppp.ref_provider_code = p.providercode), 
                             $$;
-    ELSE
-       EXECUTE IMMEDIATE $$   DELETE FROM mid.ProviderPracticeOffice ppo 
-                              USING raw.vw_provider_profile ppp
-                              WHERE ppp.office_officecode = ppo.officecode
+    else
+       execute immediate $$   delete from mid.providerpracticeoffice ppo 
+                              using raw.vw_provider_profile ppp
+                              where ppp.office_officecode = ppo.officecode
                          $$;
             
        delta_select_statement := $$
-                               WITH CTE_ProviderBatch AS (
-                                    SELECT p.ProviderID
-                                    FROM Base.Provider as p
-                                    ORDER BY p.ProviderID),
+                               with CTE_ProviderBatch as (
+                                    select p.providerid
+                                    from base.provider as p
+                                    order by p.providerid),
                                $$;
-    END IF;
+    end if;
 
 
 ---------------------------------------------------------
@@ -71,195 +71,195 @@ BEGIN
 
 select_statement := delta_select_statement || 
             $$
-            CTE_ServiceNumbers AS (
-                SELECT o.PhoneNumber, pto.OfficeID, ROW_NUMBER() OVER(PARTITION BY pto.OfficeID ORDER BY pto.PhoneRank, pto.LastUpdateDate DESC, 
-                       o.LastUpdateDate, pto.PhoneId) AS SequenceId1   
-                FROM Base.OfficeToPhone pto
-                JOIN Base.Phone o ON (pto.PhoneID = o.PhoneID)
-                WHERE pto.PhoneTypeID = (SELECT PhoneTypeID FROM Base.PhoneType WHERE PhoneTypeCode = 'Service') 
+            CTE_ServiceNumbers as (
+                select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc, 
+                       o.lastupdatedate, pto.phoneid) as SequenceId1   
+                from base.officetophone pto
+                join base.phone o on (pto.phoneid = o.phoneid)
+                where pto.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'Service') 
             ),
             
-            CTE_FaxNumbers AS (
-                SELECT o.PhoneNumber, pto.OfficeID, ROW_NUMBER() OVER(PARTITION BY pto.OfficeID ORDER BY pto.PhoneRank, pto.LastUpdateDate DESC,                      o.LastUpdateDate, pto.PhoneId) AS SequenceId1
-                FROM Base.OfficeToPhone pto
-                JOIN Base.Phone o ON (pto.PhoneID = o.PhoneID)
-                WHERE pto.PhoneTypeID = (SELECT PhoneTypeID FROM Base.PhoneType WHERE PhoneTypeCode = 'Fax') 
+            CTE_FaxNumbers as (
+                select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc,                      o.lastupdatedate, pto.phoneid) as SequenceId1
+                from base.officetophone pto
+                join base.phone o on (pto.phoneid = o.phoneid)
+                where pto.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'Fax') 
             ),
             
-            CTE_ProviderOfficeRank AS (
-                SELECT ProviderID, MIN(ProviderOfficeRank) AS ProviderOfficeRank
-                FROM Base.ProviderToOffice
-                WHERE ProviderOfficeRank IS NOT NULL
-                GROUP BY ProviderID
+            CTE_ProviderOfficeRank as (
+                select ProviderID, MIN(ProviderOfficeRank) as ProviderOfficeRank
+                from base.providertooffice
+                where ProviderOfficeRank is not null
+                group by ProviderID
             ),
             
-            CTE_PracticeEmails AS (
-                SELECT PracticeID, EmailAddress, ROW_NUMBER() OVER (PARTITION BY PracticeID ORDER BY LEN(EmailAddress)) AS EmailRank
-                FROM Base.PracticeEmail
-                WHERE EmailAddress IS NOT NULL
+            CTE_PracticeEmails as (
+                select PracticeID, EmailAddress, row_number() over (partition by PracticeID order by LEN(EmailAddress)) as EmailRank
+                from base.practiceemail
+                where EmailAddress is not null
             ),
             
-            CTE_ProviderPracticeOffice AS (
-                SELECT DISTINCT 
-                    pto.ProviderToOfficeID, 
-                    pto.ProviderID,  
-                    p.PracticeID, 
-                    p.PracticeCode, 
+            CTE_ProviderPracticeOffice as (
+                select distinct 
+                    pto.providertoofficeid, 
+                    pto.providerid,  
+                    p.practiceid, 
+                    p.practicecode, 
                     CASE 
-                        WHEN pto.PracticeName IS NOT NULL THEN pto.PracticeName 
-                        ELSE p.PracticeName 
-                    END AS PracticeName,
-                    p.YearPracticeEstablished, 
-                    p.NPI AS PracticeNPI, 
-                    cte_pe.EmailAddress AS PracticeEmail,
-                    p.PracticeWebsite, 
-                    p.PracticeDescription, 
-                    p.PracticeLogo, 
-                    p.PracticeMedicalDirector, 
-                    p.PracticeSoftware, 
-                    p.PracticeTIN, 
-                    ota.OfficeToAddressID, 
-                    o.OfficeID, 
-                    o.OfficeCode, 
+                        WHEN pto.practicename is not null then pto.practicename 
+                        else p.practicename 
+                    END as PracticeName,
+                    p.yearpracticeestablished, 
+                    p.npi as PracticeNPI, 
+                    cte_pe.emailaddress as PracticeEmail,
+                    p.practicewebsite, 
+                    p.practicedescription, 
+                    p.practicelogo, 
+                    p.practicemedicaldirector, 
+                    p.practicesoftware, 
+                    p.practicetin, 
+                    ota.officetoaddressid, 
+                    o.officeid, 
+                    o.officecode, 
                     CASE 
-                        WHEN pto.OfficeName IS NOT NULL THEN pto.OfficeName 
-                        ELSE o.OfficeName 
-                    END AS OfficeName, 
+                        WHEN pto.officename is not null then pto.officename 
+                        else o.officename 
+                    END as OfficeName, 
                     CASE
-                        WHEN cte_por.ProviderID IS NOT NULL THEN 1
-                        ELSE NULL 
-                    END AS IsPrimaryOffice, 
-                    pto.ProviderOfficeRank, 
-                    a.AddressID, 
-                    a.AddressCode, 
-                    'Office' AS AddressTypeCode, 
-                    a.AddressLine1 AS AddressLine1, 
-                    NULL AS AddressLine2, 
-                    a.AddressLine3, 
-                    a.AddressLine4,
-                    cspc.City, 
-                    cspc.State, 
-                    cspc.PostalCode AS ZipCode, 
-                    cspc.County, 
-                    n.NationName AS Nation, 
-                    a.Latitude, 
-                    a.Longitude,
-                    cte_sn.PhoneNumber AS FullPhone,
-                    cte_fn.PhoneNumber AS FullFax,
-                    ota.IsDerived, 
-                    o.HasBillingStaff,
-                    o.HasHandicapAccess, 
-                    o.HasLabServicesOnSite, 
-                    o.HasPharmacyOnSite, 
-                    o.HasXrayOnSite, 
-                    o.IsSurgeryCenter, 
-                    o.HasSurgeryOnSite, 
-                    o.AverageDailyPatientVolume, 
-                    NULL AS PhysicianCount, 
-                    o.OfficeCoordinatorName, 
-                    o.ParkingInformation, 
-                    o.PaymentPolicy,
-                    o.LegacyKey AS LegacyKeyOffice, 
-                    p.LegacyKey AS LegacyKeyPractice,
-                    0 AS ActionCode
-                FROM CTE_ProviderBatch pb 
-                INNER JOIN Base.ProviderToOffice AS pto ON pb.ProviderID = pto.ProviderID
-                INNER JOIN Base.Office AS o ON o.OfficeID = pto.OfficeID
-                INNER JOIN Base.OfficeToAddress AS ota ON o.OfficeID = ota.OfficeID
-                INNER JOIN Base.Address AS a ON a.AddressID = ota.AddressID	
-                LEFT JOIN CTE_ServiceNumbers AS cte_sn ON cte_sn.OfficeID = o.OfficeID AND cte_sn.SequenceId1 = 1
-                LEFT JOIN CTE_FaxNumbers AS cte_fn ON cte_fn.OfficeID = o.OfficeID AND cte_fn.SequenceId1 = 1
-                LEFT JOIN Base.CityStatePostalCode AS cspc ON a.CityStatePostalCodeID = cspc.CityStatePostalCodeID
-                LEFT JOIN Base.Nation AS n ON cspc.NationID = n.NationID
-                LEFT JOIN Base.Practice AS p ON o.PracticeID = p.PracticeID
-                LEFT JOIN CTE_ProviderOfficeRank AS cte_por ON pto.ProviderID = cte_por.ProviderID AND pto.ProviderOfficeRank = cte_por.ProviderOfficeRank
-                LEFT JOIN CTE_PracticeEmails cte_pe ON cte_pe.PracticeID = o.PracticeID AND cte_pe.EmailRank = 1
+                        WHEN cte_por.providerid is not null then 1
+                        else null 
+                    END as IsPrimaryOffice, 
+                    pto.providerofficerank, 
+                    a.addressid, 
+                    a.addresscode, 
+                    'Office' as AddressTypeCode, 
+                    a.addressline1 as AddressLine1, 
+                    null as AddressLine2, 
+                    a.addressline3, 
+                    a.addressline4,
+                    cspc.city, 
+                    cspc.state, 
+                    cspc.postalcode as ZipCode, 
+                    cspc.county, 
+                    n.nationname as Nation, 
+                    a.latitude, 
+                    a.longitude,
+                    cte_sn.phonenumber as FullPhone,
+                    cte_fn.phonenumber as FullFax,
+                    ota.isderived, 
+                    o.hasbillingstaff,
+                    o.hashandicapaccess, 
+                    o.haslabservicesonsite, 
+                    o.haspharmacyonsite, 
+                    o.hasxrayonsite, 
+                    o.issurgerycenter, 
+                    o.hassurgeryonsite, 
+                    o.averagedailypatientvolume, 
+                    null as PhysicianCount, 
+                    o.officecoordinatorname, 
+                    o.parkinginformation, 
+                    o.paymentpolicy,
+                    o.legacykey as LegacyKeyOffice, 
+                    p.legacykey as LegacyKeyPractice,
+                    0 as ActionCode
+                from CTE_ProviderBatch pb 
+                inner join base.providertooffice as pto on pb.providerid = pto.providerid
+                inner join base.office as o on o.officeid = pto.officeid
+                inner join base.officetoaddress as ota on o.officeid = ota.officeid
+                inner join base.address as a on a.addressid = ota.addressid	
+                left join CTE_ServiceNumbers as cte_sn on cte_sn.officeid = o.officeid and cte_sn.sequenceid1 = 1
+                left join CTE_FaxNumbers as cte_fn on cte_fn.officeid = o.officeid and cte_fn.sequenceid1 = 1
+                left join base.citystatepostalcode as cspc on a.citystatepostalcodeid = cspc.citystatepostalcodeid
+                left join base.nation as n on cspc.nationid = n.nationid
+                left join base.practice as p on o.practiceid = p.practiceid
+                left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
+                left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
             ),
             
-            -- Insert Action
-            CTE_Action_1 AS (
-                    SELECT 
-                        cte.ProviderID,
-                        cte.OfficeID,
-                        cte.FullPhone,
-                        cte.FullFax,
-                        1 AS ActionCode
-                    FROM CTE_ProviderPracticeOffice AS cte
-                    LEFT JOIN Mid.ProviderPracticeOffice AS mid 
-                        ON (cte.ProviderID = mid.ProviderID AND cte.OfficeID = mid.OfficeID
-                        AND IFNULL(cte.FullPhone, '') = IFNULL(mid.FullPhone, '')
-                        AND IFNULL(cte.FullFax, '') = IFNULL(mid.FullFax, ''))
-                    WHERE mid.ProviderToOfficeID IS NULL
+            -- insert Action
+            CTE_Action_1 as (
+                    select 
+                        cte.providerid,
+                        cte.officeid,
+                        cte.fullphone,
+                        cte.fullfax,
+                        1 as ActionCode
+                    from CTE_ProviderPracticeOffice as cte
+                    left join mid.providerpracticeoffice as mid 
+                        on (cte.providerid = mid.providerid and cte.officeid = mid.officeid
+                        and ifnull(cte.fullphone, '') = ifnull(mid.fullphone, '')
+                        and ifnull(cte.fullfax, '') = ifnull(mid.fullfax, ''))
+                    where mid.providertoofficeid is null
             ),
             
-            -- Update Action
-            CTE_Action_2 AS (
-                    SELECT 
-                        cte.ProviderID,
-                        cte.OfficeID,
-                        cte.FullPhone,
-                        cte.FullFax,
-                        2 AS ActionCode
-                    FROM CTE_ProviderPracticeOffice AS cte
-                    INNER JOIN Mid.ProviderPracticeOffice AS mid 
-                        ON (cte.ProviderID = mid.ProviderID AND cte.OfficeID = mid.OfficeID
-                        AND IFNULL(cte.FullPhone, '') = IFNULL(mid.FullPhone, '')
-                        AND IFNULL(cte.FullFax, '') = IFNULL(mid.FullFax, ''))
-                    WHERE 
-                        MD5(IFNULL(cte.AddressCode::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressCode::VARCHAR,'''')) OR 
-                        MD5(IFNULL(cte.AddressID::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AddressLine1::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressLine1::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AddressLine2::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressLine2::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AddressLine3::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressLine3::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AddressLine4::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressLine4::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AddressTypeCode::VARCHAR,'''')) <> MD5(IFNULL(mid.AddressTypeCode::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.AverageDailyPatientVolume::VARCHAR,'''')) <> MD5(IFNULL(mid.AverageDailyPatientVolume::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.City::VARCHAR,'''')) <> MD5(IFNULL(mid.City::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.County::VARCHAR,'''')) <> MD5(IFNULL(mid.County::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.FullFax::VARCHAR,'''')) <> MD5(IFNULL(mid.FullFax::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.FullPhone::VARCHAR,'''')) <> MD5(IFNULL(mid.FullPhone::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasBillingStaff::VARCHAR,'''')) <> MD5(IFNULL(mid.HasBillingStaff::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasHandicapAccess::VARCHAR,'''')) <> MD5(IFNULL(mid.HasHandicapAccess::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasLabServicesOnSite::VARCHAR,'''')) <> MD5(IFNULL(mid.HasLabServicesOnSite::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasPharmacyOnSite::VARCHAR,'''')) <> MD5(IFNULL(mid.HasPharmacyOnSite::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasSurgeryOnSite::VARCHAR,'''')) <> MD5(IFNULL(mid.HasSurgeryOnSite::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.HasXrayOnSite::VARCHAR,'''')) <> MD5(IFNULL(mid.HasXrayOnSite::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.IsDerived::VARCHAR,'''')) <> MD5(IFNULL(mid.IsDerived::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.IsPrimaryOffice::VARCHAR,'''')) <> MD5(IFNULL(mid.IsPrimaryOffice::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.IsSurgeryCenter::VARCHAR,'''')) <> MD5(IFNULL(mid.IsSurgeryCenter::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.Latitude::VARCHAR,'''')) <> MD5(IFNULL(mid.Latitude::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.LegacyKeyOffice::VARCHAR,'''')) <> MD5(IFNULL(mid.LegacyKeyOffice::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.LegacyKeyPractice::VARCHAR,'''')) <> MD5(IFNULL(mid.LegacyKeyPractice::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.Longitude::VARCHAR,'''')) <> MD5(IFNULL(mid.Longitude::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.Nation::VARCHAR,'''')) <> MD5(IFNULL(mid.Nation::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.OfficeCode::VARCHAR,'''')) <> MD5(IFNULL(mid.OfficeCode::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.OfficeCoordinatorName::VARCHAR,'''')) <> MD5(IFNULL(mid.OfficeCoordinatorName::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.OfficeID::VARCHAR,'''')) <> MD5(IFNULL(mid.OfficeID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.OfficeName::VARCHAR,'''')) <> MD5(IFNULL(mid.OfficeName::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.OfficeToAddressID::VARCHAR,'''')) <> MD5(IFNULL(mid.OfficeToAddressID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.ParkingInformation::VARCHAR,'''')) <> MD5(IFNULL(mid.ParkingInformation::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PaymentPolicy::VARCHAR,'''')) <> MD5(IFNULL(mid.PaymentPolicy::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PhysicianCount::VARCHAR,'''')) <> MD5(IFNULL(mid.PhysicianCount::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeCode::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeCode::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeDescription::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeDescription::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeEmail::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeEmail::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeID::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeLogo::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeLogo::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeMedicalDirector::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeMedicalDirector::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeName::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeName::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeNPI::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeNPI::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeSoftware::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeSoftware::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeTIN::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeTIN::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.PracticeWebsite::VARCHAR,'''')) <> MD5(IFNULL(mid.PracticeWebsite::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.ProviderID::VARCHAR,'''')) <> MD5(IFNULL(mid.ProviderID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.ProviderOfficeRank::VARCHAR,'''')) <> MD5(IFNULL(mid.ProviderOfficeRank::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.ProviderToOfficeID::VARCHAR,'''')) <> MD5(IFNULL(mid.ProviderToOfficeID::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.State::VARCHAR,'''')) <> MD5(IFNULL(mid.State::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.YearPracticeEstablished::VARCHAR,'''')) <> MD5(IFNULL(mid.YearPracticeEstablished::VARCHAR,'''')) OR
-                        MD5(IFNULL(cte.ZipCode::VARCHAR,'''')) <> MD5(IFNULL(mid.ZipCode::VARCHAR,''''))
+            -- update Action
+            CTE_Action_2 as (
+                    select 
+                        cte.providerid,
+                        cte.officeid,
+                        cte.fullphone,
+                        cte.fullfax,
+                        2 as ActionCode
+                    from CTE_ProviderPracticeOffice as cte
+                    inner join mid.providerpracticeoffice as mid 
+                        on (cte.providerid = mid.providerid and cte.officeid = mid.officeid
+                        and ifnull(cte.fullphone, '') = ifnull(mid.fullphone, '')
+                        and ifnull(cte.fullfax, '') = ifnull(mid.fullfax, ''))
+                    where 
+                        MD5(ifnull(cte.addresscode::varchar,'''')) <> MD5(ifnull(mid.addresscode::varchar,'''')) or 
+                        MD5(ifnull(cte.addressid::varchar,'''')) <> MD5(ifnull(mid.addressid::varchar,'''')) or
+                        MD5(ifnull(cte.addressline1::varchar,'''')) <> MD5(ifnull(mid.addressline1::varchar,'''')) or
+                        MD5(ifnull(cte.addressline2::varchar,'''')) <> MD5(ifnull(mid.addressline2::varchar,'''')) or
+                        MD5(ifnull(cte.addressline3::varchar,'''')) <> MD5(ifnull(mid.addressline3::varchar,'''')) or
+                        MD5(ifnull(cte.addressline4::varchar,'''')) <> MD5(ifnull(mid.addressline4::varchar,'''')) or
+                        MD5(ifnull(cte.addresstypecode::varchar,'''')) <> MD5(ifnull(mid.addresstypecode::varchar,'''')) or
+                        MD5(ifnull(cte.averagedailypatientvolume::varchar,'''')) <> MD5(ifnull(mid.averagedailypatientvolume::varchar,'''')) or
+                        MD5(ifnull(cte.city::varchar,'''')) <> MD5(ifnull(mid.city::varchar,'''')) or
+                        MD5(ifnull(cte.county::varchar,'''')) <> MD5(ifnull(mid.county::varchar,'''')) or
+                        MD5(ifnull(cte.fullfax::varchar,'''')) <> MD5(ifnull(mid.fullfax::varchar,'''')) or
+                        MD5(ifnull(cte.fullphone::varchar,'''')) <> MD5(ifnull(mid.fullphone::varchar,'''')) or
+                        MD5(ifnull(cte.hasbillingstaff::varchar,'''')) <> MD5(ifnull(mid.hasbillingstaff::varchar,'''')) or
+                        MD5(ifnull(cte.hashandicapaccess::varchar,'''')) <> MD5(ifnull(mid.hashandicapaccess::varchar,'''')) or
+                        MD5(ifnull(cte.haslabservicesonsite::varchar,'''')) <> MD5(ifnull(mid.haslabservicesonsite::varchar,'''')) or
+                        MD5(ifnull(cte.haspharmacyonsite::varchar,'''')) <> MD5(ifnull(mid.haspharmacyonsite::varchar,'''')) or
+                        MD5(ifnull(cte.hassurgeryonsite::varchar,'''')) <> MD5(ifnull(mid.hassurgeryonsite::varchar,'''')) or
+                        MD5(ifnull(cte.hasxrayonsite::varchar,'''')) <> MD5(ifnull(mid.hasxrayonsite::varchar,'''')) or
+                        MD5(ifnull(cte.isderived::varchar,'''')) <> MD5(ifnull(mid.isderived::varchar,'''')) or
+                        MD5(ifnull(cte.isprimaryoffice::varchar,'''')) <> MD5(ifnull(mid.isprimaryoffice::varchar,'''')) or
+                        MD5(ifnull(cte.issurgerycenter::varchar,'''')) <> MD5(ifnull(mid.issurgerycenter::varchar,'''')) or
+                        MD5(ifnull(cte.latitude::varchar,'''')) <> MD5(ifnull(mid.latitude::varchar,'''')) or
+                        MD5(ifnull(cte.legacykeyoffice::varchar,'''')) <> MD5(ifnull(mid.legacykeyoffice::varchar,'''')) or
+                        MD5(ifnull(cte.legacykeypractice::varchar,'''')) <> MD5(ifnull(mid.legacykeypractice::varchar,'''')) or
+                        MD5(ifnull(cte.longitude::varchar,'''')) <> MD5(ifnull(mid.longitude::varchar,'''')) or
+                        MD5(ifnull(cte.nation::varchar,'''')) <> MD5(ifnull(mid.nation::varchar,'''')) or
+                        MD5(ifnull(cte.officecode::varchar,'''')) <> MD5(ifnull(mid.officecode::varchar,'''')) or
+                        MD5(ifnull(cte.officecoordinatorname::varchar,'''')) <> MD5(ifnull(mid.officecoordinatorname::varchar,'''')) or
+                        MD5(ifnull(cte.officeid::varchar,'''')) <> MD5(ifnull(mid.officeid::varchar,'''')) or
+                        MD5(ifnull(cte.officename::varchar,'''')) <> MD5(ifnull(mid.officename::varchar,'''')) or
+                        MD5(ifnull(cte.officetoaddressid::varchar,'''')) <> MD5(ifnull(mid.officetoaddressid::varchar,'''')) or
+                        MD5(ifnull(cte.parkinginformation::varchar,'''')) <> MD5(ifnull(mid.parkinginformation::varchar,'''')) or
+                        MD5(ifnull(cte.paymentpolicy::varchar,'''')) <> MD5(ifnull(mid.paymentpolicy::varchar,'''')) or
+                        MD5(ifnull(cte.physiciancount::varchar,'''')) <> MD5(ifnull(mid.physiciancount::varchar,'''')) or
+                        MD5(ifnull(cte.practicecode::varchar,'''')) <> MD5(ifnull(mid.practicecode::varchar,'''')) or
+                        MD5(ifnull(cte.practicedescription::varchar,'''')) <> MD5(ifnull(mid.practicedescription::varchar,'''')) or
+                        MD5(ifnull(cte.practiceemail::varchar,'''')) <> MD5(ifnull(mid.practiceemail::varchar,'''')) or
+                        MD5(ifnull(cte.practiceid::varchar,'''')) <> MD5(ifnull(mid.practiceid::varchar,'''')) or
+                        MD5(ifnull(cte.practicelogo::varchar,'''')) <> MD5(ifnull(mid.practicelogo::varchar,'''')) or
+                        MD5(ifnull(cte.practicemedicaldirector::varchar,'''')) <> MD5(ifnull(mid.practicemedicaldirector::varchar,'''')) or
+                        MD5(ifnull(cte.practicename::varchar,'''')) <> MD5(ifnull(mid.practicename::varchar,'''')) or
+                        MD5(ifnull(cte.practicenpi::varchar,'''')) <> MD5(ifnull(mid.practicenpi::varchar,'''')) or
+                        MD5(ifnull(cte.practicesoftware::varchar,'''')) <> MD5(ifnull(mid.practicesoftware::varchar,'''')) or
+                        MD5(ifnull(cte.practicetin::varchar,'''')) <> MD5(ifnull(mid.practicetin::varchar,'''')) or
+                        MD5(ifnull(cte.practicewebsite::varchar,'''')) <> MD5(ifnull(mid.practicewebsite::varchar,'''')) or
+                        MD5(ifnull(cte.providerid::varchar,'''')) <> MD5(ifnull(mid.providerid::varchar,'''')) or
+                        MD5(ifnull(cte.providerofficerank::varchar,'''')) <> MD5(ifnull(mid.providerofficerank::varchar,'''')) or
+                        MD5(ifnull(cte.providertoofficeid::varchar,'''')) <> MD5(ifnull(mid.providertoofficeid::varchar,'''')) or
+                        MD5(ifnull(cte.state::varchar,'''')) <> MD5(ifnull(mid.state::varchar,'''')) or
+                        MD5(ifnull(cte.yearpracticeestablished::varchar,'''')) <> MD5(ifnull(mid.yearpracticeestablished::varchar,'''')) or
+                        MD5(ifnull(cte.zipcode::varchar,'''')) <> MD5(ifnull(mid.zipcode::varchar,''''))
             )
             
-            SELECT DISTINCT
+            select distinct
                 A0.AddressCode,
                 A0.AddressID,
                 A0.AddressLine1,
@@ -311,81 +311,81 @@ select_statement := delta_select_statement ||
                 A0.State,
                 A0.YearPracticeEstablished,
                 A0.ZipCode,
-                IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) AS ActionCode  
-            FROM CTE_ProviderPracticeOffice AS A0
-            LEFT JOIN CTE_Action_1 AS A1 ON A0.ProviderID = A1.ProviderID AND A0.OfficeID = A1.OfficeID
-            LEFT JOIN CTE_Action_2 AS A2 ON A0.ProviderID = A2.ProviderID AND A0.OfficeID = A2.OfficeID
-            WHERE IFNULL(A1.ActionCode,IFNULL(A2.ActionCode, A0.ActionCode)) <> 0
+                ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode  
+            from CTE_ProviderPracticeOffice as A0
+            left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID and A0.OfficeID = A1.OfficeID
+            left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID and A0.OfficeID = A2.OfficeID
+            where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
             $$;
                         
 
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
 update_statement := $$
-                     UPDATE SET 
-                        target.AddressCode = source.AddressCode,
-                        target.AddressID = source.AddressID,
-                        target.AddressLine1 = source.AddressLine1,
-                        target.AddressLine2 = source.AddressLine2,
-                        target.AddressLine3 = source.AddressLine3,
-                        target.AddressLine4 = source.AddressLine4,
-                        target.AddressTypeCode = source.AddressTypeCode,
-                        target.AverageDailyPatientVolume = source.AverageDailyPatientVolume,
-                        target.City = CASE 
-                                        WHEN source.City || ', ' || source.State LIKE '%,,%' THEN LEFT(source.City, LENGTH(source.City) - 1)
-                                        ELSE source.City
+                     update SET 
+                        target.addresscode = source.addresscode,
+                        target.addressid = source.addressid,
+                        target.addressline1 = source.addressline1,
+                        target.addressline2 = source.addressline2,
+                        target.addressline3 = source.addressline3,
+                        target.addressline4 = source.addressline4,
+                        target.addresstypecode = source.addresstypecode,
+                        target.averagedailypatientvolume = source.averagedailypatientvolume,
+                        target.city = CASE 
+                                        WHEN source.city || ', ' || source.state LIKE '%,,%' then LEFT(source.city, LENGTH(source.city) - 1)
+                                        else source.city
                                       END,
-                        target.County = source.County,
-                        target.FullFax = source.FullFax,
-                        target.FullPhone = source.FullPhone,
-                        target.HasBillingStaff = source.HasBillingStaff,
-                        target.HasHandicapAccess = source.HasHandicapAccess,
-                        target.HasLabServicesOnSite = source.HasLabServicesOnSite,
-                        target.HasPharmacyOnSite = source.HasPharmacyOnSite,
-                        target.HasSurgeryOnSite = source.HasSurgeryOnSite,
-                        target.HasXrayOnSite = source.HasXrayOnSite,
-                        target.IsDerived = source.IsDerived,
-                        target.IsPrimaryOffice = source.IsPrimaryOffice,
-                        target.IsSurgeryCenter = source.IsSurgeryCenter,
-                        target.Latitude = source.Latitude,
-                        target.LegacyKeyOffice = source.LegacyKeyOffice,
-                        target.LegacyKeyPractice = source.LegacyKeyPractice,
-                        target.Longitude = source.Longitude,
-                        target.Nation = source.Nation,
-                        target.OfficeCode = source.OfficeCode,
-                        target.OfficeCoordinatorName = source.OfficeCoordinatorName,
-                        target.OfficeID = source.OfficeID,
-                        target.OfficeName = UTILS.FNUREMOVESPECIALHEXADECIMALCHARACTERS(source.OfficeName),
-                        target.OfficeToAddressID = source.OfficeToAddressID,
-                        target.ParkingInformation = source.ParkingInformation,
-                        target.PaymentPolicy = source.PaymentPolicy,
-                        target.PhysicianCount = source.PhysicianCount,
-                        target.PracticeCode = source.PracticeCode,
-                        target.PracticeDescription = source.PracticeDescription,
-                        target.PracticeEmail = source.PracticeEmail,
-                        target.PracticeID = source.PracticeID,
-                        target.PracticeLogo = source.PracticeLogo,
-                        target.PracticeMedicalDirector = source.PracticeMedicalDirector,
-                        target.PracticeName = source.PracticeName,
-                        target.PracticeNPI = source.PracticeNPI,
-                        target.PracticeSoftware = source.PracticeSoftware,
-                        target.PracticeTIN = source.PracticeTIN,
-                        target.PracticeWebsite = source.PracticeWebsite,
-                        target.ProviderID = source.ProviderID,
-                        target.ProviderOfficeRank = source.ProviderOfficeRank,
-                        target.ProviderToOfficeID = source.ProviderToOfficeID,
-                        target.State = source.State,
-                        target.YearPracticeEstablished = source.YearPracticeEstablished,
-                        target.ZipCode = source.ZipCode
+                        target.county = source.county,
+                        target.fullfax = source.fullfax,
+                        target.fullphone = source.fullphone,
+                        target.hasbillingstaff = source.hasbillingstaff,
+                        target.hashandicapaccess = source.hashandicapaccess,
+                        target.haslabservicesonsite = source.haslabservicesonsite,
+                        target.haspharmacyonsite = source.haspharmacyonsite,
+                        target.hassurgeryonsite = source.hassurgeryonsite,
+                        target.hasxrayonsite = source.hasxrayonsite,
+                        target.isderived = source.isderived,
+                        target.isprimaryoffice = source.isprimaryoffice,
+                        target.issurgerycenter = source.issurgerycenter,
+                        target.latitude = source.latitude,
+                        target.legacykeyoffice = source.legacykeyoffice,
+                        target.legacykeypractice = source.legacykeypractice,
+                        target.longitude = source.longitude,
+                        target.nation = source.nation,
+                        target.officecode = source.officecode,
+                        target.officecoordinatorname = source.officecoordinatorname,
+                        target.officeid = source.officeid,
+                        target.officename = utils.fnuremovespecialhexadecimalcharacters(source.officename),
+                        target.officetoaddressid = source.officetoaddressid,
+                        target.parkinginformation = source.parkinginformation,
+                        target.paymentpolicy = source.paymentpolicy,
+                        target.physiciancount = source.physiciancount,
+                        target.practicecode = source.practicecode,
+                        target.practicedescription = source.practicedescription,
+                        target.practiceemail = source.practiceemail,
+                        target.practiceid = source.practiceid,
+                        target.practicelogo = source.practicelogo,
+                        target.practicemedicaldirector = source.practicemedicaldirector,
+                        target.practicename = source.practicename,
+                        target.practicenpi = source.practicenpi,
+                        target.practicesoftware = source.practicesoftware,
+                        target.practicetin = source.practicetin,
+                        target.practicewebsite = source.practicewebsite,
+                        target.providerid = source.providerid,
+                        target.providerofficerank = source.providerofficerank,
+                        target.providertoofficeid = source.providertoofficeid,
+                        target.state = source.state,
+                        target.yearpracticeestablished = source.yearpracticeestablished,
+                        target.zipcode = source.zipcode
                       $$;
 
 
---- Insert Statement
+--- insert Statement
 insert_statement :=   $$
-                      INSERT  (
+                      insert  (
                                 AddressCode,
                                 AddressID,
                                 AddressLine1,
@@ -438,94 +438,94 @@ insert_statement :=   $$
                                 YearPracticeEstablished,
                                 ZipCode
                                )
-                      VALUES  (
-                                source.AddressCode,
-                                source.AddressID,
-                                source.AddressLine1,
-                                source.AddressLine2,
-                                source.AddressLine3,
-                                source.AddressLine4,
-                                source.AddressTypeCode,
-                                source.AverageDailyPatientVolume,
-                                source.City,
-                                source.County,
-                                source.FullFax,
-                                source.FullPhone,
-                                source.HasBillingStaff,
-                                source.HasHandicapAccess,
-                                source.HasLabServicesOnSite,
-                                source.HasPharmacyOnSite,
-                                source.HasSurgeryOnSite,
-                                source.HasXrayOnSite,
-                                source.IsDerived,
-                                source.IsPrimaryOffice,
-                                source.IsSurgeryCenter,
-                                source.Latitude,
-                                source.LegacyKeyOffice,
-                                source.LegacyKeyPractice,
-                                source.Longitude,
-                                source.Nation,
-                                source.OfficeCode,
-                                source.OfficeCoordinatorName,
-                                source.OfficeID,
-                                source.OfficeName,
-                                source.OfficeToAddressID,
-                                source.ParkingInformation,
-                                source.PaymentPolicy,
-                                source.PhysicianCount,
-                                source.PracticeCode,
-                                source.PracticeDescription,
-                                source.PracticeEmail,
-                                source.PracticeID,
-                                source.PracticeLogo,
-                                source.PracticeMedicalDirector,
-                                source.PracticeName,
-                                source.PracticeNPI,
-                                source.PracticeSoftware,
-                                source.PracticeTIN,
-                                source.PracticeWebsite,
-                                source.ProviderID,
-                                source.ProviderOfficeRank,
-                                source.ProviderToOfficeID,
-                                source.State,
-                                source.YearPracticeEstablished,
-                                source.ZipCode
+                      values  (
+                                source.addresscode,
+                                source.addressid,
+                                source.addressline1,
+                                source.addressline2,
+                                source.addressline3,
+                                source.addressline4,
+                                source.addresstypecode,
+                                source.averagedailypatientvolume,
+                                source.city,
+                                source.county,
+                                source.fullfax,
+                                source.fullphone,
+                                source.hasbillingstaff,
+                                source.hashandicapaccess,
+                                source.haslabservicesonsite,
+                                source.haspharmacyonsite,
+                                source.hassurgeryonsite,
+                                source.hasxrayonsite,
+                                source.isderived,
+                                source.isprimaryoffice,
+                                source.issurgerycenter,
+                                source.latitude,
+                                source.legacykeyoffice,
+                                source.legacykeypractice,
+                                source.longitude,
+                                source.nation,
+                                source.officecode,
+                                source.officecoordinatorname,
+                                source.officeid,
+                                source.officename,
+                                source.officetoaddressid,
+                                source.parkinginformation,
+                                source.paymentpolicy,
+                                source.physiciancount,
+                                source.practicecode,
+                                source.practicedescription,
+                                source.practiceemail,
+                                source.practiceid,
+                                source.practicelogo,
+                                source.practicemedicaldirector,
+                                source.practicename,
+                                source.practicenpi,
+                                source.practicesoftware,
+                                source.practicetin,
+                                source.practicewebsite,
+                                source.providerid,
+                                source.providerofficerank,
+                                source.providertoofficeid,
+                                source.state,
+                                source.yearpracticeestablished,
+                                source.zipcode
                                )
                        $$;
 
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 merge_statement :=  $$
-                    MERGE INTO Mid.ProviderPracticeOffice as target USING ($$|| select_statement ||$$) as source 
-                    ON source.ProviderID = target.ProviderID
-                    WHEN MATCHED AND source.ActionCode = 2 THEN $$|| update_statement ||$$
-                    WHEN NOT MATCHED AND source.ActionCode = 1 THEN $$ || insert_statement;
+                    merge into mid.providerpracticeoffice as target using ($$|| select_statement ||$$) as source 
+                    on source.providerid = target.providerid
+                    WHEN MATCHED and source.actioncode = 2 then $$|| update_statement ||$$
+                    when not matched and source.actioncode = 1 then $$ || insert_statement;
 
                 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'Completed successfully';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
-        RETURN status;
+        return status;
 
-        EXCEPTION
-        WHEN OTHER THEN
-            status := 'Failed during execution. ' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, SPLIT_PART(REGEXP_SUBSTR(:status, 'Error code: ([0-9]+)'), ':', 2)::INTEGER, TRIM(SPLIT_PART(SPLIT_PART(:status, 'SQL Error:', 2), 'Error code:', 1)), SPLIT_PART(REGEXP_SUBSTR(:status, 'SQL State: ([0-9]+)'), ':', 2)::INTEGER; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            RETURN status;
-END;
+            return status;
+end;

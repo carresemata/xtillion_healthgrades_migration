@@ -1,10 +1,10 @@
 -- sp_load_solrprovideraddress
 
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS()
-RETURNS VARCHAR(16777216)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS()
+RETURNS varchar(16777216)
 LANGUAGE SQL
-EXECUTE AS CALLER
-AS 
+EXECUTE as CALLER
+as 
 
     ---------------------------------------------------------
     --------------- 0. Table dependencies -------------------
@@ -20,47 +20,47 @@ AS
     ---------------------------------------------------------
     --------------- 1. Declaring variables ------------------
     ---------------------------------------------------------
-    DECLARE 
-    select_statement STRING; -- CTEs
-    insert_statement STRING; -- Insert statements
-    update_statement STRING; -- Update statements
-    delete_statement STRING; -- Delete statements
-    merge_statement STRING; -- Merge statement combining everything
-    status STRING; -- Status monitoring
-    procedure_name varchar(50) default('sp_load_SOLRProviderAddress');
-    execution_start DATETIME default getdate();
+    declare 
+    select_statement string; -- ctes
+    insert_statement string; -- insert statements
+    update_statement string; -- update statements
+    delete_statement string; -- delete statements
+    merge_statement string; -- merge statement combining everything
+    status string; -- status monitoring
+    procedure_name varchar(50) default('sp_load_solrprovideraddress');
+    execution_start datetime default getdate();
 
 
     ---------------------------------------------------------
-    --------------- 2.Conditionals if any -------------------
+    --------------- 2.conditionals if any -------------------
     ---------------------------------------------------------   
     
     ---------------------------------------------------------
-    --------------- 3. Select statements --------------------
+    --------------- 3. select statements --------------------
     ---------------------------------------------------------     
-    BEGIN
+    begin
     
     select_statement := '
-                WITH CTE_ProviderID AS (
+                with CTE_ProviderID as (
     
-                SELECT ProviderID
-                FROM Mid.ProviderPracticeOffice
-                GROUP BY
+                select ProviderID
+                from Mid.ProviderPracticeOffice
+                group by
                     ProviderID,
                     City,
                     State
                 ),
                 
-                CTE_MultipleLocations AS (
-                    SELECT ProviderID
-                    FROM CTE_ProviderID
-                    GROUP BY ProviderID
-                    HAVING COUNT(*) > 1
+                CTE_MultipleLocations as (
+                    select ProviderID
+                    from CTE_ProviderID
+                    group by ProviderID
+                    having COUNT(*) > 1
                 ),
                 
-                CTE_Source AS (
-                    SELECT
-                        DISTINCT ppo.ProviderToOfficeID,
+                CTE_Source as (
+                    select
+                        distinct ppo.ProviderToOfficeID,
                         p.ProviderID,
                         p.ProviderCode,
                         ppo.AddressLine1,
@@ -70,25 +70,25 @@ AS
                         ppo.ZipCode,
                         ppo.Latitude,
                         ppo.Longitude,
-                        CONCAT(ppo.City, '''', '''', ppo.State) AS CityState,
-                        CAST(NULL AS VARCHAR(1000)) AS CityStateAlternative,
+                        CONCAT(ppo.City, '''', '''', ppo.State) as CityState,
+                        CAST(null as varchar(1000)) as CityStateAlternative,
                         ppo.OfficeCode,
                         ppo.IsPrimaryOffice,
                         ppo.FullPhone,
                         ppo.officeId,
                         CASE
-                            WHEN ml.ProviderID IS NOT NULL THEN 1
-                            ELSE 0
-                        END AS MultipleLocations,
-                        TO_GEOGRAPHY(ST_MAKEPOINT(ppo.LONGITUDE, ppo.LATITUDE)) As AddressGeoPoint,
-                        ROW_NUMBER() OVER (ORDER BY p.ProviderCode NULLS FIRST) AS SequenceId
-                    FROM
+                            WHEN ml.ProviderID is not null then 1
+                            else 0
+                        END as MultipleLocations,
+                        TO_GEOGRAPHY(ST_MAKEPOINT(ppo.LONGITUDE, ppo.LATITUDE)) as AddressGeoPoint,
+                        row_number() over (order by p.ProviderCode NULLS FIRST) as SequenceId
+                    from
                         Mid.Provider p
-                        INNER JOIN Mid.ProviderPracticeOffice ppo ON p.ProviderID = ppo.ProviderID
-                        LEFT JOIN CTE_MultipleLocations ml ON p.ProviderID = ml.ProviderID
+                        inner join Mid.ProviderPracticeOffice ppo on p.ProviderID = ppo.ProviderID
+                        left join CTE_MultipleLocations ml on p.ProviderID = ml.ProviderID
                 )
                 
-                SELECT
+                select
                     ProviderToOfficeID,
                     ProviderID,
                     ProviderCode,
@@ -105,16 +105,16 @@ AS
                     IsPrimaryOffice,
                     FullPhone,
                     AddressGeoPoint
-                FROM CTE_Source
+                from CTE_Source
                ';
 
                      
 ---------------------------------------------------------
---------------------  4. Actions ------------------------
+--------------------  4. actions ------------------------
 ---------------------------------------------------------  
 
 insert_statement := '
-                  INSERT (
+                  insert (
                             ProviderToOfficeID,
                             ProviderID,
                             ProviderCode,
@@ -132,7 +132,7 @@ insert_statement := '
                             FullPhone,
                             AddressGeoPoint
                             )
-                    VALUES (
+                    values (
                             s.ProviderToOfficeID,
                             s.ProviderID,
                             s.ProviderCode,
@@ -153,7 +153,7 @@ insert_statement := '
                     ';
 
 update_statement := '
-                    UPDATE 
+                    update 
                     SET
                       ProviderID = s.ProviderID,
                       ProviderCode = s.ProviderCode,
@@ -169,42 +169,42 @@ update_statement := '
                       OfficeCode = s.OfficeCode,
                       IsPrimaryOffice = s.IsPrimaryOffice,
                       FullPhone = s.FullPhone,
-                      RefreshDate = CURRENT_TIMESTAMP()
+                      RefreshDate = current_timestamp()
                     ';
 
 -- This is the merge statement from logic of show.spuSOLRProviderAddressGenerateFromMid                     
 merge_statement := '
-                   MERGE INTO DEV.SOLRProviderAddress USING 
+                   merge into DEV.SOLRProviderAddress using 
                    ('||select_statement||') as s 
-                   ON DEV.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
-                   WHEN MATCHED THEN '||update_statement||'
-                   WHEN NOT MATCHED THEN '||insert_statement||'
+                   on DEV.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
+                   WHEN MATCHED then '||update_statement||'
+                   when not matched then '||insert_statement||'
                    ';
 
 -- This delete comes from hack.spuRemoveSuspecProviders
 delete_statement := '
-                    DELETE FROM DEV.SOLRProviderAddress spa
-                    USING Base.ProviderRemoval pr, Show.SOLRProvider sp
-                    WHERE sp.ProviderCode = pr.ProviderCode
-                    AND sp.ProviderID = spa.ProviderID
+                    delete from DEV.SOLRProviderAddress spa
+                    using Base.ProviderRemoval pr, Show.SOLRProvider sp
+                    where sp.ProviderCode = pr.ProviderCode
+                    and sp.ProviderID = spa.ProviderID
                     ';
 
 ---------------------------------------------------------
 ------------------- 5. Execution ------------------------
 --------------------------------------------------------- 
-EXECUTE IMMEDIATE delete_statement; 
-EXECUTE IMMEDIATE merge_statement;
+execute immediate delete_statement; 
+execute immediate merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
 status := 'Completed successfully';
-    RETURN status;
+    return status;
         
-EXCEPTION
-    WHEN OTHER THEN
+exception
+    WHEN other then
           status := 'Failed during execution.' || 'SQL Error: ' || SQLERRM || ' Error code: ' || SQLCODE || '. SQL State: ' || SQLSTATE;
-          RETURN status;
+          return status;
 END
 ;
