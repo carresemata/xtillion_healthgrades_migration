@@ -8,7 +8,7 @@ declare
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
---- base.clienttentitytoclientfeature depends on:
+--- base.cliententitytoclientfeature depends on:
 --- mdm_team.mst.customer_product_profile_processing  (base.vw_swimlane_base_client)
 --- base.clientfeature
 --- base.clientfeaturevalue
