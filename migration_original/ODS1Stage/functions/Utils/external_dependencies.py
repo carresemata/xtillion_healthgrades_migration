@@ -10,7 +10,15 @@ from datetime import datetime
 
 
 def load_external_dependencies(sql_server_connector, snowflake_connector, external_dependencies, save_format, output_dir, queue_dir) -> None:
-    
+    """
+    This function loads external dependencies from SQL Server to Snowflake. It does so in the following steps:
+    1. Purge the Snowflake Table Stage to avoid duplicates (i.e., REMOVE command)
+    2. Upload raw files to Snowflake Stage (i.e., PUT command)
+    3. Delete raw files locally
+    4. Truncate Snowflake Table (i.e., TRUNCATE TABLE command)
+    5. Load data from Snowflake Stage to Table (i.e., COPY INTO command)
+    6. Update the queue file with remaining tables
+    """
     snowflake_cursor = snowflake_connector.cursor()
 
     queue_file_path = os.path.join(queue_dir, "remaining_tables_queue.txt")
