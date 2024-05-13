@@ -1,0 +1,210 @@
+ begin try drop table #ProviderBatch end try begin catch end catch
+        create table #ProviderBatch (ProviderID uniqueidentifier)
+        
+        if @IsProviderDeltaProcessing = 0 begin
+            insert into #ProviderBatch (ProviderID) select a.ProviderID from Base.Provider as a order by a.ProviderID
+          end
+        else begin
+			insert into #ProviderBatch (ProviderID)
+            select a.ProviderID
+            from Snowflake.etl.ProviderDeltaProcessing as a
+        end
+
+	--build a temp table with the same structure as the Mid.Provider
+		begin try drop table #ProviderSpecialtyFacilityServiceLineRating end try begin catch end catch
+		select top 0 *
+		into #ProviderSpecialtyFacilityServiceLineRating
+		from Mid.ProviderSpecialtyFacilityServiceLineRating
+		
+		alter table #ProviderSpecialtyFacilityServiceLineRating
+		add ActionCode int default 0
+		
+	--populate the temp table with data from Base schemas
+		insert into #ProviderSpecialtyFacilityServiceLineRating 
+			(
+				ProviderID, ServiceLineCode, ServiceLineStar, ServiceLineDescription, LegacyKey, SpecialtyID, SpecialtyCode
+			)
+			select distinct a.ProviderID, d.ServiceLineCode, e.ServiceLineStar, e.ServiceLineDescription, sg.LegacyKey, d.SpecialtyID, d.SpecialtyCode
+			from #ProviderBatch as pb  --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
+			inner join Base.ProviderToFacility a with (nolock) on a.ProviderID = pb.ProviderID
+			join Base.Facility b with (nolock) on (a.FacilityID = b.FacilityID)
+			join Base.ProviderToSpecialty c with (nolock) on (a.ProviderID = c.ProviderID)
+			join Base.SpecialtyGroupToSpecialty sgs with (nolock) on sgs.SpecialtyID = c.SpecialtyID
+			join Base.SpecialtyGroup sg with (nolock) on sg.SpecialtyGroupID = sgs.SpecialtyGroupID
+		    join Base.TempSpecialtyToServiceLineGhetto d with (nolock) on (sg.SpecialtyGroupCode = d.SpecialtyCode)  --removed view Base.vwuSpecialtyToServiceLine so that join of b.SpecialtyGroupCode = a.SpecialtyCode is not mistakenly left in place when Base.vwuSpecialtyToServiceLine is changed to use new specialy model
+			join 
+				(
+					--REFACTOR ONCE FACILITY RATINGS DATA IS IN THE ODS1Stage DATABASE
+					select a.FacilityID, a.ServiceLineID, b.ServiceLineDescription, a.SurvivalStar as ServiceLineStar
+					from ERMart1.Facility.FacilityToServiceLineRating a
+					join ERMart1.Facility.ServiceLine b on (a.ServiceLineID = b.ServiceLineID)
+					where IsMaxYear = 1
+					--and SurvivalStar = 5
+					union
+					--THIS IS A PATCH FOR THE WAY MATERNITY CARE IS CONFIGURED IN THE LEGACY SYSTEM
+					select y.FacilityID, z.ServiceLineID, z.ServiceLineDescription, y.OverallSurvivalStar as ServiceLineStar
+					from ERMART1.Facility.FacilityTOProcedureRating y/*REFACTOR ONCE FACILITY DATA IS IN THE EDW... THIS IS USING LEGACY FOR NOW*/
+					join ERMART1.Facility.ProcedureToServiceLine q on (y.ProcedureID = q.ProcedureID)/*REFACTOR ONCE FACILITY DATA IS IN THE EDW... THIS IS USING LEGACY FOR NOW*/
+					join ERMart1.Facility.ServiceLine z on (q.ServiceLineID = z.ServiceLineID)
+					where y.IsMaxYear = 1
+					--and y.OverallSurvivalStar = 5
+					and y.ProcedureID = 'OB1'
+				)e on (b.LegacyKey = e.FacilityID and d.ServiceLineCode = 'SL'+e.ServiceLineID)
+			order by a.ProviderID	
+		
+		create index temp on #ProviderSpecialtyFacilityServiceLineRating (ProviderID, SpecialtyCode, ServiceLineCode)
+
+	/*
+		Flag record level actions for ActionCode
+			0 = No Change
+			1 = Insert
+			2 = Update
+	*/
+		--ActionCode Insert
+			update a
+			set a.ActionCode = 1
+			--select *
+			from #ProviderSpecialtyFacilityServiceLineRating a
+			left join Mid.ProviderSpecialtyFacilityServiceLineRating b on (a.ProviderID = b.ProviderID and a.SpecialtyCode = b.SpecialtyCode and a.ServiceLineCode = b.ServiceLineCode and a.ServiceLineStar = b.ServiceLineStar)
+			where b.ProviderId is null
+		
+		--ActionCode Update
+			begin try drop table #ColumnsUpdates end try begin catch end catch
+			
+			select name, identity(int,1,1) as recId
+			into #ColumnsUpdates
+			from tempdb..syscolumns 
+			where id = object_id('TempDB..#ProviderSpecialtyFacilityServiceLineRating')
+			and name not in ('ProviderID'/*PK*/, 'SpecialtyCode'/*PK*/, 'ServiceLineCode', 'ServiceLineStar', 'ActionCode')
+				
+			--build the sql statement with dynamic sql to check if we need to update any columns
+				declare @sql varchar(8000)
+				declare @min int
+				declare @max int
+				declare @whereClause varchar(8000)
+				declare @column varchar(100)
+				declare @newline char(1)
+				declare @globalCheck varchar(3)
+
+				set @min = 1
+				set @whereClause = ''
+				set @newline = char(10)
+				set @sql = 'update a'+@newline+ 
+						   'set a.ActionCode = 2'+@newline+
+						   '--select *'+@newline+
+						   'from #ProviderSpecialtyFacilityServiceLineRating a'+@newline+
+						   'join Mid.ProviderSpecialtyFacilityServiceLineRating b with (nolock) on (a.ProviderID = b.ProviderID and a.SpecialtyCode = b.SpecialtyCode and a.ServiceLineCode = b.ServiceLineCode and a.ServiceLineStar = b.ServiceLineStar)'+@newline+
+						   'where '
+						   
+				select @max = MAX(recId) from #ColumnsUpdates
+
+				while @min <= @max	
+					begin
+						select @column = name from #ColumnsUpdates where recId = @min 
+						set @whereClause = @whereClause +'BINARY_CHECKSUM(isnull(cast(a.'+@column+' as varchar(max)),'''')) <> BINARY_CHECKSUM(isnull(cast(b.'+@column+' as varchar(max)),''''))'+@newline
+							--put an OR for all except for the last column check
+							if @min < @max 
+								begin
+									set @whereClause = @whereClause+' or '
+								end
+
+						
+						set @min = @min + 1
+					end
+
+				set @sql = @sql + @whereClause
+				exec (@sql)
+
+	/*
+		Complete the ActionCode
+	*/
+	
+		--define column set for INSERTS 
+		begin try drop table #ColumnInserts end try begin catch end catch
+
+		select name, identity(int,1,1) as recId
+		into #ColumnInserts
+		from tempdb..syscolumns 
+		where id = object_id('TempDB..#ProviderSpecialtyFacilityServiceLineRating')
+		and name <> 'ActionCode'--do not need to insert/update this field
+		
+		--create the column set
+		declare @columnInsert varchar(100)
+		declare @columnListInsert varchar(8000)
+		declare @minInsert int
+		declare @maxInsert int
+		
+		set @minInsert = 1
+		set @columnListInsert = ''
+		select @maxInsert = MAX(recId) from #ColumnInserts 
+		
+		while @minInsert <= @maxInsert
+			begin
+				select @columnInsert = name from #ColumnInserts where recId = @minInsert
+				set @columnListInsert = @columnListInsert + @columnInsert
+				
+				if @minInsert <@maxInsert
+					begin
+						set @columnListInsert = @columnListInsert+','
+					end
+				
+				set @minInsert = @minInsert + 1
+			end
+		
+		--ActionCode = 1 (Inserts)
+			declare @sqlInsert varchar(8000)
+			set @sqlInsert = 
+			'insert into Mid.ProviderSpecialtyFacilityServiceLineRating ('+@columnListInsert+')
+			select '+@columnListInsert+' from #ProviderSpecialtyFacilityServiceLineRating where ActionCode = 1'
+			
+			exec (@sqlInsert)
+		
+		--ActionCode = 2 (Updates)	
+			declare @minUpdates int
+			declare @maxUpdates int
+			declare @sqlUpdates varchar(8000)
+			declare @sqlUpdatesClause varchar(500)
+			declare @columnUpdates varchar(150)
+			declare @columnListUpdates varchar(8000)
+			declare @newlineUpdates char(1)
+			
+			set @newlineUpdates = char(10)
+			set @columnListUpdates = ''
+			set @sqlUpdates = 'update a'+@newlineUpdates+
+							  'set '	
+			set @sqlUpdatesClause = '--select *'+@newlineUpdates+
+							  'from Mid.ProviderSpecialtyFacilityServiceLineRating a with (nolock)'+@newlineUpdates+
+							  'join #ProviderSpecialtyFacilityServiceLineRating b on (a.ProviderID = b.ProviderID and a.SpecialtyCode = b.SpecialtyCode and a.ServiceLineCode = b.ServiceLineCode and a.ServiceLineStar = b.ServiceLineStar)'+@newlineUpdates+
+							  'where b.ActionCode = 2'
+							  
+			select @minUpdates = MIN(recId) from #ColumnsUpdates 
+			select @maxUpdates = MAX(recId) from #ColumnsUpdates
+			
+			while @minUpdates <= @maxUpdates
+				begin
+					select @columnUpdates = name from #ColumnsUpdates where recId = @minUpdates
+					set @columnListUpdates = @columnListUpdates + 'a.'+@columnUpdates+' = b.'+@columnUpdates
+					
+					if @minUpdates < @maxUpdates
+						begin
+							set @columnListUpdates = @columnListUpdates+','+@newlineUpdates+''
+						end
+					else
+						begin
+							set @columnListUpdates = @columnListUpdates+@newlineUpdates+@sqlUpdatesClause
+						end
+					
+					set @minUpdates = @minUpdates + 1
+				end
+			
+			set @sqlUpdates = @sqlUpdates + @columnListUpdates
+			
+			exec (@sqlUpdates)
+
+		--ActionCode = N (Deletes)
+			delete a
+			--select *
+			from Mid.ProviderSpecialtyFacilityServiceLineRating a with (nolock)
+            inner join #ProviderBatch as pb on pb.ProviderID = a.ProviderID	
+			left join #ProviderSpecialtyFacilityServiceLineRating b on (a.ProviderID = b.ProviderID and a.SpecialtyCode = b.SpecialtyCode and a.ServiceLineCode = b.ServiceLineCode and a.ServiceLineStar = b.ServiceLineStar)
+			where b.ProviderID is null

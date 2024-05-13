@@ -8,21 +8,22 @@ declare
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
+-- mid.providerrecognition depends on:
+-- mdm_team.mst.provider_profile_processing
 -- base.provider
 -- base.vwuproviderrecognition
 -- base.award
 -- mid.providerrecognition
--- raw.providerdeltaprocessing  
 
 ---------------------------------------------------------
 --------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-select_statement string; -- cte and select statement for the merge
-update_statement string; -- update statement for the merge
-insert_statement string; -- insert statement for the merge
-merge_statement string; -- merge statement to final table
-status string; -- status monitoring
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerrecognition');
     execution_start datetime default getdate();
 
@@ -30,19 +31,26 @@ status string; -- status monitoring
 ---------------------------------------------------------
 --------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
-   
+
 begin
     if (IsProviderDeltaProcessing) then
-       select_statement := $$
-       with CTE_ProviderBatch as (
-            select pdp.providerid
-            from raw.providerdeltaprocessing as pdp),$$;
+           select_statement := '
+          with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
     else
-       select_statement := $$
-       with CTE_ProviderBatch as (
-            select p.providerid
-            from base.provider as p
-            order by p.providerid),$$;
+           select_statement := '
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
+            
     end if;
 
 
