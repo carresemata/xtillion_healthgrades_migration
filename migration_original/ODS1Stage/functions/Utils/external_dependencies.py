@@ -218,7 +218,7 @@ output_dir = "data"
 if not os.path.exists(queue_dir): os.makedirs(queue_dir)
 if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-######## ---------------- This if just an example of how it will look like in Airflow ---------------- ########
+######## ---------------- This is just an example of how it will look like in Airflow ---------------- ########
 # Currently Airflow is unable to recognize my local file system, but the function runs fine in a local environment.
 # In any case, this will change a lot when we move to AWS, so we shouldn't worry about this for now.
 
