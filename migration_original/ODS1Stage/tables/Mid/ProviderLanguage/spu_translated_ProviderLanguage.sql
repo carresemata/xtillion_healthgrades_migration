@@ -9,20 +9,21 @@ declare
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
+-- mid.providerlanguage depends on:
+-- mdm_team.mst.provider_profile_processing
 -- base.provider
 -- base.providertolanguage 
 -- base.language 
--- raw.providerdeltaprocessing 
 
 ---------------------------------------------------------
 --------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-source_table string;
-select_statement string; 
-insert_statement string;
-merge_statement string; 
-status string;
+    source_table string;
+    select_statement string; 
+    insert_statement string;
+    merge_statement string; 
+    status string;
     procedure_name varchar(50) default('sp_load_providerlanguage');
     execution_start datetime default getdate();
 
@@ -33,23 +34,31 @@ status string;
 begin
 
     if (IsProviderDeltaProcessing) then
-        source_table := $$ raw.providerdeltaprocessing $$;
+           select_statement := '
+          with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
     else
-        source_table := $$ base.provider $$;
-end if;
+           select_statement := '
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
+            
+    end if;
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
 
     select_statement := $$
-                       (with CTE_ProviderBatch as (
-                                select p.providerid
-                                from $$ ||source_table|| $$  p
-                                order by p.providerid
-                        ),
-                    
-                        CTE_ProviderLanguage as (
+                       CTE_ProviderLanguage as (
                         select ptl.providerid, l.languagename,
                                CASE WHEN mpl.providerid is null then 1 else 0 END as ActionCode
                         from CTE_ProviderBatch pb
@@ -62,7 +71,7 @@ end if;
                             pl.providerid,
                             pl.languagename,
                             pl.actioncode
-                        from CTE_ProviderLanguage pl)
+                        from CTE_ProviderLanguage pl
                         $$;
       
 
