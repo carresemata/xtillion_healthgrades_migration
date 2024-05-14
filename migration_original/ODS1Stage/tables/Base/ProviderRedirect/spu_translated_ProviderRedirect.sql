@@ -54,8 +54,7 @@ update_statement := $$
 merge_statement := $$ merge into base.providerredirect as target 
                     using ($$||select_statement||$$) as source 
                     on source.providercode = target.providercodenew
-                    WHEN MATCHED then $$ ||update_statement
-                    $$;
+                    WHEN MATCHED then $$ ||update_statement;
 
 
 ---------------------------------------------------------
