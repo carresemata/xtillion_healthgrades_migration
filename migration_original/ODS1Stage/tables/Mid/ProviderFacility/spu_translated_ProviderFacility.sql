@@ -134,7 +134,8 @@ cte_parentchild as (
         fpc.ismaxyear = 0
         and f.isclosed = 0
 ),
-cte_serviceline as (select 
+cte_serviceline as (
+select 
     mt.medicaltermcode as servicelinecode, 
     mt.legacykey, 
     mt.medicaltermdescription1 as servicelinedescription
@@ -158,7 +159,7 @@ from
     join ermart1.facility_vwufacilityhgdisplayprocedures fdp on fpr.procedureid = fdp.procedureid and fpr.ratingsourceid = fdp.ratingsourceid
     join ermart1.facility_proceduretoserviceline psl on fdp.procedureid = psl.procedureid
     join ermart1.facility_serviceline fsl on psl.servicelineid = fsl.servicelineid
-    left join ermart1.facility_facilitytoservicelinerating fsr on fsl.servicelineid = fsr.servicelineid and fpr.facilityid = fsr.facilityid and fsr.ismaxyear = 1
+    left join ermart1.facility_facilitytoservicelinerating fsr on fsl.servicelineid = fsr.servicelineid and fpr.facilityid = fsr.facilityid 
     join cte_serviceline as sl on ('SL' + fsl.servicelineid = sl.legacykey)
 where
     fpr.ismaxyear = 1
@@ -177,9 +178,9 @@ select
 cte_ratingsortvalue as (
 select
     avg(
-        (iff(fpr.overallsurvivalstar is null, 1, fpr.overallsurvivalstar) * iff(fpr.overallrecovery30star is null, 1, fpr.overallrecovery30star))
-        + (0.5 * iff(fpr.overallsurvivalstar is null, 0.001, fpr.overallsurvivalstar))
-        + (iff(fpr.overallrecovery30star is null, 0.001, fpr.overallrecovery30star))
+        (ifnull(fpr.overallsurvivalstar, 1) * ifnull(fpr.overallrecovery30star, 1))
+        + (0.5 * ifnull(fpr.overallsurvivalstar, 0.001))
+        + (ifnull(fpr.overallrecovery30star, 0.001))
     )
     + ((count(fpr.overallsurvivalstar) + count(fpr.overallrecovery30star)) * 0.25) as average_score
 from
@@ -415,11 +416,7 @@ group by
     fta.displaydatayear,
     fta.mergeddata,
     fta.isbestind,
-    fta.awardid,
-    fta.specialtycode,
-    svc_line.ratingsourceid,
     fta.ismaxyear,
-    fta.awardname,
     award_cat.awardcategorycode,
     fta.year
 ),
@@ -524,7 +521,7 @@ from
     join cte_tempproviderspecialtyserviceline tpsl on tqs.servicelinecode = tpsl.servicelinecode
     join cte_pfacility pf on tqs.facilityid = pf.legacykey and tpsl.providerid = pf.providerid
 where
-    iff(tqs.ratingssortvalue is null, -1, tqs.ratingssortvalue) <> -1
+    ifnull(tqs.ratingssortvalue, -1) <> -1
 ),
 cte_phonehospital as (
 select distinct 
@@ -575,7 +572,7 @@ group by
     clientproducttoentityid
 ),
 cte_providerfacility as (
-select distinct
+select 
     ptf.ProviderToFacilityID,
     ptf.ProviderID, 
     ptf.FacilityID,
