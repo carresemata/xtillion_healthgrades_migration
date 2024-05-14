@@ -19,6 +19,7 @@ def load_external_dependencies(sql_server_connector, snowflake_connector, extern
     5. Load data from Snowflake Stage to Table (i.e., COPY INTO command)
     6. Update the queue file with remaining tables
     """
+
     snowflake_cursor = snowflake_connector.cursor()
 
     queue_file_path = os.path.join(queue_dir, "remaining_tables_queue.txt")
@@ -89,14 +90,13 @@ def load_external_dependencies(sql_server_connector, snowflake_connector, extern
                         if data[col].apply(lambda x: isinstance(x, uuid.UUID)).any():
                             data[col] = data[col].astype(str)
                     for col in data.select_dtypes(include=['datetime64']).columns:
-                        data[col] = data[col].astype('datetime64[ms]')
+                        data[col] = data[col].astype(str) ### just throw varchar
 
                 file_path = os.path.join(schema_dir, f"{table_name_snowflake.upper()}_chunk{chunk_num + 1}.{save_format}")
 
                 if save_format == 'csv': data.to_csv(file_path, index=False)
-                elif save_format == 'parquet':
-                    data.to_parquet(file_path, engine='pyarrow', coerce_timestamps='ms', allow_truncated_timestamps=True)
-
+                elif save_format == 'parquet': data.to_parquet(file_path)
+                    
                 # ----------------------------- UPLOAD ---------------------------------
                 try:
                     upload_query = f"PUT file://{file_path} @%{table_name_snowflake}"
