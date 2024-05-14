@@ -34,22 +34,27 @@ declare
 ---------------------------------------------------------
 --------------- 2.conditionals if any -------------------
 ---------------------------------------------------------   
-   
+
 begin
     if (IsProviderDeltaProcessing) then
-       select_statement := $$
-       with CTE_ProviderBatch as (
-             select
+    
+    select_statement := '
+          with CTE_ProviderBatch as (
+                select
                     p.providerid
                 from
                     mdm_team.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),$$;
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
     else
-       select_statement := $$
-       with CTE_ProviderBatch as (
-            select p.providerid
-            from base.provider as p
-            order by p.providerid),$$;
+           select_statement := '
+           with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    base.provider as p
+                order by
+                    p.providerid),';
+            
     end if;
 
 
