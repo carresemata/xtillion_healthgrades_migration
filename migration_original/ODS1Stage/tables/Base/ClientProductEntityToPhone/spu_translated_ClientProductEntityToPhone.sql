@@ -720,14 +720,14 @@ merge_statement_3 := '     merge into base.clientproductentitytophone as target 
                     and source.phoneid = target.phoneid
                     WHEN MATCHED then' || update_statement || '
                     when not matched then' || insert_statement;
----------------------------------------------------------
+    ---------------------------------------------------------
     ------------------- 5. execution ------------------------
     ---------------------------------------------------------
     -- execute immediate update_statement;
     execute immediate merge_statement_1;
     execute immediate merge_statement_2;
     execute immediate merge_statement_3;
----------------------------------------------------------
+    ---------------------------------------------------------
     --------------- 6. status monitoring --------------------
     ---------------------------------------------------------
     status := 'completed successfully';
@@ -745,4 +745,3 @@ merge_statement_3 := '     merge into base.clientproductentitytophone as target 
 
             return status;
 end;
-CALL BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE();

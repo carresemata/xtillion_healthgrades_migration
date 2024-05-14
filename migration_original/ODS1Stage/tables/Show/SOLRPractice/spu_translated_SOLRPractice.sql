@@ -53,7 +53,7 @@ as 'declare
     merge_statement_3 string;
     merge_statement_4 string;
     status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_solrpractice');
+    procedure_name varchar(50) default(''sp_load_solrpractice'');
     execution_start datetime default getdate();
 
    
@@ -77,7 +77,7 @@ begin
                     ),'';
     else 
 
-        truncate_statement := 'truncate TABLE Show.SOLRPractice;'; -- Truncated for full loads
+        truncate_statement := ''truncate TABLE Show.SOLRPractice''; -- Truncated for full loads
 
         execute immediate truncate_statement;
         
