@@ -9,26 +9,26 @@ declare
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
+-- mid.providercondition depends on:
+-- mdm_team.mst.provider_profile_processing
 -- base.provider
 -- base.entitytomedicalterm
 -- base.medicalterm
 -- base.entitytype
 -- base.medicaltermset
 -- base.medicaltermtype
--- raw.providerdeltaprocessing
--- mid.providercondition (*)
 
 ---------------------------------------------------------
 --------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
 
-select_statement string; 
-insert_statement string;
-merge_statement string; 
-status string;
-    procedure_name varchar(50) default('sp_load_providercondition');
-    execution_start datetime default getdate();
+  select_statement string; 
+  insert_statement string;
+  merge_statement string; 
+  status string;
+  procedure_name varchar(50) default('sp_load_providercondition');
+  execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
@@ -47,8 +47,11 @@ begin
       if (IsProviderDeltaProcessing) then
         select_statement := $$
                             (with CTE_ProviderBatch as (
-                                select pdp.providerid
-                                from raw.providerdeltaprocessing as pdp
+                                select
+                                    p.providerid
+                                from
+                                    mdm_team.mst.Provider_Profile_Processing as ppp
+                                    join base.provider as P on p.providercode = ppp.ref_provider_code
                                 order by pdp.providerid
                             ),
                             
