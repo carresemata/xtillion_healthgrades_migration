@@ -8,12 +8,15 @@ declare
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
 
--- mid.providerrecognition depends on:
--- mdm_team.mst.provider_profile_processing
--- base.provider
--- base.vwuproviderrecognition
--- base.award
--- mid.providerrecognition
+    -- mid.providerrecognition depends on:
+    -- mdm_team.mst.provider_profile_processing
+    -- base.provider
+    -- base.award
+    --- Base.ProviderSanction (base.vwuproviderrecognition)
+    --- Base.SanctionAction (base.vwuproviderrecognition)
+    --- Base.ProviderMalpractice (base.vwuproviderrecognition)
+    --- Base.ProviderToCertificationSpecialty (base.vwuproviderrecognition)
+    --- Base.CertificationStatus (base.vwuproviderrecognition)
 
 ---------------------------------------------------------
 --------------- 1. declaring variables ------------------
@@ -34,7 +37,8 @@ declare
 
 begin
     if (IsProviderDeltaProcessing) then
-           select_statement := '
+    
+    select_statement := '
           with CTE_ProviderBatch as (
                 select
                     p.providerid

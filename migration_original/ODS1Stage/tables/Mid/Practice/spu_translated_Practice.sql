@@ -629,7 +629,7 @@ insert_statement := ' insert
 ---------------------------------------------------------  
 
 
-merge_statement := ' merge into dev.midpractice as target using 
+merge_statement := ' merge into mid.practice as target using 
                    ('||select_statement||') as source 
                    on source.practiceid = target.practiceid and source.officeid = target.officeid
                    WHEN MATCHED and ActionCode = 2 then '||update_statement|| '
