@@ -1,0 +1,8 @@
+view [Facility].[vwuFacilityHGDisplayProcedures] 
+AS
+
+SELECT 
+	proc_code AS ProcedureID
+	,is_state AS RatingSourceID
+FROM hosp_directory..hosp_cohort
+WHERE active = 1

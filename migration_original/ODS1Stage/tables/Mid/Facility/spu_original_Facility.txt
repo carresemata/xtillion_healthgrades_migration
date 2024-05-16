@@ -1,0 +1,825 @@
+IF OBJECT_ID('tempdb..#FacilityURL') IS NOT NULL DROP TABLE #FacilityURL
+		SELECT distinct F.FacilityId
+					,CASE 
+						WHEN FT.FacilityTypeCode IN ('CHDR','STAC')--,'HGPG','HGPS')
+							THEN replace('/hospital-directory/' + ISNULL(HD.HospSeoUrl, REPLACE(LOWER(LTRIM(RTRIM(S.StateName))),' ','-') + '-' + LOWER(S.State)) + '/' +
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + lower(F.LegacyKey),'--','-')
+						WHEN FT.FacilityTypeCode = 'ESRD'
+							THEN replace('/clinic-directory/dialysis-centers/' + LOWER(REPLACE(S.StateName,' ','-'))+'-'+LOWER(S.State)+'/'+
+								 lower(replace(replace(replace(replace(replace(replace(replace(CSP.City,' - ',' '),'&','-'),' ','-'),'/','-'),'''',''),'.',''),'--','-')) + '/' + 
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + LOWER(SUBSTRING(F.LegacyKey, 5,8)),'--','-')
+						WHEN FT.FacilityTypeCode = 'HGUC' -- Produces url fomatted like "/urgent-care-directory/name-facilitycode"
+							THEN replace('/urgent-care-directory/' +
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + LOWER(F.FacilityCode),'--','-')
+						WHEN FT.FacilityTypeCode = 'HGPH'
+							THEN replace('/pharmacy/' +
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + LOWER(F.FacilityCode),'--','-')
+						END AS FacilityURL
+		INTO		#FacilityURL
+		--select *
+		FROM		Base.Facility F
+		INNER JOIN	Base.FacilityToFacilityType FtFT ON FtFT.FacilityID = F.FacilityID
+		INNER JOIN	Base.FacilityType FT on FT.FacilityTypeID = FtFT.FacilityTypeID
+		LEFT JOIN	BASE.FacilityToAddress FA ON FA.FacilityID = F.FacilityID
+		LEFT JOIN	BASE.Address A ON A.AddressID = FA.AddressID
+		LEFT JOIN	Base.CityStatePostalCode CSP ON CSP.CityStatePostalCodeID = A.CityStatePostalCodeID
+		LEFT JOIN	Base.State S ON S.State = CSP.State
+		LEFT JOIN   ERMART1.Facility.Facility ef ON ef.FacilityID = F.LegacyKey 
+		LEFT JOIN	ERMART1.Facility.HospitalDetail HD ON HD.FacilityID = ef.FacilityID	
+		WHERE		isnull(F.IsClosed, 0) = 0	
+					AND ef.FacSearchTypeID IN (1,4,8,9)
+					AND FT.FacilityTypeCode IN ('CHDR','ESRD','STAC','HGUC', 'HGPH')
+
+		DELETE #FacilityURL WHERE LEN(FacilityURL) = 0
+
+	--build a temp table with the same structure as the Mid.Facility
+		BEGIN TRY DROP TABLE #Facility END TRY BEGIN CATCH END CATCH
+		SELECT	TOP 0 *
+		INTO	#Facility
+		FROM	Mid.Facility
+		
+		ALTER TABLE #Facility
+		ADD ActionCode INT DEFAULT 0
+		
+		
+	--populate the temp table WITH data FROM Base schemas
+		INSERT INTO #Facility 
+			(
+					FacilityID,
+					LegacyKey,
+					FacilityCode,
+					FacilityName,
+					FacilityType,
+					FacilityTypeCode,
+					FacilitySearchType,
+					Accreditation,
+					AccreditationDescription,
+					TreatmentSchedules,
+					PhoneNumber,
+					AdditionalTransportationInformation,
+					AfterHoursPhoneNumber,
+					AwardsInformation,		
+					ClosedHolidaysInformation,
+					CommunityActivitiesInformation,
+					CommunityOutreachProgramInformation,
+					CommunitySupportInformation,
+					EmergencyAfterHoursPhoneNumber,
+					FacilityDescription,
+					FoundationInformation,
+					HealthPlanInformation,
+					IsMedicaidAccepted,
+					IsMedicareAccepted,
+					IsTeaching,
+					LanguageInformation,
+					MedicalServicesInformation,
+					MissionStatement,
+					OfficeCloseTime,
+					OfficeOpenTime,
+					OnsiteGuestServicesInformation,
+					OtherEducationAndTrainingInformation,
+					OtherServicesInformation,
+					OwnershipType,
+					ParkingInstructionsInformation,
+					PaymentPolicyInformation,
+					ProfessionalAffiliationInformation,
+					PublicTransportationInformation,
+					RegionalRelationshipInformation,
+					ReligiousAffiliationInformation,
+					SpecialProgramsInformation,
+					SurroundingAreaInformation,
+					TeachingProgramsInformation,
+					TollFreePhoneNumber,
+					TransplantCapabilitiesInformation,
+					VisitingHoursInformation,
+					VolunteerInformation,
+					YearEstablished,
+					HospitalAffiliationInformation,
+					PhysicianCallCenterPhoneNumber,
+					OverallHospitalStar,
+					AdultTraumaLevel,
+					PediatricTraumaLevel,
+					ResPgmApprAma, 
+					ResPgmApprAoa,
+					ResPgmApprAda,
+					MiscellaneousInformation,
+					AppointmentInformation,
+					WebSite,
+					VisitingHoursMonday,
+					VisitingHoursTuesday,
+					VisitingHoursWednesday,
+					VisitingHoursThursday,
+					VisitingHoursFriday,
+					VisitingHoursSaturday,
+					VisitingHoursSunday,
+					FacilityImagePath,
+					ClientToProductID,
+					ClientCode,
+					ClientName,
+					ProductCode,
+					ProductGroupCode,
+					PhoneXML,
+					MobilePhoneXML,
+					DesktopPhoneXML,
+					TabletPhoneXML,
+					UrlXML,
+					ImageXML,
+					FacilityURL				
+					
+		)
+			SELECT	aa.FacilityID,
+					aa.LegacyKey,
+					aa.FacilityCode,
+					aa.FacilityName,
+					dd.FacilityTypeDescription AS FacilityType,
+					dd.FacilityTypeCode,
+					ee.SearchTypeDescription AS FacilitySearchType,
+					bb.Accreditation,
+					bb.AccreditationDescription,
+					bb.TreatmentSchedules,
+					cc.PhoneNumber,
+					bb.AdditionalTransportationInformation,
+					bb.AfterHoursPhoneNumber,
+					bb.AwardsInformation,		
+					bb.ClosedHolidaysInformation,
+					bb.CommunityActivitiesInformation,
+					bb.CommunityOutreachProgramInformation,
+					bb.CommunitySupportInformation,
+					bb.EmergencyAfterHoursPhoneNumber,
+					bb.FacilityDescription,
+					bb.FoundationInformation,
+					bb.HealthPlanInformation,
+					bb.IsMedicaidAccepted,
+					bb.IsMedicareAccepted,
+					bb.IsTeaching,
+					bb.LanguageInformation,
+					bb.MedicalServicesInformation,
+					bb.MissionStatement,
+					bb.OfficeCloseTime,
+					bb.OfficeOpenTime,
+					bb.OnsiteGuestServicesInformation,
+					bb.OtherEducationAndTrainingInformation,
+					bb.OtherServicesInformation,
+					bb.OwnershipType,
+					bb.ParkingInstructionsInformation,
+					bb.PaymentPolicyInformation,
+					bb.ProfessionalAffiliationInformation,
+					bb.PublicTransportationInformation,
+					bb.RegionalRelationshipInformation,
+					bb.ReligiousAffiliationInformation,
+					bb.SpecialProgramsInformation,
+					bb.SurroundingAreaInformation,
+					case when bb.FacilityID = 'HGSTE6064176190065' then left (bb.TeachingProgramsInformation, 2997) else bb.TeachingProgramsInformation end,
+					bb.TollFreePhoneNumber,
+					bb.TransplantCapabilitiesInformation,
+					bb.VisitingHoursInformation,
+					bb.VolunteerInformation,
+					bb.YearEstablished,
+					bb.HospitalAffiliationInformation,
+					bb.PhysicianCallCenterPhoneNumber,
+					ff.RatingStar AS OverallHospitalStar,
+					hh.AdultTraumaLevel,
+					hh.PediatricTraumaLevel,
+					CASE WHEN ll.ResPgmApprAma = 'Y' THEN 'AMA' END AS ResPgmApprAma, 
+					CASE WHEN ll.ResPgmApprAoa = 'Y' THEN 'AOA' END AS ResPgmApprAoa,
+					CASE WHEN ll.ResPgmApprAda = 'Y' THEN 'ADA' END AS ResPgmApprAda, 
+					bb.MiscellaneousInformation,
+					bb.AppointmentInformation,
+					ll.Url AS WebSite,
+					bb.VisitingHoursMonday,
+					bb.VisitingHoursTuesday,
+					bb.VisitingHoursWednesday,
+					bb.VisitingHoursThursday,
+					bb.VisitingHoursFriday,
+					bb.VisitingHoursSaturday,
+					bb.VisitingHoursSunday,
+					nn.FacilityImagePath,
+					ii.ClientToProductID,
+					ii.ClientCode,
+					ii.ClientName,
+					ii.ProductCode,
+					ii.ProductGroupCode,
+					
+					CASE WHEN (ISNULL(CAST(kk.ClientToProductID AS VARCHAR(50)),'') <> '') AND EXISTS (SELECT TOP 1 DesignatedProviderPhone FROM Base.vwuPDCFacilityDetail fa WHERE fa.PhoneTypeCode IN ('PTUFS', 'PTHFS') AND ii.ClientProductToEntityID = fa.ClientProductToEntityID) /*Facility Level Phone*/ THEN
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFS', 'PTHFS') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE		
+						)
+						WHEN (SELECT TOP 1 1 FROM Base.vwuPDCClientDetail cl WHERE cl.PhoneTypeCode = 'PTHOS' AND ii.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.PhoneTypeCode = 'PTHOS' -- PDC Affiliated Hospital
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE				
+						)
+						-- this one is repeated ??????
+						WHEN EXISTS (SELECT TOP 1 DesignatedProviderPhone FROM Base.vwuPDCFacilityDetail fa WHERE fa.PhoneTypeCode IN ('PTUFS', 'PTHFS') AND ii.ClientProductToEntityID = fa.ClientProductToEntityID) THEN
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFS', 'PTHFS') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE
+						)						
+						WHEN EXISTS (SELECT ClientCode FROM HACK.HCATrackingPhoneHack T WHERE ClientCode NOT LIKE 'HCA%' AND ClientCode NOT IN ('STDAVD') AND T.ClientCode = ii.ClientCode) THEN
+						(
+							SELECT	cc.PhoneNumber AS ph, 'PTHOS' AS phTyp
+							FOR XML RAW ('phone'), ELEMENTS, TYPE						
+						) END AS PhoneXML,
+						
+					CASE WHEN (ISNULL(CAST(kk.ClientToProductID AS VARCHAR(50)),'') <> '') /*Facility Level Phone*/ THEN
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFSM', 'PTHFSM') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE		
+						)
+						WHEN (SELECT TOP 1 1 FROM Base.vwuPDCClientDetail cl WHERE cl.PhoneTypeCode = 'PTHOSM' AND ii.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.PhoneTypeCode = 'PTHOSM' -- PDC Affiliated Hospital
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE				
+						)
+						ELSE	
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFSM', 'PTHFSM') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE
+						) END AS MobilePhoneXML,	
+					
+					CASE WHEN (ISNULL(CAST(kk.ClientToProductID AS VARCHAR(50)),'') <> '') /*Facility Level Phone*/ THEN
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFSDTP', 'PTHFSDTP') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE		
+						)
+						WHEN (SELECT TOP 1 1 FROM Base.vwuPDCClientDetail cl WHERE cl.PhoneTypeCode = 'PTHOSDTP' AND ii.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.PhoneTypeCode = 'PTHOSDTP' -- PDC Affiliated Hospital
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE				
+						)
+						ELSE	
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFSDTP', 'PTHFSDTP') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE
+						) END AS DesktopPhoneXML,	
+						
+					CASE WHEN (ISNULL(CAST(kk.ClientToProductID AS VARCHAR(50)),'') <> '') /*Facility Level Phone*/ THEN
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFST', 'PTHFST') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE		
+						)
+						WHEN (SELECT TOP 1 1 FROM Base.vwuPDCClientDetail cl WHERE cl.PhoneTypeCode = 'PTHOST' AND ii.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.PhoneTypeCode = 'PTHOST' -- PDC Affiliated Hospital
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE				
+						)
+						ELSE	
+						(
+							SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.PhoneTypeCode IN ('PTUFST', 'PTHFST') -- Hospital - Facility Specific
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('phone'), ELEMENTS, TYPE
+						) END AS TabletPhoneXML,		
+						
+					CASE WHEN (SELECT TOP 1 FacilityCode FROM Base.FacilityCheckInURL x WHERE x.FacilityCode = aa.FacilityCode) IS NOT NULL THEN
+						(
+							SELECT	CheckInURL as urlVal, 'FCFURL' as  urlTyp
+							FROM	Base.FacilityCheckInURL x
+							WHERE	x.FacilityCode = aa.FacilityCode
+							FOR XML RAW ('url'), ELEMENTS, TYPE	
+						)
+						WHEN (ISNULL(CAST(kk.ClientToProductID AS VARCHAR(50)),'') <> '') AND (SELECT TOP 1 URL FROM Base.vwuPDCFacilityDetail fa WHERE LEN(fa.URL) >0 AND fa.URLTypeCode IN ('FCFURL', 'FCCIURL') AND ii.ClientProductToEntityID = fa.ClientProductToEntityID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT URL AS urlVal, URLTypeCode as urlTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.URLTypeCode IN ('FCFURL', 'FCCIURL') -- Hospital Profile
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('url'), ELEMENTS, TYPE	
+						)
+						WHEN (SELECT TOP 1 URL FROM Base.vwuPDCClientDetail cl WHERE LEN(cl.URL) >0 AND cl.URLTypeCode = 'FCCLURL' AND ii.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+						(
+							SELECT	DISTINCT URL AS urlVal, URLTypeCode as urlTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.URLTypeCode = 'FCCLURL' -- Client URL
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('url'), ELEMENTS, TYPE			
+						)
+						ELSE	
+						(
+							SELECT	FacilityURL AS urlVal, 'FCCLURL' AS urlTyp 
+							FROM	#FacilityURL TU 
+							WHERE	TU.FacilityId = aa.FacilityId
+							FOR XML RAW ('url'), ELEMENTS, TYPE
+						) END AS UrlXML,		
+									
+					CASE WHEN ISNULL(CAST(jj.ClientToProductID AS VARCHAR(50)),'') <> '' AND EXISTS(SELECT TOP 1 ImageFilePath FROM Base.vwuPDCClientDetail cl WHERE cl.MediaImageTypeCode = 'FCCLLOGO' AND ii.ClientToProductID = cl.ClientToProductID)/*Client Branding*/ THEN  
+						(
+							SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.MediaImageTypeCode = 'FCCLLOGO' --Client Logo
+									AND ii.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+						WHEN EXISTS(SELECT TOP 1 ImageFilePath FROM Base.vwuPDCFacilityDetail fa WHERE fa.MediaImageTypeCode = 'FCFLOGO' AND ii.ClientProductToEntityID = fa.ClientProductToEntityID) THEN
+						(
+							SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.MediaImageTypeCode = 'FCFLOGO' -- Hospital Logo
+									AND ii.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+						ELSE 
+						(
+							SELECT	TOP 1 img, imgTyp
+							FROM(
+								SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+								FROM	Base.vwuPDCClientDetail cl
+								WHERE	cl.MediaImageTypeCode = 'FCCLLOGO' --Client Logo
+										AND ii.ClientToProductID = cl.ClientToProductID
+								UNION
+								SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+								FROM	Base.vwuPDCFacilityDetail cl 
+								WHERE	cl.MediaImageTypeCode IN ('FCCLLOGO','FACIMAGE','FCFLOGO')
+										AND ii.ClientToProductID = cl.ClientToProductID
+							)X
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+					END AS ImageXML,
+					FURL.FacilityURL as FacilityURL
+					
+			-- SELECT kk.ClientToProductID ,  ii.ClientProductToEntityID
+			FROM	Base.Facility aa 
+			LEFT JOIN #FacilityURL FURL on FURL.FacilityId = aa.FacilityId
+					JOIN ERMART1.Facility.Facility bb ON aa.LegacyKey = bb.FacilityID
+					JOIN ERMART1.Facility.FacilityAddressDetail cc on bb.FacilityID = cc.FacilityID
+					JOIN Base.FacilityToFacilityType mm ON mm.FacilityID = aa.FacilityID
+					JOIN Base.FacilityType dd ON mm.FacilityTypeID = dd.FacilityTypeID
+					JOIN ERMART1.Facility.FacSearchType ee ON bb.FacSearchTypeID = ee.FacSearchTypeID
+					JOIN ERMART1.Facility.FacilityAddressDetail pp ON bb.FacilityID = pp.FacilityID					
+					--JOIN Base.FacilityToAddress gg ON aa.FacilityID = gg.FacilityID
+					--JOIN Base.Address pp ON gg.AddressID = pp.AddressID
+					--JOIN Base.CityStatePostalCode qq ON pp.CityStatePostalCodeID = qq.CityStatePostalCodeID
+					JOIN Base.State rr ON rr.State = pp.State
+					LEFT JOIN ERMART1.Facility.FacilityToRating ff ON (bb.FacilityID = ff.FacilityID and ff.IsMaxYear = 1 and ff.RatingID = 1)							  
+					LEFT JOIN ERMART1.Facility.FacilityToTraumaLevel hh ON bb.FacilityID = hh.FacilityID	
+					LEFT JOIN
+							(
+								SELECT  d.ClientProductToEntityID,a.ClientToProductID,b.ClientCode,b.ClientName,f.FacilityID,c.ProductCode,pg.ProductGroupCode
+								FROM	Base.ClientToProduct a
+										JOIN Base.Client b ON a.ClientID = b.ClientID
+										JOIN Base.Product c ON a.ProductID = c.ProductID
+										JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID
+										JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
+										JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'FAC'
+										JOIN Base.Facility f ON d.EntityID = f.FacilityID
+								WHERE	a.ActiveFlag = 1
+										AND ProductGroupCode = 'PDC'
+										AND f.IsClosed = 0
+							) ii ON ii.FacilityID = aa.FacilityID
+					LEFT JOIN 
+							(
+								SELECT	a.EntityID AS ClientToProductID, e.ClientFeatureValueCode
+								FROM	Base.ClientEntityToClientFeature a
+										JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+										JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+										JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+										JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+								WHERE	b.EntityTypeCode = 'CLPROD'
+										AND d.ClientFeatureCode = 'FCBRL' -- Branding Level
+										AND e.ClientFeatureValueCode = 'FVCLT' -- Client
+
+							) jj ON ii.ClientToProductID = jj.ClientToProductID
+					LEFT JOIN 
+							(
+								SELECT	a.EntityID AS ClientToProductID, d.ClientFeatureCode AS feCd, 
+										d.ClientFeatureDescription AS feDes, e.ClientFeatureValueCode, e.ClientFeatureValueDescription
+								FROM	Base.ClientEntityToClientFeature a
+										JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+										JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+										JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+										JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+								WHERE	b.EntityTypeCode = 'CLPROD'
+										AND d.ClientFeatureCode = 'FCCCP' -- Call Center Phone Numbers
+										AND e.ClientFeatureValueCode = 'FVFAC' -- Facility
+							) kk ON ii.ClientToProductID = kk.ClientToProductID	
+					LEFT JOIN ERMART1.Facility.HospitalDetail ll ON bb.FacilityID = ll.FacilityID
+					LEFT JOIN
+							(
+								SELECT	d.FacilityID, d.FacilityImageID, 
+										ISNULL(e.MediaRelativePath,'') + CASE WHEN RIGHT(ISNULL(e.MediaRelativePath,''),1) <> '/' then '/' else '' end + d.FileName as FacilityImagePath, 
+										e.MediaImageTypeCode 
+								FROM	Base.FacilityImage d
+										JOIN Base.MediaImageType e on e.MediaImageTypeID = d.MediaImageTypeID
+										JOIN Base.MediaSize f on (d.MediaSizeID = f.MediaSizeID)
+								WHERE	MediaImageTypeCode = 'FACIMAGE'
+							
+							) nn ON nn.FacilityID = aa.FacilityID
+							
+			WHERE	isnull(aa.IsClosed, 0) = 0
+					AND ee.FacSearchTypeID IN (1,4,8,9)
+					AND dd.FacilityTypeCode IN ('CHDR','ESRD','STAC','HGUC', 'HGPH')
+			GROUP BY aa.FacilityID,bb.FacilityID,aa.LegacyKey,aa.FacilityCode,aa.FacilityName,dd.FacilityTypeDescription,dd.FacilityTypeCode,
+					ee.SearchTypeDescription,bb.Accreditation,bb.AccreditationDescription,
+					bb.TreatmentSchedules,cc.PhoneNumber,bb.AdditionalTransportationInformation,
+					bb.AfterHoursPhoneNumber,bb.AwardsInformation,bb.ClosedHolidaysInformation,bb.CommunityActivitiesInformation,
+					bb.CommunityOutreachProgramInformation,bb.CommunitySupportInformation,bb.EmergencyAfterHoursPhoneNumber,
+					bb.FacilityDescription,bb.FoundationInformation,bb.HealthPlanInformation,bb.IsMedicaidAccepted,
+					bb.IsMedicareAccepted,bb.IsTeaching,bb.LanguageInformation,bb.MedicalServicesInformation,
+					bb.MissionStatement,bb.OfficeCloseTime,bb.OfficeOpenTime,bb.OnsiteGuestServicesInformation,
+					bb.OtherEducationAndTrainingInformation,bb.OtherServicesInformation,bb.OwnershipType,
+					bb.ParkingInstructionsInformation,bb.PaymentPolicyInformation,bb.ProfessionalAffiliationInformation,
+					bb.PublicTransportationInformation,bb.RegionalRelationshipInformation,bb.ReligiousAffiliationInformation,
+					bb.SpecialProgramsInformation,bb.SurroundingAreaInformation,bb.TeachingProgramsInformation,
+					bb.TollFreePhoneNumber,bb.TransplantCapabilitiesInformation,bb.VisitingHoursInformation,
+					bb.VolunteerInformation,bb.YearEstablished,bb.HospitalAffiliationInformation,bb.PhysicianCallCenterPhoneNumber,
+					ff.RatingStar,hh.AdultTraumaLevel,hh.PediatricTraumaLevel,ii.ClientToProductID,ii.ClientCode,ii.ClientName,ii.ProductCode,
+					ii.ProductGroupCode,ii.ClientProductToEntityID,kk.ClientToProductID,jj.ClientToProductID,ll.ResPgmApprAma,ll.ResPgmApprAoa,
+					ll.ResPgmApprAda,bb.MiscellaneousInformation,bb.AppointmentInformation,ll.Url,ll.HospSeoUrl,rr.StateName,pp.State,pp.City,
+					bb.VisitingHoursMonday,bb.VisitingHoursTuesday,bb.VisitingHoursWednesday,bb.VisitingHoursThursday,bb.VisitingHoursFriday,
+					bb.VisitingHoursSaturday,bb.VisitingHoursSunday,nn.FacilityImagePath, FURL.FacilityURL
+			
+			-- ;WITH CTE_DupFacilities AS (
+			-- 	select	*, ROW_NUMBER()OVER(PARTITION BY FacilityId ORDER BY FacilityCode) AS RN1 
+			-- 	from	#Facility
+			-- )
+			-- DELETE CTE_DupFacilities WHERE RN1 > 1
+
+			UPDATE x
+			SET
+			HospitalAffiliationInformation = NULL,
+			ReligiousAffiliationInformation= NULL,
+			ProfessionalAffiliationInformation= NULL,
+			AwardsInformation= NULL,
+			FoundationInformation= NULL,
+			YearEstablished= NULL,
+			TransplantCapabilitiesInformation= NULL,
+			PhysicianCallCenterPhoneNumber= NULL,
+			EmergencyAfterHoursPhoneNumber= NULL,
+			OtherEducationAndTrainingInformation= NULL,
+			ClosedHolidaysInformation= NULL,
+			OfficeCloseTime= NULL,
+			OfficeOpenTime= NULL,
+			LanguageInformation= NULL,
+			CommunityActivitiesInformation= NULL,
+			CommunityOutreachProgramInformation= NULL,
+			CommunitySupportInformation= NULL,
+			OnsiteGuestServicesInformation= NULL,
+			TeachingProgramsInformation= NULL,
+			HealthPlanInformation= NULL,			
+			VisitingHoursInformation= NULL,
+			VisitingHoursMonday= NULL,
+			VisitingHoursTuesday= NULL,
+			VisitingHoursWednesday= NULL,
+			VisitingHoursThursday= NULL,
+			VisitingHoursFriday= NULL,
+			VisitingHoursSaturday= NULL,			
+			VisitingHoursSunday= NULL,
+			ParkingInstructionsInformation= NULL,
+			SurroundingAreaInformation= NULL,
+			SpecialProgramsInformation= NULL,
+			VolunteerInformation= NULL,
+			TreatmentSchedules= NULL,
+			MiscellaneousInformation= NULL,
+			FacilityDescription= NULL,
+			MissionStatement= NULL,
+			AppointmentInformation= NULL,
+			MedicalServicesInformation= NULL,
+			FacilityImagePath = NULL
+			FROM #Facility x
+			WHERE x.FacilityID NOT IN (	SELECT  DISTINCT f.FacilityID
+										FROM	Base.ClientToProduct a
+												JOIN Base.Client b ON a.ClientID = b.ClientID
+												JOIN Base.Product c ON a.ProductID = c.ProductID
+												JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID
+												JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
+												JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'FAC'
+												JOIN Base.Facility f ON d.EntityID = f.FacilityID
+										WHERE	a.ActiveFlag = 1
+												AND ProductGroupCode = 'PDC'
+												AND isnull(f.IsClosed, 0) = 0
+									 ) 
+			
+
+			--Populate AwardCount
+    
+			;WITH awrdcnt
+			AS
+			(
+				SELECT	FacilityID, COUNT(*) AS AwardCount
+				FROM	ERMART1.Facility.FacilityToAward x
+						JOIN ERMart1.Facility.Award y ON x.AwardID = y.AwardID AND x.AwardName = y.AwardName
+				WHERE	x.IsMaxYear = 1
+						--AND y.Active = 1
+				GROUP	BY FacilityID 
+			)
+			UPDATE	a
+			SET		a.AwardCount = b.AwardCount
+			FROM	#Facility a
+					JOIN awrdcnt b ON a.LegacyKey = b.FacilityID
+		    
+
+			--Populate the ProcedureCount
+			
+			UPDATE x
+			SET x.ProcedureCount = y.ProcedureCount
+			--select *
+			FROM #Facility x
+			JOIN 
+				(
+					SELECT	a.FacilityID, COUNT(*) as ProcedureCount
+					FROM	ERMART1.Facility.FacilityToProcedureRating a
+							JOIN ERMART1.Facility.vwuFacilityHGDisplayProcedures b ON (a.ProcedureID = b.ProcedureID and a.RatingSourceID = b.RatingSourceID)
+					WHERE	a.IsMaxYear = 1
+					GROUP	BY a.FacilityID
+				) y ON (x.LegacyKey = y.FacilityID)
+				
+			--Populate the 5-Star ProcedureCount
+			-- The Logic now is to add all the 5-Star Ratings for OverallSurvivalStar,OverallRecovery30Star and OverallRecovery180Star
+			
+			UPDATE x
+			SET x.FiveStarProcedureCount = y.FiveStarProcedureCount
+			--select *
+			--FROM #Facility x
+			FROM #Facility x
+			JOIN 
+				(
+					SELECT	a.FacilityID, COUNT(*) as FiveStarProcedureCount
+					FROM	ERMART1.Facility.FacilityToProcedureRating a
+							JOIN ERMART1.Facility.vwuFacilityHGDisplayProcedures b ON (a.ProcedureID = b.ProcedureID and a.RatingSourceID = b.RatingSourceID)
+					WHERE	a.IsMaxYear = 1
+							AND a.OverallSurvivalStar = 5
+					GROUP	BY a.FacilityID
+				) y ON (x.LegacyKey = y.FacilityID)
+				
+				
+			UPDATE x
+			SET x.FiveStarProcedureCount = isnull(x.FiveStarProcedureCount,0) + isnull(y.FiveStarProcedureCount,0)
+			--select *
+			--FROM #Facility x
+			FROM #Facility x
+			JOIN 
+				(
+					SELECT	a.FacilityID, COUNT(*) as FiveStarProcedureCount
+					FROM	ERMART1.Facility.FacilityToProcedureRating a
+							JOIN ERMART1.Facility.vwuFacilityHGDisplayProcedures b ON (a.ProcedureID = b.ProcedureID and a.RatingSourceID = b.RatingSourceID)
+					WHERE	a.IsMaxYear = 1
+							AND a.OverallRecovery30Star = 5
+					GROUP	BY a.FacilityID
+				) y ON (x.LegacyKey = y.FacilityID)
+				
+		
+			--Populate ProviderCount	
+			UPDATE x
+			SET x.ProviderCount = y.ProviderCount
+			-- SELECT *
+			FROM  #Facility x
+			JOIN (
+					SELECT	a.FacilityID, COUNT(a.ProviderID) as ProviderCount
+					FROM	Base.ProviderToFacility a 
+							JOIN Base.Facility b ON a.FacilityID = b.FacilityID 
+					GROUP	BY a.FacilityID
+				 ) y ON (x.FacilityID = y.FacilityID)
+
+
+			-- Populate the percentage value for no. of Foreign objects left in the body during procedure
+
+			DECLARE @TotalNumberHosp DECIMAL(10,1), @NumHosp DECIMAL(10,1), @ForeignObjectLeftPercent DECIMAL(10,2)
+
+			SELECT @NumHosp = COUNT (DISTINCT FacilityID)
+			FROM	ERMART1.Facility.FacilityToRating a
+					JOIN ERMART1.Facility.Rating b ON a.RatingID = b.RatingID
+			WHERE	b.RatingCategoryId = 2
+					AND a.IsMaxYear = 1
+					AND a.RatingID = 25
+					AND EventCount > 0
+
+			SELECT @TotalNumberHosp = COUNT (DISTINCT FacilityID)
+			FROM	ERMART1.Facility.FacilityToRating a
+					JOIN ERMART1.Facility.Rating b ON a.RatingID = b.RatingID
+			WHERE	b.RatingCategoryId = 2
+					AND a.IsMaxYear = 1
+					
+			SELECT @ForeignObjectLeftPercent = (@NumHosp/@TotalNumberHosp) * 100 
+
+			UPDATE x
+			SET x.ForeignObjectLeftPercent = ROUND(@ForeignObjectLeftPercent,1)
+			FROM  #Facility x			
+			
+			CREATE INDEX Temp ON #Facility (FacilityID)
+
+			update f
+			set ClientToProductID = null,
+				ClientCode = null,
+				ClientName = null,
+				ProductCode = null,
+				ProductGroupCode = null,
+				PhoneXML = null,
+				MobilePhoneXML = null,
+				DesktopPhoneXML = null,
+				TabletPhoneXML = null,
+				UrlXML = null,
+				ImageXML = null
+
+			from #Facility f
+			JOIN Base.Client bc ON bc.ClientCode = f.ClientCode
+			JOIN Show.ClientContract scc ON scc.ClientID = bc.ClientID
+			WHERE scc.ContractEndDate <= GETDATE()
+			OR  scc.ContractStartDate >= GETDATE() 
+			
+		
+		
+	/*
+		Flag record level actions for ActionCode
+			0 = No Change
+			1 = Insert
+			2 = UPDATE
+	*/
+		--ActionCode Insert
+			UPDATE	a
+			SET		a.ActionCode = 1
+			--SELECT *
+			FROM	#Facility a
+					LEFT JOIN Mid.Facility b ON (a.FacilityID = b.FacilityID and a.FacilityCode = b.FacilityCode )
+			WHERE	b.FacilityID is null
+		
+		--ActionCode UPDATE
+			BEGIN TRY DROP TABLE #ColumnsUPDATEs END TRY BEGIN CATCH END CATCH
+			
+			SELECT	name, identity(INT,1,1) as recId
+			INTO	#ColumnsUPDATEs
+			FROM	tempdb..syscolumns 
+			WHERE	id = object_id('TempDB..#Facility')
+					AND name NOT IN ('FacilityID','FacilityCode', 'ActionCode')
+				
+			--build the sql statement with dynamic sql to check if we need to UPDATE any columns
+				DECLARE @sql VARCHAR(max)
+				DECLARE @min INT
+				DECLARE @max INT
+				DECLARE @WHEREClause VARCHAR(max)
+				DECLARE @column VARCHAR(100)
+				DECLARE @newline CHAR(1)
+				DECLARE @globalCheck VARCHAR(3)
+
+
+				SET @min = 1
+				SET @WHEREClause = ''
+				SET @newline = CHAR(10)
+				SET @sql = 'UPDATE	a'+@newline+ 
+						   'SET		a.ActionCode = 2'+@newline+
+						   '--SELECT *'+@newline+
+						   'FROM	#Facility a'+@newline+
+						   'JOIN Mid.Facility b with (nolock) on (a.FacilityID = b.FacilityID and a.FacilityCode = b.FacilityCode )'+@newline+
+						   'WHERE '
+						   
+				SELECT @max = MAX(recId) FROM #ColumnsUPDATEs
+
+				WHILE @min <= @max	
+					BEGIN
+						SELECT	@column = name FROM #ColumnsUPDATEs WHERE recId = @min 
+						SET		@WHEREClause = @WHEREClause +'BINARY_CHECKSUM(isnull(cast(a.'+@column+' as VARCHAR(max)),'''')) <> BINARY_CHECKSUM(isnull(cast(b.'+@column+' as VARCHAR(max)),''''))'+@newline
+							--put an OR for all except for the last column check
+							IF @min < @max 
+								BEGIN
+									SET @WHEREClause = @WHEREClause+' or '
+								END
+
+						
+						SET @min = @min + 1
+					END
+
+				SET @sql = @sql + @WHEREClause
+				
+				-- PRINT @sql
+
+				EXEC (@sql)
+	/*
+		Complete the ActionCode
+	*/
+	
+		--define column SET for INSERTS 
+		BEGIN TRY DROP TABLE #ColumnInserts END TRY BEGIN CATCH END CATCH
+
+		SELECT	name, identity(INT,1,1) as recId
+		INTO	#ColumnInserts
+		FROM	tempdb..syscolumns 
+		WHERE	id = object_id('TempDB..#Facility')
+				AND name <> 'ActionCode'--do not need to insert/UPDATE this field
+		
+		--create the column SET
+		DECLARE @columnInsert VARCHAR(100)
+		DECLARE @columnListInsert VARCHAR(8000)
+		DECLARE @minInsert INT
+		DECLARE @maxInsert INT
+		
+		SET @minInsert = 1
+		SET @columnListInsert = ''
+		SELECT @maxInsert = MAX(recId) FROM #ColumnInserts 
+		
+		WHILE @minInsert <= @maxInsert
+			BEGIN
+				SELECT	@columnInsert = name FROM #ColumnInserts WHERE recId = @minInsert
+				SET		@columnListInsert = @columnListInsert + @columnInsert
+				
+				IF @minInsert <@maxInsert
+					BEGIN
+						SET @columnListInsert = @columnListInsert+','
+					END
+				
+				SET @minInsert = @minInsert + 1
+			END
+		
+		--ActionCode = 1 (Inserts)
+			DECLARE @sqlInsert VARCHAR(8000)
+			SET @sqlInsert = 
+			'insert INTO Mid.Facility ('+@columnListInsert+')
+			SELECT '+@columnListInsert+' FROM #Facility WHERE ActionCode = 1'
+			
+			EXEC (@sqlInsert)
+		
+		--ActionCode = 2 (UPDATEs)	
+			DECLARE @minUPDATEs INT
+			DECLARE @maxUPDATEs INT
+			DECLARE @sqlUPDATEs VARCHAR(8000)
+			DECLARE @sqlUPDATEsClause VARCHAR(500)
+			DECLARE @columnUPDATEs VARCHAR(150)
+			DECLARE @columnListUPDATEs VARCHAR(8000)
+			DECLARE @newlineUPDATEs CHAR(1)
+			
+			SET @newlineUPDATEs = CHAR(10)
+			SET @columnListUPDATEs = ''
+			SET @sqlUPDATEs = 'UPDATE a'+@newlineUPDATEs+
+							  'SET '	
+			SET @sqlUPDATEsClause = '--SELECT *'+@newlineUPDATEs+
+							  'FROM Mid.Facility a '+@newlineUPDATEs+
+							  'JOIN #Facility b on (a.FacilityID = b.FacilityID and a.FacilityCode = b.FacilityCode )'+@newlineUPDATEs+
+							  'WHERE b.ActionCode = 2'
+							  
+			SELECT @minUPDATEs = MIN(recId) FROM #ColumnsUPDATEs 
+			SELECT @maxUPDATEs = MAX(recId) FROM #ColumnsUPDATEs
+			
+			WHILE @minUPDATEs <= @maxUPDATEs
+				BEGIN
+					SELECT @columnUPDATEs = name FROM #ColumnsUPDATEs WHERE recId = @minUPDATEs
+					SET @columnListUPDATEs = @columnListUpdates + 'a.'+@columnUpdates+' = b.'+@columnUpdates
+					
+					IF @minUPDATEs < @maxUPDATEs
+						BEGIN
+							SET @columnListUPDATEs = @columnListUPDATEs+','+@newlineUPDATEs+''
+						END
+					ELSE
+						BEGIN
+							SET @columnListUPDATEs = @columnListUPDATEs+@newlineUPDATEs+@sqlUPDATEsClause
+						END
+					
+					SET @minUPDATEs = @minUPDATEs + 1
+				END
+			
+			SET @sqlUPDATEs = @sqlUPDATEs + @columnListUPDATEs
+			
+			EXEC (@sqlUPDATEs)
+
+		--ActionCode = N (Deletes)
+			DELETE	a
+			--SELECT	*
+			FROM	Mid.Facility a 
+					LEFT JOIN #Facility b ON (a.FacilityID = b.FacilityID AND a.FacilityCode = b.FacilityCode )
+			WHERE	b.FacilityID IS NULL
+	
+	/*
+		DELTAS FOR SOLR HERE
+	*/		
+
+	/*Marionjoy Rehab (MJR) HG0675*/
+	DELETE ODS1Stage.Mid.Facility WHERE FacilityId = (select facilityid from ods1STAGE.mid.facility_MJR )
+	insert into ODS1Stage.Mid.Facility(FacilityID, LegacyKey, FacilityCode, FacilityName, FacilityType, FacilityTypeCode, FacilitySearchType, Accreditation, AccreditationDescription, PhoneNumber, AdditionalTransportationInformation, AfterHoursPhoneNumber, AwardsInformation, ClosedHolidaysInformation, CommunityActivitiesInformation, CommunityOutreachProgramInformation, CommunitySupportInformation, FacilityDescription, EmergencyAfterHoursPhoneNumber, FoundationInformation, HealthPlanInformation, IsMedicaidAccepted, IsMedicareAccepted, IsTeaching, LanguageInformation, MedicalServicesInformation, MissionStatement, OfficeCloseTime, OfficeOpenTime, OnsiteGuestServicesInformation, OtherEducationAndTrainingInformation, OtherServicesInformation, OwnershipType, ParkingInstructionsInformation, PaymentPolicyInformation, ProfessionalAffiliationInformation, PublicTransportationInformation, RegionalRelationshipInformation, ReligiousAffiliationInformation, SpecialProgramsInformation, SurroundingAreaInformation, TeachingProgramsInformation, TollFreePhoneNumber, TransplantCapabilitiesInformation, VisitingHoursInformation, VolunteerInformation, YearEstablished, HospitalAffiliationInformation, PhysicianCallCenterPhoneNumber, OverallHospitalStar, AdultTraumaLevel, PediatricTraumaLevel, TreatmentSchedules, ClientToProductID, ClientCode, ClientName, ProductCode, ProductGroupCode, ResPgmApprAma, ResPgmApprAoa, ResPgmApprAda, AwardCount, ProcedureCount, MiscellaneousInformation, AppointmentInformation, FiveStarProcedureCount, ProviderCount, FacilityURL, VisitingHoursMonday, VisitingHoursTuesday, VisitingHoursWednesday, VisitingHoursThursday, VisitingHoursFriday, VisitingHoursSaturday, VisitingHoursSunday, ForeignObjectLeftPercent, WebSite, PhoneXML, UrlXML, ImageXML, FacilityImagePath, MobilePhoneXML, TabletPhoneXML, DesktopPhoneXML)
+	select FacilityID, LegacyKey, FacilityCode, FacilityName, FacilityType, FacilityTypeCode, FacilitySearchType, Accreditation, AccreditationDescription, PhoneNumber, AdditionalTransportationInformation, AfterHoursPhoneNumber, AwardsInformation, ClosedHolidaysInformation, CommunityActivitiesInformation, CommunityOutreachProgramInformation, CommunitySupportInformation, FacilityDescription, EmergencyAfterHoursPhoneNumber, FoundationInformation, HealthPlanInformation, IsMedicaidAccepted, IsMedicareAccepted, IsTeaching, LanguageInformation, MedicalServicesInformation, MissionStatement, OfficeCloseTime, OfficeOpenTime, OnsiteGuestServicesInformation, OtherEducationAndTrainingInformation, OtherServicesInformation, OwnershipType, ParkingInstructionsInformation, PaymentPolicyInformation, ProfessionalAffiliationInformation, PublicTransportationInformation, RegionalRelationshipInformation, ReligiousAffiliationInformation, SpecialProgramsInformation, SurroundingAreaInformation, TeachingProgramsInformation, TollFreePhoneNumber, TransplantCapabilitiesInformation, VisitingHoursInformation, VolunteerInformation, YearEstablished, HospitalAffiliationInformation, PhysicianCallCenterPhoneNumber, OverallHospitalStar, AdultTraumaLevel, PediatricTraumaLevel, TreatmentSchedules, ClientToProductID, ClientCode, ClientName, ProductCode, ProductGroupCode, ResPgmApprAma, ResPgmApprAoa, ResPgmApprAda, AwardCount, ProcedureCount, MiscellaneousInformation, AppointmentInformation, FiveStarProcedureCount, ProviderCount, FacilityURL, VisitingHoursMonday, VisitingHoursTuesday, VisitingHoursWednesday, VisitingHoursThursday, VisitingHoursFriday, VisitingHoursSaturday, VisitingHoursSunday, ForeignObjectLeftPercent, WebSite, PhoneXML, UrlXML, ImageXML, FacilityImagePath, MobilePhoneXML, TabletPhoneXML, DesktopPhoneXML
+	from ods1STAGE.mid.facility_MJR 
+		
