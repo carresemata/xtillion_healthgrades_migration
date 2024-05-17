@@ -675,20 +675,21 @@ select distinct
         where fa.PhoneTypeCode in ('PTUFS', 'PTHFS') 
             and client_details.ClientProductToEntityID = fa.ClientProductToEntityID) then 
         pfxml.phonexml 
-        when (select top 1 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOS' and client_details.ClientToProductID = cl.ClientToProductID) is not null then 
+        when (select 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOS' and client_details.ClientToProductID = cl.ClientToProductID limit 1) is not null then 
         pcxml.phonexml end as phonexml,
 
     -- mobilephonexml
-    case when (select top 1 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSM' and client_details.ClientToProductID = cl.ClientToProductID) is not null then mcxml.mobilephonexml
+    case when (select 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSM' and client_details.ClientToProductID = cl.ClientToProductID limit 1) is not null then mcxml.mobilephonexml
     else mfxml.mobilephonexml end as mobilephonexml,
     
     -- desktopphonexml
-    case when (select top 1 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSDTP' and client_details.ClientToProductID = cl.ClientToProductID) is not null then dcxml.desktopphonexml
+    case when (select 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSDTP' and client_details.ClientToProductID = cl.ClientToProductID limit 1) is not null then dcxml.desktopphonexml
     else dfxml.desktopphonexml end as desktopphonexml,
     
     -- tabletphonexml
-    case when (select top 1 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOST' and client_details.ClientToProductID = cl.ClientToProductID) is not null then tcxml.tabletphonexml
+    case when (select 1 from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOST' and client_details.ClientToProductID = cl.ClientToProductID limit 1) is not null then tcxml.tabletphonexml
     else tfxml.tabletphonexml end as tabletphonexml,
+    
     
     -- urlxml
     case when (select top 1 facilitycode from base.facilitycheckinurl fc where fc.facilitycode = fac.facilitycode) is not null then fcxml.urlxml
@@ -1111,7 +1112,7 @@ cte_action_1 as (
 cte_action_2 as (
    select 
         cte.facilityid,
-        1 as actioncode
+        2 as actioncode
     from cte_facility_update_3 as cte
     left join mid.facility as mid
     on cte.facilityid = mid.facilityid and cte.facilitycode = mid.facilitycode 
