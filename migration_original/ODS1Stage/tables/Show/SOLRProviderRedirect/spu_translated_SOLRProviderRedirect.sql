@@ -15,7 +15,7 @@ create or replace procedure ods1_stage_team.show.sp_load_solrproviderredirect(is
 
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrproviderredirect depends on: 
@@ -25,7 +25,7 @@ declare
 --- show.solrprovider 
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte statement
@@ -41,9 +41,6 @@ declare
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
 

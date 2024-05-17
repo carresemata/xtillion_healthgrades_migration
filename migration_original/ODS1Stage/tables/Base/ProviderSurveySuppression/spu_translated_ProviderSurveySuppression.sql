@@ -6,7 +6,7 @@ as
 declare
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providersurveysuppression depends on:
 --- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
@@ -14,7 +14,7 @@ declare
 --- base.surveysuppressionreason
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
@@ -24,12 +24,9 @@ status string;
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------  
 
 begin
--- no conditionals
+
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------

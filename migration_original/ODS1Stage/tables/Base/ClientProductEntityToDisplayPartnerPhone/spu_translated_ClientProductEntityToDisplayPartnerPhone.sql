@@ -4,7 +4,7 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     as CALLER
     as declare 
     ---------------------------------------------------------
-    --------------- 0. table dependencies -------------------
+    --------------- 1. table dependencies -------------------
     ---------------------------------------------------------
     
     --- base.clientproductentitytodisplaypartnerphone depends on:
@@ -18,7 +18,7 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     --- base.syndicationpartner
 
     ---------------------------------------------------------
-    --------------- 1. declaring variables ------------------
+    --------------- 2. declaring variables ------------------
     ---------------------------------------------------------
     select_statement_1 string;
     select_statement_2 string;
@@ -30,9 +30,6 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     procedure_name varchar(50) default('sp_load_clientproductentitytodisplaypartnerphone');
     execution_start datetime default getdate();
 
-    ---------------------------------------------------------
-    --------------- 2.conditionals if any -------------------
-    ---------------------------------------------------------
     begin 
     ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------

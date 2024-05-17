@@ -6,7 +6,7 @@ as
 declare
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- base.providervideo depends on:
@@ -17,7 +17,7 @@ declare
 --- base.mediacontexttype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
 select_statement string; -- cte and select statement for the merge
@@ -28,9 +28,6 @@ status string; -- status monitoring
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------
 
 begin
 -- No conditionals

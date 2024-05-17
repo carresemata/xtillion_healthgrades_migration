@@ -6,7 +6,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_GEOGRAPHICAREA()
 
 declare
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- mid.geographicarea depends on: 
@@ -15,7 +15,7 @@ declare
 
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
  
     select_statement string; -- cte and select statement for the merge
@@ -27,12 +27,9 @@ declare
     execution_start datetime default getdate();
 
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

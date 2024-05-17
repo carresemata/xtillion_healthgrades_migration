@@ -5,7 +5,7 @@ EXECUTE as CALLER
 as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 --- base.clientproductentityrelationship depends on:
 -- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
@@ -20,7 +20,7 @@ declare
 -- base.practice
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
 select_statement_facility string;
@@ -35,12 +35,9 @@ status string; -- status monitoring
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
 
 begin
--- no conditionals
+
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
