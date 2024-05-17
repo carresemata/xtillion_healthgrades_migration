@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP(ISPROVIDERDELTAPROCESSING BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -26,7 +26,6 @@ declare
 --------------- 1. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement string;
     select_statement string; -- cte and select statement for the merge
     update_statement string; -- update statement for the merge
     insert_statement string; -- insert statement for the merge
@@ -35,15 +34,15 @@ declare
     procedure_name varchar(50) default('sp_load_practicesponsorship');
     execution_start datetime default getdate();
 
-   
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------     
+
 begin
-    if (IsProviderDeltaProcessing) then
-            select_statement := '
-           with CTE_PracticeBatch as (
+
+-- select Statements
+select_statement := 
+$$ with CTE_PracticeBatch as (
                     select 
                         pa.practiceid, 
                         pa.practicecode
@@ -56,31 +55,7 @@ begin
                         pa.practiceid, 
                         pa.practicecode
                     order by pa.practiceid
-                    ),';
-           
-    else
-           truncate_statement := 'truncate TABLE mid.practicesponsorship';
-           select_statement := 'with CTE_PracticeBatch as (
-                    select 
-                        PracticeID, 
-                        PracticeCode 
-                    from base.practice
-                    group by 
-                        PracticeID, 
-                        PracticeCode
-                    order by PracticeID
-                    ),';
-            execute immediate truncate_statement;
-    end if;
-
-
----------------------------------------------------------
------------------ 3. SQL Statements ---------------------
----------------------------------------------------------     
-
--- select Statements
-select_statement := select_statement || 
-$$
+                    ),
 CTE_RawPracData as (
     select	
         pract.practiceid,

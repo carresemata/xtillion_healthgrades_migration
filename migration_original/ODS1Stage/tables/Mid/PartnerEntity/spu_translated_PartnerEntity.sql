@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PartnerEntity(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PartnerEntity()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- mid.partnerentity depends on: 
@@ -21,10 +21,9 @@ declare
 --- base.externaloaspartner
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement string; 
     select_statement string; -- cte and select statement for the merge
     update_statement string; -- update statement for the merge
     insert_statement string; -- insert statement for the merge
@@ -33,41 +32,17 @@ declare
     procedure_name varchar(50) default('sp_load_partnerentity');
     execution_start datetime default getdate();
 
-   
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-           select_statement := '
-            with CTE_ProviderBatch as (
-                select distinct p.providerid, p.providercode
-                from MDM_team.mst.Provider_Profile_Processing as pdp
-                join base.provider as p on p.providercode = pdp.ref_provider_code),
-           ';
-    else
-           truncate_statement := 'truncate TABLE mid.partnerentity';
-           execute immediate truncate_statement;
-           
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select distinct p.providerid, p.providercode
-                from base.partnertoentity as pte
-                join base.provider as p on pte.primaryentityid = p.providerid),
-          ';
-    end if;
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
+begin 
 --- select Statement
 
--- if conditionals:
-select_statement := select_statement || 
-                    $$
+select_statement := $$ with CTE_ProviderBatch as (
+                select distinct p.providerid, p.providercode
+                from MDM_team.mst.Provider_Profile_Processing as pdp
+                join base.provider as p on p.providercode = pdp.ref_provider_code),
                     CTE_PartnerEntity as (
                                 select distinct
                                 			pte.partnertoentityid, 

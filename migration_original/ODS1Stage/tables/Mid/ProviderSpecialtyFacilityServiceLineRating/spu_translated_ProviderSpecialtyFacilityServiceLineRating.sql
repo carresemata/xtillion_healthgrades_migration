@@ -1,11 +1,11 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSPECIALTYFACILITYSERVICELINERATING(IsProviderDeltaProcessing BOOLEAN) 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSPECIALTYFACILITYSERVICELINERATING()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
     AS  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.providerspecialtyfacilityservicelinerating depends on:
@@ -23,7 +23,7 @@ declare
 --- ermart1.facility_proceduretoserviceline (external dependency)
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 2. Declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -35,40 +35,19 @@ declare
     execution_start datetime default getdate();
    
 ---------------------------------------------------------
---------------- 2.Conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-           select_statement := '
-          with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    mdm_team.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
-    else
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    base.provider as p
-                order by
-                    p.providerid),';
-            
-    end if;
-
-
----------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- Select Statement
 
--- If conditionals:
-select_statement := select_statement || 
-                    $$ cte_union as (
+begin
+select_statement := $$ with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),
+                    cte_union as (
     select
         fsl.facilityid,
         fsl.servicelineid,

@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICEDELTA(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICEDELTA() 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrpracticedelta depends on:
@@ -16,29 +16,25 @@ declare
 --- base.provider
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement string;
     merge_statement_1 string; -- merge statement to final table
     merge_statement_2 string;
-    merge_statement_3 string;
-    merge_statement_4 string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrpracticedelta');
     execution_start datetime default getdate();
 
    
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-begin
---- conditionals are executed in the execution section
-
-
----------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
+ begin                               
+
+---------------------------------------------------------
+--------- 4. actions (inserts and updates) --------------
+---------------------------------------------------------  
+
 merge_statement_1 := 'merge into show.solrpracticedelta as target using 
                                            (select distinct
                                                 pr.practiceid,
@@ -75,74 +71,8 @@ merge_statement_1 := 'merge into show.solrpracticedelta as target using
                                             source.startdeltaprocessdate,
                                             source.middeltaprocesscomplete
                                             );';
-                                
-        truncate_statement := 'truncate TABLE show.solrpracticedelta';
-        merge_statement_2 := $$merge into show.solrpracticedelta as target using 
-                                   (select distinct
-                                        pr.practiceid,
-                                        '1' as SolrDeltaTypeCode,
-                                        current_timestamp() as StartDeltaProcessDate,
-                                        '1' as MidDeltaProcessComplete
-                                    from
-                                        base.practice pr
-                                        left join show.solrpracticedelta spd on pr.practiceid = spd.practiceid
-                                    where
-                                        spd.practiceid is null) as source 
-                                   on source.practiceid = target.practiceid
-                                   when not matched then 
-                                    insert (
-                                    PracticeID,
-                                    SolrDeltaTypeCode,
-                                    StartDeltaProcessDate,
-                                    MidDeltaProcessComplete
-                                    )
-                                    values (
-                                    source.practiceid,
-                                    source.solrdeltatypecode,
-                                    source.startdeltaprocessdate,
-                                    source.middeltaprocesscomplete
-                                    );$$;
-
-        merge_statement_3 := $$
-                            merge into show.solrpracticedelta as target using 
-                                (select distinct
-                                    o.practiceid,
-                                    '1' as SolrDeltaTypeCode,
-                                    current_timestamp() as StartDeltaProcessDate,
-                                    '1' as MidDeltaProcessComplete
-                                from
-                                    MDM_team.mst.Provider_Profile_Processing as ppp
-                                    inner join base.provider as P on p.providercode = ppp.ref_provider_code
-                                    inner join base.providertooffice as pto on p.providerid = pto.providerid
-                                    inner join base.office as o on pto.officeid = o.officeid
-                                where
-                                    o.practiceid not in (
-                                        select
-                                            practiceid
-                                        from
-                                            show.solrpracticedelta
-                                    )) as source
-                                on source.practiceid = target.practiceid
-                                when not matched then 
-                                insert (
-                                PracticeID,
-                                SolrDeltaTypeCode,
-                                StartDeltaProcessDate,
-                                MidDeltaProcessComplete
-                                )
-                                values (
-                                source.practiceid,
-                                source.solrdeltatypecode,
-                                source.startdeltaprocessdate,
-                                source.middeltaprocesscomplete
-                                );$$;
-
----------------------------------------------------------
---------- 4. actions (inserts and updates) --------------
----------------------------------------------------------  
-
--- Merge statement ran regardless of the parameter value
-merge_statement_4 := 'merge into show.solrpracticedelta as target using 
+-- Merge statement 
+merge_statement_2 := 'merge into show.solrpracticedelta as target using 
                    (select distinct
                         PracticeId,
                         StartDeltaProcessDate,
@@ -159,14 +89,10 @@ merge_statement_4 := 'merge into show.solrpracticedelta as target using
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-if (isproviderdeltaprocessing) then
+
         execute immediate merge_statement_1;
-else
-        execute immediate truncate_statement;
         execute immediate merge_statement_2;
-        execute immediate merge_statement_3;
-end if;
-execute immediate merge_statement_4 ;
+
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

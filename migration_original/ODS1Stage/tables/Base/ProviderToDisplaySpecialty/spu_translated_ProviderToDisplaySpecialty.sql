@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -24,51 +24,25 @@ declare
 ---------------------------------------------------------
 
     delete_statement string;
-    truncate_statement string;
     select_statement string; -- cte and select statement for the insert
     insert_statement string; -- insert statement 
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertodisplayspecialty');
     execution_start datetime default getdate();
 
-   
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-           delete_statement := 'delete from base.providertodisplayspecialty 
-                                    where ProviderID IN 
-                                        (select p.providerid
-                                        from MDM_team.mst.Provider_Profile_Processing as ppp
-                                        join base.provider as p on ppp.ref_provider_code = p.providercode)';
-
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select p.providerid
-                from MDM_team.mst.Provider_Profile_Processing as ppp
-                join base.provider as p on ppp.ref_provider_code = p.providercode
-            ),';
-    else
-           truncate_statement := 'truncate TABLE base.providertodisplayspecialty';
-           
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select ProviderId
-                from base.provider),';
-    end if;
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
+begin
 --- select Statement
 
--- if conditionals:
-select_statement := select_statement || 
-                    $$ CTE_ProviderBatch as (
+select_statement := $$ with CTE_ProviderBatch as (
+                select p.providerid
+                from MDM_team.mst.Provider_Profile_Processing as ppp
+                join base.provider as p on ppp.ref_provider_code = p.providercode
+            ),
+            CTE_ProviderBatch as (
                                 select ProviderId
                                 from base.provider),
                                 
@@ -139,6 +113,12 @@ select_statement := select_statement ||
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
+delete_statement := 'delete from base.providertodisplayspecialty 
+                                    where ProviderID IN 
+                                        (select p.providerid
+                                        from MDM_team.mst.Provider_Profile_Processing as ppp
+                                        join base.provider as p on ppp.ref_provider_code = p.providercode)';
+
 insert_statement := ' insert INTO base.providertodisplayspecialty 
                         (ProviderID,
                         SpecialtyId) ' ||select_statement;
@@ -147,13 +127,8 @@ insert_statement := ' insert INTO base.providertodisplayspecialty
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-if (isproviderdeltaprocessing) then
     execute immediate delete_statement;
-else
-    execute immediate truncate_statement;
-end if;
-    
-execute immediate insert_statement ;
+    execute immediate insert_statement ;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_OFFICESPECIALTY(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_OFFICESPECIALTY()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- mid.officespecialty depends on: 
@@ -18,7 +18,7 @@ declare
 --- base.provider
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -29,37 +29,17 @@ declare
     procedure_name varchar(50) default('sp_load_officespecialty');
     execution_start datetime default getdate();
 
-   
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-           select_statement := '
-            with CTE_OfficeBatch as (select distinct pto.officeid
-            from MDM_team.mst.Provider_Profile_Processing as pdp 
-            join base.provider as P on p.providercode = pdp.ref_provider_code
-            join base.providertooffice as pto on pto.providerid = p.providerid
-            order by pto.officeid),
-           ';
-    else
-           select_statement := '
-           with CTE_OfficeBatch as (
-           select distinct o.officeid 
-           from base.office as o 
-           order by o.officeid),
-          ';
-    end if;
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
+begin
 --- select Statement
-select_statement := select_statement || 
-                    $$ 
+select_statement := $$ with CTE_OfficeBatch as (select distinct pto.officeid
+            from MDM_team.mst.Provider_Profile_Processing as pdp 
+            join base.provider as P on p.providercode = pdp.ref_provider_code
+            join base.providertooffice as pto on pto.providerid = p.providerid
+            order by pto.officeid),
                     CTE_OfficeSpecialty as (
                         select 
                             etmt.entitytomedicaltermid as OfficeToSpecialtyID, 

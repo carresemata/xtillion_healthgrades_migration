@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICE(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICE()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.practice depends on:
@@ -35,7 +35,7 @@ declare
 --- base.productgroup 
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -46,38 +46,20 @@ declare
     procedure_name varchar(50) default('sp_load_practice');
     execution_start datetime default getdate();
 
-   
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------     
+
 begin
-    if (IsProviderDeltaProcessing) then
-           select_statement := '
-           with CTE_PracticeBatch as (
+--- select Statement
+select_statement := $$ with CTE_PracticeBatch as (
                 select distinct 
                 o.practiceid
                 from MDM_team.mst.Provider_Profile_Processing as PDP 
                     join base.provider as P on p.providercode = pdp.ref_PROVIDER_CODE
                     join base.providertooffice as PTO on pto.providerid = p.providerid
                     join base.office as O on o.officeid = pto.officeid
-                order by o.practiceid), ';
-    else
-           select_statement := '
-           with CTE_PracticeBatch as (
-                select PracticeID
-                from base.practice
-                order by PracticeID ),';
-    end if;
-
-
----------------------------------------------------------
------------------ 3. SQL Statements ---------------------
----------------------------------------------------------     
-
---- select Statement
-select_statement := select_statement || 
-                    $$
+                order by o.practiceid),
                     CTE_Service as (
                         select 
                             p.phonenumber, 

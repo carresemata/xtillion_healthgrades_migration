@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERRECOGNITION(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERRECOGNITION()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
     -- mid.providerrecognition depends on:
@@ -19,7 +19,7 @@ declare
     --- Base.CertificationStatus (base.vwuproviderrecognition)
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -29,41 +29,20 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerrecognition');
     execution_start datetime default getdate();
-
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-
-begin
-    if (IsProviderDeltaProcessing) then
-    
-    select_statement := '
-          with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    mdm_team.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
-    else
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    base.provider as p
-                order by
-                    p.providerid),';
-            
-    end if;
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
-select_statement := select_statement || 
-                    $$
+begin
+
+select_statement := $$ with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),
                     CTE_ProviderRecognition as (
                         select distinct
                         vwpr.providerid, 

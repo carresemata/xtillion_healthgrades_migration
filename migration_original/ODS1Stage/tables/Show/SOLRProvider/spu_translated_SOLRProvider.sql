@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER 
     as
 DECLARE 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 1. Table dependencies -------------------
 ---------------------------------------------------------
     
 -- Show.SOLRProvider depends on: 
@@ -63,5 +63,5 @@ DECLARE
 
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 2. Declaring variables ------------------
 ---------------------------------------------------------

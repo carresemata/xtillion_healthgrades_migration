@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -7,7 +7,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA(IsPro
 declare 
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrproviderdelta depends on: 
@@ -16,68 +16,27 @@ declare
 --- base.providerswithsponsorshipissues (empty)
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    merge_statement_if_1 string;
-    merge_statement_if_2 string;
-    select_statement_if_3 string;
-    insert_statement_if_3 string;
-    merge_statement_if_3 string;
-    select_statement_else string;
-    insert_statement_else string;
-    merge_statement_else string;
+    merge_statement_1 string;
+    merge_statement_2 string;
+    select_statement_3 string;
+    insert_statement_3 string;
+    merge_statement_3 string;
     update_statement string;
     status string;
     procedure_name varchar(50) default('sp_load_solrproviderdelta');
     execution_start datetime default getdate();
 
-    
-   
+
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------  
+
 begin
-    if (IsProviderDeltaProcessing) then
 
-        merge_statement_if_1 := 'merge into show.solrproviderdelta as target using
-                                    (select	
-                                        p.providerid, 
-                                        1 as SolrDeltaTypeCode, 
-                                        current_timestamp() as StartDeltaProcessDate
-                            		from	MDM_team.mst.Provider_Profile_Processing as PPP
-                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
-                            		where	ProviderId not IN (select ProviderId from show.solrproviderdelta)) as source
-                                        on source.providerid = target.providerid
-                                        when not matched then
-                                            insert (
-                                                ProviderId, 
-                                                SolrDeltaTypeCode, 
-                                                StartDeltaProcessDate
-                                            )
-                                            values (
-                                                source.providerid, 
-                                                source.solrdeltatypecode, 
-                                                source.startdeltaprocessdate
-                                            );';
-
-         merge_statement_if_2 :=  'merge into show.solrproviderdelta as target using 
-                                    (select 
-                                        p.providerid
-                                    from 
-                                        MDM_team.mst.Provider_Profile_Processing as PPP
-                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code    
-                                    inner join show.solrproviderdelta SOLRProvDelta
-                                    on p.providerid = solrprovdelta.providerid) as source
-                                    on source.providerid = target.providerid
-                                    WHEN MATCHED then 
-                                        update SET
-                                        target.enddeltaprocessdate = null,
-                                        target.startmovedate = null,
-                                        target.endmovedate = null;';
-
-         select_statement_if_3 := 'with CTE_union as (
+select_statement_3 := 'with CTE_union as (
                                     select
                                         distinct p.providerid,
                                         1 as SolrDeltaTypeCode,
@@ -119,7 +78,7 @@ begin
                                 where
                                     RN1 = 1 ';
                             
-          insert_statement_if_3 := ' insert (
+insert_statement_3 := ' insert (
                                         ProviderID,
                                         SolrDeltaTypeCode,
                                         StartDeltaProcessDate,
@@ -131,45 +90,6 @@ begin
                                         source.startdeltaprocessdate,
                                         source.middeltaprocesscomplete
                                     )';
-                            
-          merge_statement_if_3 := ' merge into show.solrproviderdelta as target
-                                    using (' || select_statement_if_3 || ') as source
-                                    on target.providerid = source.providerid
-                                    when not matched then ' || insert_statement_if_3;
-
-        
-    else
-        select_statement_else := 'select 
-                                    baseprov.providerid, 
-                                    ''1'' as SolrDeltaTypeCode, 
-                                    current_timestamp() as StartDeltaProcessDate, 
-                                    ''1'' as MidDeltaProcessComplete 
-		                          from		
-                                    base.provider as BaseProv ';
-                                    
-        insert_statement_else := ' insert 
-                                        (ProviderID, 
-                                        SolrDeltaTypeCode, 
-                                        StartDeltaProcessDate, 
-                                        MidDeltaProcessComplete)
-                                   values
-                                        (source.providerid, 
-                                        source.solrdeltatypecode, 
-                                        source.startdeltaprocessdate, 
-                                        source.middeltaprocesscomplete)';
-                                        
-        merge_statement_else := ' merge into show.solrproviderdelta as target using 
-                                       ('|| select_statement_else ||') as source 
-                                       on source.providerid = target.providerid
-                                       when not matched then ' || insert_statement_else;
-
-        
-    end if;
-
-
----------------------------------------------------------
------------------ 3. SQL Statements ---------------------
----------------------------------------------------------     
 
 --- update Statement
 update_statement := ' update show.solrproviderdelta 
@@ -182,21 +102,59 @@ update_statement := ' update show.solrproviderdelta
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
+merge_statement_1 := 'merge into show.solrproviderdelta as target using
+                                    (select	
+                                        p.providerid, 
+                                        1 as SolrDeltaTypeCode, 
+                                        current_timestamp() as StartDeltaProcessDate
+                            		from	MDM_team.mst.Provider_Profile_Processing as PPP
+                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
+                            		where	ProviderId not IN (select ProviderId from show.solrproviderdelta)) as source
+                                        on source.providerid = target.providerid
+                                        when not matched then
+                                            insert (
+                                                ProviderId, 
+                                                SolrDeltaTypeCode, 
+                                                StartDeltaProcessDate
+                                            )
+                                            values (
+                                                source.providerid, 
+                                                source.solrdeltatypecode, 
+                                                source.startdeltaprocessdate
+                                            );';
+
+merge_statement_2 :=  'merge into show.solrproviderdelta as target using 
+                                    (select 
+                                        p.providerid
+                                    from 
+                                        MDM_team.mst.Provider_Profile_Processing as PPP
+                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code    
+                                    inner join show.solrproviderdelta SOLRProvDelta
+                                    on p.providerid = solrprovdelta.providerid) as source
+                                    on source.providerid = target.providerid
+                                    WHEN MATCHED then 
+                                        update SET
+                                        target.enddeltaprocessdate = null,
+                                        target.startmovedate = null,
+                                        target.endmovedate = null;';
+
+         
+                            
+merge_statement_3 := ' merge into show.solrproviderdelta as target
+                                    using (' || select_statement_if_3 || ') as source
+                                    on target.providerid = source.providerid
+                                    when not matched then ' || insert_statement_if_3;
+
 
                    
 ---------------------------------------------------------
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
-if (isproviderdeltaprocessing) then
-    execute immediate merge_statement_if_1;
-    execute immediate merge_statement_if_2;
-    execute immediate merge_statement_if_3;
-else
-    execute immediate merge_statement_else;
-end if;
-
-execute immediate update_statement ;
+    execute immediate merge_statement_1;
+    execute immediate merge_statement_2;
+    execute immediate merge_statement_3;
+    execute immediate update_statement ;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

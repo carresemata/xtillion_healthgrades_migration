@@ -25,6 +25,7 @@ def format_table_dependencies():
                             'SQL Statements', 'Actions', 'Inserts', 'Updates', 'WITH', 'NOT', 'EXISTS', 'EXECUTE IMMEDIATE', 
                             'EXCEPTION', 'RETURN', 'OTHER', 'GETDATE', 'TO_VARCHAR']
 
+
                 # 1. For each keyword, replace its occurrence with the lowercase version in the content
                 for keyword in keywords:
                     content = re.sub(rf'\b{keyword}\b', keyword.lower(), content, flags=re.IGNORECASE)
@@ -46,6 +47,7 @@ def format_table_dependencies():
                 # Write the updated content to the file
                 with open(file_path, 'w') as f:
                     f.write(content)
+
 
 
 format_table_dependencies()
