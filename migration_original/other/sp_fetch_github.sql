@@ -42,6 +42,6 @@ BEGIN
 
     CLOSE cur;
 
-    RETURN repo_path;
+    RETURN 'All files compiled successfully';
 END;
 $$;
