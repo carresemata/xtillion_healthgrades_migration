@@ -4,7 +4,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPH
     as CALLER
     as declare 
     ---------------------------------------------------------
-    --------------- 0. table dependencies -------------------
+    --------------- 1. table dependencies -------------------
     ---------------------------------------------------------
     
     --- base.clientproductentitytophone depends on:
@@ -23,7 +23,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPH
 
     
     ---------------------------------------------------------
-    --------------- 1. declaring variables ------------------
+    --------------- 2. declaring variables ------------------
     ---------------------------------------------------------
     
     select_statement_1 string;
@@ -39,9 +39,6 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPH
     execution_start datetime default getdate();
 
 
-    ---------------------------------------------------------
-    --------------- 2.conditionals if any -------------------
-    ---------------------------------------------------------
     begin 
     ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------

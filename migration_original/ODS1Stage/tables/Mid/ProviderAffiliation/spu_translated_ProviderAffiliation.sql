@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERAFFILIATION(IsProviderDeltaProcessing BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERAFFILIATION()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- mid.provideraffiliation depends on: 
@@ -16,7 +16,7 @@ declare
 --- base.providerrole
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -27,41 +27,21 @@ declare
     procedure_name varchar(50) default('sp_load_provideraffiliation');
     execution_start datetime default getdate();
 
-   
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-           select_statement := '
-          with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    MDM_team.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),';
-    else
-           select_statement := '
-           with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    base.provider as p
-                order by
-                    p.providerid),';
-    end if;
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
+begin
 --- select Statement
 
--- if conditionals:
-select_statement := select_statement || 
-                    $$ CTE_ProviderAffiliation as (
+select_statement := $$ with CTE_ProviderBatch as (
+                select
+                    p.providerid
+                from
+                    MDM_team.mst.Provider_Profile_Processing as ppp
+                    join base.provider as P on p.providercode = ppp.ref_provider_code),
+                    CTE_ProviderAffiliation as (
                             select
                                 pta.providertoaffiliationid,
                                 pta.providerid,

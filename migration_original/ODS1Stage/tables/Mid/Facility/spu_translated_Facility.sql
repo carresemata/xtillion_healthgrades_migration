@@ -5,7 +5,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_FACILITY()
     AS  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.facility depends on:
@@ -44,7 +44,7 @@ declare
 -- show.clientcontract
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -55,12 +55,9 @@ declare
     procedure_name varchar(50) default('sp_load_facility');
     execution_start datetime default getdate();
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

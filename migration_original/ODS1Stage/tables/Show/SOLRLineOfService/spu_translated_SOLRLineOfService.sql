@@ -8,7 +8,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRLINEOFSERVICE()
 declare 
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrlineofservice depends on: 
@@ -16,7 +16,7 @@ declare
 --- show.solrlineofservicedelta  
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte statement
@@ -28,12 +28,9 @@ declare
     execution_start datetime default getdate();
 
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

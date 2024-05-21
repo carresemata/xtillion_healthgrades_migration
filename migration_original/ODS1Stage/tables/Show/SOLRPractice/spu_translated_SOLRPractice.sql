@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE("ISPROVIDERDELTAPROCESSING" BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE()
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
 as 'declare 
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrpractice depends on: 
@@ -41,10 +41,9 @@ as 'declare
 --- show.delayclient (show.vwuproviderindex )
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    truncate_statement string;
     select_statement string; -- cte and select statement for the merge
     update_statement string; -- update statement for the merge
     insert_statement string; -- insert statement for the merge
@@ -56,33 +55,14 @@ as 'declare
     procedure_name varchar(50) default(''sp_load_solrpractice'');
     execution_start datetime default getdate();
 
-   
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
+----------------- 3. SQL Statements ---------------------
+---------------------------------------------------------     
 
 begin
-    if (IsProviderDeltaProcessing) then
-        select_statement := ''
-        with cte_practice_batch as (
-                    select distinct 
-                        BasePrac.PracticeID, 
-                        BasePrac.PracticeCode 
-                    from Base.Practice as BasePrac 
-                    inner join Base.Office Off on Off.PracticeID = BasePrac.PracticeID
-                    inner join Base.ProviderToOffice PTO on PTO.OfficeID = Off.OfficeID
-                    inner join Show.vwuProviderIndex ProvIndx on ProvIndx.ProviderID = PTO.ProviderID
-                    order by BasePrac.PracticeID
-                    ),'';
-    else 
+--- select Statement
 
-        truncate_statement := ''truncate TABLE Show.SOLRPractice''; -- Truncated for full loads
-
-        execute immediate truncate_statement;
-        
-        select_statement := ''
-        with cte_practice_batch as (
+select_statement := $$ with cte_practice_batch as (
                     select distinct 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
@@ -92,18 +72,7 @@ begin
                     inner join base.Office Off on PTO.OfficeID = Off.OfficeID
                     inner join Base.Practice as BasePrac on BasePrac.PracticeID = Off.PracticeID
                     order by BasePrac.PracticeID
-                    ),'';
-    end if;
-
-
----------------------------------------------------------
------------------ 3. SQL Statements ---------------------
----------------------------------------------------------     
-
---- select Statement
-
-select_statement := select_statement || 
-                    $$
+                    ),
                         cte_phone as (
                             select
                                 p.OfficeID,

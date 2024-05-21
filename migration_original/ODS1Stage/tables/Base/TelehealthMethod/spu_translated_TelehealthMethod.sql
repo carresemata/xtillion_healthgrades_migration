@@ -5,7 +5,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_TELEHEALTHMETHOD()
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- base.telehealthmethod depends on:
@@ -13,7 +13,7 @@ declare
 --- base.telehealthmethodtype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -24,12 +24,9 @@ declare
     execution_start datetime default getdate();
 
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

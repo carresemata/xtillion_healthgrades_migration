@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER()
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -6,7 +6,7 @@ as
 
 declare
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 --- mid.provider depends on:
@@ -22,40 +22,40 @@ declare
 -- base.specialty
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
 
-create_temp string; 
-insert_temp string; -- delta logic of insert to temporary table
-join_temp_delta string;
+    create_temp string; 
+    insert_temp string; -- delta logic of insert to temporary table
+    join_temp_delta string;
 
--- updates to temporary version of mid.provider
-update_temp_1 string;
-update_temp_2 string;
-update_temp_3 string;
-update_temp_4 string;
-update_temp_5 string;
-update_temp_6 string;
+    -- updates to temporary version of mid.provider
+    update_temp_1 string;
+    update_temp_2 string;
+    update_temp_3 string;
+    update_temp_4 string;
+    update_temp_5 string;
+    update_temp_6 string;
 
--- changes to mid.provider from temp version
-update_statement string;
-insert_statement string;
-select_statement string; 
-merge_statement string;
+    -- changes to mid.provider from temp version
+    update_statement string;
+    insert_statement string;
+    select_statement string; 
+    merge_statement string;
 
-status string;
+    status string;
     procedure_name varchar(50) default('sp_load_provider');
     execution_start datetime default getdate();
 
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------  
+      ---------------------------------------------------------
+      ----------------- 3. SQL Statements ---------------------
+      ---------------------------------------------------------  
 
-begin
-         create_temp := $$
+    begin
+               create_temp := $$
                         CREATE or REPLACE TEMPORARY TABLE mid.tempprovider as
                         select * from  mid.provider LIMIT 0;
                         $$;
@@ -119,16 +119,10 @@ begin
                        from (select * from base.provider) as p
                    $$;
                    
-      if (IsProviderDeltaProcessing) then
         join_temp_delta := $$ inner join MDM_team.mst.Provider_Profile_Processing as ppp on p.providercode = ppp.ref_provider_code $$;
         insert_temp := insert_temp || join_temp_delta;
-      else
-        insert_temp := insert_temp;
-      end if;
 
-      ---------------------------------------------------------
-      ----------------- 3. SQL Statements ---------------------
-      ---------------------------------------------------------  
+
       select_statement := $$
                           (select * from mid.tempprovider)
                           $$;

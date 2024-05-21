@@ -5,7 +5,7 @@ as CALLER
 as declare 
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 --- base.market depends on:
 -- base.geographicarea
@@ -14,7 +14,7 @@ as declare
 -- dbo.requestedmarketlocationsmissingfromods2 (external schema)
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
@@ -24,12 +24,9 @@ status string;
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
 
 begin
--- no conditionals
+
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------

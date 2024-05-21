@@ -1,11 +1,11 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE()
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.providerpracticeoffice depends on:
@@ -24,53 +24,26 @@ declare
 -- base.citystatepostalcode
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-delta_select_statement string; -- cte and select statement for delta
-select_statement string; -- cte and select statement for the merge
-update_statement string; -- main update statement for the merge
-insert_statement string; -- insert statement for the merge
-merge_statement string; -- merge statement to final table
-status string; -- status monitoring
+    select_statement string; -- cte and select statement for the merge
+    update_statement string; -- main update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    merge_statement string; -- merge statement to final table
+    status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerpracticeoffice');
     execution_start datetime default getdate();
-
-   
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
-   
-begin
-    if (IsProviderDeltaProcessing) then
-       execute immediate $$ truncate TABLE mid.providerpracticeoffice $$;
-       delta_select_statement :=  $$        
-                            with CTE_ProviderBatch as (
-                            select p.providerid
-                            from MDM_team.mst.Provider_Profile_Processing as ppp
-                            join base.provider as p on ppp.ref_provider_code = p.providercode), 
-                            $$;
-    else
-       execute immediate $$   delete from mid.providerpracticeoffice ppo 
-                              using raw.vw_provider_profile ppp
-                              where ppp.office_officecode = ppo.officecode
-                         $$;
-            
-       delta_select_statement := $$
-                               with CTE_ProviderBatch as (
-                                    select p.providerid
-                                    from base.provider as p
-                                    order by p.providerid),
-                               $$;
-    end if;
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
-select_statement := delta_select_statement || 
-            $$
+begin
+select_statement := $$ with CTE_ProviderBatch as (
+                            select p.providerid
+                            from MDM_team.mst.Provider_Profile_Processing as ppp
+                            join base.provider as p on ppp.ref_provider_code = p.providercode),
             CTE_ServiceNumbers as (
                 select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc, 
                        o.lastupdatedate, pto.phoneid) as SequenceId1   

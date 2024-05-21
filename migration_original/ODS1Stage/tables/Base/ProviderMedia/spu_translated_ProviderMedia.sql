@@ -6,7 +6,7 @@ as
 declare
     
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providermedia depends on the following tables:
 --- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
@@ -14,7 +14,7 @@ declare
 --- base.mediatype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -25,12 +25,9 @@ declare
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

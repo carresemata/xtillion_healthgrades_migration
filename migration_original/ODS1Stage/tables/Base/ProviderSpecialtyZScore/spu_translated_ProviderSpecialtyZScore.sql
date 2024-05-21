@@ -5,7 +5,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSPECIALTYZSCORE
     AS  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- base.providerspecialtyzscore depends on:
@@ -24,7 +24,7 @@ declare
 --- show.solrfacility
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and Select statement for the merge
@@ -36,12 +36,9 @@ declare
     procedure_name varchar(50) default('sp_load_providerspecialtyzscore');
     execution_start datetime default getdate();
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 BEGIN
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

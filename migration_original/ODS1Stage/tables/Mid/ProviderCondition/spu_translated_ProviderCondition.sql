@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERCONDITION(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERCONDITION()
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -6,7 +6,7 @@ as
 
 declare
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 -- mid.providercondition depends on:
@@ -19,10 +19,9 @@ declare
 -- base.medicaltermtype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
-
-
+  
   select_statement string; 
   insert_statement string;
   merge_statement string; 
@@ -32,19 +31,10 @@ declare
 
 
 ---------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------  
-
----------------------------------------------------------
 ----------------- 3. sql statements ---------------------
 ---------------------------------------------------------  
 
--- the conditional statements are included in this block since 
--- the conditional itself directly determines the select
-
 begin
-
-      if (IsProviderDeltaProcessing) then
         select_statement := $$
                             (with CTE_ProviderBatch as (
                                 select
@@ -87,48 +77,8 @@ begin
                               pc.providertoconditionid
                              from CTE_ProviderCondition pc)
                             $$;
-                            
-      else
-        select_statement := $$
-                            (with CTE_ProviderBatch as (
-                              select p.providerid
-                              from base.provider as p
-                              order by p.providerid
-                            ),
-                            
-                            CTE_ProviderCondition as (
-                              select
-                                etmt.entitytomedicaltermid as ProviderToConditionID,
-                                etmt.entityid as ProviderID,
-                                mt.medicaltermcode as ConditionCode,
-                                mt.medicaltermdescription1 as ConditionDescription,
-                                mt.medicaltermdescription2 as ConditionGroupDescription,
-                                mt.legacykey
-                              from CTE_ProviderBatch as pb
-                              inner join base.entitytomedicalterm as etmt on etmt.entityid = pb.providerid 
-                              inner join base.medicalterm as mt on mt.medicaltermid = etmt.medicaltermid
-                              inner join base.entitytype as et on et.entitytypeid = etmt.entitytypeid
-                              inner join base.medicaltermset as mts on mts.medicaltermsetid = mt.medicaltermsetid
-                              inner join base.medicaltermtype as mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid
-                              where mts.medicaltermsetcode = 'HGProvider' and mtt.medicaltermtypecode = 'Condition'
-                            )
-                            
-                            select
-                              pc.conditioncode,
-                              pc.conditiondescription,
-                              pc.conditiongroupdescription,
-                              pc.legacykey,
-                              pc.providerid,
-                              pc.providertoconditionid
-                            from CTE_ProviderCondition pc)
-                            $$;
-      end if;
-      
 
-      ---------------------------------------------------------
-      --------- 4. actions (inserts and updates) --------------
-      ---------------------------------------------------------
-      insert_statement := $$
+              insert_statement := $$
                          insert 
                           ( 
                           ConditionCode,
@@ -147,8 +97,11 @@ begin
                           source.providerid,
                           source.providertoconditionid
                           )
-                          $$;
+                          $$;    
 
+      ---------------------------------------------------------
+      --------- 4. actions (inserts and updates) --------------
+      ---------------------------------------------------------
 
       merge_statement := $$
                         merge into mid.providercondition as target 

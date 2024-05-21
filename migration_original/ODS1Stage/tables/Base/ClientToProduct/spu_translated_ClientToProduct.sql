@@ -5,7 +5,7 @@ EXECUTE as CALLER
 as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 --- base.clienttoproduct depends on:
 -- mdm_team.mst.customer_product_profile_processing (base.vw_swimlane_base_client)
@@ -13,7 +13,7 @@ declare
 -- base.product
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
 select_statement string;
@@ -24,12 +24,9 @@ status string; -- status monitoring
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
 
 begin
--- no conditionals
+
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------   

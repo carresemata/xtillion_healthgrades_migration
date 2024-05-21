@@ -7,7 +7,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_OFFICETOADDRESS()
 declare 
 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.officetoaddress depends on:
 --- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
@@ -15,7 +15,7 @@ declare
 --- base.addresstype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
@@ -25,12 +25,9 @@ status string;
     execution_start datetime default getdate();
 
 
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------  
 
 begin
--- no conditionals
+
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------

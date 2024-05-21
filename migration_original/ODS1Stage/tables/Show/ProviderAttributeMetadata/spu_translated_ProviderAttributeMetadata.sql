@@ -5,7 +5,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADA
     as  
 declare 
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.providerattributemetadata depends on: 
@@ -38,7 +38,7 @@ declare
 --- base.providervideo
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
@@ -50,12 +50,9 @@ declare
     execution_start datetime default getdate();
 
    
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------   
    
 begin
-    -- no conditionals
+    
 
 
 ---------------------------------------------------------

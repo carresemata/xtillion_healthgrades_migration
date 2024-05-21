@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERPROCEDURE(IsProviderDeltaProcessing BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERPROCEDURE()
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -6,7 +6,7 @@ as
 
 declare
 ---------------------------------------------------------
---------------- 0. table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
 --- mid.providerprocedure depends on:
@@ -19,40 +19,28 @@ declare
 -- base.medicaltermtype
 
 ---------------------------------------------------------
---------------- 1. declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-
-source_table string; 
-select_statement string; 
-insert_statement string;
-update_statement string;
-merge_statement string; 
-status string;
+    select_statement string; 
+    insert_statement string;
+    update_statement string;
+    merge_statement string; 
+    status string;
     procedure_name varchar(50) default('sp_load_providerprocedure');
     execution_start datetime default getdate();
-
-
----------------------------------------------------------
---------------- 2.conditionals if any -------------------
----------------------------------------------------------  
-begin
-
-    if (IsProviderDeltaProcessing) then
-        source_table := $$ MDM_team.mst.Provider_Profile_Processing as ppp
-                            join base.provider as p on ppp.ref_provider_code = p.providercode $$;
-    else
-        source_table := $$ base.provider $$;
-end if;
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
 
+begin
+
     select_statement := $$
-                        (with CTE_ProviderBatch as (
+                        with CTE_ProviderBatch as (
                         select p.providerid
-                        from $$ ||source_table|| $$
+                        from MDM_team.mst.Provider_Profile_Processing as ppp
+                            join base.provider as p on ppp.ref_provider_code = p.providercode
                         order by p.providerid
                         ),
                     
