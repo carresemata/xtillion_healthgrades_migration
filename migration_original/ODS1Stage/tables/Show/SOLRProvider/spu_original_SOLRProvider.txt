@@ -62,3 +62,1038 @@ update ods1stage.Show.SOLRProvider
 
 
 
+--spusolrprovidergeneratefrommid
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+--EXEC [Show].[spuSOLRProviderGenerateFromMid] 0
+ALTER   PROCEDURE [Show].[spuSOLRProviderGenerateFromMid]
+	@IsProviderDeltaProcessing BIT = 1
+AS 
+   SET NOCOUNT OFF
+
+    DECLARE @ErrorMessage VARCHAR(1000)
+
+    BEGIN TRY
+		EXEC ODS1Stage.util.spuRebuildIndexes
+		
+		EXEC [hack].[spuMAPFreeze]
+
+		/*DECLARE @IsProviderDeltaProcessing BIT = 1--*/
+		IF OBJECT_ID('tempdb..#ProvUpdates') IS NOT NULL DROP TABLE #ProvUpdates
+		SELECT	TOP 0 [ProviderID], [ProviderCode], [ProviderLegacyKey], [ProviderTypeID], [ProviderTypeGroup], [FirstName], [MiddleName], [LastName], [Suffix], [Degree], [Gender], [NPI], [AMAID], [UPIN], [MedicareID], [DEANumber], [TaxIDNumber], [DateOfBirth], [PlaceOfBirth], [CarePhilosophy], [ProfessionalInterest], [PrimaryEmailAddress], [MedicalSchoolNation], [YearsSinceMedicalSchoolGraduation], [HasDisplayImage], [DisplayImage], [HasElectronicMedicalRecords], [HasElectronicPrescription], [AcceptsNewPatients], [YearlySearchVolume], [ProviderProfileViewOneYear], [PatientExperienceSurveyOverallScore], [PatientExperienceSurveyOverallStarValue], [PatientExperienceSurveyOverallCount], [ProviderBiography], [ProviderURL], [DisplayStatusCode], [SubStatusCode], [DuplicateProviderCode], [ProductGroupCode], [SponsorCode], [ProductCode], [FacilityCode], [SurveyResponse], [SurveyResponseDate], [HasMalpracticeState], [ProcedureCount], [ConditionCount], [IsActive], [UpdatedDate], [UpdatedSource], [Title], [CityStateAll], [DisplayPatientExperienceSurveyOverallScore], [DeactivationReason], [PatientVolume], [AvailabilityStatement], [HasOAR], [IsMMPUser], [HasAboutMe], [SearchBoostSatisfaction], [SearchBoostAccessibility], [IsPCPCalculated], [FAFBoostSatisfaction], [FAFBoostSancMalp], [FFDisplaySpecialty], [FFPESBoost], [FFMalMultiHQ], [FFMalMulti], [ProviderSubTypeCode]
+		INTO	#ProvUpdates
+		FROM	Show.SOLRProvider
+        CREATE INDEX ix_ProvUpdates_ProviderID ON #ProvUpdates (ProviderID)	
+
+		IF OBJECT_ID('tempdb..#BatchProcess') IS NOT NULL DROP TABLE #BatchProcess
+		SELECT	TOP 0 ProviderId, NULL AS BatchNumber
+		INTO	#BatchProcess
+		FROM	Base.Provider
+		
+		IF @IsProviderDeltaProcessing = 0 
+		BEGIN
+			TRUNCATE TABLE Show.SOLRProvider
+			INSERT INTO #BatchProcess
+			SELECT	ProviderId, NULL
+			FROM	Base.Provider
+			WHERE	NULLIF(NPI, '') IS NOT NULL
+		END
+		IF @IsProviderDeltaProcessing = 1
+		BEGIN
+			INSERT INTO #BatchProcess
+			SELECT DISTINCT
+					pd.ProviderID
+				   ,NULL AS BatchNumber
+			FROM    xfr.SOLRProviderDelta AS pd 
+			INNER JOIN Base.Provider AS p ON p.ProviderID = pd.ProviderID
+			WHERE 	p.NPI IS NOT NULL
+			UNION 
+			SELECT DISTINCT
+					pdp.ProviderID
+				   ,NULL AS BatchNumber
+			FROM    snowflake.etl.ProviderDeltaProcessing AS pdp 
+			INNER JOIN Base.Provider AS p ON p.ProviderID = pdp.ProviderID
+			WHERE 	p.NPI IS NOT NULL
+		END
+        CREATE INDEX ix_Mid_ProviderID ON #BatchProcess (ProviderID)	
+        CREATE INDEX ix_Mid_BatchNumber ON #BatchProcess (BatchNumber) INCLUDE ([ProviderID])
+
+	--set the records a batch number based on a batch size we are setting
+        DECLARE @batchNumberMin INT
+        DECLARE @batchNumberMax INT
+        DECLARE @batchSize FLOAT
+        DECLARE @sql VARCHAR(MAX)
+
+        SET @batchSize = 10000
+				--THIS IS THE BATCH SIZE WE ARE PROCESSING... 100K SEEMS TO BE THE FASTEST WITHOUT GOING OVERBOARD
+				-- Steve O changed the batch size on 6/8 because of some hardware changes made on the server.
+        SET @batchNumberMin = 1
+        SELECT  @batchNumberMax = CEILING(COUNT(*) / @batchSize)
+        FROM    #BatchProcess
+
+		
+		--IF @IsProviderDeltaProcessing = 1
+		--BEGIN
+			WHILE @batchNumberMin <= @batchNumberMax 
+				BEGIN
+					SET @sql = '
+					update a
+					set a.BatchNumber = ' + CAST(@batchNumberMin AS VARCHAR(MAX))
+						+ '
+					--select *
+					from #BatchProcess a
+					join 
+					(
+						select top ' + CAST(@batchSize AS VARCHAR(MAX))
+						+ ' ProviderId
+						from #BatchProcess
+						where BatchNumber is null
+					)b on (a.ProviderID = b.ProviderID)
+					'
+					EXEC (@sql)
+			
+					SET @batchNumberMin = @batchNumberMin + 1	
+				END	
+		--END
+	--process the records based on designated batches			
+        DECLARE @batchProcessMin INT
+        DECLARE @batchProcessMax INT
+
+        SET @batchProcessMin = 1
+        SELECT  @batchProcessMax = MAX(BatchNumber)
+        FROM    #BatchProcess
+				 
+		IF OBJECT_ID('tempdb..#ProviderImage') IS NOT NULL DROP TABLE #ProviderImage
+		SELECT		a.ProviderID
+					,a.[FileName] AS ImageFilePath
+					,'http://d306gt4zvs7g2s.cloudfront.net/img/prov/'+SUBSTRING(a.FileName,1,1) +  '/' + SUBSTRING(a.FileName,2,1) +  '/' + SUBSTRING(a.FileName,3,1)  +  '/' + a.FileName AS imFull 
+					,ROW_NUMBER()OVER(PARTITION BY a.ProviderId ORDER BY a.ProviderId) RN1
+        INTO		#ProviderImage
+		FROM		Base.ProviderImage a
+		INNER JOIN	Base.MediaSize ms WITH(NOLOCK) 
+					ON a.MediaSizeID = ms.MediaSizeID 
+        WHERE		ms.MediaSizeName='medium' 
+		DELETE #ProviderImage WHERE RN1 > 1
+		CREATE INDEX ix_ProviderImage_ProviderID ON #ProviderImage (ProviderID)	
+		
+		IF OBJECT_ID('tempdb..#CarePhilosophy') IS NOT NULL DROP TABLE #CarePhilosophy
+		SELECT		ProviderID, pam.ProviderAboutMeText, ROW_NUMBER()OVER(PARTITION BY ProviderId ORDER BY PAM.LastUpdatedDate DESC) AS RN1
+		INTO		#CarePhilosophy
+		FROM		Base.AboutMe am
+		INNER JOIN	Base.ProviderToAboutMe pam 
+					ON am.AboutMeID = pam.AboutMeID
+					AND am.AboutMeCode = 'CarePhilosophy'
+		DELETE #CarePhilosophy WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#CarePhilosophy_ProviderID ON #CarePhilosophy(ProviderID)	
+		
+		IF OBJECT_ID('tempdb..#cityStateMultiple') IS NOT NULL DROP TABLE #cityStateMultiple
+        SELECT  a.ProviderID
+                ,dbo.GetPipeSeparatedCityState(a.ProviderID) AS CityStateAll
+        INTO    #cityStateMultiple
+        FROM    #BatchProcess a
+		INNER JOIN (
+						SELECT		ProviderID--652,813
+						FROM		Mid.ProviderPracticeOffice
+						GROUP BY	ProviderID
+						HAVING		COUNT(DISTINCT CONCAT(City, State)) > 1
+					) b ON (a.ProviderID = b.ProviderID)		
+        CREATE INDEX CIX_#cityStateMultiple_ProviderID ON #cityStateMultiple (ProviderID)	
+		
+		IF OBJECT_ID('tempdb..#cityStateSingle') IS NOT NULL DROP TABLE #cityStateSingle
+		;WITH cte_ProviderId AS (
+			SELECT		ProviderID--652,813
+			FROM		Mid.ProviderPracticeOffice
+			GROUP BY	ProviderID
+			HAVING		COUNT(DISTINCT CONCAT(City, State)) = 1
+		)
+
+		SELECT	ProviderId, RTRIM(LTRIM(City)) + ', ' + State AS CityStateAll
+		INTO	#cityStateSingle
+		FROM	Mid.ProviderPracticeOffice
+		WHERE	ProviderId IN (
+					SELECT		ProviderID--652,813
+					FROM		cte_ProviderId 
+				)
+        CREATE INDEX CIX_#cityStateSingle_ProviderID ON #cityStateSingle (ProviderID)	
+
+		IF OBJECT_ID('tempdb..#CityStateAll') IS NOT NULL DROP TABLE #CityStateAll
+        SELECT		P.ProviderId
+					,CASE WHEN C.ProviderID IS NULL THEN S.CityStateAll ELSE C.CityStateAll
+					END AS CityStateAll
+		INTO		#CityStateAll
+		FROM		#BatchProcess P
+		LEFT JOIN	#cityStateSingle S ON S.ProviderID = P.ProviderID
+		LEFT JOIN	#cityStateMultiple C ON C.ProviderID = P.ProviderID
+        CREATE INDEX CIX_#CityStateAll_ProviderID ON #CityStateAll (ProviderID)	
+		
+		IF OBJECT_ID('tempdb..#Email') IS NOT NULL DROP TABLE #Email
+		SELECT		ProviderID, X.EmailAddress, ROW_NUMBER()OVER(PARTITION BY ProviderId ORDER BY X.LastUpdateDate DESC) AS RN1
+		INTO		#Email
+		FROM		Base.ProviderEmail X
+		DELETE #Email WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#Email_ProviderID ON #Email(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ProviderTypeGroup') IS NOT NULL DROP TABLE #ProviderTypeGroup
+		SELECT		ProviderTypeID, RTRIM(LTRIM(x.ProviderTypeCode)) AS ProviderTypeCode, ROW_NUMBER()OVER(PARTITION BY ProviderTypeID ORDER BY X.LastUpdateDate DESC) AS RN1
+		INTO		#ProviderTypeGroup
+		FROM		Base.ProviderType X
+		DELETE #Email WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#ProviderTypeGroup_ProviderID ON #ProviderTypeGroup(ProviderTypeID)
+		
+		IF OBJECT_ID('tempdb..#MedicalSchoolNation') IS NOT NULL DROP TABLE #MedicalSchoolNation
+		SELECT		X.ProviderID, X.NationName, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.NationName DESC, X.GraduationYear DESC) AS RN1
+		INTO		#MedicalSchoolNation
+		FROM		Mid.ProviderEducation X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		DELETE #MedicalSchoolNation WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#MedicalSchoolNation_ProviderID ON #MedicalSchoolNation(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#YearsSinceMedicalSchoolGraduation') IS NOT NULL DROP TABLE #YearsSinceMedicalSchoolGraduation
+		SELECT		X.ProviderID, YEAR(GETDATE()) - NULLIF(TRY_CONVERT(INT, GraduationYear), 0) AS YearsSinceMedicalSchoolGraduation, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.NationName DESC, X.GraduationYear DESC) AS RN1
+		INTO		#YearsSinceMedicalSchoolGraduation
+		FROM		Mid.ProviderEducation X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		DELETE #YearsSinceMedicalSchoolGraduation WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#YearsSinceMedicalSchoolGraduation_ProviderID ON #YearsSinceMedicalSchoolGraduation(ProviderID)	
+		
+		IF OBJECT_ID('tempdb..#PatientExperienceSurveyOverallScore') IS NOT NULL DROP TABLE #PatientExperienceSurveyOverallScore
+		SELECT		X.ProviderID, (ProviderAverageScore / 5) * 100 AS PatientExperienceSurveyOverallScore, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.UpdatedOn DESC) AS RN1
+		INTO		#PatientExperienceSurveyOverallScore
+		FROM		dbo.ProviderSurveyAggregate X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		WHERE		QuestionID = 231
+		DELETE #PatientExperienceSurveyOverallScore WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#PatientExperienceSurveyOverallScore_ProviderID ON #PatientExperienceSurveyOverallScore(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#PatientExperienceSurveyOverallStarValue') IS NOT NULL DROP TABLE #PatientExperienceSurveyOverallStarValue
+		SELECT		X.ProviderID, X.ProviderAverageScore, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.UpdatedOn DESC) AS RN1
+		INTO		#PatientExperienceSurveyOverallStarValue
+		FROM		dbo.ProviderSurveyAggregate X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		WHERE		QuestionID = 231
+		DELETE #PatientExperienceSurveyOverallStarValue WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#PatientExperienceSurveyOverallStarValue_ProviderID ON #PatientExperienceSurveyOverallStarValue(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#PatientExperienceSurveyOverallCount') IS NOT NULL DROP TABLE #PatientExperienceSurveyOverallCount
+		SELECT		X.ProviderID, X.QuestionCount, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.UpdatedOn DESC) AS RN1
+		INTO		#PatientExperienceSurveyOverallCount
+		FROM		dbo.ProviderSurveyAggregate X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		WHERE		QuestionID = 231
+		DELETE #PatientExperienceSurveyOverallCount WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#PatientExperienceSurveyOverallCount_ProviderID ON #PatientExperienceSurveyOverallCount(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#DisplayStatusCode') IS NOT NULL DROP TABLE #DisplayStatusCode
+		SELECT	X.ProviderId, X.DisplayStatusCode, X.HierarchyRank, X.SubStatusRank, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.HierarchyRank, X.SubStatusRank) AS RN1
+		INTO	#DisplayStatusCode
+		FROM(
+			SELECT		A.ProviderId, c.DisplayStatusCode, a.HierarchyRank, SS.SubStatusRank
+			FROM		Base.ProviderToSubStatus AS a 
+			INNER JOIN	#BatchProcess B ON B.ProviderID = A.ProviderID
+			INNER JOIN	Base.SubStatus AS SS ON SS.SubStatusID = a.SubStatusID
+			INNER JOIN	Base.DisplayStatus AS c ON c.DisplayStatusID = SS.DisplayStatusID
+			WHERE		a.hierarchyrank = 1
+			UNION
+			SELECT		ProviderId, 'A' AS DisplayStatusCode, 2147483647 AS HierarchyRank, 2147483647 AS SubStatusRank
+			FROM		Base.Provider
+		)X
+		DELETE #DisplayStatusCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#DisplayStatusCode_ProviderID ON #DisplayStatusCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#SubStatusCode') IS NOT NULL DROP TABLE #SubStatusCode
+		SELECT	X.ProviderId, X.SubStatusCode, X.HierarchyRank, X.SubStatusRank, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY X.HierarchyRank, X.SubStatusRank) AS RN1
+		INTO	#SubStatusCode
+		FROM(
+			SELECT		A.ProviderId, SS.SubStatusCode, a.HierarchyRank, SS.SubStatusRank
+			FROM		Base.ProviderToSubStatus AS a 
+			INNER JOIN	#BatchProcess B ON B.ProviderID = A.ProviderID
+			INNER JOIN	Base.SubStatus AS SS ON SS.SubStatusID = a.SubStatusID
+			INNER JOIN	Base.DisplayStatus AS c ON c.DisplayStatusID = SS.DisplayStatusID
+			WHERE		a.hierarchyrank = 1
+			UNION
+			SELECT		ProviderId, 'K' AS SubStatusCode, 2147483647 AS HierarchyRank, 2147483647 AS SubStatusRank
+			FROM		Base.Provider
+		)X
+		DELETE #SubStatusCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#SubStatusCode_ProviderID ON #SubStatusCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ProductGroupCode') IS NOT NULL DROP TABLE #ProductGroupCode
+		SELECT		P.ProviderID, ProductGroupCode, ROW_NUMBER()OVER(PARTITION BY P.ProviderId ORDER BY ProductGroupCode DESC) AS RN1
+		INTO		#ProductGroupCode
+		FROM		Mid.ProviderSponsorship X
+		INNER JOIN	Base.Provider P ON P.ProviderCode = X.ProviderCode
+		INNER JOIN	#BatchProcess B ON B.ProviderID = P.ProviderID
+		WHERE		ProductGroupCode = 'PDC'
+		DELETE #ProductGroupCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#ProductGroupCode_ProviderID ON #ProductGroupCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ProductCode') IS NOT NULL DROP TABLE #ProductCode
+		SELECT		P.ProviderID, ProductCode, ROW_NUMBER()OVER(PARTITION BY P.ProviderId ORDER BY ProductGroupCode DESC) AS RN1
+		INTO		#ProductCode
+		FROM		Mid.ProviderSponsorship X
+		INNER JOIN	Base.Provider P ON P.ProviderCode = X.ProviderCode
+		INNER JOIN	#BatchProcess B ON B.ProviderID = P.ProviderID
+		WHERE		ProductGroupCode = 'PDC'
+		DELETE #ProductCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#ProductCode_ProviderID ON #ProductCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#SponsorCode') IS NOT NULL DROP TABLE #SponsorCode
+		SELECT		P.ProviderID, ClientCode AS SponsorCode, ROW_NUMBER()OVER(PARTITION BY P.ProviderId ORDER BY ProductGroupCode DESC) AS RN1
+		INTO		#SponsorCode
+		FROM		Mid.ProviderSponsorship X
+		INNER JOIN	Base.Provider P ON P.ProviderCode = X.ProviderCode
+		INNER JOIN	#BatchProcess B ON B.ProviderID = P.ProviderID
+		WHERE		ProductGroupCode = 'PDC'
+		DELETE #SponsorCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#SponsorCode_ProviderID ON #SponsorCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#FacilityCode') IS NOT NULL DROP TABLE #FacilityCode
+		SELECT		P.ProviderID, dbo.GetPipeSeparatedPDCFacility(X.ProviderCode) Facility, ROW_NUMBER()OVER(PARTITION BY P.ProviderId ORDER BY ProductGroupCode DESC) AS RN1
+		INTO		#FacilityCode
+		FROM		Mid.ProviderSponsorship X
+		INNER JOIN	Base.Provider P ON P.ProviderCode = X.ProviderCode
+		INNER JOIN	#BatchProcess B ON B.ProviderID = P.ProviderID
+		WHERE		ProductGroupCode = 'PDC'
+		DELETE #FacilityCode WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#FacilityCode_ProviderID ON #FacilityCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#AboutMe') IS NOT NULL DROP TABLE #AboutMe
+		SELECT		PAM.ProviderID, ProviderAboutMeText, ROW_NUMBER()OVER(PARTITION BY B.ProviderId ORDER BY PAM.LastUpdatedDate DESC) AS RN1
+		INTO		#AboutMe
+		FROM		Base.AboutMe am
+		INNER JOIN	Base.ProviderToAboutMe pam 
+					ON am.AboutMeID = pam.AboutMeID
+					AND am.AboutMeCode = 'ResponseToPes'
+		INNER JOIN	#BatchProcess B ON B.ProviderID = PAM.ProviderID
+		DELETE #AboutMe WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#AboutMe_ProviderID ON #AboutMe(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#SurveyResponseDate') IS NOT NULL DROP TABLE #SurveyResponseDate
+		SELECT		pam.ProviderID, SurveyResponseDate, ROW_NUMBER()OVER(PARTITION BY B.ProviderId ORDER BY PAM.SurveyResponseDate DESC) AS RN1
+		INTO		#SurveyResponseDate
+		FROM		Mid.ProviderSurveyResponse pam 
+		INNER JOIN	#BatchProcess B ON B.ProviderID = PAM.ProviderID
+		DELETE #SurveyResponseDate WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#SurveyResponseDate_ProviderID ON #SurveyResponseDate(ProviderID)
+							
+		IF OBJECT_ID('tempdb..#HasMalpracticeState') IS NOT NULL DROP TABLE #HasMalpracticeState
+		SELECT	ProviderId, HasMalpracticeState, ROW_NUMBER()OVER(PARTITION BY ProviderID ORDER BY HasMalpracticeState DESC) AS RN1
+		INTO	#HasMalpracticeState
+		FROM(
+			SELECT	ProviderId
+					,CASE WHEN EXISTS (
+								SELECT 1
+								FROM Mid.ProviderPracticeOffice ppo
+								JOIN Base.MalpracticeState mps ON ppo.State = mps.STATE AND ISNULL(mps.Active,1) = 1
+								WHERE p.ProviderID = ppo.ProviderID
+							)
+						THEN 1
+						WHEN EXISTS (
+								SELECT 1
+								FROM Mid.ProviderMalpractice pm
+								WHERE p.ProviderID = pm.ProviderID
+							)
+						THEN 1 ELSE 0 END HasMalpracticeState
+			FROM		#BatchProcess P
+		)X
+		DELETE #HasMalpracticeState WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#HasMalpracticeState_ProviderID ON #HasMalpracticeState(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ProcedureCount') IS NOT NULL DROP TABLE #ProcedureCount
+		SELECT		X.ProviderID, COUNT(ProcedureCode) AS ProcedureCount
+		INTO		#ProcedureCount
+		FROM		Mid.ProviderProcedure X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		GROUP BY	X.ProviderID
+		CREATE CLUSTERED INDEX CIX_#ProcedureCount_ProviderID ON #ProcedureCount(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ConditionCount') IS NOT NULL DROP TABLE #ConditionCount
+		SELECT		X.ProviderID, COUNT(ProcedureCode) AS ConditionCount
+		INTO		#ConditionCount
+		FROM		Mid.ProviderProcedure X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		GROUP BY	X.ProviderID
+		CREATE CLUSTERED INDEX CIX_#ConditionCount_ProviderID ON #ConditionCount(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#ConditionCode') IS NOT NULL DROP TABLE #ConditionCode
+		SELECT		X.ProviderID, COUNT(ProcedureCode) AS ConditionCount
+		INTO		#ConditionCode
+		FROM		Mid.ProviderProcedure X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		GROUP BY	X.ProviderID
+		CREATE CLUSTERED INDEX CIX_#ConditionCode_ProviderID ON #ConditionCode(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#OAR') IS NOT NULL DROP TABLE #OAR
+        SELECT		DISTINCT B.ProviderId, HasOar
+		INTO		#OAR
+        FROM		Mid.ProviderSponsorship X
+		INNER JOIN	Base.Product bp ON X.ProductCode = bp.ProductCode
+		INNER JOIN	Base.Provider P ON P.ProviderCode = X.ProviderCode
+		INNER JOIN	#BatchProcess B ON B.ProviderID = P.ProviderID
+					AND(
+						bp.ProductTypeCode = 'PRACTICE'
+						OR x.clientcode  IN ('OCHSNR', 'PRVHEW')
+					)
+		
+		IF OBJECT_ID('tempdb..#AvailabilityStatement') IS NOT NULL DROP TABLE #AvailabilityStatement
+		SELECT		X.ProviderID, AppointmentAvailabilityStatement, ROW_NUMBER()OVER(PARTITION BY X.ProviderId ORDER BY LastUpdatedDate DESC) AS RN1
+		INTO		#AvailabilityStatement
+		FROM		Base.ProviderAppointmentAvailabilityStatement X
+		INNER JOIN	#BatchProcess B ON B.ProviderID = X.ProviderID
+		CREATE CLUSTERED INDEX CIX_#AvailabilityStatement_ProviderID ON #AvailabilityStatement(ProviderID)
+		
+		IF OBJECT_ID('tempdb..#HasAboutMe') IS NOT NULL DROP TABLE #HasAboutMe
+		SELECT		DISTINCT B.ProviderID, 1 AS HasAboutMe
+		INTO		#HasAboutMe
+		FROM		Base.AboutMe X
+		INNER JOIN	Base.ProviderToAboutMe PAM ON PAM.AboutMeID = X.AboutMeID
+		INNER JOIN	#BatchProcess B ON B.ProviderID = PAM.ProviderID
+		WHERE		X.AboutMeCode = 'About'
+		CREATE CLUSTERED INDEX CIX_#HasAboutMe_ProviderID ON #HasAboutMe(ProviderID)
+
+		IF OBJECT_ID('tempdb..#ProviderSubType') IS NOT NULL DROP TABLE #ProviderSubType
+		SELECT		x.ProviderID, z.ProviderSubTypeCode, ROW_NUMBER()OVER(PARTITION BY x.ProviderId ORDER BY z.ProviderSubTypeRank ASC, x.LastUpdateDate DESC) AS RN1
+		INTO		#ProviderSubType
+		FROM		Base.ProviderToProviderSubType x
+		INNER JOIN	Base.ProviderSubType z ON x.ProviderSubTypeID = z.ProviderSubTypeID
+		INNER JOIN	#BatchProcess B ON B.ProviderID = x.ProviderID
+		DELETE #ProviderSubType WHERE RN1 > 1
+		CREATE CLUSTERED INDEX CIX_#ProviderSubType_ProviderID ON #ProviderSubType(ProviderID)
+
+		DROP TABLE IF EXISTS #ProviderIsBoardEligible
+		--Using ANY Providers that have Board Actions (Sanctions)
+		SELECT ps.ProviderID
+		INTO #ProviderIsBoardEligible
+		FROM Base.ProviderSanction ps
+		JOIN Base.SanctionAction sa ON sa.SanctionActionID = ps.SanctionActionID
+		JOIN Base.SanctionActionType sat ON sat.SanctionActionTypeID = sa.SanctionActionTypeID
+		JOIN #BatchProcess bp ON ps.ProviderID = bp.ProviderID
+		WHERE sat.SanctionActionTypeCode = 'B'
+		UNION
+		--Using Only Provider SubType (DOC and NDOC)
+		SELECT ptpst.ProviderID
+		FROM Base.ProviderSubType pst
+		JOIN Base.ProviderToProviderSubType ptpst ON ptpst.ProviderSubTypeID = pst.ProviderSubTypeID
+		JOIN #BatchProcess bp ON ptpst.ProviderID = bp.ProviderID
+		WHERE pst.IsBoardActionEligible = 1
+		UNION
+		--Using Provider SubType To Degree (MDEX Plus Degrees)
+		SELECT ptpst.ProviderID
+		FROM Base.ProviderSubTypeToDegree psttd
+		JOIN Base.ProviderToProviderSubType ptpst ON psttd.ProviderSubTypeID = ptpst.ProviderSubTypeID
+		JOIN Base.ProviderToDegree ptd ON ptd.ProviderID = ptpst.ProviderID AND psttd.DegreeID = ptd.DegreeID
+		JOIN #BatchProcess bp ON ptpst.ProviderID = bp.ProviderID
+		WHERE psttd.IsBoardActionEligible = 1
+		UNION
+		--Using Specialty Group (GMPA)
+		SELECT ps.ProviderID
+		FROM Base.SpecialtyGroup sg
+		JOIN Base.SpecialtyGroupToSpecialty sgts ON sgts.SpecialtyGroupID = sg.SpecialtyGroupID
+		JOIN Base.ProviderToSpecialty ps ON ps.SpecialtyID = sgts.SpecialtyID
+		JOIN #BatchProcess bp ON ps.ProviderID = bp.ProviderID
+		WHERE sg.IsBoardActionEligible = 1
+
+		CREATE CLUSTERED INDEX CIX_#ProviderIsBoardEligible_ProviderID ON #ProviderIsBoardEligible(ProviderID)
+				
+        PRINT 'Process Start'
+        PRINT GETDATE()
+        WHILE @batchProcessMin <= @batchProcessMax 
+            BEGIN	
+				--get the records to process that are new or deltas within a batch
+                BEGIN TRY
+                    DROP TABLE #BatchInsertUpdateProcess
+                END TRY
+                BEGIN CATCH
+                END CATCH
+                SELECT DISTINCT
+                        ProviderID
+                INTO    #BatchInsertUpdateProcess
+                FROM    #BatchProcess
+                WHERE   BatchNumber = @batchProcessMin
+						
+                CREATE INDEX ix_Mid_ProviderID ON #BatchInsertUpdateProcess (ProviderID)
+				
+				--(37239 row(s) affected) / 00:06:50
+				TRUNCATE TABLE #ProvUpdates
+				INSERT INTO #ProvUpdates([ProviderID], [ProviderCode], [ProviderLegacyKey], [ProviderTypeID], [ProviderTypeGroup], [FirstName], [MiddleName], [LastName], [Suffix], [Degree], [Gender], [NPI], [AMAID], [UPIN], [MedicareID], [DEANumber], [TaxIDNumber], [DateOfBirth], [PlaceOfBirth], [CarePhilosophy], [ProfessionalInterest], [PrimaryEmailAddress], [MedicalSchoolNation], [YearsSinceMedicalSchoolGraduation], [HasDisplayImage], [DisplayImage], [HasElectronicMedicalRecords], [HasElectronicPrescription], [AcceptsNewPatients], [YearlySearchVolume], [ProviderProfileViewOneYear], [PatientExperienceSurveyOverallScore], [PatientExperienceSurveyOverallStarValue], [PatientExperienceSurveyOverallCount], [ProviderBiography], [ProviderURL], [DisplayStatusCode], [SubStatusCode], [DuplicateProviderCode], [ProductGroupCode], [SponsorCode], [ProductCode], [FacilityCode], [SurveyResponse], [SurveyResponseDate], [HasMalpracticeState], [ProcedureCount], [ConditionCount], [IsActive], [UpdatedDate], [UpdatedSource], [Title], [CityStateAll], [DisplayPatientExperienceSurveyOverallScore], [DeactivationReason], [PatientVolume], [AvailabilityStatement], [HasOAR], [IsMMPUser], [HasAboutMe], [SearchBoostSatisfaction], [SearchBoostAccessibility], [IsPCPCalculated], [FAFBoostSatisfaction], [FAFBoostSancMalp], [FFDisplaySpecialty], [FFPESBoost], [FFMalMultiHQ], [FFMalMulti], [ProviderSubTypeCode])
+				SELECT b.ProviderID
+                    ,ProviderCode
+                    ,LegacyKey AS ProviderLegacyKey
+                    ,ProviderTypeID
+                    ,ProviderTypeGroup
+                    ,FirstName
+                    ,MiddleName
+                    ,LastName
+                    ,Suffix
+                    ,UPPER(Degree) AS Degree
+                    ,UPPER(Gender) AS Gender
+                    ,NPI
+                    ,AMAID
+                    ,UPIN
+                    ,MedicareID
+                    ,DEANumber
+                    ,TaxIDNumber
+                    ,DateOfBirth
+                    ,PlaceOfBirth
+                    ,CarePhilosophy
+                    ,ProfessionalInterest
+                    ,PrimaryEmailAddress
+                    , /*City,St*/MedicalSchoolNation
+                    ,YearsSinceMedicalSchoolGraduation
+                    ,HasDisplayImage
+                    ,imFull AS DisplayImage
+                    ,HasElectronicMedicalRecords
+                    ,HasElectronicPrescription
+                    ,AcceptsNewPatients
+                    ,YearlySearchVolume
+                    ,ProviderProfileViewOneYear
+                    ,PatientExperienceSurveyOverallScore
+                    ,PatientExperienceSurveyOverallStarValue
+                    ,PatientExperienceSurveyOverallCount
+                    ,ProviderBiography
+                    ,ProviderURL
+                    ,py.DisplayStatusCode
+                    ,py.SubStatusCode
+                    ,CASE WHEN SubStatusCode = 'U' THEN SubStatusValueA ELSE NULL END AS DuplicateProviderCode
+                    ,ProductGroupCode
+                    ,SponsorCode
+                    ,ProductCode
+                    ,FacilityCode
+                    ,SurveyResponse
+                    ,SurveyResponseDate
+					,HasMalpracticeState
+					,ProcedureCount
+					,ConditionCount
+                    ,NULL AS IsActive
+                    ,UpdatedDate
+                    ,UpdatedSource
+                    ,Title
+                    ,CityStateAll
+                    ,CASE WHEN PatientExperienceSurveyOverallScore >= 75 THEN 1 ELSE 0 END AS DisplayPatientExperienceSurveyOverallScore
+                    ,ds.DeactivationReason AS DeactivationReason
+					,PatientVolume
+                    ,AvailabilityStatement
+					,HasOAR
+                    ,IsMMPUser
+					,HasAboutMe
+                    ,SearchBoostSatisfaction
+                    ,SearchBoostAccessibility
+					,IsPCPCalculated
+					,FAFBoostSatisfaction
+					,FAFBoostSancMalp
+					,FFDisplaySpecialty
+					,FFPESBoost
+					,FFMalMultiHQ
+					,FFMalMulti
+					,ProviderSubTypeCode
+                FROM(
+                        SELECT p.ProviderID
+                            ,p.ProviderCode
+                            ,p.ProviderTypeID
+                            ,p.FirstName
+                            ,p.MiddleName
+                            ,p.LastName
+                            ,p.Suffix
+                            ,p.Gender
+                            ,p.NPI
+                            ,p.AMAID
+                            ,p.UPIN
+                            ,p.MedicareID
+                            ,p.DEANumber
+                            ,p.TaxIDNumber
+                            ,p.DateOfBirth
+                            ,p.PlaceOfBirth
+							,(
+								SELECT	TOP 1 ProviderAboutMeText 
+								FROM	#CarePhilosophy X
+								WHERE	X.ProviderID = p.ProviderID
+							) AS CarePhilosophy
+                            ,p.ProfessionalInterest
+                            ,p.AcceptsNewPatients
+                            ,p.HasElectronicMedicalRecords
+                            ,p.HasElectronicPrescription
+                            ,p.LegacyKey
+                            ,p.DegreeAbbreviation AS Degree
+                            ,p.Title
+                            ,p.ProviderURL
+                            ,p.ExpireCode
+                            ,pss.SubStatusValueA
+							,(
+								SELECT	TOP 1 X.CityStateAll
+								FROM	#CityStateAll X
+								WHERE	X.ProviderID = p.ProviderID
+							)AS CityStateAll
+                            ,(
+								SELECT	TOP 1 EmailAddress 
+								FROM	#Email X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS PrimaryEmailAddress
+                            ,(
+                                SELECT	TOP 1 RTRIM(LTRIM(ProviderTypeCode))
+								FROM	#ProviderTypeGroup X
+								WHERE	X.ProviderTypeID = p.ProviderTypeID
+                            ) AS ProviderTypeGroup
+                            ,(
+                                SELECT TOP 1 NationName
+                                FROM   #MedicalSchoolNation X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS MedicalSchoolNation
+                            ,(
+								SELECT	TOP 1 YearsSinceMedicalSchoolGraduation
+                                FROM	#YearsSinceMedicalSchoolGraduation X
+                                WHERE	X.ProviderID = p.ProviderID
+                            ) AS YearsSinceMedicalSchoolGraduation    
+                            ,CASE WHEN EXISTS(SELECT ProviderId FROM #ProviderImage a WHERE a.ProviderID = p.ProviderID) THEN 1 ELSE 0 END AS HasDisplayImage
+                            ,(
+                                SELECT	TOP 1 ImageFilePath
+                                FROM	#ProviderImage a
+                                WHERE	a.ProviderID = p.ProviderID
+                            ) AS [Image]
+                            ,(
+                                SELECT	TOP 1 imFull
+                                FROM	#ProviderImage a
+                                WHERE	a.ProviderID = p.ProviderID
+                            ) AS imFull
+                            ,(
+                                SELECT	TOP 1 ProviderProfileVisits
+                                FROM	HGMD.HGProProviderProfileVisits a
+                                WHERE	a.ProviderCode = p.ProviderCode
+                            ) AS ProviderProfileViewOneYear
+                            ,NULL AS YearlySearchVolume
+                            ,(
+                                SELECT	TOP 1 PatientExperienceSurveyOverallScore
+                                FROM	#PatientExperienceSurveyOverallScore X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS PatientExperienceSurveyOverallScore
+                            ,(
+                                SELECT	TOP 1 ProviderAverageScore
+                                FROM	#PatientExperienceSurveyOverallStarValue X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS PatientExperienceSurveyOverallStarValue
+                            ,(
+                                SELECT	TOP 1 QuestionCount
+                                FROM	#PatientExperienceSurveyOverallCount X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS PatientExperienceSurveyOverallCount
+                            ,NULL AS ProviderBiography
+                            ,(
+								SELECT	TOP 1 DisplayStatusCode
+								FROM	#DisplayStatusCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS DisplayStatusCode
+                            ,(
+								SELECT	TOP 1 SubStatusCode
+								FROM	#SubStatusCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS SubStatusCode
+                            ,(
+								SELECT	TOP 1 ProductGroupCode
+								FROM	#ProductGroupCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS ProductGroupCode
+                            ,(
+                                SELECT	TOP 1 SponsorCode
+								FROM	#SponsorCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS SponsorCode
+                            ,(
+                                SELECT	TOP 1 ProductCode
+								FROM	#ProductCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS ProductCode
+                            ,(
+                                SELECT	TOP 1 Facility
+								FROM	#FacilityCode X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS FacilityCode
+							,(
+                                SELECT	TOP 1 ProviderAboutMeText
+								FROM	#AboutMe X
+								WHERE	X.ProviderID = p.ProviderID
+                            ) AS SurveyResponse
+                            ,(
+                                SELECT	TOP 1 SurveyResponseDate
+                                FROM	#SurveyResponseDate X
+                                WHERE	X.ProviderID = p.ProviderID
+                            ) AS SurveyResponseDate
+							,(
+                                SELECT	TOP 1 HasMalpracticeState
+                                FROM	#HasMalpracticeState X
+                                WHERE	X.ProviderID = p.ProviderID
+							) AS HasMalpracticeState
+							,(
+								SELECT ProcedureCount
+								FROM   #ProcedureCount X
+								WHERE  X.ProviderID = P.ProviderID
+							) AS ProcedureCount
+							,(
+								SELECT ConditionCount
+								FROM   #ConditionCount X
+								WHERE  X.ProviderID = P.ProviderID
+							) AS ConditionCount
+							,NULL AS PatientVolume
+							,(
+                                SELECT	TOP 1 AppointmentAvailabilityStatement
+                                FROM	#AvailabilityStatement X
+                                WHERE	X.ProviderID = p.ProviderID
+                            ) AS AvailabilityStatement
+                            ,p.ProviderLastUpdateDateOverall AS UpdatedDate
+                            ,NULL AS UpdatedSource
+                            ,(
+                                SELECT	TOP 1 HasOar
+                                FROM	#OAR X
+                                WHERE	X.ProviderID = p.ProviderID
+                            ) AS HasOar
+							,NULL AS IsMMPUser,
+							(
+                                SELECT	TOP 1 HasAboutMe
+                                FROM	#HasAboutMe X
+                                WHERE	X.ProviderID = p.ProviderID
+							) AS HasAboutMe
+							,pb.SearchBoostSatisfaction
+                            ,pb.SearchBoostAccessibility
+							,pb.IsPCPCalculated
+							,pb.FAFBoostSatisfaction
+							,pb.FAFBoostSancMalp
+							,p.FFDisplaySpecialty
+							,pb.FFESatisfactionBoost as FFPESBoost
+							,pb.FFMalMultiHQ
+							,pb.FFMalMulti
+                            ,(
+								SELECT	TOP 1 x.ProviderSubTypeCode 
+								FROM	#ProviderSubType x
+								WHERE	x.ProviderID = p.ProviderID
+                            ) AS ProviderSubTypeCode
+                        FROM   Mid.Provider AS p
+						inner join Base.Provider as pb on pb.ProviderID = p.ProviderID
+                            INNER JOIN #BatchInsertUpdateProcess
+                            AS batch ON batch.ProviderID = p.ProviderID
+                            LEFT JOIN #cityStateMultiple e ON (p.ProviderID = e.ProviderID)
+                            LEFT JOIN (SELECT   a.ProviderID
+                                                ,a.SubStatusValueA
+                                        FROM     Base.ProviderToSubStatus a
+                                                JOIN Base.SubStatus b ON b.SubStatusID = a.SubStatusID
+                                                    AND b.SubStatusCode = 'U'
+                                        ) pss ON pss.ProviderID = p.ProviderID  
+
+
+                    ) AS py
+                    LEFT JOIN Base.DisplayStatus ds ON ds.DisplayStatusCode = py.DisplayStatusCode
+					JOIN #BatchInsertUpdateProcess b ON b.ProviderID = py.ProviderID
+					
+		ALTER INDEX ALL on #ProvUpdates REBUILD
+				--00:00:00		
+
+		/*Provider Images Update*/			
+		UPDATE		PU
+		SET			PU.DisplayImage ='/img/prov/'+ LOWER(SUBSTRING(bp.ProviderCode,1,1)) + '/'+ LOWER(SUBSTRING(bp.ProviderCode,2,1)) + '/'+ LOWER(SUBSTRING(bp.ProviderCode,3,1)) + '/'+ LOWER(bp.ProviderCode) +'_w' + CAST(ms.Width AS VARCHAR(10)) + 'h' + CAST(ms.Height AS VARCHAR(10)) + '_v' + bpi.ExternalIdentifier + '.jpg' 
+		--SELECT		'/img/prov/'+ LOWER(SUBSTRING(bp.ProviderCode,1,1)) + '/'+ LOWER(SUBSTRING(bp.ProviderCode,2,1)) + '/'+ LOWER(SUBSTRING(bp.ProviderCode,3,1)) + '/'+ LOWER(bp.ProviderCode) +'_w' + CAST(ms.Width AS VARCHAR(10)) + 'h' + CAST(ms.Height AS VARCHAR(10)) + '_v' + bpi.ExternalIdentifier + '.jpg' AS imgU, pu.DisplayImage
+		FROM		Base.ProviderImage bpi
+		INNER JOIN	Base.Provider bp ON bp.ProviderID = bpi.ProviderID
+		INNER JOIN	#ProvUpdates PU 
+					ON PU.ProviderId = bp.ProviderId
+					AND PU.DisplayImage IS NULL
+					AND PU.HasDisplayImage = 1
+		INNER JOIN	Base.MediaImageHost mih ON mih.MediaImageHostID = bpi.MediaImageHostID
+		INNER JOIN	Base.MediaContextType mct ON mct.MediaContextTypeID = bpi.MediaContextTypeID
+		CROSS JOIN	Base.MediaSize ms
+		WHERE		mih.MediaImageHostCode = 'BRIGHTSPOT'
+					AND ms.MediaSizeCode IN ( 'MEDIUM')--,'SMALL', 'LARGE', 'HIGHRES')
+											--AND bpi.providerid = 'E49E5050-872D-E111-B3AF-B499BAA4D952'
+		
+		IF @IsProviderDeltaProcessing = 1
+		BEGIN
+				--00:00:08
+				UPDATE s
+				SET s.ProviderCode = px.ProviderCode
+					,s.ProviderTypeID = px.ProviderTypeID
+					,s.ProviderTypeGroup = px.ProviderTypeGroup
+					,s.FirstName = px.FirstName
+					,s.MiddleName = px.MiddleName
+					,s.LastName = px.LastName
+					,s.Suffix = px.Suffix
+					,s.Degree = px.Degree
+					,s.Gender = px.Gender
+					,s.NPI = px.NPI
+					,s.AMAID = px.AMAID
+					,s.UPIN = px.UPIN
+					,s.MedicareID = px.MedicareID
+					,s.DEANumber = px.DEANumber
+					,s.TaxIDNumber = px.TaxIDNumber
+					,s.DateOfBirth = px.DateOfBirth
+					,s.PlaceOfBirth = px.PlaceOfBirth
+					,s.CarePhilosophy = px.CarePhilosophy
+					,s.ProfessionalInterest = px.ProfessionalInterest
+					,s.PrimaryEmailAddress = px.PrimaryEmailAddress
+					,s.MedicalSchoolNation = px.MedicalSchoolNation
+					,s.YearsSinceMedicalSchoolGraduation = px.YearsSinceMedicalSchoolGraduation
+					,s.HasDisplayImage = px.HasDisplayImage
+					,s.HasElectronicMedicalRecords = px.HasElectronicMedicalRecords
+					,s.HasElectronicPrescription = px.HasElectronicPrescription
+					,s.AcceptsNewPatients = px.AcceptsNewPatients
+					,s.YearlySearchVolume = px.YearlySearchVolume
+					,s.ProviderProfileViewOneYear = ISNULL(px.ProviderProfileViewOneYear,0)
+					,s.PatientExperienceSurveyOverallScore = px.PatientExperienceSurveyOverallScore
+					,s.PatientExperienceSurveyOverallStarValue = px.PatientExperienceSurveyOverallStarValue
+					,s.PatientExperienceSurveyOverallCount = px.PatientExperienceSurveyOverallCount
+					,s.ProviderBiography = px.ProviderBiography
+					,s.ProviderURL = px.ProviderURL
+					,s.ProductGroupCode = px.ProductGroupCode
+					,s.SponsorCode = px.SponsorCode
+					,s.ProductCode = px.ProductCode
+					,s.FacilityCode = px.FacilityCode
+					,s.ProviderLegacyKey = px.ProviderLegacyKey
+					,s.DisplayImage = px.DisplayImage
+					,s.SurveyResponse = px.SurveyResponse
+					,s.SurveyResponseDate = px.SurveyResponseDate
+					,s.UpdatedDate = px.UpdatedDate
+					,s.IsActive = px.IsActive
+					,s.UpdatedSource = px.UpdatedSource
+					,s.Title = px.Title
+					,s.CityStateAll = px.CityStateAll
+					,s.DisplayPatientExperienceSurveyOverallScore = px.DisplayPatientExperienceSurveyOverallScore
+					,s.DisplayStatusCode = px.DisplayStatusCode
+					,s.SubStatusCode = px.SubStatusCode
+					,s.DeactivationReason = px.DeactivationReason
+					,s.DuplicateProviderCode = px.DuplicateProviderCode
+					,s.PatientVolume = px.PatientVolume
+					,s.HasMalpracticeState = px.HasMalpracticeState
+					,s.ProcedureCount = px.ProcedureCount
+					,s.ConditionCount = px.ConditionCount
+					,s.AvailabilityStatement = px.AvailabilityStatement
+					,s.HasOar = px.HasOar
+					,s.IsMMPUser = px.IsMMPUser
+					,s.HasAboutMe = px.HasAboutMe
+                    ,s.SearchBoostSatisfaction = px.SearchBoostSatisfaction
+                    ,s.SearchBoostAccessibility = px.SearchBoostAccessibility
+					,s.isPCPCalculated = px.isPCPCalculated
+					,s.FAFBoostSatisfaction = px.FAFBoostSatisfaction
+					,s.FAFBoostSancMalp = px.FAFBoostSancMalp
+					,s.FFDisplaySpecialty = px.FFDisplaySpecialty
+					,s.FFPESBoost = px.FFPESBoost
+					,s.FFMalMultiHQ = px.FFMalMultiHQ
+					,s.FFMalMulti = px.FFMalMulti
+					,s.ProviderSubTypeCode = px.ProviderSubTypeCode
+				FROM Show.SOLRProvider s		
+					JOIN #ProvUpdates px ON px.ProviderID = s.ProviderID;
+		END			
+
+		
+		INSERT INTO Show.SOLRProvider (
+                                 ProviderID
+                                ,ProviderCode
+                                ,ProviderTypeID
+                                ,ProviderTypeGroup
+                                ,FirstName
+                                ,MiddleName
+                                ,LastName
+                                ,Suffix
+                                ,Degree
+                                ,Gender
+                                ,NPI
+                                ,AMAID
+                                ,UPIN
+                                ,MedicareID
+                                ,DEANumber
+                                ,TaxIDNumber
+                                ,DateOfBirth
+                                ,PlaceOfBirth
+                                ,CarePhilosophy
+                                ,ProfessionalInterest
+                                ,PrimaryEmailAddress
+                                ,MedicalSchoolNation
+                                ,YearsSinceMedicalSchoolGraduation
+                                ,HasDisplayImage
+                                ,HasElectronicMedicalRecords
+                                ,HasElectronicPrescription
+                                ,AcceptsNewPatients
+                                ,YearlySearchVolume
+                                ,ProviderProfileViewOneYear
+                                ,PatientExperienceSurveyOverallScore
+                                ,PatientExperienceSurveyOverallStarValue
+                                ,PatientExperienceSurveyOverallCount
+                                ,ProviderBiography
+								,ProviderURL
+                                ,ProductGroupCode
+                                ,SponsorCode
+                                ,ProductCode
+                                ,FacilityCode
+                                ,ProviderLegacyKey
+                                ,DisplayImage
+                                ,SurveyResponse
+                                ,SurveyResponseDate
+                                ,IsActive
+                                ,UpdatedDate
+                                ,UpdatedSource
+                                ,Title
+                                ,CityStateAll
+                                ,DisplayPatientExperienceSurveyOverallScore
+                                ,DisplayStatusCode
+                                ,SubStatusCode
+                                ,DuplicateProviderCode
+                                ,DeactivationReason
+								,PatientVolume
+								,HasMalpracticeState
+								,ProcedureCount
+								,ConditionCount
+                                ,AvailabilityStatement
+								,HasOar
+								,IsMMPUser
+								,HasAboutMe
+                                ,SearchBoostSatisfaction
+                                ,SearchBoostAccessibility
+								,isPCPCalculated
+								,FAFBoostSatisfaction
+								,FAFBoostSancMalp
+								,FFDisplaySpecialty
+								,FFPESBoost
+								,FFMalMultiHQ
+								,FFMalMulti
+								,ProviderSubTypeCode)
+                         select px.ProviderID
+                                ,px.ProviderCode
+                                ,px.ProviderTypeID
+                                ,px.ProviderTypeGroup
+                                ,px.FirstName
+                                ,px.MiddleName
+                                ,px.LastName
+                                ,px.Suffix
+                                ,px.Degree
+                                ,px.Gender
+                                ,px.NPI
+                                ,px.AMAID
+                                ,px.UPIN
+                                ,px.MedicareID
+                                ,px.DEANumber
+                                ,px.TaxIDNumber
+                                ,px.DateOfBirth
+                                ,px.PlaceOfBirth
+                                ,px.CarePhilosophy
+                                ,px.ProfessionalInterest
+                                ,px.PrimaryEmailAddress
+                                ,px.MedicalSchoolNation
+                                ,px.YearsSinceMedicalSchoolGraduation
+                                ,px.HasDisplayImage
+                                ,px.HasElectronicMedicalRecords
+                                ,px.HasElectronicPrescription
+                                ,px.AcceptsNewPatients
+                                ,px.YearlySearchVolume
+                                ,ISNULL(px.ProviderProfileViewOneYear,0)
+                                ,px.PatientExperienceSurveyOverallScore
+                                ,px.PatientExperienceSurveyOverallStarValue
+                                ,px.PatientExperienceSurveyOverallCount
+                                ,px.ProviderBiography
+								,px.ProviderURL
+                                ,px.ProductGroupCode
+                                ,px.SponsorCode
+                                ,px.ProductCode
+                                ,px.FacilityCode
+                                ,px.ProviderLegacyKey
+                                ,px.DisplayImage
+                                ,px.SurveyResponse
+                                ,px.SurveyResponseDate
+                                ,px.IsActive
+                                ,px.UpdatedDate
+                                ,px.UpdatedSource
+                                ,px.Title
+                                ,px.CityStateAll
+                                ,px.DisplayPatientExperienceSurveyOverallScore
+                                ,px.DisplayStatusCode
+                                ,px.SubStatusCode
+                                ,px.DuplicateProviderCode
+                                ,px.DeactivationReason
+								,px.PatientVolume
+								,px.HasMalpracticeState
+								,px.ProcedureCount
+								,px.ConditionCount
+                                ,px.AvailabilityStatement
+								,px.HasOar	
+								,px.IsMMPUser		
+								,px.HasAboutMe	
+                                ,px.SearchBoostSatisfaction
+                                ,px.SearchBoostAccessibility	
+								,px.isPCPCalculated			
+								,px.FAFBoostSatisfaction
+								,px.FAFBoostSancMalp
+								,px.FFDisplaySpecialty
+								,px.FFPESBoost
+								,px.FFMalMultiHQ
+								,px.FFMalMulti
+								,px.ProviderSubTypeCode
+							from #ProvUpdates px
+							where not exists (select 1 from Show.SOLRProvider x where x.ProviderID = px.ProviderID);		
+			
+                PRINT 'Batch ' + CAST(@batchProcessMin AS VARCHAR(1000)) + ' Completed'
+                SET @batchProcessMin = @batchProcessMin + 1	
+            END	
+
+		--DROP TABLE #ProvUpdates;
+							
+        PRINT 'Process End'
+        PRINT GETDATE()						
+		
+		UPDATE		T
+		SET			ProviderLegacyKey = S.LegacyKey
+		--SELECT	*
+		FROM		Show.SOLRProvider T
+		INNER JOIN	#BatchProcess P
+					ON P.ProviderId = T.ProviderId
+		INNER JOIN	base.ProviderLegacyKeys S
+					ON T.ProviderId = S.ProviderId
+
+		IF OBJECT_ID('tempdb..#TempDeleteDuplicates') IS NOT NULL DROP TABLE #TempDeleteDuplicates
+		SELECT	SOLRPRoviderID, ProviderId
+		INTO	#TempDeleteDuplicates
+		FROM(
+			SELECT	SOLRPRoviderID
+					,ProviderId
+					,ProviderCode
+					,ROW_NUMBER()OVER(PARTITION BY ProviderCode ORDER BY CASE WHEN sponsorshipXML IS NOT NULL THEN 1 ELSE 9 END DESC, DisplayStatusCode, ProviderTypeGroup DESC, SOLRPRoviderID) AS SequenceId
+			FROM    Show.SOLRProvider
+		)X
+		WHERE	SequenceId > 1
+		
+		DELETE Show.SOLRProvider WHERE SOLRPRoviderID IN (SELECT SOLRPRoviderID FROM #TempDeleteDuplicates)
+		
+		UPDATE		T
+		SET			DateOfFirstLoad = S.LastUpdateDate
+		FROM		Show.SOLRProvider T
+		INNER JOIN	#BatchProcess P
+					ON P.ProviderId = T.ProviderId
+		INNER JOIN	Base.Provider S ON S.ProviderID = T.ProviderID
+
+		UPDATE		T
+		SET			SourceUpdate = S.SourceName
+					,SourceUpdateDateTime = S.LastUpdateDateTime
+		FROM		Show.SOLRProvider T
+		INNER JOIN	#BatchProcess P
+					ON P.ProviderId = T.ProviderId
+		INNER JOIN	Show.ProviderSourceUpdate S ON S.ProviderID = T.ProviderID
+
+		UPDATE S SET AcceptsNewPatients = 1
+		FROM		Show.SOLRProvider S
+		INNER JOIN	Mid.Provider M ON M.ProviderID = S.ProviderID
+		WHERE		M.acceptsnewpatients = 1 AND ISNULL(S.AcceptsNewPatients,0) = 0
+
+		UPDATE		S SET SuppressSurvey = CASE WHEN X.ProviderID IS NOT NULL THEN 1 ELSE 0 END
+		FROM		#BatchProcess B
+		INNER JOIN	Show.SOLRProvider S ON S.ProviderID = B.ProviderID
+		LEFT JOIN (SELECT DISTINCT ProviderId FROM ODS1Stage.Base.ProviderSurveySuppression) X ON X.ProviderID = B.ProviderID
+
+		UPDATE		S SET IsBoardActionEligible = CASE WHEN X.ProviderID IS NOT NULL THEN 1 ELSE 0 END
+		FROM		#BatchProcess B
+		INNER JOIN	Show.SOLRProvider S ON S.ProviderID = B.ProviderID
+		LEFT JOIN	#ProviderIsBoardEligible X ON X.ProviderID = B.ProviderID
+
+
+
+    END TRY
+    BEGIN CATCH
+        SET @ErrorMessage = 'Error in procedure spuSOLRProviderGenerateFromMid, line '
+            + CONVERT(VARCHAR(20), ERROR_LINE()) + ': ' + ERROR_MESSAGE()
+        RAISERROR(@ErrorMessage, 18, 1)
+    END CATCH
+GO
