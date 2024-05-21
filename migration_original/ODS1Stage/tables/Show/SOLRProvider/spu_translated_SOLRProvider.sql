@@ -1,62 +1,62 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER()
     RETURNS STRING
     LANGUAGE SQL
-    EXECUTE AS CALLER 
-    AS
-DECLARE 
+    EXECUTE as CALLER 
+    as
+declare 
 ---------------------------------------------------------
---------------- 1. Table dependencies -------------------
+--------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
--- Show.SOLRProvider depends on: 
---- Show.WebFreeze
---- Show.SOLRProvider_FREEZE (empty)
---- Show.ProviderSourceUpdate
---- Show.SOLRProviderDelta
---- Mid.ProviderPracticeOffice
---- Mid.ProviderEducation
---- Mid.ProviderSponsorship
---- Mid.ProviderSurveyResponse
---- Mid.ProviderMalpractice
---- Mid.ProviderProcedure
---- Mid.Provider
---- Mid.ClientMarket
---- Base.Provider
---- Base.ProviderImage
---- Base.ProviderEmail
---- Base.ProviderType
---- Base.ProviderSanction
---- Base.ProviderSubType
---- Base.ProviderSurveyAggregate
---- Base.ProviderSurveySuppression
---- Base.ProviderToSubStatus
---- Base.ProviderToProviderSubType
---- Base.ProviderAppointmentAvailabilityStatement (DEPRECATED)
---- Base.ProviderSubTypeToDegree
---- Base.ProviderToDegree
---- Base.ProviderToOffice
---- Base.ProviderToSpecialty
---- Base.ProviderLegacyKeys
---- Base.ProviderToAboutMe
---- Base.AboutMe
---- Base.Product
---- Base.MediaSize
---- Base.MediaImageHost
---- Base.MediaContextType
---- Base.SubStatus
---- Base.OfficeToAddress
---- Base.Address
---- Base.CityStatePostalCode
---- Base.GeographicArea
---- Base.DisplayStatus
---- Base.MalpracticeState
---- Base.SanctionAction
---- Base.SanctionActionType
---- Base.SpecialityGroup
---- Base.SpecialtyGroupToSpecialty
---- Base.Client
---- Base.ClientToProduct
---- Base.Specialty
+-- show.solrprovider depends on: 
+--- show.webfreeze
+--- show.solrprovider_freeze (empty)
+--- show.providersourceupdate
+--- show.solrproviderdelta
+--- mid.providerpracticeoffice
+--- mid.providereducation
+--- mid.providersponsorship
+--- mid.providersurveyresponse
+--- mid.providermalpractice
+--- mid.providerprocedure
+--- mid.provider
+--- mid.clientmarket
+--- base.provider
+--- base.providerimage
+--- base.provideremail
+--- base.providertype
+--- base.providersanction
+--- base.providersubtype
+--- base.providersurveyaggregate
+--- base.providersurveysuppression
+--- base.providertosubstatus
+--- base.providertoprovidersubtype
+--- base.providerappointmentavailabilitystatement (deprecated)
+--- base.providersubtypetodegree
+--- base.providertodegree
+--- base.providertooffice
+--- base.providertospecialty
+--- base.providerlegacykeys
+--- base.providertoaboutme
+--- base.aboutme
+--- base.product
+--- base.mediasize
+--- base.mediaimagehost
+--- base.mediacontexttype
+--- base.substatus
+--- base.officetoaddress
+--- base.address
+--- base.citystatepostalcode
+--- base.geographicarea
+--- base.displaystatus
+--- base.malpracticestate
+--- base.sanctionaction
+--- base.sanctionactiontype
+--- base.specialitygroup
+--- base.specialtygrouptospecialty
+--- base.client
+--- base.clienttoproduct
+--- base.specialty
 --- 
 
 
@@ -65,73 +65,73 @@ DECLARE
 
 
 ---------------------------------------------------------
---------------- 2. Declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 STRING; -- CTE and Select statement for the Merge
-    insert_statement_1 STRING; -- Insert statement for the Merge
-    merge_statement_1 STRING; -- Merge statement to final table
-    select_statement_2 STRING;
-    insert_statement_2 STRING;
-    update_statement_2 STRING;
-    merge_statement_2 STRING;
-    update_statement_3 STRING;
-    update_statement_4 STRING;
-    update_statement_5 STRING;
-    update_statement_6 STRING;
-    update_statement_7 STRING;
-    update_statement_8 STRING;
-    update_statement_9 STRING;
-    update_statement_10 STRING;
-    update_statement_11 STRING;
-    update_statement_12 STRING;
-    update_statement_13 STRING;
-    update_statement_14 STRING;
-    update_statement_15 STRING;
-    update_statement_16 STRING;
-    update_statement_17 STRING;
-    update_statement_18 STRING;
-    update_statement_19 STRING;
-    update_statement_20 STRING;
-    temp_table_statement_1 STRING;
-    temp_table_statement_2 STRING;
-    update_statement_temp_1 STRING;
-    update_statement_temp_2 STRING;
-    update_statement_21 STRING;
-    update_statement_22 STRING;
-    if_condition STRING;
-    update_statement_23 STRING;
-    update_statement_24 STRING;
-    status STRING; -- Status monitoring
+    select_statement_1 string; -- cte and select statement for the merge
+    insert_statement_1 string; -- insert statement for the merge
+    merge_statement_1 string; -- merge statement to final table
+    select_statement_2 string;
+    insert_statement_2 string;
+    update_statement_2 string;
+    merge_statement_2 string;
+    update_statement_3 string;
+    update_statement_4 string;
+    update_statement_5 string;
+    update_statement_6 string;
+    update_statement_7 string;
+    update_statement_8 string;
+    update_statement_9 string;
+    update_statement_10 string;
+    update_statement_11 string;
+    update_statement_12 string;
+    update_statement_13 string;
+    update_statement_14 string;
+    update_statement_15 string;
+    update_statement_16 string;
+    update_statement_17 string;
+    update_statement_18 string;
+    update_statement_19 string;
+    update_statement_20 string;
+    temp_table_statement_1 string;
+    temp_table_statement_2 string;
+    update_statement_temp_1 string;
+    update_statement_temp_2 string;
+    update_statement_21 string;
+    update_statement_22 string;
+    if_condition string;
+    update_statement_23 string;
+    update_statement_24 string;
+    status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrprovider');
     execution_start datetime default getdate();
 
 
 ---------------------------------------------------------
------------------ 3. SQL Statements ---------------------
+----------------- 3. sql statements ---------------------
 ---------------------------------------------------------     
 begin
 
 ---------------- Step 1: Freeze Providers ------------------
---- Select Statement
-select_statement_1 := $$ SELECT
+--- select Statement
+select_statement_1 := $$ select
                             *
-                        FROM
-                            Show.SOLRProvider_FREEZE
-                        WHERE
+                        from
+                            show.solrprovider_FREEZE
+                        where
                             SponsorCode IN (
-                                SELECT
+                                select
                                     ClientCode
-                                FROM
-                                    Show.WebFreeze
-                                WHERE
-                                    CURRENT_TIMESTAMP BETWEEN FreezeStartDate
-                                    and IFNULL(FreezeEndDate, '9999-09-09')) $$;
+                                from
+                                    show.webfreeze
+                                where
+                                    current_timestamp BETWEEN FreezeStartDate
+                                    and ifnull(FreezeEndDate, '9999-09-09')) $$;
 
 
 
---- Insert Statement
-insert_statement_1 := ' INSERT
+--- insert Statement
+insert_statement_1 := ' insert
                             (
                                 ProviderID,
                                 ProviderCode,
@@ -279,385 +279,385 @@ insert_statement_1 := ' INSERT
                                 SyndicationXML,
                                 TeleHealthXML
                             )
-                        VALUES
+                        values
                         (
-                            source.ProviderID,
-                            source.ProviderCode,
-                            source.ProviderTypeID,
-                            source.ProviderTypeGroup,
-                            source.FirstName,
-                            source.MiddleName,
-                            source.LastName,
-                            source.Suffix,
-                            source.Degree,
-                            source.Gender,
-                            source.NPI,
-                            source.AMAID,
-                            source.UPIN,
-                            source.MedicareID,
-                            source.DEANumber,
-                            source.TaxIDNumber,
-                            source.DateOfBirth,
-                            source.PlaceOfBirth,
-                            source.CarePhilosophy,
-                            source.ProfessionalInterest,
-                            source.PrimaryEmailAddress,
-                            source.MedicalSchoolNation,
-                            source.YearsSinceMedicalSchoolGraduation,
-                            source.HasDisplayImage,
-                            source.HasElectronicMedicalRecords,
-                            source.HasElectronicPrescription,
-                            source.AcceptsNewPatients,
-                            source.YearlySearchVolume,
-                            source.PatientExperienceSurveyOverallScore,
-                            source.PatientExperienceSurveyOverallCount,
-                            source.PracticeOfficeXML,
-                            source.FacilityXML,
-                            source.SpecialtyXML,
-                            source.EducationXML,
-                            source.LicenseXML,
-                            source.LanguageXML,
-                            source.MalpracticeXML,
-                            source.SanctionXML,
-                            source.SponsorshipXML,
-                            source.AffiliationXML,
-                            source.ProcedureXML,
-                            source.ConditionXML,
-                            source.HealthInsuranceXML,
-                            source.MediaXML,
-                            source.HasAddressXML,
-                            source.HasSpecialtyXML,
-                            source.Active,
-                            source.UpdateDate,
-                            source.InsertDate,
-                            source.ProviderLegacyKey,
-                            source.DisplayImage,
-                            source.AddressXML,
-                            source.BoardActionXML,
-                            source.SurveyXML,
-                            source.RecognitionXML,
-                            source.SurveyResponse,
-                            source.UpdatedDate,
-                            source.UpdatedSource,
-                            source.HasPhilosophy,
-                            source.HasMediaXML,
-                            source.HasProcedureXML,
-                            source.HasConditionXML,
-                            source.HasMalpracticeXML,
-                            source.HasSanctionXML,
-                            source.HasBoardActionXML,
-                            source.IsActive,
-                            source.ExpireCode,
-                            source.Title,
-                            source.CityStateAll,
-                            source.SurveyResponseDate,
-                            source.ProviderSpecialtyFacility5StarXML,
-                            source.HasProviderSpecialtyFacility5StarXML,
-                            source.DisplayPatientExperienceSurveyOverallScore,
-                            source.ProductGroupCode,
-                            source.SponsorCode,
-                            source.FacilityCode,
-                            source.SearchSponsorshipXML,
-                            source.ProductCode,
-                            source.VideoXML,
-                            source.OASXML,
-                            source.SuppressSurvey,
-                            source.ProviderURL,
-                            source.ImageXML,
-                            source.AdXML,
-                            source.HasProfessionalOrganizationXML,
-                            source.ProfessionalOrganizationXML,
-                            source.ProviderProfileViewOneYear,
-                            source.PracticingSpecialtyXML,
-                            source.CertificationXML,
-                            source.HasPracticingSpecialtyXML,
-                            source.HasCertificationXML,
-                            source.PatientExperienceSurveyOverallStarValue,
-                            source.ProviderBiography,
-                            source.DisplayStatusCode,
-                            source.HealthInsuranceXML_v2,
-                            source.ProviderDEAXML,
-                            source.ProviderTypeXML,
-                            source.SubStatusCode,
-                            source.DuplicateProviderCode,
-                            source.DeactivationReason,
-                            source.ProcedureHierarchyXML,
-                            source.ConditionHierarchyXML,
-                            source.ProcMappedXML,
-                            source.CondMappedXML,
-                            source.PracSpecHeirXML,
-                            source.AboutMeXML,
-                            source.HasAboutMeXML,
-                            source.PatientVolume,
-                            source.HasMalpracticeState,
-                            source.ProcedureCount,
-                            source.ConditionCount,
-                            source.AvailabilityXML,
-                            source.VideoXML2,
-                            --source.AvailabilityStatement,
-                            source.IsInClientMarket,
-                            source.HasOAR,
-                            source.IsMMPUser,
-                            source.NatlAdvertisingXML,
-                            source.APIXML,
-                            source.DIHGroupNumber,
-                            source.SubStatusDescription,
-                            source.DEAXML,
-                            source.EmailAddressXML,
-                            source.DegreeXML,
-                            source.HasSurveyXML,
-                            source.HasDEAXML,
-                            source.HasEmailAddressXML,
-                            source.ClientCertificationXML,
-                            source.HasGoogleOAS,
-                            source.HasVideoXML2,
-                            source.HasAboutMe,
-                            source.ConversionPathXML,
-                            source.SearchBoostSatisfaction,
-                            source.SearchBoostAccessibility,
-                            source.IsPCPCalculated,
-                            source.FAFBoostSatisfaction,
-                            source.FAFBoostSancMalp,
-                            source.FFDisplaySpecialty,
-                            source.FFPESBoost,
-                            source.FFMalMultiHQ,
-                            source.FFMalMulti,
-                            source.CLinicalFocusXML,
-                            source.ClinicalFocusDCPXML,
-                            source.SyndicationXML,
-                            source.TeleHealthXML
+                            source.providerid,
+                            source.providercode,
+                            source.providertypeid,
+                            source.providertypegroup,
+                            source.firstname,
+                            source.middlename,
+                            source.lastname,
+                            source.suffix,
+                            source.degree,
+                            source.gender,
+                            source.npi,
+                            source.amaid,
+                            source.upin,
+                            source.medicareid,
+                            source.deanumber,
+                            source.taxidnumber,
+                            source.dateofbirth,
+                            source.placeofbirth,
+                            source.carephilosophy,
+                            source.professionalinterest,
+                            source.primaryemailaddress,
+                            source.medicalschoolnation,
+                            source.yearssincemedicalschoolgraduation,
+                            source.hasdisplayimage,
+                            source.haselectronicmedicalrecords,
+                            source.haselectronicprescription,
+                            source.acceptsnewpatients,
+                            source.yearlysearchvolume,
+                            source.patientexperiencesurveyoverallscore,
+                            source.patientexperiencesurveyoverallcount,
+                            source.practiceofficexml,
+                            source.facilityxml,
+                            source.specialtyxml,
+                            source.educationxml,
+                            source.licensexml,
+                            source.languagexml,
+                            source.malpracticexml,
+                            source.sanctionxml,
+                            source.sponsorshipxml,
+                            source.affiliationxml,
+                            source.procedurexml,
+                            source.conditionxml,
+                            source.healthinsurancexml,
+                            source.mediaxml,
+                            source.hasaddressxml,
+                            source.hasspecialtyxml,
+                            source.active,
+                            source.updatedate,
+                            source.insertdate,
+                            source.providerlegacykey,
+                            source.displayimage,
+                            source.addressxml,
+                            source.boardactionxml,
+                            source.surveyxml,
+                            source.recognitionxml,
+                            source.surveyresponse,
+                            source.updateddate,
+                            source.updatedsource,
+                            source.hasphilosophy,
+                            source.hasmediaxml,
+                            source.hasprocedurexml,
+                            source.hasconditionxml,
+                            source.hasmalpracticexml,
+                            source.hassanctionxml,
+                            source.hasboardactionxml,
+                            source.isactive,
+                            source.expirecode,
+                            source.title,
+                            source.citystateall,
+                            source.surveyresponsedate,
+                            source.providerspecialtyfacility5StarXML,
+                            source.hasproviderspecialtyfacility5StarXML,
+                            source.displaypatientexperiencesurveyoverallscore,
+                            source.productgroupcode,
+                            source.sponsorcode,
+                            source.facilitycode,
+                            source.searchsponsorshipxml,
+                            source.productcode,
+                            source.videoxml,
+                            source.oasxml,
+                            source.suppresssurvey,
+                            source.providerurl,
+                            source.imagexml,
+                            source.adxml,
+                            source.hasprofessionalorganizationxml,
+                            source.professionalorganizationxml,
+                            source.providerprofileviewoneyear,
+                            source.practicingspecialtyxml,
+                            source.certificationxml,
+                            source.haspracticingspecialtyxml,
+                            source.hascertificationxml,
+                            source.patientexperiencesurveyoverallstarvalue,
+                            source.providerbiography,
+                            source.displaystatuscode,
+                            source.healthinsurancexml_v2,
+                            source.providerdeaxml,
+                            source.providertypexml,
+                            source.substatuscode,
+                            source.duplicateprovidercode,
+                            source.deactivationreason,
+                            source.procedurehierarchyxml,
+                            source.conditionhierarchyxml,
+                            source.procmappedxml,
+                            source.condmappedxml,
+                            source.pracspecheirxml,
+                            source.aboutmexml,
+                            source.hasaboutmexml,
+                            source.patientvolume,
+                            source.hasmalpracticestate,
+                            source.procedurecount,
+                            source.conditioncount,
+                            source.availabilityxml,
+                            source.videoxml2,
+                            --source.availabilitystatement,
+                            source.isinclientmarket,
+                            source.hasoar,
+                            source.ismmpuser,
+                            source.natladvertisingxml,
+                            source.apixml,
+                            source.dihgroupnumber,
+                            source.substatusdescription,
+                            source.deaxml,
+                            source.emailaddressxml,
+                            source.degreexml,
+                            source.hassurveyxml,
+                            source.hasdeaxml,
+                            source.hasemailaddressxml,
+                            source.clientcertificationxml,
+                            source.hasgoogleoas,
+                            source.hasvideoxml2,
+                            source.hasaboutme,
+                            source.conversionpathxml,
+                            source.searchboostsatisfaction,
+                            source.searchboostaccessibility,
+                            source.ispcpcalculated,
+                            source.fafboostsatisfaction,
+                            source.fafboostsancmalp,
+                            source.ffdisplayspecialty,
+                            source.ffpesboost,
+                            source.ffmalmultihq,
+                            source.ffmalmulti,
+                            source.clinicalfocusxml,
+                            source.clinicalfocusdcpxml,
+                            source.syndicationxml,
+                            source.telehealthxml
                         );';
 
 
------------- Step 2: Generate From Mid --------------
+------------ Step 2: Generate from Mid --------------
 
---- Select Statement 
+--- select Statement 
 select_statement_2 :=  $$ with cte_batch_process as (
-                            	SELECT DISTINCT
-                    					p.ProviderID
-                    			From Base.Provider AS p 
-                    			WHERE 	p.NPI IS NOT NULL
-                    			UNION 
-                    			SELECT DISTINCT
-                    					p.ProviderID
-                    			FROM    mdm_team.mst.provider_profile_processing AS ppp 
-                    			INNER JOIN Base.Provider AS p ON p.providercode = ppp.REF_PROVIDER_CODE
-                    			WHERE 	p.NPI IS NOT NULL
+                            	select distinct
+                    					p.providerid
+                    			from base.provider as p 
+                    			where 	p.npi is not null
+                    			union 
+                    			select distinct
+                    					p.providerid
+                    			from    mdm_team.mst.provider_profile_processing as ppp 
+                    			inner join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
+                    			where 	p.npi is not null
                                 
                         ), cte_provider_image as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            a.ProviderID,
-                                            a.FileName AS ImageFilePath,
-                                            'http://d306gt4zvs7g2s.cloudfront.net/img/prov/' || SUBSTRING(a.FileName, 1, 1) || '/' || SUBSTRING(a.FileName, 2, 1) || '/' || SUBSTRING(a.FileName, 3, 1) || '/' || a.FileName AS imFull,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY a.ProviderId
-                                                ORDER BY
-                                                    a.ProviderId
-                                            ) AS RN1
-                                        FROM
-                                            Base.ProviderImage a
-                                            INNER JOIN Base.MediaSize ms ON a.MediaSizeID = ms.MediaSizeID
-                                        WHERE
-                                            ms.MediaSizeName = 'Medium'
+                                        select
+                                            a.providerid,
+                                            a.filename as ImageFilePath,
+                                            'http://d306gt4zvs7g2s.cloudfront.net/img/prov/' || SUBSTRING(a.filename, 1, 1) || '/' || SUBSTRING(a.filename, 2, 1) || '/' || SUBSTRING(a.filename, 3, 1) || '/' || a.filename as imFull,
+                                            row_number() over(
+                                                partition by a.providerid
+                                                order by
+                                                    a.providerid
+                                            ) as RN1
+                                        from
+                                            base.providerimage a
+                                            inner join base.mediasize ms on a.mediasizeid = ms.mediasizeid
+                                        where
+                                            ms.mediasizename = 'Medium'
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_care_philosophy as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
+                                        select
                                             ProviderID,
-                                            pam.ProviderAboutMeText,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderId
-                                                ORDER BY
-                                                    PAM.LastUpdatedDate DESC
-                                            ) AS RN1
-                                        FROM
-                                            Base.AboutMe am
-                                            INNER JOIN Base.ProviderToAboutMe pam ON am.AboutMeID = pam.AboutMeID
-                                            AND am.AboutMeCode = 'CarePhilosophy'
+                                            pam.provideraboutmetext,
+                                            row_number() over(
+                                                partition by ProviderId
+                                                order by
+                                                    pam.lastupdateddate desc
+                                            ) as RN1
+                                        from
+                                            base.aboutme am
+                                            inner join base.providertoaboutme pam on am.aboutmeid = pam.aboutmeid
+                                            and am.aboutmecode = 'CarePhilosophy'
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_city_state_greater_1 as (
-                                SELECT
+                                select
                                     ProviderID --652,813
-                                FROM
-                                    Mid.ProviderPracticeOffice
-                                GROUP BY
+                                from
+                                    mid.providerpracticeoffice
+                                group by
                                     ProviderID
-                                HAVING
-                                    COUNT(DISTINCT CONCAT(City, State)) > 1
+                                having
+                                    COUNT(distinct CONCAT(City, State)) > 1
                             ),
                             cte_city_state_concat as (
-                                SELECT
+                                select
                                     providerID,
                                     LISTAGG(city || ', ' || state, '|') as CityState
-                                FROM
-                                    Mid.ProviderPracticeOffice
-                                GROUP BY
+                                from
+                                    mid.providerpracticeoffice
+                                group by
                                     providerID
                             ),
                             cte_city_state_multiple as (
-                                SELECT
-                                    CTE_BATCH.ProviderID,
-                                    CTE_CSC.CityState AS CityStateAll
-                                FROM
+                                select
+                                    CTE_batch.providerid,
+                                    CTE_csc.citystate as CityStateAll
+                                from
                                     cte_batch_process as CTE_BATCH
-                                    JOIN cte_city_state_greater_1 b ON CTE_BATCH.ProviderID = b.ProviderID
-                                    LEFT JOIN cte_city_state_concat as CTE_CSC on CTE_BATCH.ProviderID = CTE_CSC.ProviderID
+                                    join cte_city_state_greater_1 b on CTE_batch.providerid = b.providerid
+                                    left join cte_city_state_concat as CTE_CSC on CTE_batch.providerid = CTE_csc.providerid
                             ),
                             cte_city_state_equal_1 as (
-                                SELECT
+                                select
                                     ProviderID --652,813
-                                FROM
-                                    Mid.ProviderPracticeOffice
-                                GROUP BY
+                                from
+                                    mid.providerpracticeoffice
+                                group by
                                     ProviderID
-                                HAVING
-                                    COUNT(DISTINCT CONCAT(City, State)) = 1
+                                having
+                                    COUNT(distinct CONCAT(City, State)) = 1
                             ),
                             cte_city_state_single as (
-                                SELECT
-                                    MPPO.ProviderId,
-                                    TRIM(City) || ', ' || State AS CityStateAll
-                                FROM
-                                    Mid.ProviderPracticeOffice AS MPPO
-                                    JOIN cte_city_state_equal_1 AS CTE_CSE1 ON MPPO.providerid = CTE_CSE1.providerid
+                                select
+                                    mppo.providerid,
+                                    trim(City) || ', ' || State as CityStateAll
+                                from
+                                    mid.providerpracticeoffice as MPPO
+                                    join cte_city_state_equal_1 as CTE_CSE1 on mppo.providerid = CTE_CSE1.providerid
                             ),
                             cte_city_state_all as (
-                                SELECT
-                                    CTE_BP.ProviderId,
+                                select
+                                    CTE_bp.providerid,
                                     CASE
-                                        WHEN CTE_CSM.ProviderID IS NULL THEN CTE_CSS.CityStateAll
-                                        ELSE CTE_CSM.CityStateAll
-                                    END AS CityStateAll
-                                FROM
-                                    cte_batch_process AS CTE_BP
-                                    LEFT JOIN cte_city_state_single AS CTE_CSS ON CTE_CSS.ProviderID = CTE_BP.ProviderID
-                                    LEFT JOIN cte_city_state_multiple AS CTE_CSM ON CTE_CSM.ProviderID = CTE_BP.ProviderID
+                                        WHEN CTE_csm.providerid is null then CTE_css.citystateall
+                                        else CTE_csm.citystateall
+                                    END as CityStateAll
+                                from
+                                    cte_batch_process as CTE_BP
+                                    left join cte_city_state_single as CTE_CSS on CTE_css.providerid = CTE_bp.providerid
+                                    left join cte_city_state_multiple as CTE_CSM on CTE_csm.providerid = CTE_bp.providerid
                             ),
                             cte_email as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
+                                        select
                                             ProviderID,
                                             EmailAddress,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderId
-                                                ORDER BY
-                                                    LastUpdateDate DESC
-                                            ) AS RN1
-                                        FROM
-                                            Base.ProviderEmail
+                                            row_number() over(
+                                                partition by ProviderId
+                                                order by
+                                                    LastUpdateDate desc
+                                            ) as RN1
+                                        from
+                                            base.provideremail
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_provider_type_group as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
+                                        select
                                             ProviderTypeID,
-                                            TRIM(x.ProviderTypeCode) AS ProviderTypeCode,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderTypeID
-                                                ORDER BY
-                                                    X.LastUpdateDate DESC
-                                            ) AS RN1
-                                        FROM
-                                            Base.ProviderType X
+                                            trim(x.providertypecode) as ProviderTypeCode,
+                                            row_number() over(
+                                                partition by ProviderTypeID
+                                                order by
+                                                    x.lastupdatedate desc
+                                            ) as RN1
+                                        from
+                                            base.providertype X
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ),
                             cte_media_school_nation as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            MPE.ProviderID,
-                                            MPE.NationName,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY MPE.ProviderId
-                                                ORDER BY
-                                                    MPE.NationName DESC,
-                                                    MPE.GraduationYear DESC
-                                            ) AS RN1
-                                        FROM
-                                            Mid.ProviderEducation AS MPE
-                                            INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = MPE.ProviderID
+                                        select
+                                            mpe.providerid,
+                                            mpe.nationname,
+                                            row_number() over(
+                                                partition by mpe.providerid
+                                                order by
+                                                    mpe.nationname desc,
+                                                    mpe.graduationyear desc
+                                            ) as RN1
+                                        from
+                                            mid.providereducation as MPE
+                                            inner join cte_batch_process as CTE_BP on CTE_bp.providerid = mpe.providerid
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_years_since_medical_school_graduation as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            MPE.ProviderID,
+                                        select
+                                            mpe.providerid,
                                             EXTRACT(
                                                 YEAR
-                                                FROM
+                                                from
                                                     CURRENT_DATE
                                             ) - CASE
-                                                WHEN TRY_TO_NUMBER(GraduationYear) IS NULL THEN NULL
-                                                ELSE TRY_TO_NUMBER(GraduationYear)
-                                            END AS YearsSinceMedicalSchoolGraduation,
-                                            ROW_NUMBER() OVER (
-                                                PARTITION BY MPE.ProviderId
-                                                ORDER BY
-                                                    MPE.NationName DESC,
-                                                    MPE.GraduationYear DESC
-                                            ) AS RN1
-                                        FROM
-                                            Mid.ProviderEducation MPE
-                                            INNER JOIN cte_batch_process CTE_BP ON CTE_BP.ProviderID = MPE.ProviderID
+                                                WHEN TRY_TO_NUMBER(GraduationYear) is null then null
+                                                else TRY_TO_NUMBER(GraduationYear)
+                                            END as YearsSinceMedicalSchoolGraduation,
+                                            row_number() over (
+                                                partition by mpe.providerid
+                                                order by
+                                                    mpe.nationname desc,
+                                                    mpe.graduationyear desc
+                                            ) as RN1
+                                        from
+                                            mid.providereducation MPE
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = mpe.providerid
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_patient_experience_survey_overall_score as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            BPSA.ProviderID,
-                                            (ProviderAverageScore / 5) * 100 AS PatientExperienceSurveyOverallScore,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY BPSA.ProviderId
-                                                ORDER BY
-                                                    BPSA.UpdatedOn DESC
-                                            ) AS RN1
-                                        FROM
-                                            base.ProviderSurveyAggregate AS BPSA
-                                            INNER JOIN cte_batch_process CTE_BP ON CTE_BP.ProviderID = BPSA.ProviderID
-                                        WHERE
+                                        select
+                                            bpsa.providerid,
+                                            (ProviderAverageScore / 5) * 100 as PatientExperienceSurveyOverallScore,
+                                            row_number() over(
+                                                partition by bpsa.providerid
+                                                order by
+                                                    bpsa.updatedon desc
+                                            ) as RN1
+                                        from
+                                            base.providersurveyaggregate as BPSA
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                        where
                                             QuestionID = 231
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ),
                             cte_patient_experience_survey_overall_star_value as (
@@ -665,291 +665,291 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     *
                                 from
                                     (
-                                        SELECT
-                                            BPSA.ProviderID,
-                                            BPSA.ProviderAverageScore,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY BPSA.ProviderId
-                                                ORDER BY
-                                                    BPSA.UpdatedOn DESC
-                                            ) AS RN1
-                                        FROM
-                                            base.ProviderSurveyAggregate AS BPSA
-                                            INNER JOIN cte_batch_process CTE_BP ON CTE_BP.ProviderID = BPSA.ProviderID
-                                        WHERE
+                                        select
+                                            bpsa.providerid,
+                                            bpsa.provideraveragescore,
+                                            row_number() over(
+                                                partition by bpsa.providerid
+                                                order by
+                                                    bpsa.updatedon desc
+                                            ) as RN1
+                                        from
+                                            base.providersurveyaggregate as BPSA
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                        where
                                             QuestionID = 231
                                     )
                                 where
                                     rn1 <= 1
                             ),
                             cte_patient_experience_survey_overall_count as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            BPSA.ProviderID,
-                                            BPSA.QuestionCount,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY BPSA.ProviderId
-                                                ORDER BY
-                                                    BPSA.UpdatedOn DESC
-                                            ) AS RN1
-                                        FROM
-                                            base.ProviderSurveyAggregate AS BPSA
-                                            INNER JOIN cte_batch_process CTE_BP ON CTE_BP.ProviderID = BPSA.ProviderID
-                                        WHERE
+                                        select
+                                            bpsa.providerid,
+                                            bpsa.questioncount,
+                                            row_number() over(
+                                                partition by bpsa.providerid
+                                                order by
+                                                    bpsa.updatedon desc
+                                            ) as RN1
+                                        from
+                                            base.providersurveyaggregate as BPSA
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                        where
                                             QuestionID = 231
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ),
                             cte_display_status_code_sub as (
-                                SELECT
-                                    BPTSS.ProviderId,
-                                    BDS.DisplayStatusCode,
-                                    BPTSS.HierarchyRank,
-                                    SS.SubStatusRank
-                                FROM
-                                    Base.ProviderToSubStatus AS BPTSS
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = BPTSS.ProviderID
-                                    INNER JOIN Base.SubStatus AS SS ON SS.SubStatusID = BPTSS.SubStatusID
-                                    INNER JOIN Base.DisplayStatus AS BDS ON BDS.DisplayStatusID = SS.DisplayStatusID
-                                WHERE
-                                    BPTSS.hierarchyrank = 1
-                                UNION
-                                SELECT
+                                select
+                                    bptss.providerid,
+                                    bds.displaystatuscode,
+                                    bptss.hierarchyrank,
+                                    ss.substatusrank
+                                from
+                                    base.providertosubstatus as BPTSS
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = bptss.providerid
+                                    inner join base.substatus as SS on ss.substatusid = bptss.substatusid
+                                    inner join base.displaystatus as BDS on bds.displaystatusid = ss.displaystatusid
+                                where
+                                    bptss.hierarchyrank = 1
+                                union
+                                select
                                     ProviderId,
-                                    'A' AS DisplayStatusCode,
-                                    2147483647 AS HierarchyRank,
-                                    2147483647 AS SubStatusRank
-                                FROM
-                                    Base.Provider
+                                    'A' as DisplayStatusCode,
+                                    2147483647 as HierarchyRank,
+                                    2147483647 as SubStatusRank
+                                from
+                                    base.provider
                             ),
                             cte_display_status_code as (
-                                SELECT
+                                select
                                     *
-                                FROM(
-                                        SELECT
+                                from(
+                                        select
                                             ProviderId,
                                             DisplayStatusCode,
                                             HierarchyRank,
                                             SubStatusRank,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderId
-                                                ORDER BY
+                                            row_number() over(
+                                                partition by ProviderId
+                                                order by
                                                     HierarchyRank,
                                                     SubStatusRank
-                                            ) AS RN1
+                                            ) as RN1
                                         from
                                             cte_display_status_code_sub
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ),
-                            cte_sub_status_code_sub AS (
-                                SELECT
-                                    BPSS.ProviderId,
-                                    SS.SubStatusCode,
-                                    BPSS.HierarchyRank,
-                                    SS.SubStatusRank
-                                FROM
-                                    Base.ProviderToSubStatus AS BPSS
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = BPSS.ProviderID
-                                    INNER JOIN Base.SubStatus AS SS ON SS.SubStatusID = BPSS.SubStatusID
-                                    INNER JOIN Base.DisplayStatus AS BDS ON BDS.DisplayStatusID = SS.DisplayStatusID
-                                WHERE
-                                    BPSS.hierarchyrank = 1
-                                UNION
-                                SELECT
+                            cte_sub_status_code_sub as (
+                                select
+                                    bpss.providerid,
+                                    ss.substatuscode,
+                                    bpss.hierarchyrank,
+                                    ss.substatusrank
+                                from
+                                    base.providertosubstatus as BPSS
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = bpss.providerid
+                                    inner join base.substatus as SS on ss.substatusid = bpss.substatusid
+                                    inner join base.displaystatus as BDS on bds.displaystatusid = ss.displaystatusid
+                                where
+                                    bpss.hierarchyrank = 1
+                                union
+                                select
                                     ProviderId,
-                                    'K' AS SubStatusCode,
-                                    2147483647 AS HierarchyRank,
-                                    2147483647 AS SubStatusRank
-                                FROM
-                                    Base.Provider
+                                    'K' as SubStatusCode,
+                                    2147483647 as HierarchyRank,
+                                    2147483647 as SubStatusRank
+                                from
+                                    base.provider
                             ),
                             cte_sub_status_code as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
+                                        select
                                             ProviderId,
                                             SubStatusCode,
                                             HierarchyRank,
                                             SubStatusRank,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderId
-                                                ORDER BY
+                                            row_number() over(
+                                                partition by ProviderId
+                                                order by
                                                     HierarchyRank,
                                                     SubStatusRank
-                                            ) AS RN1
-                                        FROM
+                                            ) as RN1
+                                        from
                                             cte_sub_status_code_sub
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ),
                             cte_product_group_code as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            P.ProviderID,
+                                        select
+                                            p.providerid,
                                             ProductGroupCode,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY P.ProviderId
-                                                ORDER BY
-                                                    ProductGroupCode DESC
-                                            ) AS RN1
-                                        FROM
-                                            Mid.ProviderSponsorship AS MPS
-                                            INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                            INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                        WHERE
+                                            row_number() over(
+                                                partition by p.providerid
+                                                order by
+                                                    ProductGroupCode desc
+                                            ) as RN1
+                                        from
+                                            mid.providersponsorship as MPS
+                                            inner join base.provider as P on p.providercode = mps.providercode
+                                            inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                        where
                                             ProductGroupCode = 'PDC'
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_product_code as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            P.ProviderID,
+                                        select
+                                            p.providerid,
                                             ProductCode,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY P.ProviderId
-                                                ORDER BY
-                                                    ProductGroupCode DESC
-                                            ) AS RN1
-                                        FROM
-                                            Mid.ProviderSponsorship AS MPS
-                                            INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                            INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                        WHERE
+                                            row_number() over(
+                                                partition by p.providerid
+                                                order by
+                                                    ProductGroupCode desc
+                                            ) as RN1
+                                        from
+                                            mid.providersponsorship as MPS
+                                            inner join base.provider as P on p.providercode = mps.providercode
+                                            inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                        where
                                             ProductGroupCode = 'PDC'
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_sponsor_code as (
-                                SELECT
+                                select
                                     *
-                                FROM
+                                from
                                     (
-                                        SELECT
-                                            P.ProviderID,
-                                            ClientCode AS SponsorCode,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY P.ProviderId
-                                                ORDER BY
-                                                    ProductGroupCode DESC
-                                            ) AS RN1
-                                        FROM
-                                            Mid.ProviderSponsorship AS MPS
-                                            INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                            INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                        WHERE
+                                        select
+                                            p.providerid,
+                                            ClientCode as SponsorCode,
+                                            row_number() over(
+                                                partition by p.providerid
+                                                order by
+                                                    ProductGroupCode desc
+                                            ) as RN1
+                                        from
+                                            mid.providersponsorship as MPS
+                                            inner join base.provider as P on p.providercode = mps.providercode
+                                            inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                        where
                                             ProductGroupCode = 'PDC'
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_pipe_separated_facility as (
                                 select
-                                    P.ProviderID,
-                                    listagg(MPS.providercode, '|') as codes
-                                FROM
-                                    Mid.ProviderSponsorship AS MPS
-                                    INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                WHERE
+                                    p.providerid,
+                                    listagg(mps.providercode, '|') as codes
+                                from
+                                    mid.providersponsorship as MPS
+                                    inner join base.provider as P on p.providercode = mps.providercode
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                where
                                     ProductGroupCode = 'PDC'
                                 group by
-                                    P.providerid
+                                    p.providerid
                             ) 
                         ,
                             cte_facility_code as (
-                                SELECT
-                                    P.ProviderID,
-                                    CTE_PSF.codes AS Facility,
-                                    ROW_NUMBER() OVER(
-                                        PARTITION BY P.ProviderId
-                                        ORDER BY
-                                            ProductGroupCode DESC
-                                    ) AS RN1
-                                FROM
-                                    Mid.ProviderSponsorship AS MPS
-                                    INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                    INNER JOIN cte_pipe_separated_facility AS CTE_PSF ON CTE_PSF.ProviderID = P.ProviderID
-                                WHERE
+                                select
+                                    p.providerid,
+                                    CTE_psf.codes as Facility,
+                                    row_number() over(
+                                        partition by p.providerid
+                                        order by
+                                            ProductGroupCode desc
+                                    ) as RN1
+                                from
+                                    mid.providersponsorship as MPS
+                                    inner join base.provider as P on p.providercode = mps.providercode
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                    inner join cte_pipe_separated_facility as CTE_PSF on CTE_psf.providerid = p.providerid
+                                where
                                     ProductGroupCode = 'PDC'
                             ) 
                         ,
                             cte_about_me as (
-                                SELECT
-                                    PAM.ProviderID,
+                                select
+                                    pam.providerid,
                                     ProviderAboutMeText,
-                                    ROW_NUMBER() OVER(
-                                        PARTITION BY CTE_BP.ProviderId
-                                        ORDER BY
-                                            PAM.LastUpdatedDate DESC
-                                    ) AS RN1
-                                FROM
-                                    Base.AboutMe AS AM
-                                    INNER JOIN Base.ProviderToAboutMe AS PAM ON AM.AboutMeID = PAM.AboutMeID
-                                    AND AM.AboutMeCode = 'ResponseToPes'
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = PAM.ProviderID
+                                    row_number() over(
+                                        partition by CTE_bp.providerid
+                                        order by
+                                            pam.lastupdateddate desc
+                                    ) as RN1
+                                from
+                                    base.aboutme as AM
+                                    inner join base.providertoaboutme as PAM on am.aboutmeid = pam.aboutmeid
+                                    and am.aboutmecode = 'ResponseToPes'
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = pam.providerid
                             ) 
                         ,
                             cte_survey_response_date as (
-                                SELECT
-                                    PAM.ProviderID,
+                                select
+                                    pam.providerid,
                                     SurveyResponseDate,
-                                    ROW_NUMBER() OVER(
-                                        PARTITION BY CTE_BP.ProviderId
-                                        ORDER BY
-                                            PAM.SurveyResponseDate DESC
-                                    ) AS RN1
-                                FROM
-                                    Mid.ProviderSurveyResponse AS PAM
-                                    INNER JOIN CTE_BATCH_PROCESS AS CTE_BP ON CTE_BP.ProviderID = PAM.ProviderID
+                                    row_number() over(
+                                        partition by CTE_bp.providerid
+                                        order by
+                                            pam.surveyresponsedate desc
+                                    ) as RN1
+                                from
+                                    mid.providersurveyresponse as PAM
+                                    inner join CTE_BATCH_PROCESS as CTE_BP on CTE_bp.providerid = pam.providerid
                             ) 
                         ,
                             cte_has_malpractice_state_sub as (
-                                SELECT
+                                select
                                     ProviderId,
                                     CASE
-                                        WHEN EXISTS (
-                                            SELECT
+                                        WHEN exists (
+                                            select
                                                 1
-                                            FROM
-                                                Mid.ProviderPracticeOffice ppo
-                                                JOIN Base.MalpracticeState mps ON ppo.State = mps.STATE
-                                                AND IFNULL(mps.Active, 1) = 1
-                                            WHERE
-                                                p.ProviderID = ppo.ProviderID
-                                        ) THEN 1
-                                        WHEN EXISTS (
-                                            SELECT
+                                            from
+                                                mid.providerpracticeoffice ppo
+                                                join base.malpracticestate mps on ppo.state = mps.state
+                                                and ifnull(mps.active, 1) = 1
+                                            where
+                                                p.providerid = ppo.providerid
+                                        ) then 1
+                                        WHEN exists (
+                                            select
                                                 1
-                                            FROM
-                                                Mid.ProviderMalpractice pm
-                                            WHERE
-                                                p.ProviderID = pm.ProviderID
-                                        ) THEN 1
-                                        ELSE 0
+                                            from
+                                                mid.providermalpractice pm
+                                            where
+                                                p.providerid = pm.providerid
+                                        ) then 1
+                                        else 0
                                     END HasMalpracticeState
-                                FROM
+                                from
                                     cte_batch_process P
                             ) 
                         ,
@@ -958,94 +958,94 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     *
                                 from
                                     (
-                                        SELECT
+                                        select
                                             ProviderId,
                                             HasMalpracticeState,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY ProviderID
-                                                ORDER BY
-                                                    HasMalpracticeState DESC
-                                            ) AS RN1
-                                        FROM
+                                            row_number() over(
+                                                partition by ProviderID
+                                                order by
+                                                    HasMalpracticeState desc
+                                            ) as RN1
+                                        from
                                             cte_has_malpractice_state_sub
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_procedure_count as (
-                                SELECT
-                                    MPP.ProviderID,
-                                    COUNT(ProcedureCode) AS ProcedureCount
-                                FROM
-                                    Mid.ProviderProcedure AS MPP
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = MPP.ProviderID
-                                GROUP BY
-                                    MPP.ProviderID
+                                select
+                                    mpp.providerid,
+                                    COUNT(ProcedureCode) as ProcedureCount
+                                from
+                                    mid.providerprocedure as MPP
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = mpp.providerid
+                                group by
+                                    mpp.providerid
                             ) 
                         ,
                             cte_condition_count as (
-                                SELECT
-                                    MPP.ProviderID,
-                                    COUNT(ProcedureCode) AS ConditionCount
-                                FROM
-                                    Mid.ProviderProcedure AS MPP
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = MPP.ProviderID
-                                GROUP BY
-                                    MPP.ProviderID
+                                select
+                                    mpp.providerid,
+                                    COUNT(ProcedureCode) as ConditionCount
+                                from
+                                    mid.providerprocedure as MPP
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = mpp.providerid
+                                group by
+                                    mpp.providerid
                             ) 
                         ,
                             cte_condition_code as (
-                                SELECT
-                                    MPP.ProviderID,
-                                    COUNT(ProcedureCode) AS ConditionCount
-                                FROM
-                                    Mid.ProviderProcedure AS MPP
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = MPP.ProviderID
-                                GROUP BY
-                                    MPP.ProviderID
+                                select
+                                    mpp.providerid,
+                                    COUNT(ProcedureCode) as ConditionCount
+                                from
+                                    mid.providerprocedure as MPP
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = mpp.providerid
+                                group by
+                                    mpp.providerid
                             ) 
                         ,
                             --THIS CTE RETURNS EMPTY, I VALIDATED IN SQL SERVER IT ALSO RETURNS EMPTY
                             cte_oar as (
-                                SELECT
-                                    DISTINCT CTE_BP.ProviderId,
+                                select
+                                    distinct CTE_bp.providerid,
                                     HasOar
-                                FROM
-                                    Mid.ProviderSponsorship AS MPS
-                                    INNER JOIN Base.Product AS BP ON MPS.ProductCode = BP.ProductCode
-                                    INNER JOIN Base.Provider AS P ON P.ProviderCode = MPS.ProviderCode
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = P.ProviderID
-                                    AND(
-                                        BP.ProductTypeCode = 'PRACTICE'
-                                        OR MPS.clientcode IN ('OCHSNR', 'PRVHEW')
+                                from
+                                    mid.providersponsorship as MPS
+                                    inner join base.product as BP on mps.productcode = bp.productcode
+                                    inner join base.provider as P on p.providercode = mps.providercode
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                    and(
+                                        bp.producttypecode = 'PRACTICE'
+                                        or mps.clientcode IN ('OCHSNR', 'PRVHEW')
                                     )
                             ) 
                         ,
                             cte_availability_statement as (
-                                SELECT
-                                    BPAAS.ProviderID,
+                                select
+                                    bpaas.providerid,
                                     AppointmentAvailabilityStatement,
-                                    ROW_NUMBER() OVER(
-                                        PARTITION BY BPAAS.ProviderId
-                                        ORDER BY
-                                            LastUpdatedDate DESC
-                                    ) AS RN1
-                                FROM
-                                    Base.ProviderAppointmentAvailabilityStatement AS BPAAS
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = BPAAS.ProviderID
+                                    row_number() over(
+                                        partition by bpaas.providerid
+                                        order by
+                                            LastUpdatedDate desc
+                                    ) as RN1
+                                from
+                                    base.providerappointmentavailabilitystatement as BPAAS
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = bpaas.providerid
                             ) 
                         ,
                             cte_has_about_me as (
-                                SELECT
-                                    DISTINCT CTE_BP.ProviderID,
-                                    1 AS HasAboutMe
-                                FROM
-                                    Base.AboutMe AS BAM
-                                    INNER JOIN Base.ProviderToAboutMe AS PAM ON PAM.AboutMeID = BAM.AboutMeID
-                                    INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = PAM.ProviderID
-                                WHERE
-                                    BAM.AboutMeCode = 'About'
+                                select
+                                    distinct CTE_bp.providerid,
+                                    1 as HasAboutMe
+                                from
+                                    base.aboutme as BAM
+                                    inner join base.providertoaboutme as PAM on pam.aboutmeid = bam.aboutmeid
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = pam.providerid
+                                where
+                                    bam.aboutmecode = 'About'
                             ) 
                         ,
                             cte_provider_sub_type as (
@@ -1053,206 +1053,206 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     *
                                 from
                                     (
-                                        SELECT
-                                            BPTPST.ProviderID,
-                                            BPST.ProviderSubTypeCode,
-                                            ROW_NUMBER() OVER(
-                                                PARTITION BY BPTPST.ProviderId
-                                                ORDER BY
-                                                    BPST.ProviderSubTypeRank ASC,
-                                                    BPTPST.LastUpdateDate DESC
-                                            ) AS RN1
-                                        FROM
-                                            Base.ProviderToProviderSubType AS BPTPST
-                                            INNER JOIN Base.ProviderSubType AS BPST ON BPTPST.ProviderSubTypeID = BPST.ProviderSubTypeID
-                                            INNER JOIN cte_batch_process AS CTE_BP ON CTE_BP.ProviderID = BPTPST.ProviderID
+                                        select
+                                            bptpst.providerid,
+                                            bpst.providersubtypecode,
+                                            row_number() over(
+                                                partition by bptpst.providerid
+                                                order by
+                                                    bpst.providersubtyperank ASC,
+                                                    bptpst.lastupdatedate desc
+                                            ) as RN1
+                                        from
+                                            base.providertoprovidersubtype as BPTPST
+                                            inner join base.providersubtype as BPST on bptpst.providersubtypeid = bpst.providersubtypeid
+                                            inner join cte_batch_process as CTE_BP on CTE_bp.providerid = bptpst.providerid
                                     )
-                                WHERE
+                                where
                                     RN1 <= 1
                             ) 
                         ,
                             cte_provider_is_board_eligible as (
-                                SELECT
-                                    ps.ProviderID
-                                FROM
-                                    Base.ProviderSanction AS ps
-                                    JOIN Base.SanctionAction AS sa ON sa.SanctionActionID = ps.SanctionActionID
-                                    JOIN Base.SanctionActionType AS sat ON sat.SanctionActionTypeID = sa.SanctionActionTypeID
-                                    JOIN cte_batch_process AS bp ON ps.ProviderID = bp.ProviderID
-                                WHERE
-                                    sat.SanctionActionTypeCode = 'B'
-                                UNION
-                                    --Using Only Provider SubType (DOC and NDOC)
-                                SELECT
-                                    ptpst.ProviderID
-                                FROM
-                                    Base.ProviderSubType AS pst
-                                    JOIN Base.ProviderToProviderSubType AS ptpst ON ptpst.ProviderSubTypeID = pst.ProviderSubTypeID
-                                    JOIN cte_batch_process AS bp ON ptpst.ProviderID = bp.ProviderID
-                                WHERE
-                                    pst.IsBoardActionEligible = 1
-                                UNION
-                                    --Using Provider SubType To Degree (MDEX Plus Degrees)
-                                SELECT
-                                    ptpst.ProviderID
-                                FROM
-                                    Base.ProviderSubTypeToDegree AS psttd
-                                    JOIN Base.ProviderToProviderSubType AS ptpst ON psttd.ProviderSubTypeID = ptpst.ProviderSubTypeID
-                                    JOIN Base.ProviderToDegree AS ptd ON ptd.ProviderID = ptpst.ProviderID
-                                    AND psttd.DegreeID = ptd.DegreeID
-                                    JOIN cte_batch_process AS bp ON ptpst.ProviderID = bp.ProviderID
-                                WHERE
-                                    psttd.IsBoardActionEligible = 1
-                                UNION
-                                    --Using Specialty Group (GMPA)
-                                SELECT
-                                    ps.ProviderID
-                                FROM
-                                    Base.SpecialtyGroup AS sg
-                                    JOIN Base.SpecialtyGroupToSpecialty AS sgts ON sgts.SpecialtyGroupID = sg.SpecialtyGroupID
-                                    JOIN Base.ProviderToSpecialty AS ps ON ps.SpecialtyID = sgts.SpecialtyID
-                                    JOIN cte_batch_process AS bp ON ps.ProviderID = bp.ProviderID
-                                WHERE
-                                    sg.IsBoardActionEligible = 1
+                                select
+                                    ps.providerid
+                                from
+                                    base.providersanction as ps
+                                    join base.sanctionaction as sa on sa.sanctionactionid = ps.sanctionactionid
+                                    join base.sanctionactiontype as sat on sat.sanctionactiontypeid = sa.sanctionactiontypeid
+                                    join cte_batch_process as bp on ps.providerid = bp.providerid
+                                where
+                                    sat.sanctionactiontypecode = 'B'
+                                union
+                                    --using Only Provider SubType (DOC and NDOC)
+                                select
+                                    ptpst.providerid
+                                from
+                                    base.providersubtype as pst
+                                    join base.providertoprovidersubtype as ptpst on ptpst.providersubtypeid = pst.providersubtypeid
+                                    join cte_batch_process as bp on ptpst.providerid = bp.providerid
+                                where
+                                    pst.isboardactioneligible = 1
+                                union
+                                    --using Provider SubType To Degree (MDEX Plus Degrees)
+                                select
+                                    ptpst.providerid
+                                from
+                                    base.providersubtypetodegree as psttd
+                                    join base.providertoprovidersubtype as ptpst on psttd.providersubtypeid = ptpst.providersubtypeid
+                                    join base.providertodegree as ptd on ptd.providerid = ptpst.providerid
+                                    and psttd.degreeid = ptd.degreeid
+                                    join cte_batch_process as bp on ptpst.providerid = bp.providerid
+                                where
+                                    psttd.isboardactioneligible = 1
+                                union
+                                    --using Specialty Group (GMPA)
+                                select
+                                    ps.providerid
+                                from
+                                    base.specialtygroup as sg
+                                    join base.specialtygrouptospecialty as sgts on sgts.specialtygroupid = sg.specialtygroupid
+                                    join base.providertospecialty as ps on ps.specialtyid = sgts.specialtyid
+                                    join cte_batch_process as bp on ps.providerid = bp.providerid
+                                where
+                                    sg.isboardactioneligible = 1
                             ) 
                         ,
                             cte_pss as (
-                                SELECT
-                                    a.ProviderID,
-                                    a.SubStatusValueA
-                                FROM
-                                    Base.ProviderToSubStatus AS a
-                                    JOIN Base.SubStatus AS b ON b.SubStatusID = a.SubStatusID
-                                    AND b.SubStatusCode = 'U'
+                                select
+                                    a.providerid,
+                                    a.substatusvaluea
+                                from
+                                    base.providertosubstatus as a
+                                    join base.substatus as b on b.substatusid = a.substatusid
+                                    and b.substatuscode = 'U'
                             ) 
                         ,
                             cte_prov_updates_sub as (
-                                SELECT
-                                    DISTINCT p.ProviderID,
-                                    p.ProviderCode,
-                                    p.ProviderTypeID,
-                                    p.FirstName,
-                                    p.MiddleName,
-                                    p.LastName,
-                                    p.Suffix,
-                                    p.Gender,
-                                    p.NPI,
-                                    p.AMAID,
-                                    p.UPIN,
-                                    p.MedicareID,
-                                    p.DEANumber,
-                                    p.TaxIDNumber,
-                                    p.DateOfBirth,
-                                    p.PlaceOfBirth,
-                                    CTE_CP.ProviderID AS CarePhilosophy,
-                                    p.ProfessionalInterest,
-                                    p.AcceptsNewPatients,
-                                    p.HasElectronicMedicalRecords,
-                                    p.HasElectronicPrescription,
-                                    p.LegacyKey,
-                                    p.DegreeAbbreviation AS Degree,
-                                    p.Title,
-                                    p.ProviderURL,
-                                    p.ExpireCode,
-                                    pss.SubStatusValueA,
-                                    CTE_CSA.CityStateAll AS CityStateAll,
-                                    CTE_E.EmailAddress AS PrimaryEmailAddress,
-                                    TRIM(CTE_PTG.ProviderTypeCode) AS ProviderTypeGroup,
-                                    CTE_MSN.NationName AS MedicalSchoolNation,
-                                    CTE_YSMSG.YearsSinceMedicalSchoolGraduation AS YearsSinceMedicalSchoolGraduation,
+                                select
+                                    distinct p.providerid,
+                                    p.providercode,
+                                    p.providertypeid,
+                                    p.firstname,
+                                    p.middlename,
+                                    p.lastname,
+                                    p.suffix,
+                                    p.gender,
+                                    p.npi,
+                                    p.amaid,
+                                    p.upin,
+                                    p.medicareid,
+                                    p.deanumber,
+                                    p.taxidnumber,
+                                    p.dateofbirth,
+                                    p.placeofbirth,
+                                    CTE_cp.providerid as CarePhilosophy,
+                                    p.professionalinterest,
+                                    p.acceptsnewpatients,
+                                    p.haselectronicmedicalrecords,
+                                    p.haselectronicprescription,
+                                    p.legacykey,
+                                    p.degreeabbreviation as Degree,
+                                    p.title,
+                                    p.providerurl,
+                                    p.expirecode,
+                                    pss.substatusvaluea,
+                                    CTE_csa.citystateall as CityStateAll,
+                                    CTE_e.emailaddress as PrimaryEmailAddress,
+                                    trim(CTE_ptg.providertypecode) as ProviderTypeGroup,
+                                    CTE_msn.nationname as MedicalSchoolNation,
+                                    CTE_ysmsg.yearssincemedicalschoolgraduation as YearsSinceMedicalSchoolGraduation,
                                     CASE
-                                        WHEN EXISTS(
-                                            SELECT
+                                        WHEN exists(
+                                            select
                                                 ProviderId
-                                            FROM
-                                                cte_provider_image AS a
-                                            WHERE
-                                                a.ProviderID = p.ProviderID
-                                        ) THEN 1
-                                        ELSE 0
-                                    END AS HasDisplayImage,
-                                    CTE_PI.ImageFilePath AS Image,
-                                    CTE_PI.imFull AS imFull,
-                                    NULL AS ProviderProfileViewOneYear,
-                                    NULL AS YearlySearchVolume,
-                                    CTE_PESOS.PatientExperienceSurveyOverallScore AS PatientExperienceSurveyOverallScore,
-                                    CTE_PESOSV.ProviderAverageScore AS PatientExperienceSurveyOverallStarValue,
-                                    CTE_PESOC.QuestionCount AS PatientExperienceSurveyOverallCount,
-                                    NULL AS ProviderBiography,
-                                    CTE_DSC.DisplayStatusCode AS DisplayStatusCode,
-                                    CTE_SSC.SubStatusCode AS SubStatusCode,
-                                    CTE_PGC.ProductGroupCode AS ProductGroupCode,
-                                    CTE_SC.SponsorCode AS SponsorCode,
-                                    CTE_PC.ProductCode AS ProductCode,
-                                    CTE_FC.Facility AS FacilityCode,
-                                    CTE_AM.ProviderAboutMeText AS SurveyResponse,
-                                    CTE_SRD.SurveyResponseDate AS SurveyResponseDate,
-                                    CTE_HMS.HasMalpracticeState AS HasMalpracticeState,
-                                    CTE_PCOUNT.ProcedureCount AS ProcedureCount,
-                                    CTE_CC.ConditionCount AS ConditionCount,
-                                    NULL AS PatientVolume,
-                                    -- CTE_AS.AppointmentAvailabilityStatement AS AvailabilityStatement,
-                                    p.ProviderLastUpdateDateOverall AS UpdatedDate,
-                                    NULL AS UpdatedSource,
-                                    CTE_O.HasOar AS HasOar,
-                                    NULL AS IsMMPUser,
-                                    CTE_HAM.HasAboutMe AS HasAboutMe,
-                                    pb.SearchBoostSatisfaction,
-                                    pb.SearchBoostAccessibility,
-                                    pb.IsPCPCalculated,
-                                    pb.FAFBoostSatisfaction,
-                                    pb.FAFBoostSancMalp,
-                                    p.FFDisplaySpecialty,
-                                    pb.FFESatisfactionBoost as FFPESBoost,
-                                    pb.FFMalMultiHQ,
-                                    pb.FFMalMulti,
-                                    CTE_PST.ProviderSubTypeCode AS ProviderSubTypeCode
-                                FROM
-                                    Mid.Provider AS p
-                                    INNER JOIN Base.Provider as pb on pb.ProviderID = p.ProviderID -- INNER JOIN #BatchInsertUpdateProcess
-                                    -- AS batch ON batch.ProviderID = p.ProviderID
-                                    INNER JOIN cte_batch_process as CTE_BP ON CTE_BP.ProviderID = p.providerid
-                                    LEFT JOIN cte_city_state_multiple e ON p.ProviderID = e.ProviderID
-                                    LEFT JOIN cte_pss AS pss on pss.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_care_philosophy AS CTE_CP ON CTE_CP.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_city_state_all AS CTE_CSA ON CTE_CSA.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_email AS CTE_E ON CTE_E.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_provider_type_group AS CTE_PTG ON CTE_PTG.ProviderTypeID = p.ProviderTypeID
-                                    LEFT JOIN cte_media_school_nation AS CTE_MSN ON CTE_MSN.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_years_since_medical_school_graduation AS CTE_YSMSG ON CTE_YSMSG.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_provider_image AS CTE_PI ON CTE_PI.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_patient_experience_survey_overall_score AS CTE_PESOS ON CTE_PESOS.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_patient_experience_survey_overall_star_value AS CTE_PESOSV ON CTE_PESOSV.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_patient_experience_survey_overall_count AS CTE_PESOC ON CTE_PESOC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_display_status_code AS CTE_DSC ON CTE_DSC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_sub_status_code AS CTE_SSC ON CTE_SSC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_product_group_code AS CTE_PGC ON CTE_PGC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_sponsor_code AS CTE_SC ON CTE_SC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_product_code AS CTE_PC ON CTE_PC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_facility_code AS CTE_FC ON CTE_FC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_about_me AS CTE_AM ON CTE_AM.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_survey_response_date AS CTE_SRD ON CTE_SRD.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_has_malpractice_state AS CTE_HMS ON CTE_HMS.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_procedure_count AS CTE_PCOUNT ON CTE_PCOUNT.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_condition_count AS CTE_CC ON CTE_CC.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_availability_statement AS CTE_AS ON CTE_AS.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_oar AS CTE_O ON CTE_O.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_has_about_me AS CTE_HAM ON CTE_HAM.ProviderID = p.ProviderID
-                                    LEFT JOIN cte_provider_sub_type AS CTE_PST ON CTE_PST.ProviderID = p.ProviderID
+                                            from
+                                                cte_provider_image as a
+                                            where
+                                                a.providerid = p.providerid
+                                        ) then 1
+                                        else 0
+                                    END as HasDisplayImage,
+                                    CTE_pi.imagefilepath as Image,
+                                    CTE_pi.imfull as imFull,
+                                    null as ProviderProfileViewOneYear,
+                                    null as YearlySearchVolume,
+                                    CTE_pesos.patientexperiencesurveyoverallscore as PatientExperienceSurveyOverallScore,
+                                    CTE_pesosv.provideraveragescore as PatientExperienceSurveyOverallStarValue,
+                                    CTE_pesoc.questioncount as PatientExperienceSurveyOverallCount,
+                                    null as ProviderBiography,
+                                    CTE_dsc.displaystatuscode as DisplayStatusCode,
+                                    CTE_ssc.substatuscode as SubStatusCode,
+                                    CTE_pgc.productgroupcode as ProductGroupCode,
+                                    CTE_sc.sponsorcode as SponsorCode,
+                                    CTE_pc.productcode as ProductCode,
+                                    CTE_fc.facility as FacilityCode,
+                                    CTE_am.provideraboutmetext as SurveyResponse,
+                                    CTE_srd.surveyresponsedate as SurveyResponseDate,
+                                    CTE_hms.hasmalpracticestate as HasMalpracticeState,
+                                    CTE_pcount.procedurecount as ProcedureCount,
+                                    CTE_cc.conditioncount as ConditionCount,
+                                    null as PatientVolume,
+                                    -- CTE_as.appointmentavailabilitystatement as AvailabilityStatement,
+                                    p.providerlastupdatedateoverall as UpdatedDate,
+                                    null as UpdatedSource,
+                                    CTE_o.hasoar as HasOar,
+                                    null as IsMMPUser,
+                                    CTE_ham.hasaboutme as HasAboutMe,
+                                    pb.searchboostsatisfaction,
+                                    pb.searchboostaccessibility,
+                                    pb.ispcpcalculated,
+                                    pb.fafboostsatisfaction,
+                                    pb.fafboostsancmalp,
+                                    p.ffdisplayspecialty,
+                                    pb.ffesatisfactionboost as FFPESBoost,
+                                    pb.ffmalmultihq,
+                                    pb.ffmalmulti,
+                                    CTE_pst.providersubtypecode as ProviderSubTypeCode
+                                from
+                                    mid.provider as p
+                                    inner join base.provider as pb on pb.providerid = p.providerid -- inner join #BatchInsertUpdateProcess
+                                    -- as batch on batch.providerid = p.providerid
+                                    inner join cte_batch_process as CTE_BP on CTE_bp.providerid = p.providerid
+                                    left join cte_city_state_multiple e on p.providerid = e.providerid
+                                    left join cte_pss as pss on pss.providerid = p.providerid
+                                    left join cte_care_philosophy as CTE_CP on CTE_cp.providerid = p.providerid
+                                    left join cte_city_state_all as CTE_CSA on CTE_csa.providerid = p.providerid
+                                    left join cte_email as CTE_E on CTE_e.providerid = p.providerid
+                                    left join cte_provider_type_group as CTE_PTG on CTE_ptg.providertypeid = p.providertypeid
+                                    left join cte_media_school_nation as CTE_MSN on CTE_msn.providerid = p.providerid
+                                    left join cte_years_since_medical_school_graduation as CTE_YSMSG on CTE_ysmsg.providerid = p.providerid
+                                    left join cte_provider_image as CTE_PI on CTE_pi.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_score as CTE_PESOS on CTE_pesos.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_count as CTE_PESOC on CTE_pesoc.providerid = p.providerid
+                                    left join cte_display_status_code as CTE_DSC on CTE_dsc.providerid = p.providerid
+                                    left join cte_sub_status_code as CTE_SSC on CTE_ssc.providerid = p.providerid
+                                    left join cte_product_group_code as CTE_PGC on CTE_pgc.providerid = p.providerid
+                                    left join cte_sponsor_code as CTE_SC on CTE_sc.providerid = p.providerid
+                                    left join cte_product_code as CTE_PC on CTE_pc.providerid = p.providerid
+                                    left join cte_facility_code as CTE_FC on CTE_fc.providerid = p.providerid
+                                    left join cte_about_me as CTE_AM on CTE_am.providerid = p.providerid
+                                    left join cte_survey_response_date as CTE_SRD on CTE_srd.providerid = p.providerid
+                                    left join cte_has_malpractice_state as CTE_HMS on CTE_hms.providerid = p.providerid
+                                    left join cte_procedure_count as CTE_PCOUNT on CTE_pcount.providerid = p.providerid
+                                    left join cte_condition_count as CTE_CC on CTE_cc.providerid = p.providerid
+                                    left join cte_availability_statement as CTE_AS on CTE_as.providerid = p.providerid
+                                    left join cte_oar as CTE_O on CTE_o.providerid = p.providerid
+                                    left join cte_has_about_me as CTE_HAM on CTE_ham.providerid = p.providerid
+                                    left join cte_provider_sub_type as CTE_PST on CTE_pst.providerid = p.providerid
                             ),
                             cte_prov_updates as (
-                                SELECT
-                                    CTE_PUS.ProviderID,
+                                select
+                                    CTE_pus.providerid,
                                     ProviderCode,
-                                    LegacyKey AS ProviderLegacyKey,
+                                    LegacyKey as ProviderLegacyKey,
                                     ProviderTypeID,
                                     ProviderTypeGroup,
                                     FirstName,
                                     MiddleName,
                                     LastName,
                                     Suffix,
-                                    UPPER(Degree) AS Degree,
-                                    UPPER(Gender) AS Gender,
+                                    upper(Degree) as Degree,
+                                    upper(Gender) as Gender,
                                     NPI,
                                     AMAID,
                                     UPIN,
@@ -1268,7 +1268,7 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     MedicalSchoolNation,
                                     YearsSinceMedicalSchoolGraduation,
                                     HasDisplayImage,
-                                    imFull AS DisplayImage,
+                                    imFull as DisplayImage,
                                     HasElectronicMedicalRecords,
                                     HasElectronicPrescription,
                                     AcceptsNewPatients,
@@ -1279,12 +1279,12 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     PatientExperienceSurveyOverallCount,
                                     ProviderBiography,
                                     ProviderURL,
-                                    CTE_PUS.DisplayStatusCode,
-                                    CTE_PUS.SubStatusCode,
+                                    CTE_pus.displaystatuscode,
+                                    CTE_pus.substatuscode,
                                     CASE
-                                        WHEN SubStatusCode = 'U' THEN SubStatusValueA
-                                        ELSE NULL
-                                    END AS DuplicateProviderCode,
+                                        WHEN SubStatusCode = 'U' then SubStatusValueA
+                                        else null
+                                    END as DuplicateProviderCode,
                                     ProductGroupCode,
                                     SponsorCode,
                                     ProductCode,
@@ -1294,16 +1294,16 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     HasMalpracticeState,
                                     ProcedureCount,
                                     ConditionCount,
-                                    NULL AS IsActive,
+                                    null as IsActive,
                                     UpdatedDate,
                                     UpdatedSource,
                                     Title,
                                     CityStateAll,
                                     CASE
-                                        WHEN PatientExperienceSurveyOverallScore >= 75 THEN 1
-                                        ELSE 0
-                                    END AS DisplayPatientExperienceSurveyOverallScore,
-                                    CTE_DS.DeactivationReason AS DeactivationReason,
+                                        WHEN PatientExperienceSurveyOverallScore >= 75 then 1
+                                        else 0
+                                    END as DisplayPatientExperienceSurveyOverallScore,
+                                    CTE_ds.deactivationreason as DeactivationReason,
                                     PatientVolume,
                                     -- AvailabilityStatement,
                                     HasOAR,
@@ -1319,29 +1319,29 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     FFMalMultiHQ,
                                     FFMalMulti,
                                     ProviderSubTypeCode
-                                FROM
-                                    cte_prov_updates_sub AS CTE_PUS
-                                    LEFT JOIN Base.DisplayStatus AS CTE_DS ON CTE_DS.DisplayStatusCode = CTE_PUS.DisplayStatusCode -- JOIN #BatchInsertUpdateProcess b ON b.ProviderID = py.ProviderID
+                                from
+                                    cte_prov_updates_sub as CTE_PUS
+                                    left join base.displaystatus as CTE_DS on CTE_ds.displaystatuscode = CTE_pus.displaystatuscode -- join #BatchInsertUpdateProcess b on b.providerid = py.providerid
                             ),
                             cte_display_image as (
-                                SELECT
-                                    PU.ProviderID,
-                                    '/img/prov/' || LOWER(SUBSTRING(bp.ProviderCode, 1, 1)) || '/' || LOWER(SUBSTRING(bp.ProviderCode, 2, 1)) || '/' || LOWER(SUBSTRING(bp.ProviderCode, 3, 1)) || '/' || LOWER(bp.ProviderCode) || '_w' || CAST(ms.Width AS VARCHAR(10)) || 'h' || CAST(ms.Height AS VARCHAR(10)) || '_v' || bpi.ExternalIdentifier || '.jpg' AS DisplayImage
-                                FROM
-                                    Base.ProviderImage AS bpi
-                                    INNER JOIN Base.Provider AS bp ON bp.ProviderID = bpi.ProviderID
-                                    INNER JOIN cte_prov_updates AS PU ON PU.ProviderId = bp.ProviderId
-                                    INNER JOIN Base.MediaImageHost AS mih ON mih.MediaImageHostID = bpi.MediaImageHostID
-                                    INNER JOIN Base.MediaContextType AS mct ON mct.MediaContextTypeID = bpi.MediaContextTypeID
-                                    CROSS JOIN Base.MediaSize AS ms
-                                WHERE
-                                    mih.MediaImageHostCode = 'BRIGHTSPOT'
-                                    AND ms.MediaSizeCode IN ('MEDIUM')
-                                    AND PU.DisplayImage IS NULL
-                                    AND PU.HasDisplayImage = 1
+                                select
+                                    pu.providerid,
+                                    '/img/prov/' || lower(SUBSTRING(bp.providercode, 1, 1)) || '/' || lower(SUBSTRING(bp.providercode, 2, 1)) || '/' || lower(SUBSTRING(bp.providercode, 3, 1)) || '/' || lower(bp.providercode) || '_w' || CAST(ms.width as varchar(10)) || 'h' || CAST(ms.height as varchar(10)) || '_v' || bpi.externalidentifier || '.jpg' as DisplayImage
+                                from
+                                    base.providerimage as bpi
+                                    inner join base.provider as bp on bp.providerid = bpi.providerid
+                                    inner join cte_prov_updates as PU on pu.providerid = bp.providerid
+                                    inner join base.mediaimagehost as mih on mih.mediaimagehostid = bpi.mediaimagehostid
+                                    inner join base.mediacontexttype as mct on mct.mediacontexttypeid = bpi.mediacontexttypeid
+                                    CROSS join base.mediasize as ms
+                                where
+                                    mih.mediaimagehostcode = 'BRIGHTSPOT'
+                                    and ms.mediasizecode IN ('MEDIUM')
+                                    and pu.displayimage is null
+                                    and pu.hasdisplayimage = 1
                             ) 
-                            SELECT
-                                CTE_PU.ProviderID,
+                            select
+                                CTE_pu.providerid,
                                 ProviderCode,
                                 ProviderLegacyKey,
                                 ProviderTypeID,
@@ -1367,10 +1367,10 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                 YearsSinceMedicalSchoolGraduation,
                                 ----------------------------------
                                 CASE
-                                    WHEN CTE_PU.DisplayImage IS NULL
-                                    AND CTE_PU.HasDisplayImage = 1 THEN CTE_DI.DisplayImage
-                                    ELSE CTE_PU.DisplayImage
-                                END AS DisplayImage,
+                                    WHEN CTE_pu.displayimage is null
+                                    and CTE_pu.hasdisplayimage = 1 then CTE_di.displayimage
+                                    else CTE_pu.displayimage
+                                END as DisplayImage,
                                 ----------------------------------
                                 HasDisplayImage,
                                 HasElectronicMedicalRecords,
@@ -1417,85 +1417,85 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                 FFMalMultiHQ,
                                 FFMalMulti,
                                 ProviderSubTypeCode
-                            FROM
-                                cte_prov_updates AS CTE_PU
-                                LEFT JOIN cte_display_image AS CTE_DI ON CTE_DI.ProviderID = CTE_PU.ProviderID $$;
+                            from
+                                cte_prov_updates as CTE_PU
+                                left join cte_display_image as CTE_DI on CTE_di.providerid = CTE_pu.providerid $$;
 
---- Update Statement
-update_statement_2 := ' UPDATE
+--- update Statement
+update_statement_2 := ' update
                         SET
-                            target.ProviderCode = source.ProviderCode,
-                            target.ProviderTypeID = source.ProviderTypeID,
-                            target.ProviderTypeGroup = source.ProviderTypeGroup,
-                            target.FirstName = source.FirstName,
-                            target.MiddleName = source.MiddleName,
-                            target.LastName = source.LastName,
-                            target.Suffix = source.Suffix,
-                            target.Degree = source.Degree,
-                            target.Gender = source.Gender,
-                            target.NPI = source.NPI,
-                            target.AMAID = source.AMAID,
-                            target.UPIN = source.UPIN,
-                            target.MedicareID = source.MedicareID,
-                            target.DEANumber = source.DEANumber,
-                            target.TaxIDNumber = source.TaxIDNumber,
-                            target.DateOfBirth = source.DateOfBirth,
-                            target.PlaceOfBirth = source.PlaceOfBirth,
-                            target.CarePhilosophy = source.CarePhilosophy,
-                            target.ProfessionalInterest = source.ProfessionalInterest,
-                            target.PrimaryEmailAddress = source.PrimaryEmailAddress,
-                            target.MedicalSchoolNation = source.MedicalSchoolNation,
-                            target.YearsSinceMedicalSchoolGraduation = source.YearsSinceMedicalSchoolGraduation,
-                            target.HasDisplayImage = source.HasDisplayImage,
-                            target.HasElectronicMedicalRecords = source.HasElectronicMedicalRecords,
-                            target.HasElectronicPrescription = source.HasElectronicPrescription,
-                            target.AcceptsNewPatients = source.AcceptsNewPatients,
-                            target.YearlySearchVolume = source.YearlySearchVolume,
-                            target.ProviderProfileViewOneYear = source.ProviderProfileViewOneYear,
-                            target.PatientExperienceSurveyOverallScore = source.PatientExperienceSurveyOverallScore,
-                            target.PatientExperienceSurveyOverallStarValue = source.PatientExperienceSurveyOverallStarValue,
-                            target.PatientExperienceSurveyOverallCount = source.PatientExperienceSurveyOverallCount,
-                            target.ProviderBiography = source.ProviderBiography,
-                            target.ProviderURL = source.ProviderURL,
-                            target.ProductGroupCode = source.ProductGroupCode,
-                            target.SponsorCode = source.SponsorCode,
-                            target.ProductCode = source.ProductCode,
-                            target.FacilityCode = source.FacilityCode,
-                            target.ProviderLegacyKey = source.ProviderLegacyKey,
-                            target.DisplayImage = source.DisplayImage,
-                            target.SurveyResponse = source.SurveyResponse,
-                            target.SurveyResponseDate = source.SurveyResponseDate,
-                            target.UpdatedDate = source.UpdatedDate,
-                            target.IsActive = source.IsActive,
-                            target.UpdatedSource = source.UpdatedSource,
-                            target.Title = source.Title,
-                            target.CityStateAll = source.CityStateAll,
-                            target.DisplayPatientExperienceSurveyOverallScore = source.DisplayPatientExperienceSurveyOverallScore,
-                            target.DisplayStatusCode = source.DisplayStatusCode,
-                            target.SubStatusCode = source.SubStatusCode,
-                            target.DeactivationReason = source.DeactivationReason,
-                            target.DuplicateProviderCode = source.DuplicateProviderCode,
-                            target.PatientVolume = source.PatientVolume,
-                            target.HasMalpracticeState = source.HasMalpracticeState,
-                            target.ProcedureCount = source.ProcedureCount,
-                            target.ConditionCount = source.ConditionCount,
-                            -- target.AvailabilityStatement = source.AvailabilityStatement,
-                            target.HasOar = source.HasOar,
-                            target.IsMMPUser = source.IsMMPUser,
-                            target.HasAboutMe = source.HasAboutMe,
-                            target.SearchBoostSatisfaction = source.SearchBoostSatisfaction,
-                            target.SearchBoostAccessibility = source.SearchBoostAccessibility,
-                            target.isPCPCalculated = source.isPCPCalculated,
-                            target.FAFBoostSatisfaction = source.FAFBoostSatisfaction,
-                            target.FAFBoostSancMalp = source.FAFBoostSancMalp,
-                            target.FFDisplaySpecialty = source.FFDisplaySpecialty,
-                            target.FFPESBoost = source.FFPESBoost,
-                            target.FFMalMultiHQ = source.FFMalMultiHQ,
-                            target.FFMalMulti = source.FFMalMulti,
-                            target.ProviderSubTypeCode = source.ProviderSubTypeCode';
+                            target.providercode = source.providercode,
+                            target.providertypeid = source.providertypeid,
+                            target.providertypegroup = source.providertypegroup,
+                            target.firstname = source.firstname,
+                            target.middlename = source.middlename,
+                            target.lastname = source.lastname,
+                            target.suffix = source.suffix,
+                            target.degree = source.degree,
+                            target.gender = source.gender,
+                            target.npi = source.npi,
+                            target.amaid = source.amaid,
+                            target.upin = source.upin,
+                            target.medicareid = source.medicareid,
+                            target.deanumber = source.deanumber,
+                            target.taxidnumber = source.taxidnumber,
+                            target.dateofbirth = source.dateofbirth,
+                            target.placeofbirth = source.placeofbirth,
+                            target.carephilosophy = source.carephilosophy,
+                            target.professionalinterest = source.professionalinterest,
+                            target.primaryemailaddress = source.primaryemailaddress,
+                            target.medicalschoolnation = source.medicalschoolnation,
+                            target.yearssincemedicalschoolgraduation = source.yearssincemedicalschoolgraduation,
+                            target.hasdisplayimage = source.hasdisplayimage,
+                            target.haselectronicmedicalrecords = source.haselectronicmedicalrecords,
+                            target.haselectronicprescription = source.haselectronicprescription,
+                            target.acceptsnewpatients = source.acceptsnewpatients,
+                            target.yearlysearchvolume = source.yearlysearchvolume,
+                            target.providerprofileviewoneyear = source.providerprofileviewoneyear,
+                            target.patientexperiencesurveyoverallscore = source.patientexperiencesurveyoverallscore,
+                            target.patientexperiencesurveyoverallstarvalue = source.patientexperiencesurveyoverallstarvalue,
+                            target.patientexperiencesurveyoverallcount = source.patientexperiencesurveyoverallcount,
+                            target.providerbiography = source.providerbiography,
+                            target.providerurl = source.providerurl,
+                            target.productgroupcode = source.productgroupcode,
+                            target.sponsorcode = source.sponsorcode,
+                            target.productcode = source.productcode,
+                            target.facilitycode = source.facilitycode,
+                            target.providerlegacykey = source.providerlegacykey,
+                            target.displayimage = source.displayimage,
+                            target.surveyresponse = source.surveyresponse,
+                            target.surveyresponsedate = source.surveyresponsedate,
+                            target.updateddate = source.updateddate,
+                            target.isactive = source.isactive,
+                            target.updatedsource = source.updatedsource,
+                            target.title = source.title,
+                            target.citystateall = source.citystateall,
+                            target.displaypatientexperiencesurveyoverallscore = source.displaypatientexperiencesurveyoverallscore,
+                            target.displaystatuscode = source.displaystatuscode,
+                            target.substatuscode = source.substatuscode,
+                            target.deactivationreason = source.deactivationreason,
+                            target.duplicateprovidercode = source.duplicateprovidercode,
+                            target.patientvolume = source.patientvolume,
+                            target.hasmalpracticestate = source.hasmalpracticestate,
+                            target.procedurecount = source.procedurecount,
+                            target.conditioncount = source.conditioncount,
+                            -- target.availabilitystatement = source.availabilitystatement,
+                            target.hasoar = source.hasoar,
+                            target.ismmpuser = source.ismmpuser,
+                            target.hasaboutme = source.hasaboutme,
+                            target.searchboostsatisfaction = source.searchboostsatisfaction,
+                            target.searchboostaccessibility = source.searchboostaccessibility,
+                            target.ispcpcalculated = source.ispcpcalculated,
+                            target.fafboostsatisfaction = source.fafboostsatisfaction,
+                            target.fafboostsancmalp = source.fafboostsancmalp,
+                            target.ffdisplayspecialty = source.ffdisplayspecialty,
+                            target.ffpesboost = source.ffpesboost,
+                            target.ffmalmultihq = source.ffmalmultihq,
+                            target.ffmalmulti = source.ffmalmulti,
+                            target.providersubtypecode = source.providersubtypecode';
 
---- Insert Statement
-insert_statement_2 := ' INSERT
+--- insert Statement
+insert_statement_2 := ' insert
                             (
                                 ProviderID,
                                 ProviderCode,
@@ -1568,515 +1568,515 @@ insert_statement_2 := ' INSERT
                                 FFMalMulti,
                                 ProviderSubTypeCode
                             )
-                        VALUES(
-                                source.ProviderID,
-                                source.ProviderCode,
-                                source.ProviderTypeID,
-                                source.ProviderTypeGroup,
-                                source.FirstName,
-                                source.MiddleName,
-                                source.LastName,
-                                source.Suffix,
-                                source.Degree,
-                                source.Gender,
-                                source.NPI,
-                                source.AMAID,
-                                source.UPIN,
-                                source.MedicareID,
-                                source.DEANumber,
-                                source.TaxIDNumber,
-                                source.DateOfBirth,
-                                source.PlaceOfBirth,
-                                source.CarePhilosophy,
-                                source.ProfessionalInterest,
-                                source.PrimaryEmailAddress,
-                                source.MedicalSchoolNation,
-                                source.YearsSinceMedicalSchoolGraduation,
-                                source.HasDisplayImage,
-                                source.HasElectronicMedicalRecords,
-                                source.HasElectronicPrescription,
-                                source.AcceptsNewPatients,
-                                source.YearlySearchVolume,
-                                source.ProviderProfileViewOneYear,
-                                source.PatientExperienceSurveyOverallScore,
-                                source.PatientExperienceSurveyOverallStarValue,
-                                source.PatientExperienceSurveyOverallCount,
-                                source.ProviderBiography,
-                                source.ProviderURL,
-                                source.ProductGroupCode,
-                                source.SponsorCode,
-                                source.ProductCode,
-                                source.FacilityCode,
-                                source.ProviderLegacyKey,
-                                source.DisplayImage,
-                                source.SurveyResponse,
-                                source.SurveyResponseDate,
-                                source.IsActive,
-                                source.UpdatedDate,
-                                source.UpdatedSource,
-                                source.Title,
-                                source.CityStateAll,
-                                source.DisplayPatientExperienceSurveyOverallScore,
-                                source.DisplayStatusCode,
-                                source.SubStatusCode,
-                                source.DuplicateProviderCode,
-                                source.DeactivationReason,
-                                source.PatientVolume,
-                                source.HasMalpracticeState,
-                                source.ProcedureCount,
-                                source.ConditionCount,
-                                -- source.AvailabilityStatement,
-                                source.HasOar,
-                                source.IsMMPUser,
-                                source.HasAboutMe,
-                                source.SearchBoostSatisfaction,
-                                source.SearchBoostAccessibility,
-                                source.isPCPCalculated,
-                                source.FAFBoostSatisfaction,
-                                source.FAFBoostSancMalp,
-                                source.FFDisplaySpecialty,
-                                source.FFPESBoost,
-                                source.FFMalMultiHQ,
-                                source.FFMalMulti,
-                                source.ProviderSubTypeCode
+                        values(
+                                source.providerid,
+                                source.providercode,
+                                source.providertypeid,
+                                source.providertypegroup,
+                                source.firstname,
+                                source.middlename,
+                                source.lastname,
+                                source.suffix,
+                                source.degree,
+                                source.gender,
+                                source.npi,
+                                source.amaid,
+                                source.upin,
+                                source.medicareid,
+                                source.deanumber,
+                                source.taxidnumber,
+                                source.dateofbirth,
+                                source.placeofbirth,
+                                source.carephilosophy,
+                                source.professionalinterest,
+                                source.primaryemailaddress,
+                                source.medicalschoolnation,
+                                source.yearssincemedicalschoolgraduation,
+                                source.hasdisplayimage,
+                                source.haselectronicmedicalrecords,
+                                source.haselectronicprescription,
+                                source.acceptsnewpatients,
+                                source.yearlysearchvolume,
+                                source.providerprofileviewoneyear,
+                                source.patientexperiencesurveyoverallscore,
+                                source.patientexperiencesurveyoverallstarvalue,
+                                source.patientexperiencesurveyoverallcount,
+                                source.providerbiography,
+                                source.providerurl,
+                                source.productgroupcode,
+                                source.sponsorcode,
+                                source.productcode,
+                                source.facilitycode,
+                                source.providerlegacykey,
+                                source.displayimage,
+                                source.surveyresponse,
+                                source.surveyresponsedate,
+                                source.isactive,
+                                source.updateddate,
+                                source.updatedsource,
+                                source.title,
+                                source.citystateall,
+                                source.displaypatientexperiencesurveyoverallscore,
+                                source.displaystatuscode,
+                                source.substatuscode,
+                                source.duplicateprovidercode,
+                                source.deactivationreason,
+                                source.patientvolume,
+                                source.hasmalpracticestate,
+                                source.procedurecount,
+                                source.conditioncount,
+                                -- source.availabilitystatement,
+                                source.hasoar,
+                                source.ismmpuser,
+                                source.hasaboutme,
+                                source.searchboostsatisfaction,
+                                source.searchboostaccessibility,
+                                source.ispcpcalculated,
+                                source.fafboostsatisfaction,
+                                source.fafboostsancmalp,
+                                source.ffdisplayspecialty,
+                                source.ffpesboost,
+                                source.ffmalmultihq,
+                                source.ffmalmulti,
+                                source.providersubtypecode
                             );';
 
-update_statement_3 := $$ UPDATE show.solrprovider target
-                            SET target.ProviderLegacyKey = src.LegacyKey
-                            FROM base.ProviderLegacyKeys AS src where target.ProviderId = src.ProviderId; 
+update_statement_3 := $$ update show.solrprovider target
+                            SET target.providerlegacykey = src.legacykey
+                            from base.providerlegacykeys as src where target.providerid = src.providerid; 
                         $$;
 
-update_statement_4 := $$ DELETE FROM show.solrprovider
-                        WHERE SOLRPRoviderID IN (
-                            SELECT SOLRPRoviderID
-                            FROM (
-                                SELECT SOLRPRoviderID, ProviderId
-                                FROM (
-                                    SELECT SOLRPRoviderID, ProviderId, ProviderCode, 
-                                    ROW_NUMBER() OVER(PARTITION BY ProviderCode ORDER BY CASE WHEN sponsorshipXML IS NOT NULL THEN 1 ELSE 9 END DESC, DisplayStatusCode, ProviderTypeGroup DESC, SOLRPRoviderID) AS SequenceId
-                                    FROM show.solrprovider
+update_statement_4 := $$ delete from show.solrprovider
+                        where SOLRPRoviderID IN (
+                            select SOLRPRoviderID
+                            from (
+                                select SOLRPRoviderID, ProviderId
+                                from (
+                                    select SOLRPRoviderID, ProviderId, ProviderCode, 
+                                    row_number() over(partition by ProviderCode order by CASE WHEN sponsorshipXML is not null then 1 else 9 END desc, DisplayStatusCode, ProviderTypeGroup desc, SOLRPRoviderID) as SequenceId
+                                    from show.solrprovider
                                 ) X
-                                WHERE SequenceId > 1
+                                where SequenceId > 1
                             )
                         ); 
                         $$;
 
-update_statement_5 := $$ UPDATE show.solrprovider target
-                            SET DateOfFirstLoad = src.LastUpdateDate
-                            FROM  Base.Provider src 
-                            WHERE src.providercode = target.providercode; 
+update_statement_5 := $$ update show.solrprovider target
+                            SET DateOfFirstLoad = src.lastupdatedate
+                            from  base.provider src 
+                            where src.providercode = target.providercode; 
                         $$;
 
-update_statement_6 := $$ UPDATE show.solrprovider target
+update_statement_6 := $$ update show.solrprovider target
                             SET 
-                                target.SourceUpdate = src.SourceName, 
-                                target.SourceUpdateDateTime = src.LastUpdateDateTime
-                            FROM Show.ProviderSourceUpdate src 
-                            WHERE src.ProviderID = target.ProviderID; 
+                                target.sourceupdate = src.sourcename, 
+                                target.sourceupdatedatetime = src.lastupdatedatetime
+                            from show.providersourceupdate src 
+                            where src.providerid = target.providerid; 
                         $$;
 
-update_statement_7 := $$ UPDATE show.solrprovider target
+update_statement_7 := $$ update show.solrprovider target
                             SET AcceptsNewPatients = 1
-                            FROM Mid.Provider src 
-                            where src.ProviderID = target.ProviderID
-                            and src.acceptsnewpatients = 1 AND IFNULL(target.AcceptsNewPatients, 0) = 0; 
+                            from mid.provider src 
+                            where src.providerid = target.providerid
+                            and src.acceptsnewpatients = 1 and ifnull(target.acceptsnewpatients, 0) = 0; 
                         $$;
 
-update_statement_8 := $$ UPDATE show.solrprovider target
-                            SET SuppressSurvey = CASE WHEN src.ProviderID IS NOT NULL THEN 1 ELSE 0 END
-                            FROM (
-                                SELECT DISTINCT ProviderId
-                                FROM Base.ProviderSurveySuppression
+update_statement_8 := $$ update show.solrprovider target
+                            SET SuppressSurvey = CASE WHEN src.providerid is not null then 1 else 0 END
+                            from (
+                                select distinct ProviderId
+                                from base.providersurveysuppression
                             ) src 
-                            WHERE src.ProviderID = target.ProviderID; 
+                            where src.providerid = target.providerid; 
                         $$;
 
-update_statement_9 := $$UPDATE show.solrprovider target
-                            SET IsBoardActionEligible = CASE WHEN X.ProviderID IS NOT NULL THEN 1 ELSE 0 END
-                            FROM (
-                                SELECT ps.ProviderID
-                                FROM Base.ProviderSanction AS ps
-                                JOIN Base.SanctionAction AS sa ON sa.SanctionActionID = ps.SanctionActionID
-                                JOIN Base.SanctionActionType AS sat ON sat.SanctionActionTypeID = sa.SanctionActionTypeID
-                                WHERE sat.SanctionActionTypeCode = 'B'
-                                UNION
-                                SELECT ptpst.ProviderID
-                                FROM Base.ProviderSubType AS pst
-                                JOIN Base.ProviderToProviderSubType AS ptpst ON ptpst.ProviderSubTypeID = pst.ProviderSubTypeID
-                                WHERE pst.IsBoardActionEligible = 1
-                                UNION
-                                SELECT ptpst.ProviderID
-                                FROM Base.ProviderSubTypeToDegree AS psttd
-                                JOIN Base.ProviderToProviderSubType AS ptpst ON psttd.ProviderSubTypeID = ptpst.ProviderSubTypeID
-                                JOIN Base.ProviderToDegree AS ptd ON ptd.ProviderID = ptpst.ProviderID AND psttd.DegreeID = ptd.DegreeID
-                                WHERE psttd.IsBoardActionEligible = 1
-                                UNION
-                                SELECT ps.ProviderID
-                                FROM Base.SpecialtyGroup AS sg
-                                JOIN Base.SpecialtyGroupToSpecialty AS sgts ON sgts.SpecialtyGroupID = sg.SpecialtyGroupID
-                                JOIN Base.ProviderToSpecialty AS ps ON ps.SpecialtyID = sgts.SpecialtyID
-                                WHERE sg.IsBoardActionEligible = 1
+update_statement_9 := $$update show.solrprovider target
+                            SET IsBoardActionEligible = CASE WHEN x.providerid is not null then 1 else 0 END
+                            from (
+                                select ps.providerid
+                                from base.providersanction as ps
+                                join base.sanctionaction as sa on sa.sanctionactionid = ps.sanctionactionid
+                                join base.sanctionactiontype as sat on sat.sanctionactiontypeid = sa.sanctionactiontypeid
+                                where sat.sanctionactiontypecode = 'B'
+                                union
+                                select ptpst.providerid
+                                from base.providersubtype as pst
+                                join base.providertoprovidersubtype as ptpst on ptpst.providersubtypeid = pst.providersubtypeid
+                                where pst.isboardactioneligible = 1
+                                union
+                                select ptpst.providerid
+                                from base.providersubtypetodegree as psttd
+                                join base.providertoprovidersubtype as ptpst on psttd.providersubtypeid = ptpst.providersubtypeid
+                                join base.providertodegree as ptd on ptd.providerid = ptpst.providerid and psttd.degreeid = ptd.degreeid
+                                where psttd.isboardactioneligible = 1
+                                union
+                                select ps.providerid
+                                from base.specialtygroup as sg
+                                join base.specialtygrouptospecialty as sgts on sgts.specialtygroupid = sg.specialtygroupid
+                                join base.providertospecialty as ps on ps.specialtyid = sgts.specialtyid
+                                where sg.isboardactioneligible = 1
                             ) X 
-                            WHERE X.ProviderID = target.ProviderID; 
+                            where x.providerid = target.providerid; 
                         $$;
 
 
 --------- Step 3: Client Certification XML ------------
 
 
-update_statement_10 := $$ UPDATE
+update_statement_10 := $$ update
                                 show.solrprovider target
                             SET
-                                ClientCertificationXML = parse_xml(CTE_CCX.Certs)
-                            FROM
+                                ClientCertificationXML = parse_xml(CTE_ccx.certs)
+                            from
                                 (
                                     with cte_client_providers as (
-                                        SELECT
-                                            distinct s.ProviderCode,
-                                            s.providerId,
-                                            s.SOLRProviderID,
-                                            pc.SourceCode
-                                        FROM
-                                            show.solrprovider AS s
-                                            JOIN base.ProviderCertification as pc on pc.ProviderCode = s.ProviderCode
+                                        select
+                                            distinct s.providercode,
+                                            s.providerid,
+                                            s.solrproviderid,
+                                            pc.sourcecode
+                                        from
+                                            show.solrprovider as s
+                                            join base.providercertification as pc on pc.providercode = s.providercode
                                     ) -- select* from cte_client_providers;
                             ,
                                     cte_cSpcL as (
                                         select
-                                            pc.providerCode,
-                                            UTILS.P_JSON_TO_XML(
+                                            pc.providercode,
+                                            utils.p_JSON_TO_XML(
                                                 array_agg(
-                                                    '{ ' || IFF(
-                                                        pc.cSpCd IS NOT NULL,
-                                                        '"cSpCd":' || '"' || pc.cSpCd || '"' || ',',
+                                                    '{ ' || iff(
+                                                        pc.cspcd is not null,
+                                                        '"cSpCd":' || '"' || pc.cspcd || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.cSpY IS NOT NULL,
-                                                        '"cSpY":' || '"' || pc.cSpY || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cspy is not null,
+                                                        '"cSpY":' || '"' || pc.cspy || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.caCd IS NOT NULL,
-                                                        '"caCd":' || '"' || pc.caCd || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cacd is not null,
+                                                        '"caCd":' || '"' || pc.cacd || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.caD IS NOT NULL,
-                                                        '"caD":' || '"' || pc.caD || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cad is not null,
+                                                        '"caD":' || '"' || pc.cad || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.cbCd IS NOT NULL,
-                                                        '"cbCd":' || '"' || pc.cbCd || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cbcd is not null,
+                                                        '"cbCd":' || '"' || pc.cbcd || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.cbD IS NOT NULL,
-                                                        '"cbD":' || '"' || pc.cbD || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cbd is not null,
+                                                        '"cbD":' || '"' || pc.cbd || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.csCd IS NOT NULL,
-                                                        '"csCd":' || '"' || pc.csCd || '"' || ',',
+                                                    ) || iff(
+                                                        pc.cscd is not null,
+                                                        '"csCd":' || '"' || pc.cscd || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        pc.csD IS NOT NULL,
-                                                        '"csD":' || '"' || pc.csD || '"',
+                                                    ) || iff(
+                                                        pc.csd is not null,
+                                                        '"csD":' || '"' || pc.csd || '"',
                                                         ''
                                                     ) || ' }'
                                                 )::varchar,
                                                 '',
                                                 'cSpC'
                                             ) as cSpcL
-                                        FROM
-                                            base.ProviderCertification as pc
+                                        from
+                                            base.providercertification as pc
                                         where
                                             (
-                                                pc.cSpCd is not null
-                                                or pc.cSpY is not null
-                                                or pc.caCd is not null
-                                                or pc.caD is not null
-                                                or pc.cbCd is not null
-                                                or pc.cbD is not null
-                                                or pc.csCd is not null
-                                                or pc.csD is not null
+                                                pc.cspcd is not null
+                                                or pc.cspy is not null
+                                                or pc.cacd is not null
+                                                or pc.cad is not null
+                                                or pc.cbcd is not null
+                                                or pc.cbd is not null
+                                                or pc.cscd is not null
+                                                or pc.csd is not null
                                             )
                                         group by
-                                            pc.providerCode
+                                            pc.providercode
                                     ),
                                     cte_SpnL as (
-                                        SELECT
-                                            cp.SOLRProviderID,
-                                            cp.ProviderCode,
-                                            UTILS.P_JSON_TO_XML(
+                                        select
+                                            cp.solrproviderid,
+                                            cp.providercode,
+                                            utils.p_JSON_TO_XML(
                                                 array_agg(
-                                                    '{ ' || IFF(
-                                                        SUBSTRING(cp.SourceCode, 3, 50) IS NOT NULL,
-                                                        '"spnCd":' || '"' || SUBSTRING(cp.SourceCode, 3, 50) || '"' || ',',
+                                                    '{ ' || iff(
+                                                        SUBSTRING(cp.sourcecode, 3, 50) is not null,
+                                                        '"spnCd":' || '"' || SUBSTRING(cp.sourcecode, 3, 50) || '"' || ',',
                                                         ''
-                                                    ) || IFF(
-                                                        CTE_cSpcL.cSpcL IS NOT NULL,
-                                                        '"cSpcL":' || '"' || CTE_cSpcL.cSpcL || '"',
+                                                    ) || iff(
+                                                        CTE_cspcl.cspcl is not null,
+                                                        '"cSpcL":' || '"' || CTE_cspcl.cspcl || '"',
                                                         ''
                                                     ) || ' }'
                                                 )::varchar,
                                                 'cSpnL',
                                                 'cSpn'
                                             ) as certs
-                                        FROM
-                                            cte_client_providers AS cp
-                                            LEFT JOIN CTE_cSpcL ON CTE_cSpcL.ProviderCode = cp.ProviderCode -- WHERE cp.SOLRProviderID=prv.SOLRProviderID
-                                        GROUP BY
-                                            cp.SOLRProviderID,
-                                            cp.ProviderCode
+                                        from
+                                            cte_client_providers as cp
+                                            left join CTE_cSpcL on CTE_cspcl.providercode = cp.providercode -- where cp.solrproviderid=prv.solrproviderid
+                                        group by
+                                            cp.solrproviderid,
+                                            cp.providercode
                                     ),
                                     cte_certs as (
                                         select
-                                            DISTINCT prv.SOLRProviderID,
-                                            prv.ProviderCode,
+                                            distinct prv.solrproviderid,
+                                            prv.providercode,
                                             certs
-                                        FROM
-                                            cte_client_providers AS prv
-                                            left join cte_SpnL ON cte_SpnL.SOLRProviderID = prv.SOLRProviderID
-                                            and cte_SpnL.ProviderCode = prv.ProviderCode
+                                        from
+                                            cte_client_providers as prv
+                                            left join cte_SpnL on cte_spnl.solrproviderid = prv.solrproviderid
+                                            and cte_spnl.providercode = prv.providercode
                                     )
                                     ,
                                     cte_client_certs_xml as (
-                                        SELECT
+                                        select
                                             SOLRProviderID,
                                             CASE
-                                                WHEN REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') > 0 THEN cte_certs.certs
-                                            END AS certs,
-                                            REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') AS CertsCount,
-                                            ROW_NUMBER() OVER (
-                                                PARTITION BY SOLRProviderID
-                                                ORDER BY
-                                                    REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') DESC
-                                            ) AS DedupeRank
+                                                WHEN REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') > 0 then cte_certs.certs
+                                            END as certs,
+                                            REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') as CertsCount,
+                                            row_number() over (
+                                                partition by SOLRProviderID
+                                                order by
+                                                    REGEXP_COUNT(certs, '<cSpnL><cSpn><spnCd>.*<cspc>', 1, 'i') desc
+                                            ) as DedupeRank
                                             
                                         from
                                             cte_certs
                                     )
                                     select * from cte_client_certs_xml
-                                ) AS CTE_CCX 
-                                where CTE_CCX.SOLRProviderID = target.SOLRProviderID
+                                ) as CTE_CCX 
+                                where CTE_ccx.solrproviderid = target.solrproviderid
                             and
-                                CTE_CCX.DedupeRank = 1; $$;
+                                CTE_ccx.deduperank = 1; $$;
 
-update_statement_11 := $$ UPDATE show.solrprovider
-                            SET DateOfBirth = NULL
-                            WHERE EXTRACT(YEAR FROM DateOfBirth) = 1900;$$;
+update_statement_11 := $$ update show.solrprovider
+                            SET DateOfBirth = null
+                            where EXTRACT(YEAR from DateOfBirth) = 1900;$$;
 
 --------- Step 4: spuSuppressSurveyFlag
 
-update_statement_12 := $$ UPDATE
+update_statement_12 := $$ update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
-                            FROM
-                                Base.ProviderToSpecialty AS a
-                                JOIN Base.Specialty as b ON b.SpecialtyID = a.SpecialtyID
-                                JOIN Base.SpecialtyGroupToSpecialty c ON c.SpecialtyID = a.SpecialtyID
-                                JOIN Base.SpecialtyGroup d ON d.SpecialtyGroupID = c.SpecialtyGroupID
-                            where target.ProviderID = a.ProviderID
+                            from
+                                base.providertospecialty as a
+                                join base.specialty as b on b.specialtyid = a.specialtyid
+                                join base.specialtygrouptospecialty c on c.specialtyid = a.specialtyid
+                                join base.specialtygroup d on d.specialtygroupid = c.specialtygroupid
+                            where target.providerid = a.providerid
                             and
-                                d.SpecialtyGroupCode IN ('NPHR', 'PNPH')
-                                AND IFNULL(target.SuppressSurvey, 0) = 0;$$;
+                                d.specialtygroupcode IN ('NPHR', 'PNPH')
+                                and ifnull(target.suppresssurvey, 0) = 0;$$;
     
-update_statement_13 := $$ UPDATE
+update_statement_13 := $$ update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 0
-                            FROM
-                                SHOW.SOLRPROVIDERDelta src 
-                            WHERE src.ProviderID = target.ProviderID
-                            AND
-                                target.SuppressSurvey = 1;$$;
+                            from
+                                show.solrproviderdelta src 
+                            where src.providerid = target.providerid
+                            and
+                                target.suppresssurvey = 1;$$;
     
-update_statement_14 := $$ UPDATE
+update_statement_14 := $$ update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
-                            FROM SHOW.SOLRPROVIDERDelta b , Base.ProviderSurveySuppressiON ps 
-                            WHERE
-                            b.ProviderID = target.ProviderID AND target.ProviderID = ps.ProviderID;$$;
+                            from show.solrproviderdelta b , base.providersurveysuppression ps 
+                            where
+                            b.providerid = target.providerid and target.providerid = ps.providerid;$$;
     
-update_statement_15 := $$ UPDATE
+update_statement_15 := $$ update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
-                            FROM
-                                SHOW.SOLRPROVIDERDelta b 
-                                JOIN (
-                                    SELECT
-                                        DISTINCT p.ProviderID
-                                    FROM
-                                        Base.Provider p
-                                        JOIN SHOW.SOLRPROVIDERDelta b ON b.ProviderID = p.ProviderID
-                                        JOIN Base.ProviderToSubStatus ap ON p.ProviderID = ap.ProviderID
-                                        JOIN Base.SubStatus ss ON ap.SubStatusID = ss.SubStatusID
-                                    WHERE
-                                        ss.SubStatusCode IN ('B', 'L')
-                                        AND ap.HierarchyRank = 1
+                            from
+                                show.solrproviderdelta b 
+                                join (
+                                    select
+                                        distinct p.providerid
+                                    from
+                                        base.provider p
+                                        join show.solrproviderdelta b on b.providerid = p.providerid
+                                        join base.providertosubstatus ap on p.providerid = ap.providerid
+                                        join base.substatus ss on ap.substatusid = ss.substatusid
+                                    where
+                                        ss.substatuscode IN ('B', 'L')
+                                        and ap.hierarchyrank = 1
                                 ) x 
-                                where x.ProviderID = target.ProviderID
-                                and b.ProviderID = target.ProviderID;$$;
+                                where x.providerid = target.providerid
+                                and b.providerid = target.providerid;$$;
 
-update_statement_16 := $$ UPDATE
+update_statement_16 := $$ update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 0 --select SuppressSurvey, *
-                            FROM
-                                Mid.ProviderSpONsorship ps,
-                                Base.ProviderToSpecialty a 
-                                JOIN Base.Specialty b ON b.SpecialtyID = a.SpecialtyID
-                                JOIN Base.SpecialtyGroupToSpecialty c ON c.SpecialtyID = a.SpecialtyID
-                                JOIN Base.SpecialtyGroup d ON d.SpecialtyGroupID = c.SpecialtyGroupID
-                            WHERE
-                                d.SpecialtyGroupCode IN ('NPHR', 'PNPH')
-                                AND ps.ClientCode <> 'Fresen'
-                                AND ps.ProviderCode = target.ProviderCode
-                                and target.ProviderID = a.ProviderID
-                                AND target.SuppressSurvey = 1; $$;
+                            from
+                                mid.providersponsorship ps,
+                                base.providertospecialty a 
+                                join base.specialty b on b.specialtyid = a.specialtyid
+                                join base.specialtygrouptospecialty c on c.specialtyid = a.specialtyid
+                                join base.specialtygroup d on d.specialtygroupid = c.specialtygroupid
+                            where
+                                d.specialtygroupcode IN ('NPHR', 'PNPH')
+                                and ps.clientcode <> 'Fresen'
+                                and ps.providercode = target.providercode
+                                and target.providerid = a.providerid
+                                and target.suppresssurvey = 1; $$;
 --------------------- 
 
 update_statement_17 := $$ 
-DELETE FROM show.solrprovider
-WHERE ProviderCode IN (
-    SELECT pr.ProviderCode
-    FROM Base.ProviderRemoval pr
-    WHERE show.solrprovider.ProviderCode = pr.ProviderCode
+delete from show.solrprovider
+where ProviderCode IN (
+    select pr.providercode
+    from base.providerremoval pr
+    where show.solrprovider.ProviderCode = pr.providercode
 ); 
 $$;
 
 update_statement_18 := $$ 
-UPDATE show.solrprovider
+update show.solrprovider
 SET AcceptsNewPatients = 0
-WHERE ProviderID IN (
-    SELECT b.ProviderID
-    FROM Show.SOLRProviderDelta b
-    WHERE show.solrprovider.ProviderID = b.ProviderID
-    AND SubStatusCode IN ('C', 'Y', 'A')
-    AND AcceptsNewPatients != 0
+where ProviderID IN (
+    select b.providerid
+    from show.solrproviderdelta b
+    where show.solrprovider.ProviderID = b.providerid
+    and SubStatusCode IN ('C', 'Y', 'A')
+    and AcceptsNewPatients != 0
 );
 $$;
 
 update_statement_19 := $$ 
-MERGE INTO show.solrprovider AS P USING (
-    SELECT SS.SubStatusCode, DS.DisplayStatusCode
-    FROM Base.SubStatus AS SS
-    JOIN Base.DisplayStatus AS DS ON DS.DisplayStatusId = SS.DisplayStatusId
-) AS sub ON P.SubStatusCode = sub.SubStatusCode
-WHEN MATCHED AND P.DisplayStatusCode != sub.DisplayStatusCode AND P.DisplayStatusCode = 'H' THEN
-UPDATE SET P.DisplayStatusCode = sub.DisplayStatusCode; 
+merge into show.solrprovider as P using (
+    select ss.substatuscode, ds.displaystatuscode
+    from base.substatus as SS
+    join base.displaystatus as DS on ds.displaystatusid = ss.displaystatusid
+) as sub on p.substatuscode = sub.substatuscode
+WHEN MATCHED and p.displaystatuscode != sub.displaystatuscode and p.displaystatuscode = 'H' then
+update SET p.displaystatuscode = sub.displaystatuscode; 
 $$;
 
 update_statement_20 := $$ 
-UPDATE show.solrprovider 
-SET APIXML = TO_VARIANT(REPLACE(CAST(APIXML AS VARCHAR(16777216)), '</apiL>', '
+update show.solrprovider 
+SET APIXML = TO_VARIANT(REPLACE(CAST(APIXML as varchar(16777216)), '</apiL>', '
 <api>
 <clientCd>OASTEST</clientCd>
 <camCd>OASTEST_005</camCd>
 </api>
 </apiL>'))
-WHERE ProviderCode IN ('G92WN', 'yj754', 'XYLGDMH', '2p2v2', '2CJGY', 'XCWYN', 'E5B5Z', 'YJLPH')
-AND CAST(APIXML AS VARCHAR(16777216)) NOT LIKE '%OASTEST_005%'; 
+where ProviderCode IN ('G92WN', 'yj754', 'XYLGDMH', '2p2v2', '2CJGY', 'XCWYN', 'E5B5Z', 'YJLPH')
+and CAST(APIXML as varchar(16777216)) not LIKE '%OASTEST_005%'; 
 $$;
 
 ------ Client Market Refresh
 
-temp_table_statement_1 := 'CREATE OR REPLACE TEMPORARY TABLE temp_provider as (
-    SELECT
-        p.ProviderID,
-        p.ProviderID as EDWBaseRecordID,
-        0 AS IsInClientMarket
-    FROM
+temp_table_statement_1 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
+    select
+        p.providerid,
+        p.providerid as EDWBaseRecordID,
+        0 as IsInClientMarket
+    from
         mdm_team.mst.provider_profile_processing as ppp
-        Join Base.Provider as p on p.providercode = ppp.REF_PROVIDER_CODE
+        join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
     LIMIT 50000
 );';
 
--- temp_table_statement_2 := 'CREATE OR REPLACE TEMPORARY TABLE temp_provider as (
---                     SELECT
---                         src.ProviderID,
---                         src.EDWBaseRecordID,
---                         0 AS IsInClientMarket
---                     FROM
---                         Base.Provider AS src
+-- temp_table_statement_2 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
+--                     select
+--                         src.providerid,
+--                         src.edwbaserecordid,
+--                         0 as IsInClientMarket
+--                     from
+--                         base.provider as src
 --                     LIMIT 50000
 --                 );';
 
-update_statement_temp_1 := 'UPDATE
+update_statement_temp_1 := 'update
                                     temp_provider target
                                 SET
                                     IsInClientMarket = 1
-                                FROM
-                                    Base.ProviderToOffice pto 
-                                    JOIN Base.OfficeToAddress ota ON pto.OfficeID = ota.OfficeID
-                                    JOIN Base.Address a ON ota.AddressID = a.AddressID
-                                    JOIN Base.CityStatePostalCode csz ON a.CityStatePostalCodeID = csz.CityStatePostalCodeID
-                                    JOIN Base.GeographicArea geo ON (
-                                        csz.City = geo.GeographicAreaValue1
-                                        AND csz.State = geo.GeographicAreaValue2
+                                from
+                                    base.providertooffice pto 
+                                    join base.officetoaddress ota on pto.officeid = ota.officeid
+                                    join base.address a on ota.addressid = a.addressid
+                                    join base.citystatepostalcode csz on a.citystatepostalcodeid = csz.citystatepostalcodeid
+                                    join base.geographicarea geo on (
+                                        csz.city = geo.geographicareavalue1
+                                        and csz.state = geo.geographicareavalue2
                                     )
-                                    JOIN Mid.ClientMarket cm ON geo.GeographicAreaCode = cm.GeographicAreaCode,
-                                    Base.ProviderToSpecialty pts  
-                                    JOIN Base.SpecialtyGroupToSpecialty sgs ON pts.SpecialtyID = sgs.SpecialtyID,
-                                    Base.SpecialtyGroup sg
-                                WHERE
-                                    pts.IsSearchable = 1
-                                    AND target.ProviderID = pto.ProviderID
-                                    AND target.ProviderID = pts.ProviderID
-                                    AND sgs.SpecialtyGroupID = sg.SpecialtyGroupID
-                                    AND cm.LineOfServiceCode = sg.SpecialtyGroupCode;';
+                                    join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode,
+                                    base.providertospecialty pts  
+                                    join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid,
+                                    base.specialtygroup sg
+                                where
+                                    pts.issearchable = 1
+                                    and target.providerid = pto.providerid
+                                    and target.providerid = pts.providerid
+                                    and sgs.specialtygroupid = sg.specialtygroupid
+                                    and cm.lineofservicecode = sg.specialtygroupcode;';
 
-update_statement_temp_2 := 'UPDATE
+update_statement_temp_2 := 'update
                                     temp_provider target
                                 SET
                                     IsInClientMarket = 1
-                                FROM
-                                    Base.ProviderToOffice pto 
-                                    JOIN Base.OfficeToAddress ota ON pto.OfficeID = ota.OfficeID
-                                    JOIN Base.Address a ON ota.AddressID = a.AddressID
-                                    JOIN Base.CityStatePostalCode csz ON a.CityStatePostalCodeID = csz.CityStatePostalCodeID
-                                    JOIN Base.GeographicArea geo ON (
-                                        csz.PostalCode = geo.GeographicAreaValue1
-                                        AND geo.GeographicAreaValue2 IS NULL
+                                from
+                                    base.providertooffice pto 
+                                    join base.officetoaddress ota on pto.officeid = ota.officeid
+                                    join base.address a on ota.addressid = a.addressid
+                                    join base.citystatepostalcode csz on a.citystatepostalcodeid = csz.citystatepostalcodeid
+                                    join base.geographicarea geo on (
+                                        csz.postalcode = geo.geographicareavalue1
+                                        and geo.geographicareavalue2 is null
                                     )
-                                    JOIN Mid.ClientMarket cm ON geo.GeographicAreaCode = cm.GeographicAreaCode,
-                                    Base.ProviderToSpecialty pts 
-                                    JOIN Base.SpecialtyGroupToSpecialty sgs ON pts.SpecialtyID = sgs.SpecialtyID,
-                                    Base.SpecialtyGroup sg 
-                                WHERE
-                                    pts.IsSearchable = 1
-                                    AND target.IsInClientMarket = 0
-                                    AND target.ProviderID = pto.ProviderID
-                                    AND target.ProviderID = pts.ProviderID
-                                    AND sgs.SpecialtyGroupID = sg.SpecialtyGroupID
-                                    AND cm.LineOfServiceCode = sg.SpecialtyGroupCode;;';                                
+                                    join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode,
+                                    base.providertospecialty pts 
+                                    join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid,
+                                    base.specialtygroup sg 
+                                where
+                                    pts.issearchable = 1
+                                    and target.isinclientmarket = 0
+                                    and target.providerid = pto.providerid
+                                    and target.providerid = pts.providerid
+                                    and sgs.specialtygroupid = sg.specialtygroupid
+                                    and cm.lineofservicecode = sg.specialtygroupcode;;';                                
 
-update_statement_21 := 'UPDATE
+update_statement_21 := 'update
                                 show.solrprovider target
                             SET
                                 IsInClientMarket = p1.IsInClientMarket
-                            FROM
+                            from
                                 TEMP_PROVIDER p1
-                            WHERE
-                                p1.IsInClientMarket <> target.IsInClientMarket
-                                and p1.ProviderID = target.ProviderID;';
+                            where
+                                p1.IsInClientMarket <> target.isinclientmarket
+                                and p1.ProviderID = target.providerid;';
 
 
-update_statement_22 := 'UPDATE		show.solrprovider target
+update_statement_22 := 'update		show.solrprovider target
 SET			AcceptsNewPatients =  1
-FROM		Base.Provider P 
-WHERE		IFNULL(target.ACCEPTSNEWPATIENTS,0) != P.AcceptsNewPatients
-AND P.Providerid = target.ProviderID';
+from		base.provider P 
+where		ifnull(target.acceptsnewpatients,0) != p.acceptsnewpatients
+and p.providerid = target.providerid';
 
 
-if_condition := $$ SELECT
+if_condition := $$ select
     COUNT(1)
-FROM
-    Show.SOLRprovider P
-    LEFT JOIN (
-        SELECT
-            DISTINCT *
-        FROM(
-                SELECT
+from
+    show.solrprovider P
+    left join (
+        select
+            distinct *
+        from(
+                select
                     ProviderId,
                     ProviderCode,
                     SponsorCode,
@@ -2092,7 +2092,7 @@ FROM
                             'Type'
                         ),
                         '$'
-                    ) AS DisplayType,
+                    ) as DisplayType,
                     get(
                         xmlget(
                             xmlget(
@@ -2105,7 +2105,7 @@ FROM
                             'cd'
                         ),
                         '$'
-                    ) AS PracticeCode,
+                    ) as PracticeCode,
                     get(
                         xmlget(
                             xmlget(
@@ -2124,7 +2124,7 @@ FROM
                             'cd'
                         ),
                         '$'
-                    ) AS OfficeCode,
+                    ) as OfficeCode,
                     get(
                         xmlget(
                             xmlget(
@@ -2149,7 +2149,7 @@ FROM
                             'ph'
                         ),
                         '$'
-                    ) AS PhoneNumber,
+                    ) as PhoneNumber,
                     get(
                         xmlget(
                             xmlget(
@@ -2174,35 +2174,35 @@ FROM
                             'phTyp'
                         ),
                         '$'
-                    ) AS PhoneType,
-                FROM
+                    ) as PhoneType,
+                from
                     show.solrprovider,
-                WHERE
+                where
                     ProductCode = 'MAP'
             )
-    ) X ON X.ProviderId = P.ProviderId
-WHERE
+    ) X on x.providerid = p.providerid
+where
     ProductCode = 'MAP'
-    AND PracticeOfficeXML IS NOT NULL
-    AND(
-        X.ProviderId IS NULL
-        OR LEN(PhoneNumber) = 0
+    and PracticeOfficeXML is not null
+    and(
+        x.providerid is null
+        or LEN(PhoneNumber) = 0
     )
-    AND P.DisplayStatusCode != 'H'
-    AND SponsorshipXML IS NOT NULL $$;
+    and p.displaystatuscode != 'H'
+    and SponsorshipXML is not null $$;
 
-update_statement_23 := $$ Update
+update_statement_23 := $$ update
     show.solrprovider
 SET
     SponsorshipXML = null,
     SearchSponsorshipXML = null
-FROM
-    show.solrprovider AS P
-    LEFT JOIN (
-        SELECT
-            DISTINCT *
-        FROM(
-                SELECT
+from
+    show.solrprovider as P
+    left join (
+        select
+            distinct *
+        from(
+                select
                     ProviderId,
                     ProviderCode,
                     SponsorCode,
@@ -2218,7 +2218,7 @@ FROM
                             'Type'
                         ),
                         '$'
-                    ) AS DisplayType,
+                    ) as DisplayType,
                     get(
                         xmlget(
                             xmlget(
@@ -2231,7 +2231,7 @@ FROM
                             'cd'
                         ),
                         '$'
-                    ) AS PracticeCode,
+                    ) as PracticeCode,
                     get(
                         xmlget(
                             xmlget(
@@ -2250,7 +2250,7 @@ FROM
                             'cd'
                         ),
                         '$'
-                    ) AS OfficeCode,
+                    ) as OfficeCode,
                     get(
                         xmlget(
                             xmlget(
@@ -2275,7 +2275,7 @@ FROM
                             'ph'
                         ),
                         '$'
-                    ) AS PhoneNumber,
+                    ) as PhoneNumber,
                     get(
                         xmlget(
                             xmlget(
@@ -2300,113 +2300,113 @@ FROM
                             'phTyp'
                         ),
                         '$'
-                    ) AS PhoneType,
-                FROM
+                    ) as PhoneType,
+                from
                     show.solrprovider,
-                WHERE
+                where
                     ProductCode = 'MAP'
             )
-    ) as x ON X.ProviderId = P.ProviderId
-WHERE
-    P.ProductCode = 'MAP'
-    AND P.PracticeOfficeXML IS NOT NULL
-    AND(
-        X.ProviderId IS NULL
-        OR LEN(PhoneNumber) = 0
+    ) as x on x.providerid = p.providerid
+where
+    p.productcode = 'MAP'
+    and p.practiceofficexml is not null
+    and(
+        x.providerid is null
+        or LEN(PhoneNumber) = 0
     )
-    AND P.DisplayStatusCode != 'H'
-    AND P.SponsorshipXML IS NOT NULL; $$;
+    and p.displaystatuscode != 'H'
+    and p.sponsorshipxml is not null; $$;
 
-update_statement_24 := $$UPDATE show.solrprovider 
+update_statement_24 := $$update show.solrprovider 
 		SET DisplayStatusCode = 'A'
-		WHERE DisplayStatusCode = 'H' AND SubStatusCode = '1'$$;
+		where DisplayStatusCode = 'H' and SubStatusCode = '1'$$;
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement_1 := ' MERGE INTO show.solrprovider as target USING 
+merge_statement_1 := ' merge into show.solrprovider as target using 
                    ('||select_statement_1||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN MATCHED THEN DELETE
-                   WHEN NOT MATCHED THEN '||insert_statement_1;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then delete
+                   when not matched then '||insert_statement_1;
 
-merge_statement_2 := ' MERGE INTO show.solrprovider as target USING 
+merge_statement_2 := ' merge into show.solrprovider as target using 
                    ('||select_statement_2 ||') as source 
-                   ON source.Providerid = target.Providerid
-                   WHEN MATCHED THEN '||update_statement_2 || '
-                   WHEN NOT MATCHED THEN '||insert_statement_2 ;
+                   on source.providerid = target.providerid
+                   WHEN MATCHED then '||update_statement_2 || '
+                   when not matched then '||insert_statement_2 ;
                    
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
+------------------- 5. execution ------------------------
 --------------------------------------------------------- 
                     
-EXECUTE IMMEDIATE merge_statement_1 ;
-EXECUTE IMMEDIATE merge_statement_2 ;
-EXECUTE IMMEDIATE update_statement_3;
-EXECUTE IMMEDIATE update_statement_4;
-EXECUTE IMMEDIATE update_statement_5;
-EXECUTE IMMEDIATE update_statement_6;
-EXECUTE IMMEDIATE update_statement_7;
-EXECUTE IMMEDIATE update_statement_8;
-EXECUTE IMMEDIATE update_statement_9;
-EXECUTE IMMEDIATE update_statement_10; 
-EXECUTE IMMEDIATE update_statement_11;
-IF ((select count(*) from Base.Client c JOIN Base.ClientToProduct ctp ON c.ClientID = ctp.ClientID WHERE c.ClientCode = 'Fresen') > 1) THEN
-    EXECUTE IMMEDIATE update_statement_12;
-END IF;
-EXECUTE IMMEDIATE update_statement_13;
-EXECUTE IMMEDIATE update_statement_14;
-EXECUTE IMMEDIATE update_statement_15;
-EXECUTE IMMEDIATE update_statement_16;
-EXECUTE IMMEDIATE update_statement_17;
-EXECUTE IMMEDIATE update_statement_18;
-EXECUTE IMMEDIATE update_statement_19;
-EXECUTE IMMEDIATE update_statement_20;
-EXECUTE IMMEDIATE temp_table_statement_1;
-EXECUTE IMMEDIATE update_statement_temp_1;
-EXECUTE IMMEDIATE update_statement_temp_2;
-EXECUTE IMMEDIATE update_statement_21;
-EXECUTE IMMEDIATE update_statement_22;
-EXECUTE IMMEDIATE if_condition;
-IF ((SELECT
-    COUNT(1)
-FROM
-    Show.SOLRprovider P
-    LEFT JOIN (
-        SELECT
-            DISTINCT *
-        FROM(
-                SELECT
-                    ProviderId,
-                    ProviderCode,
-                    SponsorCode,
+execute immediate merge_statement_1 ;
+execute immediate merge_statement_2 ;
+execute immediate update_statement_3;
+execute immediate update_statement_4;
+execute immediate update_statement_5;
+execute immediate update_statement_6;
+execute immediate update_statement_7;
+execute immediate update_statement_8;
+execute immediate update_statement_9;
+execute immediate update_statement_10; 
+execute immediate update_statement_11;
+if ((select count(*) from base.client c join base.clienttoproduct ctp on c.clientid = ctp.clientid where c.clientcode = 'fresen') > 1) then
+    execute immediate update_statement_12;
+end if;
+execute immediate update_statement_13;
+execute immediate update_statement_14;
+execute immediate update_statement_15;
+execute immediate update_statement_16;
+execute immediate update_statement_17;
+execute immediate update_statement_18;
+execute immediate update_statement_19;
+execute immediate update_statement_20;
+execute immediate temp_table_statement_1;
+execute immediate update_statement_temp_1;
+execute immediate update_statement_temp_2;
+execute immediate update_statement_21;
+execute immediate update_statement_22;
+execute immediate if_condition;
+if ((select
+    count(1)
+from
+    show.solrprovider p
+    left join (
+        select
+            distinct *
+        from(
+                select
+                    providerid,
+                    providercode,
+                    sponsorcode,
                     get(
                         xmlget(
                             xmlget(
                                 xmlget(
                                     xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
+                                    'displ'
                                 ),
                                 'disp'
                             ),
-                            'Type'
+                            'type'
                         ),
                         '$'
-                    ) AS DisplayType,
+                    ) as displaytype,
                     get(
                         xmlget(
                             xmlget(
                                 xmlget(
                                     xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
+                                    'displ'
                                 ),
                                 'disp'
                             ),
                             'cd'
                         ),
                         '$'
-                    ) AS PracticeCode,
+                    ) as practicecode,
                     get(
                         xmlget(
                             xmlget(
@@ -2414,18 +2414,18 @@ FROM
                                     xmlget(
                                         xmlget(
                                             xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                            'dispL'
+                                            'displ'
                                         ),
                                         'disp'
                                     ),
-                                    'offL'
+                                    'offl'
                                 ),
                                 'off'
                             ),
                             'cd'
                         ),
                         '$'
-                    ) AS OfficeCode,
+                    ) as officecode,
                     get(
                         xmlget(
                             xmlget(
@@ -2435,22 +2435,22 @@ FROM
                                             xmlget(
                                                 xmlget(
                                                     xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
+                                                    'displ'
                                                 ),
                                                 'disp'
                                             ),
-                                            'offL'
+                                            'offl'
                                         ),
                                         'off'
                                     ),
-                                    'phoneL'
+                                    'phonel'
                                 ),
                                 'phone'
                             ),
                             'ph'
                         ),
                         '$'
-                    ) AS PhoneNumber,
+                    ) as phonenumber,
                     get(
                         xmlget(
                             xmlget(
@@ -2460,43 +2460,43 @@ FROM
                                             xmlget(
                                                 xmlget(
                                                     xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
+                                                    'displ'
                                                 ),
                                                 'disp'
                                             ),
-                                            'offL'
+                                            'offl'
                                         ),
                                         'off'
                                     ),
-                                    'phoneL'
+                                    'phonel'
                                 ),
                                 'phone'
                             ),
-                            'phTyp'
+                            'phtyp'
                         ),
                         '$'
-                    ) AS PhoneType,
-                FROM
+                    ) as phonetype,
+                from
                     show.solrprovider,
-                WHERE
-                    ProductCode = 'MAP'
+                where
+                    productcode = 'map'
             )
-    ) X ON X.ProviderId = P.ProviderId
-WHERE
-    ProductCode = 'MAP'
-    AND PracticeOfficeXML IS NOT NULL
-    AND(
-        X.ProviderId IS NULL
-        OR LEN(PhoneNumber) = 0
+    ) x on x.providerid = p.providerid
+where
+    productcode = 'map'
+    and practiceofficexml is not null
+    and(
+        x.providerid is null
+        or len(phonenumber) = 0
     )
-    AND P.DisplayStatusCode != 'H'
-    AND SponsorshipXML IS NOT NULL)< 20 ) THEN 
-    EXECUTE IMMEDIATE update_statement_23;
-END IF;
-EXECUTE IMMEDIATE update_statement_24;
+    and p.displaystatuscode != 'h'
+    and sponsorshipxml is not null)< 20 ) then 
+    execute immediate update_statement_23;
+end if;
+execute immediate update_statement_24;
 
 ---------------------------------------------------------
---------------- 6. Status monitoring --------------------
+--------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
 status := 'completed successfully';
@@ -2516,4 +2516,4 @@ status := 'completed successfully';
 
 
     
-END;
+end;
