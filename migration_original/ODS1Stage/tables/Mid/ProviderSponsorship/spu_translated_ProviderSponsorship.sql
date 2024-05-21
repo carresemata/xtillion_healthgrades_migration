@@ -93,7 +93,7 @@ cte_client_to_product_phone as (
         base.vwupdcclientdetail cl
     where
         cl.phonetypecode in ('PTDES', 'PTMWC', 'PTPSRD', 'PTDPPEP', 'PTDPPNP')
-    union
+    union all
     select
         cp.clienttoproductid,
         p.phonenumber as ph,
@@ -137,26 +137,6 @@ cte_provider_office_phones as (
         e.phonetypecode = 'Service'
     qualify row_number() over(partition by a.providerid order by a.isprimaryoffice, a.providerofficerank) <= 1
 ),
--- cte_message_list_legit as (
---     select
---         a.*,
---         b.messagecode,
---         c.awardcode,
---         c.awarddisplayname
---     from
---         dbo.qualitymessageforods a
---         join base.message b on (a.messagetext = b.messagetext)
---         join base.award c on (a.awardname = c.awarddisplayname)
---     where
---         a.messagepagecode = 'SPONSPHYPRO'
---         and a.awarded = 1
---         and a.displayonpage = 1
---         and a.defaultdisplayonpage = 1
---         and a.displayonsite = 1
---         and a.defaultdisplayonsite = 1
---         and a.messagingconfigured = 1
---         and a.selectedmessageforpage = 1
--- ),
 cte_facility_url as (
     select
         distinct f.facilityid,
@@ -304,23 +284,23 @@ where
     and cf.clientfeaturecode = 'FCDTP' -- Direct To Provider Phone
     and cfv.clientfeaturevaluecode = 'FVPPN'
 ), 
-cte_entity_message_client AS (
-select
-    a.entityid,
-    d.messagetext as calltoactionmsg
-from
-    base.messagetomessagetoentitytopagetoyear a
-    join base.entitytype b on a.entitytypeid = b.entitytypeid
-    join base.messagetype c on a.messagetypeid = c.messagetypeid
-    join base.message d on a.messageid = d.messageid
-    join base.messagepage e on a.messagepageid = e.messagepageid
-where
-    b.entitytypecode = 'CLPROD'
-    and c.messagetypecode = 'CLIENTCALLMSG'
-    and displayonpage = 1
-    and d.isactive = 1
-    and e.messagepagecode = 'SPONSPHYPRO'
-), 
+cte_entity_message_client as (
+    select
+        mtme.entityid,
+        msg.messagetext as calltoactionmsg
+    from
+        base.messagetomessagetoentitytopagetoyear mtme
+        join base.entitytype et on mtme.entitytypeid = et.entitytypeid
+        join base.messagetype mt on mtme.messagetypeid = mt.messagetypeid
+        join base.message msg on mtme.messageid = msg.messageid
+        join base.messagepage mp on mtme.messagepageid = mp.messagepageid
+    where
+        et.entitytypecode = 'CLPROD'
+        and mt.messagetypecode = 'CLIENTCALLMSG'
+        and displayonpage = 1
+        and msg.isactive = 1
+        and mp.messagepagecode = 'SPONSPHYPRO'
+),
 cte_entity_message_product AS (
 select
     mte.entityid,
@@ -439,13 +419,13 @@ select
     prac.practiceid,
     prac.practicename,
     off.officecode as officecodetemp,
-    prac.practicecode as practicecodetemp,
-    row_number() over (partition by pb.providercode order by pto.providerofficerank asc, off.officecode asc) as recid
+    prac.practicecode as practicecodetemp
 from
     cte_provider_batch pb
     join base.providertooffice pto on pb.providerid = pto.providerid 
     join base.office off on pto.officeid = off.officeid
     join base.practice prac on off.practiceid = prac.practiceid
+qualify row_number() over (partition by pb.providercode order by pto.providerofficerank asc, off.officecode asc) = 1
 ),
 
 -- PhoneXML
@@ -521,7 +501,7 @@ cte_phone_3 as (
     where
         fa.phonetypecode in ('PTPSRD','PTFMT','PTFMTM','PTFMTT','PTFDS','PTFMC','PTFSRD','PTFDPPEP','PTFDPPNP','PTFSR','PTFSRM','PTFSRT','PTFSRDTP','PTFMTDTP')
         
-    union
+    union all
 
     select distinct
         fa.clientproducttoentityid,
@@ -532,7 +512,7 @@ cte_phone_3 as (
         base.vwupdcfacilitydetail fa
     where
         fa.phonetypecode in ('PTFSR')
-    union
+    union all
 
     select distinct
         fa.clientproducttoentityid,
@@ -543,7 +523,7 @@ cte_phone_3 as (
         base.vwupdcfacilitydetail fa
     where
         fa.phonetypecode in ('PTFMT')
-    union 
+    union all
     select
         fa.clientproducttoentityid,
         phone.phonenumber as ph,
@@ -1051,8 +1031,8 @@ group by
 ),
 
 cte_providersponsorship as (
-select distinct
-    pv.providercode,
+select
+    distinct pv.providercode,
     pr.productcode,
     pr.producttypecode,
     pr.productdescription,
@@ -1063,70 +1043,241 @@ select distinct
     cl.clientname,
     tfp.facilitycode,
     tfp.facilityname,
-    
     -- phonexml,
-
-    case when (pr.ProductCode IN ('PDCDEV','PDCSPC') OR ifnull(to_varchar(ed.ClientToProductID),'') <> '') THEN p1.phonexml
-    when (	cpe.IsEntityEmployed = 1 and ((select ifnull(ep.EmployedProviderPhone,'') from Base.vwuPDCEmployedProviderPhone ep WHERE ep.PhoneTypeCode = 'PTEMP' and ctp.ClientToProductID = ep.ClientToProductID )  <> '' )) THEN p2.phonexml
-    when ifnull(to_varchar(ec.ClientToProductID),'') <> '' and (select top 1 ifnull(DesignatedProviderPhone, '') from Base.vwuPDCFacilityDetail fa WHERE fa.PhoneTypeCode in ('PTFMT','PTFMTM','PTFMTT','PTFDS','PTFMC','PTFSRD','PTFDPPEP','PTFDPPNP','PTFSR','PTFSRM','PTFSRT','PTFSRDTP','PTFMTDTP')  and tfp.ClientProductToEntityID = fa.ClientProductToEntityID) <> '' THEN p3.phonexml
-    when exists(select TOP 1 1 from cte_client_to_product_phone cpp WHERE ctp.ClientToProductID = cpp.ClientToProductId) then p4.phonexml 
-    when exists (select TOP 1 1 from cte_provider_office_phones pop WHERE pv.ProviderID = pop.ProviderID) THEN p5.phonexml
-    else p6.phonexml
+    case
+        when (
+            pr.ProductCode IN ('PDCDEV', 'PDCSPC')
+            OR ifnull(to_varchar(ed.ClientToProductID), '') <> ''
+        ) THEN p1.phonexml
+        when (
+            cpe.IsEntityEmployed = 1
+            and (
+                (
+                    select
+                        ifnull(ep.EmployedProviderPhone, '')
+                    from
+                        Base.vwuPDCEmployedProviderPhone ep
+                    WHERE
+                        ep.PhoneTypeCode = 'PTEMP'
+                        and ctp.ClientToProductID = ep.ClientToProductID
+                ) <> ''
+            )
+        ) THEN p2.phonexml
+        when ifnull(to_varchar(ec.ClientToProductID), '') <> ''
+        and (
+            select
+                top 1 ifnull(DesignatedProviderPhone, '')
+            from
+                Base.vwuPDCFacilityDetail fa
+            WHERE
+                fa.PhoneTypeCode in (
+                    'PTFMT',
+                    'PTFMTM',
+                    'PTFMTT',
+                    'PTFDS',
+                    'PTFMC',
+                    'PTFSRD',
+                    'PTFDPPEP',
+                    'PTFDPPNP',
+                    'PTFSR',
+                    'PTFSRM',
+                    'PTFSRT',
+                    'PTFSRDTP',
+                    'PTFMTDTP'
+                )
+                and tfp.ClientProductToEntityID = fa.ClientProductToEntityID
+        ) <> '' THEN p3.phonexml
+        when exists(
+            select
+                TOP 1 1
+            from
+                cte_client_to_product_phone cpp
+            WHERE
+                ctp.ClientToProductID = cpp.ClientToProductId
+        ) then p4.phonexml
+        when exists (
+            select
+                TOP 1 1
+            from
+                cte_provider_office_phones pop
+            WHERE
+                pv.ProviderID = pop.ProviderID
+        ) THEN p5.phonexml
+        else p6.phonexml
     end as phonexml,
-    
     -- mobilephonexml
-    case when (pr.ProductCode IN ('PDCDEV','PDCSPC') or ifnull(to_varchar(ed.clienttoproductid),'') <> '' ) then null	
-	when (	cpe.IsEntityEmployed = 1 -- Client-Employed Provider
-		and ((	select	ifnull(ep.EmployedProviderPhone,'')
-									from	Base.vwuPDCEmployedProviderPhone ep
-									where	ep.PhoneTypeCode = 'PTEMPM'
-											and ctp.ClientToProductID = ep.ClientToProductID )  <> '' )) then m1.mobilephonexml
-    when ifnull(to_varchar(ec.ClientToProductID),'') <> '' then m2.mobilephonexml
-    else m3.mobilephonexml end as mobilephonexml,
-    
+    case
+        when (
+            pr.ProductCode IN ('PDCDEV', 'PDCSPC')
+            or ifnull(to_varchar(ed.clienttoproductid), '') <> ''
+        ) then null
+        when (
+            cpe.IsEntityEmployed = 1 -- Client-Employed Provider
+            and (
+                (
+                    select
+                        ifnull(ep.EmployedProviderPhone, '')
+                    from
+                        Base.vwuPDCEmployedProviderPhone ep
+                    where
+                        ep.PhoneTypeCode = 'PTEMPM'
+                        and ctp.ClientToProductID = ep.ClientToProductID
+                ) <> ''
+            )
+        ) then m1.mobilephonexml
+        when ifnull(to_varchar(ec.ClientToProductID), '') <> '' then m2.mobilephonexml
+        else m3.mobilephonexml
+    end as mobilephonexml,
     -- desktopphonexml,
-    case when (pr.ProductCode IN ('PDCDEV','PDCSPC') or ifnull(to_varchar(ed.clienttoproductid),'') <> '' ) then null
-    when (	cpe.IsEntityEmployed = 1 -- Client-Employed Provider
-		and ((	select	ifnull(ep.EmployedProviderPhone,'')
-									from	Base.vwuPDCEmployedProviderPhone ep
-									where	ep.PhoneTypeCode = 'PTEMPDTP'
-											and ctp.ClientToProductID = ep.ClientToProductID )  <> '' )) then d1.desktopphonexml
-     when ifnull(to_varchar(ec.ClientToProductID),'') <> '' then d2.desktopphonexml
-     else d3.desktopphonexml end as desktopphonexml,
-                                            
+    case
+        when (
+            pr.ProductCode IN ('PDCDEV', 'PDCSPC')
+            or ifnull(to_varchar(ed.clienttoproductid), '') <> ''
+        ) then null
+        when (
+            cpe.IsEntityEmployed = 1 -- Client-Employed Provider
+            and (
+                (
+                    select
+                        ifnull(ep.EmployedProviderPhone, '')
+                    from
+                        Base.vwuPDCEmployedProviderPhone ep
+                    where
+                        ep.PhoneTypeCode = 'PTEMPDTP'
+                        and ctp.ClientToProductID = ep.ClientToProductID
+                ) <> ''
+            )
+        ) then d1.desktopphonexml
+        when ifnull(to_varchar(ec.ClientToProductID), '') <> '' then d2.desktopphonexml
+        else d3.desktopphonexml
+    end as desktopphonexml,
     -- tabletphonexml,
-    case when (pr.ProductCode IN ('PDCDEV','PDCSPC') or ifnull(to_varchar(ed.clienttoproductid),'') <> '' ) then null
-    when (	cpe.IsEntityEmployed = 1 -- Client-Employed Provider
-		and ((	select	ifnull(ep.EmployedProviderPhone,'')
-									from	Base.vwuPDCEmployedProviderPhone ep
-									where	ep.PhoneTypeCode = 'PTEMPT'
-											and ctp.ClientToProductID = ep.ClientToProductID )  <> '' )) then t1.tabletphonexml
-     when ifnull(to_varchar(ec.ClientToProductID),'') <> '' then t2.tabletphonexml
-     else t3.tabletphonexml end as tabletphonexml,
-
+    case
+        when (
+            pr.ProductCode IN ('PDCDEV', 'PDCSPC')
+            or ifnull(to_varchar(ed.clienttoproductid), '') <> ''
+        ) then null
+        when (
+            cpe.IsEntityEmployed = 1 -- Client-Employed Provider
+            and (
+                (
+                    select
+                        ifnull(ep.EmployedProviderPhone, '')
+                    from
+                        Base.vwuPDCEmployedProviderPhone ep
+                    where
+                        ep.PhoneTypeCode = 'PTEMPT'
+                        and ctp.ClientToProductID = ep.ClientToProductID
+                ) <> ''
+            )
+        ) then t1.tabletphonexml
+        when ifnull(to_varchar(ec.ClientToProductID), '') <> '' then t2.tabletphonexml
+        else t3.tabletphonexml
+    end as tabletphonexml,
     -- urlxml,
-    case when (ifnull(to_varchar(eb.ClientToProductID),'') <> '') and (select TOP 1 URL from Base.vwuPDCFacilityDetail fa WHERE fa.URLTypeCode IN ('FCFURL', 'FCCIURL') and tfp.ClientProductToEntityID = fa.ClientProductToEntityID) IS NOT NULL THEN u1.urlxml 
-    when (select TOP 1 URL from Base.vwuPDCClientDetail cl WHERE cl.URLTypeCode = 'FCCLURL' and eb.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN u2.urlxml
-    else u3.urlxml end as urlxml,
-
+    case
+        when (
+            ifnull(to_varchar(eb.ClientToProductID), '') <> ''
+        )
+        and (
+            select
+                TOP 1 URL
+            from
+                Base.vwuPDCFacilityDetail fa
+            WHERE
+                fa.URLTypeCode IN ('FCFURL', 'FCCIURL')
+                and tfp.ClientProductToEntityID = fa.ClientProductToEntityID
+        ) IS NOT NULL THEN u1.urlxml
+        when (
+            select
+                TOP 1 URL
+            from
+                Base.vwuPDCClientDetail cl
+            WHERE
+                cl.URLTypeCode = 'FCCLURL'
+                and eb.ClientToProductID = cl.ClientToProductID
+        ) IS NOT NULL THEN u2.urlxml
+        else u3.urlxml
+    end as urlxml,
     -- imagexml,
-    case when (ifnull(to_varchar(eb.ClientToProductID),'') <> '') and exists (select TOP 1 ImageFilePath from Base.vwuPDCClientDetail cl WHERE cl.MediaImageTypeCode = 'FCCLLOGO' and eb.ClientToProductID = cl.ClientToProductID) then i1.imagexml
-    when exists(select TOP 1 ImageFilePath from Base.vwuPDCFacilityDetail fa WHERE fa.MediaImageTypeCode = 'FCFLOGO' and tfp.ClientProductToEntityID = fa.ClientProductToEntityID) then i2.imagexml 
-    when exists(select TOP 1 ImageFilePath from Base.vwuPDCFacilityDetail fa WHERE tfp.ClientProductToEntityID = fa.ClientProductToEntityID) then i3.imagexml
-    else i4.imagexml end as imagexml,
-    
+    case
+        when (
+            ifnull(to_varchar(eb.ClientToProductID), '') <> ''
+        )
+        and exists (
+            select
+                TOP 1 ImageFilePath
+            from
+                Base.vwuPDCClientDetail cl
+            WHERE
+                cl.MediaImageTypeCode = 'FCCLLOGO'
+                and eb.ClientToProductID = cl.ClientToProductID
+        ) then i1.imagexml
+        when exists(
+            select
+                TOP 1 ImageFilePath
+            from
+                Base.vwuPDCFacilityDetail fa
+            WHERE
+                fa.MediaImageTypeCode = 'FCFLOGO'
+                and tfp.ClientProductToEntityID = fa.ClientProductToEntityID
+        ) then i2.imagexml
+        when exists(
+            select
+                TOP 1 ImageFilePath
+            from
+                Base.vwuPDCFacilityDetail fa
+            WHERE
+                tfp.ClientProductToEntityID = fa.ClientProductToEntityID
+        ) then i3.imagexml
+        else i4.imagexml
+    end as imagexml,
     -- qualitymessagexml,
     null as appointmentoptiondescription,
-    case when ifnull(emc.calltoactionmsg,'') <> '' then emc.calltoactionmsg when ifnull(emp.calltoactionmsg,'') <> '' then emp.calltoactionmsg else empg.calltoactionmsg end as calltoactionmsg,
+    case
+        when ifnull(emc.calltoactionmsg, '') <> '' then emc.calltoactionmsg
+        when ifnull(emp.calltoactionmsg, '') <> '' then emp.calltoactionmsg
+        else empg.calltoactionmsg
+    end as calltoactionmsg,
     ems.safeharbormsg,
-    case when ifnull(to_varchar(emst.clienttoproductid), '') <> '' then tfp.state end as facilitystate,
-    case when prac.officeid is not null then prac.officeid else po.officeid end as officeid,
-    case when prac.officecode is not null then prac.officecode else po.officecode end as officecode,
-    case when prac.officename is not null then prac.officename else po.officename end as officename,
-    case when prac.practiceid is not null then prac.practiceid when po.practiceid is not null then po.practiceid else '00000000-0000-0000-0000-000000000000' end as practiceid,
-    case when prac.practicecode is not null then prac.practicecode when po.practicecode is not null then po.practicecode else 'GENERAL' end as practicecode,
-    case when prac.practicename is not null then prac.practicename when po.practicename is not null then po.practicename else '' end as practicename,
-    case when clientcode in (select clientcode from cte_clientcode_in) then 1 end as hasoar
+    case
+        when ifnull(to_varchar(emst.clienttoproductid), '') <> '' then tfp.state
+    end as facilitystate,
+    case
+        when prac.officeid is not null then prac.officeid
+        else po.officeid
+    end as officeid,
+    case
+        when prac.officecode is not null then prac.officecode
+        else po.officecode
+    end as officecode,
+    case
+        when prac.officename is not null then prac.officename
+        else po.officename
+    end as officename,
+    case
+        when prac.practiceid is not null then prac.practiceid
+        when po.practiceid is not null then po.practiceid
+        else '00000000-0000-0000-0000-000000000000'
+    end as practiceid,
+    case
+        when prac.practicecode is not null then prac.practicecode
+        when po.practicecode is not null then po.practicecode
+        else 'GENERAL'
+    end as practicecode,
+    case
+        when prac.practicename is not null then prac.practicename
+        when po.practicename is not null then po.practicename
+        else ''
+    end as practicename,
+    case
+        when clientcode in (
+            select
+                clientcode
+            from
+                cte_clientcode_in
+        ) then 1
+    end as hasoar
 from base.clienttoproduct ctp -- a
 		join base.client cl on ctp.clientid = cl.clientid  -- b
 		join base.product pr on ctp.productid = pr.productid and ifnull(pr.producttypecode, '') <> 'Practice' -- c
@@ -1188,32 +1339,32 @@ where
 ),
 
 cte_ptods as (
-select
-    distinct cl.clientcode,
-    pr.productcode,
-    pv.providercode,
-    a.officecode,
-    d.phonenumber as ph,
-    e.phonetypecode phtyp
-from
-    base.office a
-    inner join base.providertooffice po on po.officeid = a.officeid
-    inner join base.provider pv on pv.providerid = po.providerid
-    inner join base.clientproducttoentity b on a.officeid = b.entityid
-    inner join base.clientproductentitytophone c on b.clientproducttoentityid = c.clientproducttoentityid
-    inner join base.phone d on c.phoneid = d.phoneid
-    inner join base.phonetype e on c.phonetypeid = e.phonetypeid
-    inner join base.clienttoproduct cp on cp.clienttoproductid = b.clienttoproductid
-    inner join base.product pr on pr.productid = cp.productid
-    inner join base.client cl on cl.clientid = cp.clientid
-    inner join cte_providersponsorship ps on ps.providercode = pv.providercode
-where
-    e.phonetypecode = 'PTODS'
-    and ps.phonexml is null
-qualify row_number() over (
-        partition by cl.clientcode, pr.productcode, pv.providercode, a.officecode 
-        order by e.phonetypecode, d.phonenumber
-    ) = 1
+    select
+        distinct cl.clientcode,
+        pr.productcode,
+        pv.providercode,
+        off.officecode,
+        ph.phonenumber as ph,
+        pt.phonetypecode as phtyp
+    from
+        base.office off
+        inner join base.providertooffice pto on pto.officeid = off.officeid
+        inner join base.provider pv on pv.providerid = pto.providerid
+        inner join base.clientproducttoentity cpe on off.officeid = cpe.entityid
+        inner join base.clientproductentitytophone cpetp on cpe.clientproducttoentityid = cpetp.clientproducttoentityid
+        inner join base.phone ph on cpetp.phoneid = ph.phoneid
+        inner join base.phonetype pt on cpetp.phonetypeid = pt.phonetypeid
+        inner join base.clienttoproduct ctp on ctp.clienttoproductid = cpe.clienttoproductid
+        inner join base.product pr on pr.productid = ctp.productid
+        inner join base.client cl on cl.clientid = ctp.clientid
+        inner join cte_providersponsorship ps on ps.providercode = pv.providercode
+    where
+        pt.phonetypecode = 'PTODS'
+        and ps.phonexml is null
+    qualify row_number() over (
+            partition by cl.clientcode, pr.productcode, pv.providercode, off.officecode 
+            order by pt.phonetypecode, ph.phonenumber
+        ) = 1
 ),
 cte_ptods_xml as (
 select
