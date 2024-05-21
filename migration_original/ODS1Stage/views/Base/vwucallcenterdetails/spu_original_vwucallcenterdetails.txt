@@ -1,0 +1,69 @@
+
+SELECT		DISTINCT i.ClientToProductID, a.CallCenterID, a.CallCenterCode, a.CallCenterName, 
+			CASE WHEN a.CallCenterCode in ('CC12','CC13','CC16','CC25','CC36','CC7','CC8','CC55') THEN 1
+				WHEN a.CallCenterCode in ('CC1','CC10','CC11','CC14','CC15','CC17','CC18','CC19','CC2','CC21','CC22','CC23','CC24','CC26','CC27','CC28','CC3','CC4','CC5','CC6','CC9') THEN 2
+				ELSE a.ReplyDays END AS ReplyDays,
+			CASE WHEN a.CallCenterCode IN ('CC11','CC15','CC2','CC21','CC23','CC24','CC25','CC26','CC27','CC28','CC4') THEN '01:00:00.0000000'
+				WHEN a.CallCenterCode IN ('CC1') THEN '17:00:00.0000000'
+				WHEN a.CallCenterCode IN ('CC10','CC12','CC13','CC14','CC16','CC17','CC18','CC19','CC22','CC3','CC36','CC5','CC6','CC7','CC8','CC9') THEN '23:00:00.0000000'
+				ELSE a.ApptCutOffTime END AS ApptCutOffTime, 
+			d.EmailAddress, g.PhoneNumber as FaxNumber
+FROM		Base.CallCenter a
+INNER JOIN	Base.CallCenterType b 
+			ON a.CallCenterTypeID = b.CallCenterTypeID 
+			AND b.CallCenterTypeCode = 'CCTOAR'
+INNER JOIN	Base.ClientProductToCallCenter i 
+			ON a.CallCenterID = i.CallCenterID 
+			AND i.ActiveFlag = 1
+INNER JOIN	Base.ClientToProduct as cp 
+			ON i.ClientToProductID = cp.ClientToProductID 
+			AND cp.ActiveFlag = 1
+LEFT JOIN	Base.CallCenterToEmail c 
+			ON a.CallCenterID = c.CallCenterID  
+LEFT JOIN	Base.Email d 
+			ON c.EmailID = d.EmailID 
+LEFT JOIN	Base.EmailType e 
+			ON c.EmailTypeID = e.EmailTypeID 
+			AND e.EmailTypeCode = 'EMLCC'
+INNER JOIN	Base.CallCenterToPhone f 
+			ON a.CallCenterID = f.CallCenterID
+INNER JOIN	Base.Phone g 
+			ON f.PhoneID = g.PhoneID 
+INNER JOIN	Base.PhoneType h 
+			ON f.PhoneTypeID = h.PhoneTypeID 
+			AND h.PhoneTypeCode = 'PTCCFAX'
+WHERE		i.ClientToProductID != '5D6F65D5-F03D-4AA3-BE1E-45657799B4B0'
+
+UNION
+
+SELECT		ClientToProductId
+			,dCC.CallCenterId
+			,dCC.CallCenterCode
+			,dCC.CallCenterName
+			,CASE WHEN dCC.CallCenterCode in ('CC12','CC13','CC16','CC25','CC36','CC7','CC8','CC55') THEN 1
+				WHEN dCC.CallCenterCode in ('CC1','CC10','CC11','CC14','CC15','CC17','CC18','CC19','CC2','CC21','CC22','CC23','CC24','CC26','CC27','CC28','CC3','CC4','CC5','CC6','CC9') THEN 2
+				ELSE dCC.ReplyDays END AS ReplyDays
+			,CASE WHEN dCC.CallCenterCode IN ('CC11','CC15','CC2','CC21','CC23','CC24','CC25','CC26','CC27','CC28','CC4') THEN '01:00:00.0000000'
+				WHEN dCC.CallCenterCode IN ('CC1') THEN '17:00:00.0000000'
+				WHEN dCC.CallCenterCode IN ('CC10','CC12','CC13','CC14','CC16','CC17','CC18','CC19','CC22','CC3','CC36','CC5','CC6','CC7','CC8','CC9') THEN '23:00:00.0000000'
+				ELSE dCC.ApptCutOffTime END AS ApptCutOffTime
+			,d.EmailAddress, g.PhoneNumber as FaxNumber
+FROM		Base.ClientToProduct lCtP
+INNER JOIN	Base.Client dC
+			ON dC.ClientId = lCtP.ClientId 
+INNER JOIN	Base.Product dP
+			ON dP.ProductId = lCtP.ProductId
+INNER JOIN	Base.CallCenter dCC
+			ON dCC.CallCenterCode = 'CC36'
+LEFT JOIN	Base.CallCenterToEmail LccTe
+			ON dCC.CallCenterID = LccTe.CallCenterID  
+LEFT JOIN	Base.Email d 
+			ON LccTe.EmailID = d.EmailID 
+LEFT JOIN	Base.EmailType e 
+			ON LccTe.EmailTypeID = e.EmailTypeID 
+			AND e.EmailTypeCode = 'EMLCC'
+INNER JOIN	Base.CallCenterToPhone f 
+			ON dCC.CallCenterID = f.CallCenterID
+INNER JOIN	Base.Phone g 
+			ON f.PhoneID = g.PhoneID 
+WHERE		dC.ClientCode IN ('PREMHP')
