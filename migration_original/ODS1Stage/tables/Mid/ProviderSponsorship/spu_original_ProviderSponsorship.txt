@@ -1,0 +1,1314 @@
+
+--- 
+
+begin try drop table #ProviderBatch end try begin catch end catch
+        create table #ProviderBatch (ProviderID uniqueidentifier, ProviderCode varchar(25))
+       
+	
+        if @IsProviderDeltaProcessing = 0 
+        begin
+			IF OBJECT_ID('tempdb..#TempProviders') IS NOT NULL DROP TABLE #TempProviders
+			select prov.ProviderID, prov.ProviderCode
+			into	#TempProviders
+			from Base.Client c
+			join Base.ClientToProduct cp on c.ClientID = cp.ClientID
+			join Base.ClientProductToEntity cpe on cp.ClientToProductID = cpe.ClientToProductID
+			join Base.EntityType et on cpe.EntityTypeID = et.EntityTypeID and et.EntityTypeCode = 'Prov'
+			Join Base.Provider prov on cpe.EntityID = prov.ProviderID
+			insert into #ProviderBatch (ProviderID, ProviderCode)
+			SELECT	DISTINCT ProviderId, ProviderCode
+			FROM	#TempProviders 
+
+			truncate table Mid.ProviderSponsorship
+
+          end
+        else begin
+            insert into #ProviderBatch (ProviderID, ProviderCode)
+            select P.ProviderID, P.ProviderCode
+            from Snowflake.etl.ProviderDeltaProcessing as a
+            inner join Base.Provider as p on p.ProviderID = a.ProviderID
+            order by a.ProviderID
+        end
+
+        create index ixPbProviderID on #ProviderBatch (ProviderID)
+
+		IF OBJECT_ID('tempdb..#ClientToProductPhone') IS NOT NULL DROP TABLE #ClientToProductPhone
+		SELECT		cl.ClientToProductID, cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+		INTO		#ClientToProductPhone
+		FROM		Base.vwuPDCClientDetail cl
+		WHERE		cl.PhoneTypeCode in ('PTDES', 'PTMWC', 'PTPSRD', 'PTDPPEP', 'PTDPPNP') -- PDC Affiliated - Client Specific
+		UNION
+		SELECT		CP.ClientToProductId, P.PhoneNumber AS ph, PT.PhoneTypeCode as phTyp
+		FROM		ODS1Stage.Base.ClientProductEntityToPhone CPEP
+		INNER JOIN	ODS1Stage.Base.ClientProductToEntity CPE ON CPE.ClientProductToEntityID = CPEP.ClientProductToEntityID
+		INNER JOIN	ODS1Stage.Base.EntityType ET ON ET.EntityTypeID = CPE.EntityTypeID
+		INNER JOIN	ODS1Stage.Base.ClientToProduct CP ON CP.ClientToProductId = CPE.ClientToProductId
+		INNER JOIN	ODS1Stage.Base.PhoneType PT ON PT.PhoneTypeID = CPEP.PhoneTypeID
+		INNER JOIN	ODS1Stage.Base.Phone P On P.PhoneID = CPEP.PhoneID
+		WHERE		ET.EntityTypeCode = 'CLPROD'
+
+		IF OBJECT_ID('tempdb..#FacilityPhones') IS NOT NULL DROP TABLE #FacilityPhones
+		SELECT		PF.ProviderId, phone_nbr  AS ph, 'PTDES' AS phTyp, F.FacilityId, ROW_NUMBER()OVER(PARTITION BY PF.ProviderId, F.FacilityId ORDER BY phone_nbr) AS RN1
+		INTO		#FacilityPhones
+		FROM		Base.ProviderToFacility PF
+		INNER JOIN	#ProviderBatch x on x.ProviderId = PF.ProviderId
+		INNER JOIN	Base.Facility F oN F.FacilityId = PF.FacilityId
+		INNER JOIN	hosp_directory.dbo.master_directory M ON M.hgid = F.legacykey
+
+		DELETE #FacilityPhones WHERE RN1 > 1
+		
+		IF OBJECT_ID('tempdb..#ProviderOfficePhones') IS NOT NULL DROP TABLE #ProviderOfficePhones
+		SELECT		A.ProviderID, PhoneNumber  AS ph, PhoneTypeCode AS phTyp, ROW_NUMBER()OVER(PARTITION BY A.ProviderId ORDER BY IsPrimaryOffice, ProviderOfficeRank) AS RN1
+		INTO		#ProviderOfficePhones
+		FROM		Base.ProviderToOffice a 
+		INNER JOIN	#ProviderBatch x on x.ProviderId = a.ProviderId
+		INNER JOIN	Base.Office b on b.OfficeID = a.OfficeID
+		INNER JOIN	Base.OfficeToPhone c ON c.OfficeID = b.OfficeID
+		INNER JOIN	Base.Phone d on (c.PhoneID = d.PhoneID)
+		INNER JOIN	Base.PhoneType e ON e.PhoneTypeID = c.PhoneTypeID
+		WHERE		e.PhoneTypeCode = 'Service'
+		ORDER BY	a.IsPrimaryOffice, a.ProviderOfficeRank, b.OfficeID	
+
+		DELETE #ProviderOfficePhones WHERE RN1 > 1
+
+	--build a temp TABLE with the same structure as the Mid.ProviderSponsorship
+		BEGIN TRY DROP TABLE #ProviderSponsorship END TRY BEGIN CATCH END CATCH
+		SELECT	TOP 0 *
+		INTO	#ProviderSponsorship
+		FROM	Mid.ProviderSponsorship
+		
+		ALTER TABLE #ProviderSponsorship
+		ADD ActionCode INT DEFAULT 0
+
+		ALTER TABLE #ProviderSponsorship
+		ADD ProductTypeCode varchar(50)
+
+--drop table #MessageListLegit
+		IF OBJECT_ID('tempdb..#MessageListLegit') IS NOT NULL DROP TABLE #MessageListLegit
+		select a.*, b.MessageCode, c.AwardCode, c.AwardDisplayName
+		into #MessageListLegit
+		FROM dbo.QualityMessageForODS a
+		JOIN Base.Message b on (a.MessageText = b.MessageText)
+		JOIN Base.Award c on (a.AwardName = c.AwardDisplayName)
+		where a.MessagePageCode = 'SPONSPHYPRO'
+		AND a.Awarded= 1
+		and a.DisplayOnPage = 1
+		and a.DefaultDisplayOnPage= 1
+		and a.DisplayOnSite = 1
+		and a.DefaultDisplayOnSite= 1
+		and a.MessagingConfigured = 1
+		and a.SelectedMessageForPage = 1
+		
+		
+		IF OBJECT_ID('tempdb..#FacilityURL') IS NOT NULL DROP TABLE #FacilityURL
+		SELECT		distinct F.FacilityId, F.FacilityCode
+					,CASE 
+						WHEN FT.FacilityTypeCode IN ('CHDR','STAC')--,'HGPG','HGPS')
+							THEN replace('/hospital-directory/' + ISNULL(HD.HospSeoUrl, REPLACE(LOWER(LTRIM(RTRIM(S.StateName))),' ','-') + '-' + LOWER(S.State)) + '/' +
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + lower(F.LegacyKey),'--','-')
+						WHEN FT.FacilityTypeCode = 'ESRD'
+							THEN replace('/clinic-directory/dialysis-centers/' + LOWER(REPLACE(S.StateName,' ','-'))+'-'+LOWER(S.State)+'/'+
+								 lower(replace(replace(replace(replace(replace(replace(replace(CSP.City,' - ',' '),'&','-'),' ','-'),'/','-'),'''',''),'.',''),'--','-')) + '/' + 
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + LOWER(SUBSTRING(F.LegacyKey, 5,8)),'--','-')
+						WHEN FT.FacilityTypeCode = 'HGUC' -- Produces url fomatted like "/urgent-care/name-facilitycode"
+							THEN replace('/urgent-care/' +
+								 lower(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(LTRIM(RTRIM(f.FacilityName)),' - ',' '),'&','-'),' ','-'),'/','-'),'\','-'),'''',''),':',''),'~',''),';',''),'|',''),'<',''),'>',''),'™',''),'•',''),'*',''),'?',''),'+',''),'®',''),'!',''),'–',''),'@',''),'{',''),'}',''),'[',''),']',''),'(',''),')',''),'ñ','n'),'é','e'),'í','i'),'"',''),'’',''),' ',''),'`',''),',',''),'#',''),'.',''),'---','-'),'--','-')) + 
+								 '-' + LOWER(F.FacilityCode),'--','-')
+						END AS FacilityURL
+		INTO		#FacilityURL
+		FROM		Base.Facility F
+		INNER JOIN	Base.FacilityToFacilityType FtFT ON FtFT.FacilityID = F.FacilityID
+		INNER JOIN	Base.FacilityType FT on FT.FacilityTypeID = FtFT.FacilityTypeID
+		LEFT JOIN	BASE.FacilityToAddress FA ON FA.FacilityID = F.FacilityID
+		LEFT JOIN	BASE.Address A ON A.AddressID = FA.AddressID
+		LEFT JOIN	Base.CityStatePostalCode CSP ON CSP.CityStatePostalCodeID = A.CityStatePostalCodeID
+		LEFT JOIN	Base.State S ON S.State = CSP.State
+		LEFT JOIN   ERMART1.Facility.Facility ef ON ef.FacilityID = F.LegacyKey 
+		LEFT JOIN	ERMART1.Facility.HospitalDetail HD ON HD.FacilityID = ef.FacilityID	
+		WHERE		F.IsClosed = 0	
+					AND ef.FacSearchTypeID IN (1,4,8)
+					AND FT.FacilityTypeCode IN ('CHDR','ESRD','STAC','HGUC')
+
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+	----------		PDC Section : had to split up mid for PDC vs everything else due to performance issues		----------
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+
+	
+        
+		IF OBJECT_ID('tempdb..#TempFacilityPDC') IS NOT NULL DROP TABLE #TempFacilityPDC
+		SELECT	u.ParentID, x.FacilityID, x.FacilityCode, x.FacilityName, 
+				w.ClientProductToEntityID, cspc.State
+		INTO	#TempFacilityPDC
+		FROM	Base.ClientProductEntityRelationship u 
+				JOIN Base.RelationshipType v ON u.RelationshipTypeID = v.RelationshipTypeID
+				JOIN Base.ClientProductToEntity w ON w.ClientProductToEntityID = u.ChildID
+				JOIN Base.Facility x ON w.EntityID = x.FacilityID 
+				JOIN base.facilitytoaddress fad ON fad.FacilityID = x.facilityid
+				join base.address a on a.addressid = fad.AddressID
+				join base.CityStatePostalCode cspc on cspc.CityStatePostalCodeID = a.CityStatePostalCodeID 
+		WHERE	v.RelationshipTypeCode = 'PROVTOFAC' 	
+		AND ISNULL(x.IsClosed,0) = 0
+		
+		create index cix_TempFacilityPDC on #TempFacilityPDC (ClientProductToEntityID)
+
+	--	populate the temp TABLE with data FROM Base schemas
+	--TRUNCATE TABLE #ProviderSponsorship
+
+		INSERT INTO #ProviderSponsorship 
+			(/*PDC & MAP*/
+				ProviderCode,ProductCode,ProductTypeCode,ProductDescription,ProductGroupCode,ProductGroupDescription,
+				ClientToProductID,ClientCode,ClientName,FacilityCode,FacilityName,PhoneXML,MobilePhoneXML,DesktopPhoneXML,TabletPhoneXML,
+				URLXML,ImageXML,QualityMessageXML, AppointmentOptionDescription,CallToActionMsg,SafeHarborMsg,FacilityState
+			)
+
+		SELECT	f.ProviderCode,c.ProductCode,c.ProductTypeCode,c.ProductDescription,pg.ProductGroupCode,pg.ProductGroupDescription,
+				a.ClientToProductID,b.ClientCode,b.ClientName,g.FacilityCode,g.FacilityName,
+				CASE 
+				
+				WHEN	(c.ProductCode IN ('PDCDEV','PDCSPC') OR ISNULL(CAST(m.ClientToProductID AS VARCHAR(50)),'') <> '') THEN 
+					(	
+						SELECT * 
+						FROM (
+							SELECT		TOP 1 PhoneNumber  AS ph, PhoneTypeCode AS phTyp
+							FROM		Base.ProviderToOffice a 
+							INNER JOIN	Base.Office b on b.OfficeID = a.OfficeID
+							INNER JOIN	Base.OfficeToPhone c ON c.OfficeID = b.OfficeID
+							INNER JOIN	Base.Phone d on (c.PhoneID = d.PhoneID)
+							INNER JOIN	Base.PhoneType e ON e.PhoneTypeID = c.PhoneTypeID
+							WHERE		e.PhoneTypeCode = 'Service'
+										AND f.ProviderID = a.ProviderID
+							ORDER BY	a.IsPrimaryOffice, a.ProviderOfficeRank, b.OfficeID						
+							UNION 
+							SELECT		cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+							FROM		Base.vwuPDCClientDetail cl
+							INNER JOIN	Base.ClientToProduct CP
+										ON CP.ClientToProductID = CL.ClientToProductID
+							INNER JOIN	Base.Product P
+										ON P.ProductID = CP.ProductID
+							WHERE		cl.PhoneTypeCode in ('PTPSR', 'PTMWC', 'PTMTR') -- PDC Affiliated - Client Specific
+										AND P.ProductCode = 'MAP'
+										AND cl.ClientToProductID = a.ClientToProductID 
+
+						)X
+						FOR XML RAW ('phone'), ELEMENTS, TYPE
+					)
+					WHEN (	d.IsEntityEmployed = 1 /*Client-Employed Provider*/ AND ((SELECT ISNULL(ep.EmployedProviderPhone,'') FROM Base.vwuPDCEmployedProviderPhone ep WHERE ep.PhoneTypeCode = 'PTEMP' AND a.ClientToProductID = ep.ClientToProductID )  <> '' )) THEN 
+					(
+						SELECT	ep.EmployedProviderPhone AS ph, ep.PhoneTypeCode AS phTyp
+						FROM	Base.vwuPDCEmployedProviderPhone ep
+						WHERE	ep.PhoneTypeCode = 'PTEMP'
+								AND a.ClientToProductID = ep.ClientToProductID 
+						ORDER	BY ep.EmployedProviderPhone, ep.PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE
+					)
+					WHEN ISNULL(CAST(l.ClientToProductID AS VARCHAR(50)),'') <> '' AND (SELECT top 1 ISNULL(DesignatedProviderPhone, '') FROM Base.vwuPDCFacilityDetail fa WHERE fa.PhoneTypeCode in ('PTFMT','PTFMTM','PTFMTT','PTFDS','PTFMC','PTFSRD','PTFDPPEP','PTFDPPNP','PTFSR','PTFSRM','PTFSRT','PTFSRDTP','PTFMTDTP')  AND g.ClientProductToEntityID = fa.ClientProductToEntityID) <> '' /*Facility Level Phones*/ THEN 
+					(		
+						SELECT ph, phTyp
+						FROM(
+							SELECT	ph, phTyp
+							FROM(
+								SELECT	ph, phTyp, ROW_NUMBER()OVER(PARTITION BY phTyp ORDER BY RankValue, PH) AS RN1
+								FROM(
+										SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp, 1 AS RankValue
+										FROM	Base.vwuPDCFacilityDetail fa
+										WHERE	fa.PhoneTypeCode in ('PTPSRD','PTFMT','PTFMTM','PTFMTT','PTFDS','PTFMC','PTFSRD','PTFDPPEP','PTFDPPNP','PTFSR','PTFSRM','PTFSRT','PTFSRDTP','PTFMTDTP') -- PDC Affiliated - Facility Specific
+												AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+										UNION
+										SELECT	DISTINCT DesignatedProviderPhone AS ph, 'PTPSR' as phTyp, 2 AS RankValue
+										FROM	Base.vwuPDCFacilityDetail fa
+										WHERE	fa.PhoneTypeCode in ('PTFSR') -- PDC Affiliated - Facility Specific
+												AND c.ProductCode = 'MAP'
+												AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+										UNION
+										SELECT	DISTINCT DesignatedProviderPhone AS ph, 'PTMTR' as phTyp, 3 AS RankValue
+										FROM	Base.vwuPDCFacilityDetail fa
+										WHERE	fa.PhoneTypeCode in ('PTFMT') -- PDC Affiliated - Facility Specific
+												AND c.ProductCode = 'MAP'
+												AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+										UNION
+										SELECT		TOP 1 PhoneNumber  AS ph, PhoneTypeCode AS phTyp, 1 AS RankValue
+										FROM		Base.ProviderToOffice a 
+										INNER JOIN	Base.Office b on b.OfficeID = a.OfficeID
+										INNER JOIN	Base.OfficeToPhone c ON c.OfficeID = b.OfficeID
+										INNER JOIN	Base.Phone d on (c.PhoneID = d.PhoneID)
+										INNER JOIN	Base.PhoneType e ON e.PhoneTypeID = c.PhoneTypeID
+										WHERE		e.PhoneTypeCode = 'Service'
+													AND f.ProviderID = a.ProviderID
+										ORDER BY	a.IsPrimaryOffice, a.ProviderOfficeRank, b.OfficeID	
+									)X
+								)X
+								WHERE RN1 = 1
+							) phxml
+							order by ph, phTyp
+							FOR XML RAW ('phone'), ELEMENTS, TYPE						
+						)
+					WHEN EXISTS(SELECT TOP 1 1 FROM #ClientToProductPhone X WHERE a.ClientToProductID = X.ClientToProductId) THEN 
+					(		
+						SELECT ph, phTyp
+						FROM(
+								SELECT	ph, phTyp
+								FROM	#ClientToProductPhone CP
+								WHERE	a.ClientToProductID = CP.ClientToProductId
+							) phxml
+							order by ph, phTyp
+							FOR XML RAW ('phone'), ELEMENTS, TYPE						
+						)
+					WHEN EXISTS(SELECT TOP 1 1 FROM #ProviderOfficePhones X WHERE f.ProviderID = X.ProviderID) THEN 
+					(		
+						SELECT ph, phTyp
+						FROM(
+								SELECT		ph, phTyp
+								FROM		#ProviderOfficePhones X
+								WHERE		f.ProviderID = X.ProviderID
+							) phxml
+							order by ph, phTyp
+							FOR XML RAW ('phone'), ELEMENTS, TYPE						
+						)
+					else/*Client Level Phones*/
+					(
+							SELECT ph, phTyp
+							FROM(
+								SELECT		ph, phTyp
+								FROM		#FacilityPhones X
+								WHERE		X.ProviderId = f.ProviderId
+							) phxml
+							order by ph, phTyp
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+
+					)
+				END AS PhoneXML,
+	
+				CASE 
+					WHEN	(c.ProductCode IN ('PDCDEV','PDCSPC') OR ISNULL(CAST(m.ClientToProductID AS VARCHAR(50)),'') <> '' ) THEN NULL	
+					WHEN (	d.IsEntityEmployed = 1 -- Client-Employed Provider
+							AND ((	SELECT	ISNULL(ep.EmployedProviderPhone,'')
+									FROM	Base.vwuPDCEmployedProviderPhone ep
+									WHERE	ep.PhoneTypeCode = 'PTEMPM'
+											AND a.ClientToProductID = ep.ClientToProductID )  <> '' ))
+					
+					
+						THEN (
+								SELECT	DISTINCT ep.EmployedProviderPhone AS ph, ep.PhoneTypeCode AS phTyp
+								FROM	Base.vwuPDCEmployedProviderPhone ep
+								WHERE	ep.PhoneTypeCode = 'PTEMPM'
+										AND a.ClientToProductID = ep.ClientToProductID 
+								order by ep.EmployedProviderPhone, ep.PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE
+							  )
+					WHEN ISNULL(CAST(l.ClientToProductID AS VARCHAR(50)),'') <> '' -- Facility Level Phone
+						THEN (
+								SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+								FROM	Base.vwuPDCFacilityDetail fa
+								WHERE	fa.PhoneTypeCode in('PTFDSM', 'PTFMCM', 'PTFSRDM') -- PDC Designated -- Facility Specific
+										AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+								order by DesignatedProviderPhone, PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE						
+							  )
+					ELSE
+					(
+						SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCClientDetail cl
+						WHERE	cl.PhoneTypeCode in('PTDESM', 'PTMWCM', 'PTPSRM') -- PDC Designated
+								AND a.ClientToProductID = cl.ClientToProductID
+						order by cl.DesignatedProviderPhone, cl.PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+
+					)
+					END AS MobilePhoneXML,
+
+				CASE 
+					WHEN	(c.ProductCode IN ('PDCDEV','PDCSPC') OR  ISNULL(CAST(m.ClientToProductID AS VARCHAR(50)),'') <> '' ) THEN NULL	
+					WHEN (	d.IsEntityEmployed = 1 -- Client-Employed Provider
+							AND ((	SELECT	ISNULL(ep.EmployedProviderPhone,'')
+									FROM	Base.vwuPDCEmployedProviderPhone ep
+									WHERE	ep.PhoneTypeCode = 'PTEMPDTP'
+											AND a.ClientToProductID = ep.ClientToProductID )  <> '' ))					
+					
+						THEN (
+								SELECT	DISTINCT ep.EmployedProviderPhone AS ph, ep.PhoneTypeCode AS phTyp
+								FROM	Base.vwuPDCEmployedProviderPhone ep
+								WHERE	ep.PhoneTypeCode = 'PTEMPDTP'
+										AND a.ClientToProductID = ep.ClientToProductID 
+								order by ep.EmployedProviderPhone, ep.PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE
+							  )
+					WHEN ISNULL(CAST(l.ClientToProductID AS VARCHAR(50)),'') <> '' -- Facility Level Phone
+						THEN (
+								SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+								FROM	Base.vwuPDCFacilityDetail fa
+								WHERE	fa.PhoneTypeCode in('PTFDSDTP','PTFMCDTP','PTFSRDDTP') -- PDC Designated -- Facility Specific
+										AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+								order by DesignatedProviderPhone, PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE						
+							  )
+					ELSE
+					(
+						SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCClientDetail cl
+						WHERE	cl.PhoneTypeCode in('PTDESDTP','PTMWCDTP' , 'PTPSRDTP') -- PDC Designated
+								AND a.ClientToProductID = cl.ClientToProductID
+						order by cl.DesignatedProviderPhone, cl.PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+
+					)
+					END AS DesktopPhoneXML,
+                    
+				CASE  WHEN	(c.ProductCode IN ('PDCDEV','PDCSPC') OR  ISNULL(CAST(m.ClientToProductID AS VARCHAR(50)),'') <> '' ) THEN NULL	
+					WHEN (	d.IsEntityEmployed = 1 -- Client-Employed Provider
+							AND ((	SELECT	ISNULL(ep.EmployedProviderPhone,'')
+									FROM	Base.vwuPDCEmployedProviderPhone ep
+									WHERE	ep.PhoneTypeCode = 'PTEMPT'
+											AND a.ClientToProductID = ep.ClientToProductID )  <> '' ))
+					
+					
+						THEN (
+								SELECT	DISTINCT ep.EmployedProviderPhone AS ph, ep.PhoneTypeCode AS phTyp
+								FROM	Base.vwuPDCEmployedProviderPhone ep
+								WHERE	ep.PhoneTypeCode = 'PTEMPT'
+										AND a.ClientToProductID = ep.ClientToProductID 
+								order by ep.EmployedProviderPhone, ep.PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE
+							  )
+					WHEN ISNULL(CAST(l.ClientToProductID AS VARCHAR(50)),'') <> '' -- Facility Level Phone
+						THEN (
+								SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+								FROM	Base.vwuPDCFacilityDetail fa
+								WHERE	fa.PhoneTypeCode in('PTFDST', 'PTFMCT', 'PTFSRDT') -- PDC Designated -- Facility Specific
+										AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+								order by DesignatedProviderPhone, PhoneTypeCode
+								FOR XML RAW ('phone'), ELEMENTS, TYPE						
+							  )
+					ELSE
+					(
+						SELECT	DISTINCT cl.DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCClientDetail cl
+						WHERE	cl.PhoneTypeCode in('PTDEST', 'PTMWCT', 'PTPSRT') -- PDC Designated
+								AND a.ClientToProductID = cl.ClientToProductID
+						order by cl.DesignatedProviderPhone, cl.PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+	
+					)
+					END AS TabletPhoneXML,	
+	
+					CASE WHEN (ISNULL(CAST(i.ClientToProductID AS VARCHAR(50)),'') <> '') AND (SELECT TOP 1 URL FROM Base.vwuPDCFacilityDetail fa WHERE fa.URLTypeCode IN ('FCFURL', 'FCCIURL') AND g.ClientProductToEntityID = fa.ClientProductToEntityID) IS NOT NULL THEN
+					(
+						SELECT	DISTINCT URL AS urlVal, URLTypeCode as urlTyp
+						FROM	Base.vwuPDCFacilityDetail fa
+						WHERE	fa.URLTypeCode IN ('FCFURL', 'FCCIURL') -- Hospital Profile
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						FOR XML RAW ('url'), ELEMENTS, TYPE	
+					)
+					WHEN (SELECT TOP 1 URL FROM Base.vwuPDCClientDetail cl WHERE cl.URLTypeCode = 'FCCLURL' AND i.ClientToProductID = cl.ClientToProductID) IS NOT NULL THEN
+					(
+						SELECT	DISTINCT URL AS urlVal, URLTypeCode as urlTyp
+						FROM	Base.vwuPDCClientDetail cl
+						WHERE	cl.URLTypeCode = 'FCCLURL' -- Client URL
+								AND i.ClientToProductID = cl.ClientToProductID
+						FOR XML RAW ('url'), ELEMENTS, TYPE			
+					)
+					ELSE	
+					(
+						SELECT	FacilityURL AS urlVal, 'FCCLURL' AS urlTyp 
+						FROM	#FacilityURL TU 
+						WHERE	TU.FacilityCode = g.FacilityCode
+						FOR XML RAW ('url'), ELEMENTS, TYPE
+					) END AS UrlXML,
+
+					CASE WHEN ISNULL(CAST(i.ClientToProductID AS VARCHAR(50)),'') <> '' AND EXISTS(SELECT TOP 1 ImageFilePath FROM Base.vwuPDCClientDetail cl WHERE cl.MediaImageTypeCode = 'FCCLLOGO' AND i.ClientToProductID = cl.ClientToProductID)/*Client Branding*/ THEN  
+						(
+							SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+							FROM	Base.vwuPDCClientDetail cl
+							WHERE	cl.MediaImageTypeCode = 'FCCLLOGO' --Client Logo
+									AND i.ClientToProductID = cl.ClientToProductID
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+						WHEN EXISTS(SELECT TOP 1 ImageFilePath FROM Base.vwuPDCFacilityDetail fa WHERE fa.MediaImageTypeCode = 'FCFLOGO' AND g.ClientProductToEntityID = fa.ClientProductToEntityID) THEN
+						(
+							SELECT	DISTINCT ImageFilePath AS img, MediaImageTypeCode as imgTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	fa.MediaImageTypeCode = 'FCFLOGO' -- Hospital Logo
+									AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+						WHEN EXISTS(SELECT TOP 1 ImageFilePath FROM Base.vwuPDCFacilityDetail fa WHERE g.ClientProductToEntityID = fa.ClientProductToEntityID) THEN
+						(
+							SELECT	DISTINCT TOP 1 ImageFilePath AS img, MediaImageTypeCode as imgTyp
+							FROM	Base.vwuPDCFacilityDetail fa
+							WHERE	g.ClientProductToEntityID = fa.ClientProductToEntityID
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+						ELSE 
+						(
+							SELECT TOP 1 img, imgTyp
+							FROM(
+								SELECT	DISTINCT TOP 1 ImageFilePath AS img, MediaImageTypeCode as imgTyp
+								FROM	Base.vwuPDCClientDetail cl
+								WHERE	i.ClientToProductID = cl.ClientToProductID
+								UNION
+								SELECT	DISTINCT TOP 1 ImageFilePath AS img, MediaImageTypeCode as imgTyp
+								FROM	Base.vwuPDCClientDetail cl
+								WHERE	A.ClientToProductID = cl.ClientToProductID
+							)X
+							FOR XML RAW ('image'), ELEMENTS, TYPE
+						)
+					END AS ImageXML,
+
+				-- (
+				-- 	SELECT  DISTINCT aa.ServiceLineCode AS svcLnCd, stsl.SpecialtyCode AS specCd,
+				-- 			    mt2.LegacyKey AS specID, aa.MessageCode AS msgCd, 'PDCQUALITY' AS msgTypCd, 
+				-- 			    aa.Year AS msgYr, aa.MessageText AS msgTxt, aa.Priority AS pri,
+				-- 			    aa.AwardCode AS awCd, aa.AwardDisplayName AS awNm,
+				-- 			    aa.SelectedMessageForPage as selectMsg	
+				-- 	from	#MessageListLegit aa
+				-- 			JOIN Base.vwuSpecialtyToServiceLine stsl ON aa.ServiceLineCode = stsl.ServiceLineCode
+                --             --These three lines commented out for TFS#41643
+				-- 			--JOIN Base.MedicalTerm mt2 ON mt2.MedicalTermCode = stsl.SpecialtyCode
+				-- 			--JOIN Base.MedicalTermType mtt2 on mt2.MedicalTermTypeID = mtt2.MedicalTermTypeID AND mtt2.MedicalTermTypeCode = 'Specialty'
+				-- 			--JOIN Base.EntityToMedicalTerm emt ON mt2.MedicalTermID = emt.MedicalTermID  
+                --             --These three lines added for TFS#41643
+			    --             join Base.SpecialtyGroup mt2 on mt2.SpecialtyGroupCode = stsl.SpecialtyCode  --Old specialty code from ghetto view is new specialty group code
+			    --             join Base.SpecialtyGroupToSpecialty sgs on sgs.SpecialtyGroupID = mt2.SpecialtyGroupID
+			    --             join Base.ProviderToSpecialty ps on ps.ProviderID = f.ProviderID and ps.SpecialtyID = sgs.SpecialtyID
+				-- 	WHERE 	g.FacilityID = aa.FacilityID
+				-- 			--AND	f.ProviderID = emt.EntityID  --This line commented out for TFS#41643 (added to join above)
+				-- 	order	by Priority,AwardDisplayName,Year			
+				-- 	FOR XML RAW ('quaMsg'), ELEMENTS, TYPE	
+				-- ) AS QualityMessageXML,
+				--n.AppointmentOptionDescription,
+
+				null as AppointmentOptionDescription,
+				CASE 
+					WHEN ISNULL(r.CallToActionMsg,'') <> '' THEN r.CallToActionMsg
+					WHEN ISNULL(rr.CallToActionMsg,'') <> '' THEN rr.CallToActionMsg
+					ELSE s.CallToActionMsg
+				END AS CallToActionMsg,
+				t.SafeHarborMsg,
+                CASE -- State Border for Sponsorship
+                      WHEN ISNULL(CAST(u.ClientToProductID AS VARCHAR(50)),'') <> '' THEN  g.State
+				END AS FacilityState
+		
+	--	SELECT	*
+		FROM	Base.ClientToProduct a
+				JOIN Base.Client b ON a.ClientID = b.ClientID --AND CLIENTCODE = 'IUH'
+				JOIN Base.Product c ON a.ProductID = c.ProductID and ISNULL(c.ProductTypeCode,'') <> 'Practice'
+				JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID and pg.ProductGroupCode = 'PDC'
+				JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
+				JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'PROV'
+				JOIN #ProviderBatch as pb ON d.EntityID = pb.ProviderID --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
+				JOIN Base.Provider f ON d.EntityID = f.ProviderID
+				LEFT JOIN #TempFacilityPDC  g ON d.ClientProductToEntityID = g.ParentID
+				LEFT JOIN 
+				(
+					select distinct ClientToProductID from Base.vwuPDCClientDetail
+				) h ON a.ClientToProductID = h.ClientToProductID --and h.PhoneTypeCode = 'PTDES'--g.ClientProductToEntityID = h.ClientProductToEntityID
+				LEFT JOIN 
+				(
+					SELECT	a.EntityID AS ClientToProductID, e.ClientFeatureValueCode
+					FROM	Base.ClientEntityToClientFeature a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+							JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+							JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+							JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+					WHERE	b.EntityTypeCode = 'CLPROD'
+							AND d.ClientFeatureCode = 'FCBRL' -- Branding Level
+							AND e.ClientFeatureValueCode = 'FVCLT' -- Client
+
+				) i ON a.ClientToProductID = i.ClientToProductID
+				LEFT JOIN 
+				(
+					select distinct ClientProductToEntityID from Base.vwuPDCFacilityDetail 
+				)j ON g.ClientProductToEntityID = j.ClientProductToEntityID				
+				LEFT JOIN 
+				(
+					SELECT	a.EntityID AS ClientToProductID, d.ClientFeatureCode
+					FROM	Base.ClientEntityToClientFeature a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+							JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+							JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+							JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+					WHERE	b.EntityTypeCode = 'CLPROD'
+							AND d.ClientFeatureCode = 'FCMAR' -- Facility Market Targeted
+							AND e.ClientFeatureValueCode = 'Yes' 
+
+				) k ON a.ClientToProductID = k.ClientToProductID
+				LEFT JOIN 
+				(
+					SELECT	a.EntityID AS ClientToProductID, d.ClientFeatureCode AS feCd, 
+							d.ClientFeatureDescription AS feDes, e.ClientFeatureValueCode, e.ClientFeatureValueDescription
+					FROM	Base.ClientEntityToClientFeature a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+							JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+							JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+							JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+					WHERE	b.EntityTypeCode = 'CLPROD'
+							AND d.ClientFeatureCode = 'FCCCP' -- Call Center Phone Numbers
+							AND e.ClientFeatureValueCode = 'FVFAC' -- Facility
+				) l ON a.ClientToProductID = l.ClientToProductID
+				LEFT JOIN 
+				(
+					SELECT	a.EntityID AS ClientToProductID, d.ClientFeatureCode
+					FROM	Base.ClientEntityToClientFeature a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+							JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+							JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+							JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+					WHERE	b.EntityTypeCode = 'CLPROD'
+							AND d.ClientFeatureCode = 'FCDTP' -- Direct To Provider Phone
+							AND e.ClientFeatureValueCode = 'FVPPN' 
+
+				) m ON a.ClientToProductID = m.ClientToProductID
+				LEFT JOIN 
+				(
+					SELECT	EntityID, MessageText AS CallToActionMsg 
+					FROM	Base.MessageToMessageToEntityToPageToYear a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+							JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+							JOIN Base.Message d ON a.MessageID = d.MessageID
+							JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+					WHERE	EntityTypeCode = 'CLPROD'
+							AND c.MessageTypeCode = 'CLIENTCALLMSG'
+							AND DisplayOnPage = 1
+							AND DisplayOnPage = 1
+							AND IsActive = 1
+							AND MessagePageCode = 'SPONSPHYPRO'
+
+				) r ON r.EntityID = a.ClientToProductID
+				LEFT JOIN 
+				(
+					SELECT	EntityID, MessageText AS CallToActionMsg 
+					FROM	Base.MessageToMessageToEntityToPageToYear a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+							JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+							JOIN Base.Message d ON a.MessageID = d.MessageID
+							JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+					WHERE	EntityTypeCode = 'PROD'
+							AND c.MessageTypeCode = 'PRODUCTCALLMSG'
+							AND DisplayOnPage = 1
+							AND DisplayOnPage = 1
+							AND IsActive = 1
+							AND MessagePageCode = 'SPONSPHYPRO'
+
+				) rr ON rr.EntityID = a.ProductID
+				LEFT JOIN 
+				(
+					SELECT	EntityID, MessageText AS CallToActionMsg 
+					FROM	Base.MessageToMessageToEntityToPageToYear a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+							JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+							JOIN Base.Message d ON a.MessageID = d.MessageID
+							JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+					WHERE	EntityTypeCode = 'PROGROUP'
+							AND c.MessageTypeCode = 'DEFAULTCALLMSG'
+							AND DisplayOnPage = 1
+							AND DisplayOnPage = 1
+							AND IsActive = 1
+							AND MessagePageCode = 'SPONSPHYPRO'
+				) s ON s.EntityID = pg.ProductGroupID
+				LEFT JOIN
+				(
+					SELECT	EntityID, MessageText AS SafeHarborMsg 
+					FROM	Base.MessageToMessageToEntityToPageToYear a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+							JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+							JOIN Base.Message d ON a.MessageID = d.MessageID
+							JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+					WHERE	EntityTypeCode = 'CLPROD'
+							AND c.MessageTypeCode = 'SAFEHARBOR'
+							AND DisplayOnPage = 1
+							AND DisplayOnPage = 1
+							AND IsActive = 1
+							AND MessagePageCode = 'SPONSPHYPRO'
+
+				) t ON t.EntityID = a.ClientToProductID
+
+				LEFT JOIN 
+				(
+					SELECT	a.EntityID AS ClientToProductID, d.ClientFeatureCode
+					FROM	Base.ClientEntityToClientFeature a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID 
+							JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+							JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+							JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+					WHERE	b.EntityTypeCode = 'CLPROD'
+							AND d.ClientFeatureCode = 'FCSBS' -- State Border for Sponsorship
+							AND e.ClientFeatureValueCode = 'FVYES' 
+
+				) u ON a.ClientToProductID = u.ClientToProductID
+
+		WHERE	a.ActiveFlag = 1
+				--and f.ProviderCode = '288hd'
+		GROUP	BY f.ProviderID,f.ProviderCode,c.ProductTypeCode,d.IsEntityEmployed,c.ProductCode, 
+				c.ProductDescription,pg.ProductGroupCode,pg.ProductGroupDescription, 
+				b.ClientCode, b.ClientName, g.FacilityID, g.FacilityCode, g.FacilityName, 
+				a.ClientToProductID, d.ClientProductToEntityID,i.ClientToProductID,
+				k.ClientToProductID,l.ClientToProductID,--n.AppointmentOptionDescription,
+				g.ClientProductToEntityID,m.ClientToProductID,g.state,
+				r.CallToActionMsg, rr.CallToActionMsg, s.CallToActionMsg,t.SafeHarborMsg,u.ClientToProductID
+--				SELECT ProductGroupCode, * FROM #ProviderSponsorship
+	/*PREMHP HACK*/
+	UPDATE #ProviderSponsorship
+	SET PhoneXML = '<phone><ph>(937) 204-3105</ph><phTyp>PTFDPPNP</phTyp></phone><phone><ph>(937) 204-3105</ph><phTyp>PTFDS</phTyp></phone>'
+	,TabletPhoneXML = '<phone><ph>(937) 204-3105</ph><phTyp>PTFDST</phTyp></phone>'
+	,DesktopPhoneXML = '<phone><ph>(937) 204-3105</ph><phTyp>PTFDSDTP</phTyp></phone>'
+	WHERE ClientCode = 'PREMHP'
+	AND PhoneXML  IS NULL
+	AND TabletPhoneXML  IS NULL
+	AND DesktopPhoneXML  IS NULL
+								
+
+													------------------------------
+													-- THIS IS FOR PDC-PRACTICE --
+													------------------------------
+
+		INSERT INTO #ProviderSponsorship 
+			(/*EPP*/
+				ProviderCode,ProductCode,ProductTypeCode,ProductDescription,ProductGroupCode,ProductGroupDescription,
+				ClientToProductID,ClientCode,ClientName,OfficeID,OfficeCode,OfficeName, 
+				PracticeID,PracticeCode,PracticeName,PhoneXML,MobilePhoneXML,DesktopPhoneXML,TabletPhoneXML,
+				URLXML,ImageXML,AppointmentOptionDescription,CallToActionMsg
+			)
+
+		SELECT		f.ProviderCode,c.ProductCode,c.ProductTypeCode,c.ProductDescription,pg.ProductGroupCode,pg.ProductGroupDescription,
+					a.ClientToProductID,b.ClientCode,b.ClientName,g.OfficeID, g.OfficeCode, g.OfficeName, 
+					ISNULL(g.PracticeID,'00000000-0000-0000-0000-000000000000'), ISNULL(g.PracticeCode, 'GENERAL'), ISNULL(g.PracticeName,''),
+					(
+                        select DISTINCT x.ph, x.phTyp
+                        from
+                        (
+						    SELECT	/*DISTINCT*/ DesignatedProviderPhone AS ph, 
+								    PhoneTypeCode as phTyp
+						    FROM	Base.vwuPDCPracticeOfficeDetail fa
+						    WHERE	fa.PhoneTypeCode in ('PTODS') -- PDC Designated - Office Specific
+								    AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+                            union all
+                            select PhoneNumber as ph, PhoneTypeCode as phTyp
+                            from Base.ProviderToOfficeToCustomerToProductToPhone as a2 with (nolock)
+                            where a2.ProviderCode = f.ProviderCode and a2.OfficeCode = g.OfficeCode and a2.CustomerCode = b.ClientCode
+                        ) as x 
+                        order by x.ph, x.phTyp
+                        for xml raw('phone'), elements, type
+					) AS PhoneXML,
+	
+					(
+						SELECT	DISTINCT DesignatedProviderPhone AS ph, 
+								PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCPracticeOfficeDetail fa
+						WHERE	fa.PhoneTypeCode in ('PTODSM') -- PDC Designated - Office Specific - Mobile
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						order by DesignatedProviderPhone, PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+					) AS MobilePhoneXML,
+					(
+						SELECT	DISTINCT DesignatedProviderPhone AS ph, 
+								PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCPracticeOfficeDetail fa
+						WHERE	fa.PhoneTypeCode in ('PTODSDTP') -- PDC Designated - Office Specific - Desktop
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						order by DesignatedProviderPhone, PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+					) AS DesktopPhoneXML,
+
+
+
+					(
+						SELECT	DISTINCT DesignatedProviderPhone AS ph, 
+								PhoneTypeCode as phTyp
+						FROM	Base.vwuPDCPracticeOfficeDetail fa
+						WHERE	fa.PhoneTypeCode in ('PTODST') -- PDC Designated - Office Specific - Tablet
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						order by DesignatedProviderPhone, PhoneTypeCode
+						FOR XML RAW ('phone'), ELEMENTS, TYPE						
+					) AS TabletPhoneXML,
+
+					(
+						SELECT	DISTINCT URL AS urlVal, URLTypeCode as urlTyp
+						FROM	Base.vwuPDCPracticeOfficeDetail fa
+						WHERE	fa.URLTypeCode = 'FCOURL' -- Office Url
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						order by URL, URLTypeCode
+						FOR XML RAW ('url'), ELEMENTS, TYPE
+
+					) AS URLXML,
+
+					(
+						SELECT  DISTINCT ImageFilePath AS img, ImageTypeCode as imgTyp
+						FROM	Base.vwuPDCPracticeOfficeDetail fa
+						WHERE	fa.ImageTypeCode in ('FCOLOGO', 'FCOWALL') --Office Logo and wallpaper
+								AND g.ClientProductToEntityID = fa.ClientProductToEntityID
+						order by ImageFilePath, ImageTypeCode
+						FOR XML RAW ('image'), ELEMENTS, TYPE
+					) AS ImageXML,
+					--n.AppointmentOptionDescription,
+					null as AppointmentOptionDescription,
+					CASE 
+						WHEN ISNULL(r.CallToActionMsg,'') <> '' THEN r.CallToActionMsg
+						WHEN ISNULL(rr.CallToActionMsg,'') <> '' THEN rr.CallToActionMsg
+						ELSE s.CallToActionMsg
+					END AS CallToActionMsg		
+		--	SELECT g.ClientProductToEntityID
+			FROM	Base.ClientToProduct a
+					JOIN Base.Client b ON a.ClientID = b.ClientID
+					JOIN Base.Product c ON a.ProductID = c.ProductID and ISNULL(c.ProductTypeCode,'') = 'Practice'
+					JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID and pg.ProductGroupCode = 'PDC'
+					JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
+					JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'PROV'
+					--JOIN Show.SOLRProvider as pb ON d.EntityID = pb.ProviderID
+					JOIN #ProviderBatch as pb ON d.EntityID = pb.ProviderID --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
+					JOIN Base.Provider f ON d.EntityID = f.ProviderID
+					LEFT JOIN 
+					(	SELECT	u.ParentID, x.OfficeID, x.OfficeCode, x.OfficeName, y.PracticeID, y.PracticeCode, y.PracticeName,w.ClientProductToEntityID				
+						FROM	Base.ClientProductEntityRelationship u 
+								JOIN Base.RelationshipType v ON u.RelationshipTypeID = v.RelationshipTypeID
+								JOIN Base.ClientProductToEntity w ON w.ClientProductToEntityID = u.ChildID
+								JOIN Base.Office x ON w.EntityID = x.OfficeID 
+								left JOIN Base.Practice y WITH (NOLOCK) ON x.PracticeID = y.PracticeID
+						WHERE	v.RelationshipTypeCode = 'PROVTOOFF' 	
+					) g ON d.ClientProductToEntityID = g.ParentID
+					LEFT JOIN 
+					(
+						SELECT	EntityID, MessageText AS CallToActionMsg 
+						FROM	Base.MessageToMessageToEntityToPageToYear a
+								JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+								JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+								JOIN Base.Message d ON a.MessageID = d.MessageID
+								JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+						WHERE	EntityTypeCode = 'CLPROD'
+								AND c.MessageTypeCode = 'CLIENTCALLMSG'
+								AND DisplayOnPage = 1
+								AND DisplayOnPage = 1
+								AND IsActive = 1
+								AND MessagePageCode = 'SPONSPHYPRO'
+
+					) r ON r.EntityID = a.ClientToProductID
+					LEFT JOIN 
+					(
+					SELECT	EntityID, MessageText AS CallToActionMsg 
+					FROM	Base.MessageToMessageToEntityToPageToYear a
+							JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+							JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+							JOIN Base.Message d ON a.MessageID = d.MessageID
+							JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+					WHERE	EntityTypeCode = 'PROD'
+							AND c.MessageTypeCode = 'PRODUCTCALLMSG'
+							AND DisplayOnPage = 1
+							AND DisplayOnPage = 1
+							AND IsActive = 1
+							AND MessagePageCode = 'SPONSPHYPRO'
+
+					) rr ON rr.EntityID = a.ProductID
+					LEFT JOIN 
+					(
+						SELECT	EntityID, MessageText AS CallToActionMsg 
+						FROM	Base.MessageToMessageToEntityToPageToYear a
+								JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+								JOIN Base.MessageType c ON a.MessageTypeID = c.MessageTypeID
+								JOIN Base.Message d ON a.MessageID = d.MessageID
+								JOIN Base.MessagePage e ON a.MessagePageID = e.MessagePageID
+						WHERE	EntityTypeCode = 'PROGROUP'
+								AND c.MessageTypeCode = 'DEFAULTCALLMSG'
+								AND DisplayOnPage = 1
+								AND DisplayOnPage = 1
+								AND IsActive = 1
+								AND MessagePageCode = 'SPONSPHYPRO'
+					) s ON s.EntityID = pg.ProductGroupID
+			WHERE	a.ActiveFlag = 1
+					--and f.ProviderCode = '24448'
+			GROUP	BY f.ProviderID,f.ProviderCode,c.ProductTypeCode,d.IsEntityEmployed,c.ProductCode, 
+					c.ProductDescription,pg.ProductGroupCode,pg.ProductGroupDescription, 
+					b.ClientCode, b.ClientName, g.OfficeID, g.OfficeCode, g.OfficeName, 
+					g.PracticeID, g.PracticeCode, g.PracticeName,
+					a.ClientToProductID, d.ClientProductToEntityID,--n.AppointmentOptionDescription,
+					g.ClientProductToEntityID,r.CallToActionMsg,rr.CallToActionMsg,s.CallToActionMsg
+
+					
+		-- Set HasOar Flag
+		UPDATE a
+		SET a.HasOAR = 1
+		FROM #ProviderSponsorship a
+		WHERE ClientCode IN
+		(
+
+		SELECT	DISTINCT h.ClientCode
+		FROM	Base.ClientEntityToClientFeature a
+				JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+				JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+				JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+				JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+				JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
+				JOIN Base.ClientToProduct g ON g.ClientToProductID = a.EntityID
+				JOIN Base.Client h ON h.ClientID = g.ClientID
+				JOIN Base.Product i ON g.ProductID = i.ProductID 
+				JOIN Base.ProductGroup j ON i.ProductGroupID = j.ProductGroupID 
+		WHERE	b.EntityTypeCode = 'CLPROD'
+				AND ClientFeatureCode = 'FCDOA'
+				AND e.ClientFeatureValueCode = 'FVYES'
+				AND j.ProductGroupCode = 'PDC'
+		)
+
+		--DELETE #ProviderSponsorship WHERE OfficeId IS NULL
+
+		--fix the missing OfficeCode and PracticeCode where we can based on new business rules and logic to fill in the gaps
+				UPDATE a
+				SET a.OfficeCode = b.OfficeCode,
+					a.OfficeID = b.OfficeID,
+					a.OfficeName = b.OfficeName,
+					a.PracticeCode = b.PracticeCode,
+					a.PracticeID = b.PracticeID,
+					a.PracticeName = b.PracticeName
+				--select *
+				from #ProviderSponsorship a
+				JOIN 
+				(
+					select b.ProviderCode, d.OfficeCode, e.PracticeCode, c.ProviderOfficeRank, d.OfficeID, d.OfficeName, e.PracticeID, e.PracticeName, b.OfficeCode AS OfficeCodeTemp, b.PracticeCode AS PracticeCodeTemp, b.ProductCode,
+					ROW_NUMBER() OVER (PARTITION BY b.ProviderCode ORDER BY c.ProviderOfficeRank ASC, b.OfficeCode ASC) AS recID
+					--select *
+					from #ProviderBatch AS a 
+					JOIN #ProviderSponsorship AS b ON a.ProviderCode = b.ProviderCode
+					JOIN Base.ProviderToOffice AS C on a.ProviderID = c.ProviderID 
+					JOIN Base.Office AS d on c.OfficeID = d.OfficeID
+					JOIN Base.Practice AS e on d.PracticeID = e.PracticeID
+					where ISNULL(b.ProductTypeCode,'') = 'Practice' -- b.ProductCode = 'PDCPRAC'
+					AND b.PhoneXML IS NULL
+				) AS b on a.ProviderCode = b.ProviderCode --AND a.OfficeCode = b.OfficeCodeTemp
+				where b.recID = 1
+				and ISNULL(a.ProductTypeCode,'') = 'Practice' -- a.ProductCode = 'PDCPRAC'
+				AND a.PhoneXML IS NULL
+				AND not EXISTS (SELECT 1 FROM #ProviderSponsorship z WHERE b.ProviderCode = z.ProviderCode AND b.ProductCode = z.ProductCode AND b.OfficeCode = z.OfficeCode)
+                AND NOT EXISTS (SELECT 1 FROM #ProviderSponsorship z WHERE a.ProviderCode = z.ProviderCode AND a.ProductCode = z.ProductCode AND z.PhoneXML is NOT null)
+							
+			IF OBJECT_ID('tempdb..#PTODS') IS NOT NULL DROP TABLE #PTODS
+			select		DISTINCT cl.clientcode, pr.productcode, PV.ProviderCode, a.OfficeCode, d.PhoneNumber, e.PhoneTypeCode
+						,ROW_NUMBER() OVER (PARTITION BY cl.clientcode, pr.productcode, PV.ProviderCode, a.OfficeCode ORDER BY e.PhoneTypeCode, d.PhoneNumber) AS recID 
+			INTO		#PTODS
+			from		base.office a
+			inner join	base.providertooffice po on po.OfficeID = a.OfficeID
+			inner join	base.provider pv on pv.providerid = po.ProviderID
+			inner join	base.clientproducttoentity b on a.officeid=b.entityid
+			inner join	base.clientproductentitytophone c on b.clientproducttoentityid=c.clientproducttoentityid
+			inner join	base.phone d on c.phoneid=d.phoneid
+			inner join	base.phonetype e on c.phonetypeid=e.phonetypeid
+			inner join	Base.ClientToProduct as cp on cp.ClientToProductID = b.ClientToProductID
+			inner join	base.Product pr on pr.ProductID = cp.ProductID
+			inner join	Base.Client as cl on cl.ClientID = cp.ClientID
+			inner join	#ProviderSponsorship x on x.ProviderCode = pv.ProviderCode
+			where		e.PhoneTypeCode = 'PTODS'
+						and X.PhoneXML IS NULL
+						--AND a.OfficeCode = 'OOVP5GH'
+
+			UPDATE a
+			SET a.PhoneXML = 
+			(
+				SELECT	DISTINCT PhoneNumber as ph, PhoneTypeCode as phTyp
+				FROM	#PTODS check1
+				WHERE	check1.ProviderCode = a.ProviderCode AND check1.OfficeCode = a.OfficeCode AND check1.ClientCode = a.ClientCode and check1.ProductCode = a.ProductCode AND check1.recID = 1 
+				FOR XML RAW ('phone'), ELEMENTS, TYPE	
+			)
+			--SELECT *
+			from #ProviderSponsorship a
+			JOIN #PTODS b on a.ProviderCode = b.ProviderCode AND a.OfficeCOde = b.OfficeCode AND a.ClientCode = b.ClientCode AND a.ProductCode = b.ProductCode
+
+			
+		--fix the missing PhoneXML for PDCPRAC where we can
+			--Using Provider To Office as the first level
+				BEGIN TRY drop table #PhoneXMLCheck1 END TRY BEGIN CATCH end CATCH
+				select b.ClientCode, b.ProductCode, b.ProviderCode, b.OfficeCode, e.PhoneNumber AS DesignatedProviderPhone, 'PTODS' AS PhoneTypeCode,
+				ROW_NUMBER() OVER (PARTITION BY b.ProviderCode, b.OfficeCode, b.ClientCode, b.ProductCode ORDER BY e.PhoneNumber) AS recID 
+				INTO #PhoneXMLCheck1
+				from #ProviderBatch AS a 
+				JOIN #ProviderSponsorship AS b ON a.ProviderCode = b.ProviderCode
+				JOIN Base.ProviderToOffice AS c on a.ProviderID = c.ProviderID AND b.OfficeID = c.OfficeID
+				JOIN Base.OfficeToPhone AS d ON c.OfficeID = d.OfficeID
+				JOIN Base.Phone AS E on d.PhoneID = e.PhoneID
+				JOIN Base.PhoneType AS f on d.PhoneTypeID = f.PhoneTypeID and f.PhoneTypeCode = 'SERVICE'
+				where ISNULL(b.ProductTypeCode,'') = 'Practice' -- b.ProductCode = 'PDCPRAC'
+				AND b.PhoneXML IS NULL
+
+				UPDATE a
+				SET a.PhoneXML = 
+				(
+					SELECT	DISTINCT DesignatedProviderPhone AS ph, PhoneTypeCode as phTyp
+					FROM	#PhoneXMLCheck1 check1
+					WHERE	check1.ProviderCode = a.ProviderCode AND check1.OfficeCode = a.OfficeCode AND check1.ClientCode = a.ClientCode and check1.ProductCode = a.ProductCode AND check1.recID = 1 
+					order by DesignatedProviderPhone, PhoneTypeCode
+					FOR XML RAW ('phone'), ELEMENTS, TYPE	
+				)
+				--SELECT *
+				from #ProviderSponsorship a
+				JOIN #PhoneXMLCheck1 b on a.ProviderCode = b.ProviderCode AND a.OfficeCOde = b.OfficeCode AND a.ClientCode = b.ClientCode AND a.ProductCode = b.ProductCode
+
+	-- END PDC Section
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+	
+
+
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+	----------		Non-PDC Section : had to split up mid for PDC vs everything else due to performance issues		----------
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+
+	--	populate the temp TABLE with data FROM Base schemas
+		INSERT INTO #ProviderSponsorship 
+			(
+				ProviderCode,ProductCode,ProductTypeCode,ProductDescription,ProductGroupCode,ProductGroupDescription,
+				ClientToProductID,ClientCode,ClientName
+			)
+		SELECT
+				f.ProviderCode,ProductCode,c.ProductTypeCode,ProductDescription,ProductGroupCode,ProductGroupDescription,
+				a.ClientToProductID,ClientCode,ClientName
+		
+	--	SELECT * 
+		FROM	Base.ClientToProduct a
+				JOIN Base.Client b ON a.ClientID = b.ClientID
+				JOIN Base.Product c ON a.ProductID = c.ProductID
+				JOIN Base.ProductGroup pg ON c.ProductGroupID = pg.ProductGroupID and pg.ProductGroupCode <> 'PDC'
+				JOIN Base.ClientProductToEntity d ON a.ClientToProductID = d.ClientToProductID
+				JOIN Base.EntityType e ON d.EntityTypeID = e.EntityTypeID AND e.EntityTypeCode = 'PROV'
+				JOIN #ProviderBatch as pb ON d.EntityID = pb.ProviderID --When not migrating a batch, this is all providers in Base.Provider. Otherwise it is just the providers in the batch
+				JOIN Base.Provider f ON d.EntityID = f.ProviderID
+		WHERE	a.ActiveFlag = 1
+				--and f.ProviderCode = '288hd'
+		GROUP	BY f.ProviderID,f.ProviderCode,c.ProductTypeCode,d.IsEntityEmployed,c.ProductCode, 
+				c.ProductDescription,pg.ProductGroupCode,pg.ProductGroupDescription, 
+				b.ClientCode, b.ClientName,
+				a.ClientToProductID, d.ClientProductToEntityID
+
+	-- END Non-PDC Section				
+	-----------------------------------------------------------------------------------------------				
+	-----------------------------------------------------------------------------------------------
+
+
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+	----------		PDC WriteMD Comparison Section : Need to get a before & after picture of WriteMD provider lists 	----------
+	----------------------------------------------------------------------------------------------------------------------
+	----------------------------------------------------------------------------------------------------------------------
+
+
+	select distinct ProviderCode, ProductCode, ClientCode, ClientToProductID
+	into #WriteMDBeforeChanges
+	from Mid.ProviderSponsorship
+	where ProductCode in ('PDCWRITEMD', 'PDCWMDLITE')
+
+	
+	/*
+		Flag record level actions for ActionCode
+			0 = No Change
+			1 = Insert
+			2 = UPDATE
+	*/
+		--ActionCode Insert
+			UPDATE	a
+			SET		a.ActionCode = 1
+			--SELECT *
+			FROM	#ProviderSponsorship a
+					LEFT JOIN Mid.ProviderSponsorship b ON (a.ProviderCode = b.ProviderCode 
+						and a.ProductCode = b.ProductCode 
+						and a.ClientToProductID = b.ClientToProductID 
+						and a.ClientCode = b.ClientCode 
+						and ISNULL(CAST(a.FacilityCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.FacilityCode AS VARCHAR(100)), 'ZZZ')
+						and ISNULL(CAST(a.PracticeCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.PracticeCode AS VARCHAR(100)), 'ZZZ')
+						and ISNULL(CAST(a.OfficeCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.OfficeCode AS VARCHAR(100)), 'ZZZ')
+						)
+			WHERE	b.ProviderCode is null
+		
+		--ActionCode UPDATE
+			BEGIN TRY DROP TABLE #ColumnsUPDATEs END TRY BEGIN CATCH END CATCH
+			
+			SELECT	name, identity(INT,1,1) as recId
+			INTO	#ColumnsUPDATEs
+			FROM	tempdb..syscolumns 
+			WHERE	id = object_id('TempDB..#ProviderSponsorship')
+					AND name NOT IN ('ProviderCode','ProductCode', 'ProductTypeCode', 'ClientCode', 'FacilityCode', 'ActionCode', 'PracticeCode', 'OfficeCode')
+				
+			--build the sql statement with dynamic sql to check if we need to UPDATE any columns
+				DECLARE @sql VARCHAR(8000)
+				DECLARE @min INT
+				DECLARE @max INT
+				DECLARE @WHEREClause VARCHAR(8000)
+				DECLARE @column VARCHAR(100)
+				DECLARE @newline CHAR(1)
+				DECLARE @globalCheck VARCHAR(3)
+
+				SET @min = 1
+				SET @WHEREClause = ''
+				SET @newline = CHAR(10)
+				SET @sql = 'UPDATE	a'+@newline+ 
+						   'SET		a.ActionCode = 2'+@newline+
+						   '--SELECT *'+@newline+
+						   'FROM	#ProviderSponsorship a'+@newline+
+						   'JOIN Mid.ProviderSponsorship b with (nolock) on (a.ProviderCode = b.ProviderCode'+@newline+ 
+								'and a.ProductCode = b.ProductCode and a.ClientToProductID = b.ClientToProductID'+@newline+ 
+								'and a.ClientCode = b.ClientCode'+@newline+ 
+								'and ISNULL(CAST(a.FacilityCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.FacilityCode AS VARCHAR(100)), ''ZZZ'')'+@newline+
+								'and ISNULL(CAST(a.PracticeCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.PracticeCode AS VARCHAR(100)), ''ZZZ'')'+@newline+
+								'and ISNULL(CAST(a.OfficeCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.OfficeCode AS VARCHAR(100)), ''ZZZ'')'+@newline+
+								')'+@newline+
+						   'WHERE '
+						   
+				SELECT @max = MAX(recId) FROM #ColumnsUPDATEs
+
+				WHILE @min <= @max	
+					BEGIN
+						SELECT	@column = name FROM #ColumnsUPDATEs WHERE recId = @min 
+						SET		@WHEREClause = @WHEREClause +'BINARY_CHECKSUM(isnull(cast(a.'+@column+' as VARCHAR(max)),'''')) <> BINARY_CHECKSUM(isnull(cast(b.'+@column+' as VARCHAR(max)),''''))'+@newline
+							--put an OR for all except for the last column check
+							IF @min < @max 
+								BEGIN
+									SET @WHEREClause = @WHEREClause+' or '
+								END
+
+						
+						SET @min = @min + 1
+					END
+
+				SET @sql = @sql + @WHEREClause
+				EXEC (@sql)
+
+	/*
+		Complete the ActionCode
+		SELECT * FROM #ProviderSponsorship
+	*/
+	
+		--define column SET for INSERTS 
+		BEGIN TRY DROP TABLE #ColumnInserts END TRY BEGIN CATCH END CATCH
+
+		SELECT	name, identity(INT,1,1) as recId
+		INTO	#ColumnInserts
+		FROM	tempdb..syscolumns 
+		WHERE	id = object_id('TempDB..#ProviderSponsorship')
+				AND name <> 'ActionCode' and name <> 'ProductTypeCode'--do not need to insert/UPDATE this field
+		
+		--create the column SET
+		DECLARE @columnInsert VARCHAR(100)
+		DECLARE @columnListInsert VARCHAR(8000)
+		DECLARE @minInsert INT
+		DECLARE @maxInsert INT
+		
+		SET @minInsert = 1
+		SET @columnListInsert = ''
+		SELECT @maxInsert = MAX(recId) FROM #ColumnInserts 
+		
+		WHILE @minInsert <= @maxInsert
+			BEGIN
+				SELECT	@columnInsert = name FROM #ColumnInserts WHERE recId = @minInsert
+				SET		@columnListInsert = @columnListInsert + @columnInsert
+				
+				IF @minInsert <@maxInsert
+					BEGIN
+						SET @columnListInsert = @columnListInsert+','
+					END
+				
+				SET @minInsert = @minInsert + 1
+			END
+		
+		--ActionCode = 1 (Inserts)
+			DECLARE @sqlInsert VARCHAR(8000)
+			SET @sqlInsert = 
+			'insert INTO Mid.ProviderSponsorship ('+@columnListInsert+')
+			SELECT '+@columnListInsert+' FROM #ProviderSponsorship WHERE ActionCode = 1'
+			
+			EXEC (@sqlInsert)
+		
+		--ActionCode = 2 (UPDATEs)	
+			DECLARE @minUPDATEs INT
+			DECLARE @maxUPDATEs INT
+			DECLARE @sqlUPDATEs VARCHAR(8000)
+			DECLARE @sqlUPDATEsClause VARCHAR(5000)
+			DECLARE @columnUPDATEs VARCHAR(1500)
+			DECLARE @columnListUPDATEs VARCHAR(8000)
+			DECLARE @newlineUPDATEs CHAR(1)
+			
+			SET @newlineUPDATEs = CHAR(10)
+			SET @columnListUPDATEs = ''
+			SET @sqlUPDATEs = 'UPDATE a'+@newlineUPDATEs+
+							  'SET '	
+			SET @sqlUPDATEsClause = '--SELECT *'+@newlineUPDATEs+
+							  'FROM Mid.ProviderSponsorship a '+@newlineUPDATEs+
+							  'JOIN #ProviderSponsorship b on (a.ProviderCode = b.ProviderCode'+@newlineUPDATEs+ 
+								'and a.ProductCode = b.ProductCode and a.ClientToProductID = b.ClientToProductID'+@newlineUPDATEs+ 
+								'and a.ClientCode = b.ClientCode'+@newlineUPDATEs+ 
+								'and ISNULL(CAST(a.FacilityCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.FacilityCode AS VARCHAR(100)), ''ZZZ'')'+@newlineUPDATEs+
+								'and ISNULL(CAST(a.PracticeCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.PracticeCode AS VARCHAR(100)), ''ZZZ'')'+@newlineUPDATEs+
+								'and ISNULL(CAST(a.OfficeCode AS VARCHAR(100)), ''ZZZ'') =  ISNULL(CAST(b.OfficeCode AS VARCHAR(100)), ''ZZZ'')'+@newlineUPDATEs+
+							  ')'+@newlineUPDATEs+
+							  'WHERE b.ActionCode = 2'
+							  
+			SELECT @minUPDATEs = MIN(recId) FROM #ColumnsUPDATEs 
+			SELECT @maxUPDATEs = MAX(recId) FROM #ColumnsUPDATEs
+			
+			WHILE @minUPDATEs <= @maxUPDATEs
+				BEGIN
+					SELECT @columnUPDATEs = name FROM #ColumnsUPDATEs WHERE recId = @minUPDATEs
+					SET @columnListUPDATEs = @columnListUpdates + 'a.'+@columnUpdates+' = b.'+@columnUpdates
+					
+					IF @minUPDATEs < @maxUPDATEs
+						BEGIN
+							SET @columnListUPDATEs = @columnListUPDATEs+','+@newlineUPDATEs+''
+						END
+					ELSE
+						BEGIN
+							SET @columnListUPDATEs = @columnListUPDATEs+@newlineUPDATEs+@sqlUPDATEsClause
+						END
+					
+					SET @minUPDATEs = @minUPDATEs + 1
+				END
+			
+			SET @sqlUPDATEs = @sqlUPDATEs + @columnListUPDATEs
+			
+			EXEC (@sqlUPDATEs)
+
+		--ActionCode = N (Deletes)
+			DELETE	a
+			--SELECT	*
+			FROM	Mid.ProviderSponsorship a 
+					inner join #ProviderBatch as pb on pb.ProviderCode = a.ProviderCode
+					LEFT JOIN #ProviderSponsorship b ON (a.ProviderCode = b.ProviderCode 
+						and a.ProductCode = b.ProductCode 
+						and a.ClientToProductID = b.ClientToProductID 
+						and a.ClientCode = b.ClientCode and ISNULL(CAST(a.FacilityCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.FacilityCode AS VARCHAR(100)), 'ZZZ')
+						and ISNULL(CAST(a.PracticeCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.PracticeCode AS VARCHAR(100)), 'ZZZ')
+						and ISNULL(CAST(a.OfficeCode AS VARCHAR(100)), 'ZZZ') =  ISNULL(CAST(b.OfficeCode AS VARCHAR(100)), 'ZZZ')
+						)
+			WHERE	b.ProviderCode IS NULL
+
+
+/*
+			**
+			**  Clean up Multiple sponsorships that just don't get otherwise sorted.
+			**
+			*/
+
+
+            begin try drop table #MultipleSponsorshipProblems end try begin catch end catch
+            select distinct a.ProviderCode, a.ClientCode, a.ClientToProductID
+            into #MultipleSponsorshipProblems
+            from Mid.ProviderSponsorship a with (nolock)
+            JOIN Mid.ProviderSponsorship b with (nolock) on a.ProviderCode =b.ProviderCode
+            where a.ClientToProductID <> b.ClientToProductID
+                and a.ProductGroupCode <> 'LID'
+                and b.ProductGroupCode <> 'LID'
+
+            declare @Today datetime = getdate()
+
+            insert OperationalMetrics.client.MultipleSponsorshipTracking (ProviderCode, ClientCode, OccurrenceDate)
+            select ProviderCode, ClientCode, @Today
+            FROM #MultipleSponsorshipProblems
+
+            --Call the proc that identifies sponsorship issues for specific providers
+            --  This proc populates table Base.ProvidersWithSponsorshipIssues, used below to delete mid sponsorship records
+            exec Mid.spuRecordPostRulesEngineDataIssues
+
+
+            --Call the proc that identifies sponsorship issues for specific providers
+			delete ps
+			--select *
+			from Mid.ProviderSponsorship as ps
+            inner join Base.ProvidersWithSponsorshipIssues as i on i.ProviderCode = ps.ProviderCode
+			WHERE ps.ProductCode = 'PDCPRAC'
+			AND (ps.OfficeCode is NULL OR ps.PhoneXML is NULL)
+
+			delete ps
+			--select *
+			from Mid.ProviderSponsorship as ps
+            inner join Base.ProvidersWithSponsorshipIssues as i on i.ProviderCode = ps.ProviderCode
+			WHERE ps.ProductCode = 'PDCHSP'
+			AND (ps.FacilityCode is NULL OR ps.PhoneXML is NULL)
+
+			--remove garbage
+			DELETE a
+			--SELECT * 
+			FROM Base.ProvidersWithSponsorshipIssues a
+			JOIN mid.ProviderSponsorship b on b.ProviderCode = a.ProviderCode
+
+
+										   ----------------------------------------------------
+										   -- THIS IS A CLEANUP SECTION FOR WRITEMD QUEUEING --
+										   ----------------------------------------------------
+
+			--drop table #ProviderSponsorshipQueueCheck
+			select distinct ctp.ClientToProductID, ctp.ClientID, c.ClientCode, ctp.ProductID, p.ProductCode, ctp.QueueSize, pr.LastName, pr.FirstName, pr.NPI, pr.ProviderCode, 
+				--identity (int, 1,1) as QueueRank
+				row_number() over (partition by ctp.ClientToProductID order by pr.LastName, pr.FirstName, pr.NPI, pr.ProviderCode) as QueueRank
+			into #ProviderSponsorshipQueueCheck 
+			from base.clienttoproduct ctp
+			join base.Client c on ctp.ClientID = c.ClientID
+			join base.Product p on ctp.ProductID = p.ProductID
+			join mid.ProviderSponsorship ps on ctp.ClientToProductID = ps.ClientToProductID
+			join base.Provider pr on ps.ProviderCode = pr.ProviderCode
+			where ctp.QueueSize is not null and p.ProductCode in ('PDCWRITEMD', 'PDCWMDLITE')
+			--order by pr.LastName, pr.FirstName, pr.NPI, pr.ProviderCode
+			/*
+			delete ps
+			--select *
+			from #ProviderSponsorshipQueueCheck ck
+			join mid.ProviderSponsorship ps on ck.ClientToProductID = ps.ClientToProductID and ck.ProviderCode = ps.ProviderCode
+			where ck.QueueRank > ck.QueueSize
+			*/
+			----------------------------------------------------------------------------------------------------------------------
+			----------------------------------------------------------------------------------------------------------------------
+			----------		PDC WriteMD Comparison Section : Need to get a before & after picture of WriteMD provider lists 	----------
+			----------------------------------------------------------------------------------------------------------------------
+			----------------------------------------------------------------------------------------------------------------------
+
+
+			IF OBJECT_ID('TEMPDB..#WriteMDAfterChanges') is not null drop table #WriteMDAfterChanges
+			select distinct ProviderCode, ProductCode, ClientCode, ClientToProductID
+			into #WriteMDAfterChanges
+			from Mid.ProviderSponsorship
+			where ProductCode in ('PDCWRITEMD', 'PDCWMDLITE')
+				
+			IF OBJECT_ID('TEMPDB..#Changes') is not null drop table #Changes
+			select *
+			into #Changes
+			from #WriteMDBeforeChanges BeforeChanges
+			except
+			select *
+			from #WriteMDAfterChanges AfterChanges
+
+			insert #Changes
+			select *
+			from #WriteMDAfterChanges AfterChanges
+			except
+			select *
+			from #WriteMDBeforeChanges BeforeChanges
+			
+			IF OBJECT_ID('TEMPDB..#BatchMe') is not null drop table #BatchMe
+			select p.edwBaseRecordID as ProviderRecordID
+			into #BatchMe
+			from #Changes c
+			join base.Provider p on c.ProviderCode = p.ProviderCode
+
+			drop table #WriteMDBeforeChanges;
+			drop table #WriteMDAfterChanges;
+			drop table #Changes;
+			drop table #BatchMe;
+		
+		DELETE mid.providersponsorship  WHERE officecode is null and facilitycode is null and ProductGroupCode in ('PDC','MAP') and ProductCode IN ('PDCPRACT2','PDCPRAC','PDCHSP')
+
+	/*
+		DELTAS FOR SOLR HERE
+	*/		
+
+	insert into mid.providersponsorship(ProviderCode, ProductCode, ProductDescription, ProductGroupCode, ProductGroupDescription, ClientToProductID, ClientCode, ClientName)
+	SELECT		ProviderCode, ProductCode, ProductDescription, ProductGroupCode, ProductGroupDescription, ClientToProductID, ClientCode, ClientName
+	FROM		.Base.Provider p
+	cross join(
+		select	top 1 ProductCode, ProductDescription, ProductGroupCode, ProductGroupDescription, ClientToProductID, ClientCode, ClientName
+		from	.mid.ProviderSponsorship
+		where	clientcode = 'key2_adsol'
+	)x
+	WHERE		NPI IN ('1366549735','1306963962','1457349771','1881710226','1679573372','1801839113','1891775789','1982883948','1285699017','1386696011','1548310238','1871654509','1811952591','1609984368','1124171533','1598794570','1285727404','1093795270','1588623755','1215905286','1639116288','1548268592','1538112701','1467671792','1114011343','1407058530','1780856971','1093934598','1255311445','1922143791','1245212844','1174609358','1417060054','1821126830','1881725364','1144214727','1912988536','1821042029','1598755191','1659344117','1972543643','1144213026','1992704035','1982606893','1336383637','1578550679','1437117157','1629031208','1386641082','1649217647','1942462601','1629186580','1326052085','1225047657','1033155874','1194765800','1134161243','1952375578','1861474991','1770580037','1811994866','1508813155','1134237050','1679546121','1346247251','1619959525','1598760274','1265520191','1518910561','1043267628','1730157371','1780612333','1922001064','1487621272','1588758312','1891824587','1639170665','1801813357','1629027727','1124372677','1740287515','1699064089','1306041900','1396709895','1861473472','1740274315','1952369621','1841248812','1629297932','1427033455','1821209370','1013954643','1396938536','1467431999','1275501645','1275640294','1639196330','1275591067','1710943436','1154380376','1568422764','1255381653','1912972415','1497726137','1972579613','1174595144','1093767493','1124159678','1164423257','1578582227','1811047905','1871587113','1730176322','1093803777','1982805164','1285836098','1073526778','1912950502','1013128792','1669414652','1083656581','1174539936','1932159357','1093773657','1891877593','1215976816','1538260179','1609010800','1972782548','1053355701','1457336976','1699764589','1356474548','1073590782','1154304699','1861440661','1740276484','1558474122','1336115542','1427126051','1609890474','1588619142','1801807011','1710198577','1922079474','1043488844','1447235486','1497720049','1417940735','1205808672','1649210816','1467435222','1023096823','1700812591','1467445999','1043385180','1932189396','1942248901','1861480535','1295704450','1043258270','1427059781','1689600058','1659596179','1760437925','1669400784','1336241751','1174747323','1992748586','1194726042','1104850932','1770523227','1093782245','1528228541','1154522209','1861698946','1497717938','1073755278','1952373656','1083697494','1467401224','1538460225','1740242932','1386782902','1447232772','1134124910','1205831666','1316920416','1497972426','1043215403','1568581759','1861592016','1427009083','1396764551','1134241284','1902064975','1093752826','1841293966','1770535700','1114958501','1285637314','1467494690','1598871410','1063491439','1487659850','1972506111','1790976363','1003031212','1417954785','1033405154','1851387039','1871545012','1174515803','1831167071','1053316190','1952342123','1710197447','1205904828','1780612507','1497890701','1922283126','1043409691','1790710481','1194916650','1063551240','1336341668','1316999550','1588653406','1902837362','1154596922','1114993813','1871783407','1972590347','1639163033','1790780625','1598785966','1679573752','1982715892','1700897535','1932149036','1184606071','1467423392','1376537621','1275538985','1144332495','1215924840','1699721654','1104025154','1518924323','1306894829','1801069356','1992760664','1417068347','1306805460','1053350140','1285775239','1801004825','1518035369','1841250719','1760458103','1730161092','1063494953','1962605055','1801829635','1700829249','1407875982','1386603744','1881987303','1235127622','1790780500','1093703969','1033103155','1609827989','1881647493','1669466009','1366425670','1417929282','1063453413','1336120336','1689887788','1821070418','1588869374','1487618328','1073602751','1356430227','1972765733','1518930676','1417084799','1760441885','1154372738','1255537239','1215939764','1316903321','1851320691','1134166879','1497064448','1013937481','1609863281','1861468415','1043287378','1639371297','1265453047','1225275233','1558460626','1730147596','1518165943','1861428583','1972563906','1215155908','1831179225','1407851793','1215093968','1558546663','1699773804','1396741880','1740315654','1245211242','1790929529','1982672937','1295752830','1578524765','1124076955','1326140039','1700159118','1609096668','1427016914','1093778458','1285820274','1083641518','1326048356','1194792119','1568404481','1811958481','1336173277','1053340521','1396735908','1780647453','1184607624','1982670147','1427278720','1174565089','1306058581','1417116211','1740426774','1649228651','1003828823','1679523088','1821058496','1316017676','1093785396','1891798914','1922000488','1659588911','1528030848','1376532499','1477644896','1518905678','1578571576','1730110669','1275522831','1770520165','1760469407','1336199942','1023088564','1093988487','1003875295','1952359234','1255333167','1801865175','1629148762','1407180615','1285639609','1740423912','1114138351','1881627966','1659369429','1619936127','1952344277','1316948995','1497933998','1245221993','1649289364','1710976626','1881963403','1811098304','1033167846','1750386058','1487611505','1447447933','1891754685','1689871154','1922086669','1750347290','1659542702','1336132943','1285616359','1295871747','1750556684','1740276823','1275703076','1154312783','1205814092','1558341735','1184735300','1346239894','1184670952','1568567618','1891794210','1982688925','1174759419','1528088549','1225004930','1538491212','1164420105','1851501704','1184628059','1619943313','1558547588','1780673665','1497862569','1801850268','1205804283','1083611362','1083608285','1972591378','1740235928','1346451051','1528202900','1740254473','1720293608','1811949308','1578508222','1851367189','1740254457','1942258751','1023015674','1891871661','1477711901','1851323547','1477550408','1851393136','1316943491','1457301657','1104854751','1518160241','1902886369','1720076284','1669469292','1811971922','1972591212','1699890376','1487642583','1194893727','1992706139','1245268838','1275585424','1447319512','1629259932','1205879491','1194753350','1023246212','1629041199','1851388573','1902889959','1487640892','1023025434','1609023803','1114969052','1306827126','1588688592','1386635019','1558341982','1225023948','1457348088','1174763262','1497861025','1548370612','1962443051','1083666846','1558367110','1003875535','1396713095','1023013497','1013917400','1417174699','1952374464','1700936002','1295798874','1235168808','1700800620','1417900374','1619960044','1013991678','1467440891','1528080967','1063685121','1962668038','1760486005','1386637288','1609941335','1538165675','1457577470','1124125174','1598728727','1083652291','1679765770','1225002843','1447422431','1184756611','1609946169','1902979644','1962452474','1265478325','1144486309','1427091339','1205851797','1083747976','1104038249','1396712808','1649234121','1487647335','1104892652','1194887034','1356392781','1003986852','1932128410','1841297025','1053337295','1437126380','1962501718','1275626970','1770577116','1700984010','1275532715','1861452054','1689671034','1861448243','1558301267','1205016060','1881813202','1811968225','1922086784','1013998970','1457340390','1205996014','1407963036','1255306296','1841220225','1336130046','1235186065','1770601734','1841364908','1811986706','1932148848','1235127929','1922120708','1881851616','1194715276','1588661490','1477525624','1760481667','1326265273','1528098720','1982894697','1093924417','1083741037','1629066220','1407174782','1417114901','1922072891','1437102571','1467548628','1750384921','1245324938','1083618912','1851346928','1386621654','1578714424','1508835174','1285742296','1770733073','1396700431','1013911593','1457453599','1396719910','1184787723','1033114459','1114920790','1609858539','1437188273','1285743542','1902853294','1942513320','1346217718','1053340802','1821032129','1386800464','1770894354','1699760132','1629067533','1114900479','1073535076','1700946423','1013005685','1902913809','1053504092','1750501276','1437152857','1437137015','1902852171','1487636478','1720087752','1205896818','1174533194','1588629695','1801074455','1356508915','1962507863','1841304409','1740235662','1043479926','1285644708','1609875087','1154326262','1164443792','1386864486','1316959968','1043316656','1427277573','1386609394','1801968334','1295709996','1962451377','1528016318','1780871707','1164413589','1730383332','1386649606','1710912175','1295717189','1730140922','1619136413','1700847373','1831262922','1316924772','1356489181','1306866736','1194783027','1033107156','1366443152','1922069624','1972591683','1073803557','1275619447','1871518373','1649257650','1801837711','1487846416','1932195138','1386655603','1699766378','1144297946','1326011347','1508833971','1669507141','1992739742','1215034525','1598731291','1891762019','1487652665','1508868837','1104003342','1366490781','1194799742','1811018765','1427268259','1356337430','1659303873','1407852676','1265431233','1740251933','1457577017','1720049398','1083827018','1447229711','1093761124','1861401788','1609043249','1679578389','1164477097','1013996545','1487858973','1962452136','1164566550','1518968643','1861480857','1639254931','1063420669','1225034309','1003888074','1801839758','1912959594','1639188766','1235163833','1255597456','1942421334','1366446726','1447205638','1134121668','1801857966','1639149545','1386841963','1053585232','1336147263','1073571964','1053345629','1497743124','1922086412','1538360896','1568645950','1285677138','1265429989','1861488454','1376500769','1356584080','1780662361','1336155498','1083643845','1528069226','1477668523','1548484611','1124071592','1285694018','1558368605','1265459168','1083708762','1720170053','1932103330','1548444045','1033174560','1598747164','1891729786','1508087297','1407844798','1013975903','1871577221','1922101161','1609858463','1376639559','1104035971','1013002880','1912980947','1740316272','1699838979','1225002694','1245217728','1326207838','1437199965','1316022924','1023005691','1902874514','1215026380','1376502237','1598741225','1417999533','1780676346','1578511283','1427071612','1174740435','1003855818','1316936222','1669466595','1376627737','1952362816','1134125214','1699745638','1174639751','1801844238','1346214384','1427006782','1427026020','1689837601','1184620122','1427068154','1871767152','1578521266','1114956067','1770587271','1750350633','1043426521','1457367112','1285862185','1609808856','1982620027','1114182888','1013976299','1053365320','1427010685','1992732234','1053522862','1437122454','1609892256','1104874916','1922096130','1679569842','1548207814','1346446671','1992740856','1770627184','1881751634','1669490975','1912995960','1780657148','1639119589','1932139136','1457320509','1174562151','1154417434','1750497863','1104804798','1528059227','1063691830','1376511956','1306931761','1871537738','1093804932','1841482270','1568776391','1104874171','1326003195','1720056823','1538165113','1316085939','1134221062','1205822012','1134154594','1013979566','1922291939','1902870959','1720273949','1508810474','1992762868','1699762344','1154302156','1003865338','1730229816','1922032218','1770534653','1659460244','1245425503','1508973447','1902895360','1225045529','1497850614','1316948771','1871607598','1558545038','1558380295','1265626360','1417121286','1114916350','1881678506','1790797538','1275502544','1811133697','1164643359','1447268297','1639435407','1033106752','1871540328','1558495689','1801835756','1558354860','1538208764','1427279611','1922209139','1104082809','1376638668','1952415317','1932148384','1285630731','1265619878','1942392899','1104902063','1891717708','1346475506','1235101874','1922214352','1700827839','1780772277','1295727493','1598700627','1356482020','1285603639','1992813828','1932197233','1689783961','1508813098','1538149414','1013911668','1285673012','1629231170','1619964236','1114922531','1023188539','1881733889','1942257787','1336112119','1306862859','1003810383','1063441772','1427046085','1588637250','1811187909','1265424253','1699919597','1740398262','1578723276','1033165139','1215129309','1942456389','1659506319','1538243258','1609945880','1205934288','1306887708','1457341760','1912168535','1730136953','1063617454','1447248109','1760595516','1386635548','1114169323','1457343683','1376760991','1962490631','1811138787','1710978598','1083648133','1952356933','1891878146','1861695678','1912194283','1558562793','1487616017','1609057157','1528010386','1962455931','1013980903','1033192570','1639380207','1225034788','1568454080','1174590541','1235196189','1366435299','1447214911','1891834016','1174735658','1467432344','1225094469','1881812519','1508820770','1891780805','1962442699','1831109792','1972746394','1225142656','1033118229','1699791459','1881663284','1215027560','1518948801','1407804578','1487604518','1033189584','1538128178','1205802907','1669416459','1205875218','1538281647','1477558435','1659393395','1922068881','1780654889','1922001627','1790733053','1154300622','1982692851','1518966944','1376511444','1790727709','1639179708','1376512046','1609835586','1508885088','1336160241','1538109004','1144279225','1295721215','1750585287','1306937669','1417137365','1144372004','1518970748','1780625376','1245228295','1518167451','1558358630','1407803083','1013074889','1568438976','1518256957','1851312789','1336120211','1437101755','1659363794','1205091758','1861456089','1124245618','1063489649','1356391064','1952384596','1184604118','1407849284','1851356828','1417976457','1770521387','1619947876','1568540193','1174599948','1861477721','1578596508','1790780716','1568468544','1598863458','1477677557','1003930215','1316918394','1053579490','1245249689','1891766721','1215066980','1104883305','1285630210','1487799474','1477504611','1871822619','1548295306','1073506341','1366451098','1376713727','1457316341','1396784807','1154427920','1558544510','1467544312','1265427223','1396820189','1245288315','1356332506','1932105442','1477557064','1689654618','1396981445','1417954199','1164440962','1730185935','1588758718','1457396608','1134113376','1467441352','1639102064','1801853171','1063415735','1205816667','1114977071','1851389514','1528038759','1295735058','1194784785','1750392908','1790716926','1912911389','1487645149','1922079904','1366404642','1245349638','1417024654','1598758062','1780711531','1356357347','1770768210','1164484614','1831247667','1508829094','1609804350','1548217490','1982728796','1720240419','1982644498','1679508790','1972773539','1285662510','1679504393','1043218316','1720010648','1124131446','1043209950','1275535601')
+				and p.providercode not in (select ProviderCode from mid.providersponsorship where clientcode = 'key2_adsol')
+
+	DELETE MID.ProviderSponsorship WHERE ClientCode = 'TRE02'
+		
+	exec [hack].[WriteMDLite]
+
+	/*because dedesignation does not work in MAP yet*/
+	delete mid.ProviderSponsorship where clientcode = 'rwjb' and facilitycode is null and providercode not in (select distinct providercode from mid.ProviderSponsorship where clientcode = 'rwjb' and facilitycode is not null)
