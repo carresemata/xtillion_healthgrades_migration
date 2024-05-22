@@ -27,7 +27,7 @@ def table_dependencies():
                     with open(f'spu_translated_{table}.sql', 'r') as f:
                         content = f.read()
                         # Check if the section exists
-                        match = re.search(r'0. table dependencies(.*?)1.', content, re.DOTALL | re.IGNORECASE)
+                        match = re.search(r'1. table dependencies(.*?)2.', content, re.DOTALL | re.IGNORECASE)
                         if match:
                             dependencies_section = match.group(1)
                             # Remove words inside brackets
