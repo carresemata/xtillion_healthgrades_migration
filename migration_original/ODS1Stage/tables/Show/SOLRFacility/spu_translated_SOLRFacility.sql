@@ -148,9 +148,6 @@ join
     base.facilityhours fh on f.facilityid = fh.facilityid
 join 
     base.daysofweek dow on fh.daysofweekid = dow.daysofweekid
-order by 
-    f.facilityid,
-    dow.sortorder
 ),
 cte_facility_hours_xml as (
 select 
@@ -849,9 +846,6 @@ cte_readmission_rate as (
         and pm.measuredisplayname = '30-Day Readmission Rate'
         and pm.iscurrent = 1
         and pm.isdisplayed = 1
-    order by 
-        pm.conditioncodedisplayorder, 
-        pm.measurecodedisplayorder
 
 ),
 
@@ -907,7 +901,6 @@ select distinct
         and pm.measuredisplayname <> '30-Day Readmission Rate'
         and pm.iscurrent = 1
         and pm.isdisplayed = 1
-    order by pm.conditioncodedisplayorder, pm.measurecodedisplayorder
 ),
 
 cte_effective_care_xml as (
@@ -948,8 +941,6 @@ where
     r.ratingcategoryid = 2
     and fr.ismaxyear = 1
     and r.ratingid <> 2
-order by 
-    r.ratingorder
 ),
 cte_patient_safety_xml as (
 select 
@@ -1006,7 +997,7 @@ cte_affiliation as (
         and fchild.isclosed = 0
         and fparent.isclosed = 0
 
-    union 
+    union all
 
     select 
         fpc.facilityidparent as facilityid,
