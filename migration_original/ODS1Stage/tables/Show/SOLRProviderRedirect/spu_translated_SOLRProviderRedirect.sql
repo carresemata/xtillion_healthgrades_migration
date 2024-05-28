@@ -1,14 +1,4 @@
-
--- sp_load_solrproviderredirect (validated in snowflake)
-
-
--- 1. update show.solrproviderredirect where the columns are different 
--- 2. insert into show.solrproviderredirect where the providerid is null
--- 3. delete from show.solrproviderredirect if the provider is in show.solrprovider
--- 4. DELTA: insert into show.solrproviderredirect where the providerid is null
--- 5. delta: update show.solrproviderredirect where urls are null
-
-create or replace procedure ods1_stage_team.show.sp_load_solrproviderredirect(isproviderdeltaprocessing boolean)
+create or replace procedure ods1_stage_team.show.sp_load_solrproviderredirect()
     returns string
     language sql
     as  
@@ -42,126 +32,15 @@ declare
 
 
    
-begin
-
-    if (isproviderdeltaprocessing) then
-        merge_statement_else_1 := '';
-    else
-    
-        merge_statement_else_1 := 'merge into show.solrproviderredirect as target
-                                    using (
-                                        select
-                                            solrprov.providercode as providercodeold,
-                                            solrprov.providercode as providercodenew,
-                                            solrprov.providerurl as providerurlold,
-                                            solrprov.providerurl as providerurlnew,
-                                            solrprov.lastname,
-                                            solrprov.firstname,
-                                            solrprov.middlename,
-                                            solrprov.suffix,
-                                            solrprov.firstname || '' '' || iff(solrprov.middlename is null, '''', solrprov.middlename || '' '') || solrprov.lastname || iff(solrprov.suffix is null,'''', '' '' || solrprov.suffix) as displayname,
-                                            solrprov.degree,
-                                            solrprov.title,
-                                            solrprov.providertypeid,
-                                            solrprov.providertypegroup,
-                                            ''deactivated'' as deactivationreason,
-                                            solrprov.gender as gender,
-                                            solrprov.dateofbirth,
-                                            solrprov.practiceofficexml,
-                                            solrprov.specialtyxml,
-                                            solrprov.educationxml,
-                                            solrprov.imagexml,
-                                            current_timestamp() as lastupdatedate,
-                                            current_timestamp() as updatedate,
-                                            current_user() as updatesource
-                                        from
-                                            show.solrprovider solrprov
-                                            left join base.provider baseprov on baseprov.providerid = solrprov.providerid
-                                            left join show.solrproviderredirect solrprovred on solrprovred.providercodeold = solrprov.providercode
-                                            and solrprovred.providercodenew = solrprov.providercode
-                                            and solrprovred.deactivationreason = ''deactivated''
-                                        where
-                                            baseprov.providerid is null
-                                            and solrprovred.solrproviderredirectid is null
-                                    ) as source
-                                    on target.providercodeold = source.providercodeold
-                                    when not matched then 
-                                        insert (
-                                            providercodeold,
-                                            providercodenew,
-                                            providerurlold,
-                                            providerurlnew,
-                                            lastname,
-                                            firstname,
-                                            middlename,
-                                            suffix,
-                                            displayname,
-                                            degree,
-                                            title,
-                                            providertypeid,
-                                            providertypegroup,
-                                            deactivationreason,
-                                            gender,
-                                            dateofbirth,
-                                            practiceofficexml,
-                                            specialtyxml,
-                                            educationxml,
-                                            imagexml,
-                                            lastupdatedate,
-                                            updatedate,
-                                            updatesource
-                                        )
-                                        values (
-                                            source.providercodeold,
-                                            source.providercodenew,
-                                            source.providerurlold,
-                                            source.providerurlnew,
-                                            source.lastname,
-                                            source.firstname,
-                                            source.middlename,
-                                            source.suffix,
-                                            source.displayname,
-                                            source.degree,
-                                            source.title,
-                                            source.providertypeid,
-                                            source.providertypegroup,
-                                            source.deactivationreason,
-                                            source.gender,
-                                            source.dateofbirth,
-                                            source.practiceofficexml,
-                                            source.specialtyxml,
-                                            source.educationxml,
-                                            source.imagexml,
-                                            source.lastupdatedate,
-                                            source.updatedate,
-                                            source.updatesource
-                                        );';
-                                                                
-            
-                        
-     merge_statement_else_2 := 'merge into show.solrproviderredirect as solrprovred using (
-                                 select
-                                    provurl.url,
-                                    baseprov.providercode
-                                from
-                                    base.providerurl as provurl
-                                    join base.provider as baseprov on provurl.providerid = baseprov.providerid
-                           ) as url on solrprovred.providercodeold = url.providercode
-                            and solrprovred.providerurlold is null
-                            when matched then
-                        update
-                        set
-                            solrprovred.providerurlold = url.url;';
+begin   
         
-        execute immediate merge_statement_else_1;
-        execute immediate merge_statement_else_2;
                                 
-    end if;
 
 
 ---------------------------------------------------------
 ----------------- 3. sql statements ---------------------
 ---------------------------------------------------------     
+
 
         
 select_statement := ' with cte_providernotinsolr as (
@@ -314,6 +193,111 @@ update_statement := 'update
                         ctefinal.lastupdatedate,
                         current_timestamp(),
                         current_user() );';
+
+merge_statement_else_1 := 'merge into show.solrproviderredirect as target
+                                    using (
+                                        select
+                                            solrprov.providercode as providercodeold,
+                                            solrprov.providercode as providercodenew,
+                                            solrprov.providerurl as providerurlold,
+                                            solrprov.providerurl as providerurlnew,
+                                            solrprov.lastname,
+                                            solrprov.firstname,
+                                            solrprov.middlename,
+                                            solrprov.suffix,
+                                            solrprov.firstname || '' '' || iff(solrprov.middlename is null, '''', solrprov.middlename || '' '') || solrprov.lastname || iff(solrprov.suffix is null,'''', '' '' || solrprov.suffix) as displayname,
+                                            solrprov.degree,
+                                            solrprov.title,
+                                            solrprov.providertypeid,
+                                            solrprov.providertypegroup,
+                                            ''deactivated'' as deactivationreason,
+                                            solrprov.gender as gender,
+                                            solrprov.dateofbirth,
+                                            solrprov.practiceofficexml,
+                                            solrprov.specialtyxml,
+                                            solrprov.educationxml,
+                                            solrprov.imagexml,
+                                            current_timestamp() as lastupdatedate,
+                                            current_timestamp() as updatedate,
+                                            current_user() as updatesource
+                                        from
+                                            show.solrprovider solrprov
+                                            left join base.provider baseprov on baseprov.providerid = solrprov.providerid
+                                            left join show.solrproviderredirect solrprovred on solrprovred.providercodeold = solrprov.providercode
+                                            and solrprovred.providercodenew = solrprov.providercode
+                                            and solrprovred.deactivationreason = ''deactivated''
+                                        where
+                                            baseprov.providerid is null
+                                            and solrprovred.solrproviderredirectid is null
+                                    ) as source
+                                    on target.providercodeold = source.providercodeold
+                                    when not matched then 
+                                        insert (
+                                            providercodeold,
+                                            providercodenew,
+                                            providerurlold,
+                                            providerurlnew,
+                                            lastname,
+                                            firstname,
+                                            middlename,
+                                            suffix,
+                                            displayname,
+                                            degree,
+                                            title,
+                                            providertypeid,
+                                            providertypegroup,
+                                            deactivationreason,
+                                            gender,
+                                            dateofbirth,
+                                            practiceofficexml,
+                                            specialtyxml,
+                                            educationxml,
+                                            imagexml,
+                                            lastupdatedate,
+                                            updatedate,
+                                            updatesource
+                                        )
+                                        values (
+                                            source.providercodeold,
+                                            source.providercodenew,
+                                            source.providerurlold,
+                                            source.providerurlnew,
+                                            source.lastname,
+                                            source.firstname,
+                                            source.middlename,
+                                            source.suffix,
+                                            source.displayname,
+                                            source.degree,
+                                            source.title,
+                                            source.providertypeid,
+                                            source.providertypegroup,
+                                            source.deactivationreason,
+                                            source.gender,
+                                            source.dateofbirth,
+                                            source.practiceofficexml,
+                                            source.specialtyxml,
+                                            source.educationxml,
+                                            source.imagexml,
+                                            source.lastupdatedate,
+                                            source.updatedate,
+                                            source.updatesource
+                                        );';
+                                                                
+            
+                        
+     merge_statement_else_2 := 'merge into show.solrproviderredirect as solrprovred using (
+                                 select
+                                    provurl.url,
+                                    baseprov.providercode
+                                from
+                                    base.providerurl as provurl
+                                    join base.provider as baseprov on provurl.providerid = baseprov.providerid
+                           ) as url on solrprovred.providercodeold = url.providercode
+                            and solrprovred.providerurlold is null
+                            when matched then
+                        update
+                        set
+                            solrprovred.providerurlold = url.url;';
                 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -345,8 +329,8 @@ delete_statement := 'delete from
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
---execute immediate merge_statement_else_1; (executed in section 2. conditionals)
---execute immediate merge_statement_else_2; (executed in section 2. conditionals) 
+execute immediate merge_statement_else_1;
+execute immediate merge_statement_else_2;
 execute immediate merge_statement;
 execute immediate delete_statement;
 

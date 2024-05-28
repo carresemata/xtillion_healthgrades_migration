@@ -25,6 +25,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerlicense');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -38,7 +39,7 @@ select_statement := select_statement ||
                 select
                     p.providerid
                 from
-                    MDM_team.mst.Provider_Profile_Processing as ppp
+                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                     join base.provider as P on p.providercode = ppp.ref_provider_code),
                     
                 CTE_ProviderLicense as (

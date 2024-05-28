@@ -9,6 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- show.solrprovider depends on: 
+--- mdm_team.mst.provider_profile_processing
 --- show.webfreeze
 --- show.solrprovider_freeze (empty)
 --- show.providersourceupdate
@@ -105,7 +106,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrprovider');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. sql statements ---------------------
@@ -440,7 +441,7 @@ select_statement_2 :=  $$ with cte_batch_process as (
                     			union 
                     			select distinct
                     					p.providerid
-                    			from    mdm_team.mst.provider_profile_processing as ppp 
+                    			from    $$ || mdm_db || $$.mst.provider_profile_processing as ppp 
                     			inner join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
                     			where 	p.npi is not null
                                 
@@ -1986,7 +1987,7 @@ temp_table_statement_1 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
         p.providerid as EDWBaseRecordID,
         0 as IsInClientMarket
     from
-        mdm_team.mst.provider_profile_processing as ppp
+        $$ || mdm_db || $$.mst.provider_profile_processing as ppp
         join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
     LIMIT 50000
 );';

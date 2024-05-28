@@ -24,7 +24,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrpracticedelta');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -44,7 +44,7 @@ merge_statement_1 := 'merge into show.solrpracticedelta as target using
                                                 spd.enddeltaprocessdate,
                                                 spd.startmovedate,
                                                 spd.endmovedate
-                                            from	MDM_team.mst.Provider_Profile_Processing as ppp
+                                            from	$$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                                                     join base.provider as P on p.providercode = ppp.ref_provider_code
                                             		join	base.providertooffice po on p.providerid = po.providerid
                                             		join	base.office o on po.officeid = o.officeid

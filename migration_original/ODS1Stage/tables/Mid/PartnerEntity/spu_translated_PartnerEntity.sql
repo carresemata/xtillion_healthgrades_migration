@@ -31,7 +31,8 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_partnerentity');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
+    
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
@@ -41,7 +42,7 @@ begin
 
 select_statement := $$ with CTE_ProviderBatch as (
                 select distinct p.providerid, p.providercode
-                from MDM_team.mst.Provider_Profile_Processing as pdp
+                from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp
                 join base.provider as p on p.providercode = pdp.ref_provider_code),
                     CTE_PartnerEntity as (
                                 select distinct

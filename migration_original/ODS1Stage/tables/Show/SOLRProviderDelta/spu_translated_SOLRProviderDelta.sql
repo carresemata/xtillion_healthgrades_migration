@@ -28,7 +28,7 @@ declare
     status string;
     procedure_name varchar(50) default('sp_load_solrproviderdelta');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -43,7 +43,7 @@ select_statement_3 := 'with CTE_union as (
                                         current_timestamp() as StartDeltaProcessDate,
                                         1 as MidDeltaProcessComplete
                                     from
-                                        MDM_team.mst.Provider_Profile_Processing as PPP
+                                        ' || mdm_db || '.mst.Provider_Profile_Processing as PPP
                                         inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
                                         left join show.solrproviderdelta as SOLRProvDelta on solrprovdelta.providerid = p.providerid
                                         left join base.providerswithsponsorshipissues as ProvIssue on provissue.providercode = p.providercode
@@ -107,7 +107,7 @@ merge_statement_1 := 'merge into show.solrproviderdelta as target using
                                         p.providerid, 
                                         1 as SolrDeltaTypeCode, 
                                         current_timestamp() as StartDeltaProcessDate
-                            		from	MDM_team.mst.Provider_Profile_Processing as PPP
+                            		from	' || mdm_db || '.mst.Provider_Profile_Processing as PPP
                                     inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
                             		where	ProviderId not IN (select ProviderId from show.solrproviderdelta)) as source
                                         on source.providerid = target.providerid
@@ -127,7 +127,7 @@ merge_statement_2 :=  'merge into show.solrproviderdelta as target using
                                     (select 
                                         p.providerid
                                     from 
-                                        MDM_team.mst.Provider_Profile_Processing as PPP
+                                        ' || mdm_db || '.mst.Provider_Profile_Processing as PPP
                                     inner join base.provider as P on p.providercode = ppp.ref_Provider_Code    
                                     inner join show.solrproviderdelta SOLRProvDelta
                                     on p.providerid = solrprovdelta.providerid) as source

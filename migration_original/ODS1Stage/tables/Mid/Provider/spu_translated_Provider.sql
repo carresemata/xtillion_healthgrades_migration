@@ -47,8 +47,7 @@ declare
     status string;
     procedure_name varchar(50) default('sp_load_provider');
     execution_start datetime default getdate();
-
-
+    mdm_db string default('mdm_team');
 
       ---------------------------------------------------------
       ----------------- 3. SQL Statements ---------------------
@@ -119,7 +118,7 @@ declare
                        from (select * from base.provider) as p
                    $$;
                    
-        join_temp_delta := $$ inner join MDM_team.mst.Provider_Profile_Processing as ppp on p.providercode = ppp.ref_provider_code $$;
+        join_temp_delta := $$ inner join $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp on p.providercode = ppp.ref_provider_code $$;
         insert_temp := insert_temp || join_temp_delta;
 
 
