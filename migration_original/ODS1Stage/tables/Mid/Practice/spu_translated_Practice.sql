@@ -45,6 +45,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_practice');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -55,7 +56,7 @@ begin
 select_statement := $$ with CTE_PracticeBatch as (
                 select distinct 
                 o.practiceid
-                from MDM_team.mst.Provider_Profile_Processing as PDP 
+                from $$ || mdm_db || $$.mst.Provider_Profile_Processing as PDP 
                     join base.provider as P on p.providercode = pdp.ref_PROVIDER_CODE
                     join base.providertooffice as PTO on pto.providerid = p.providerid
                     join base.office as O on o.officeid = pto.officeid

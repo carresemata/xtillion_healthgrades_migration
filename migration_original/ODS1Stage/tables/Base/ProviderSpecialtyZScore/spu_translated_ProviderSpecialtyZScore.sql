@@ -35,7 +35,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerspecialtyzscore');
     execution_start datetime default getdate();
-   
+    mdm_db string default('mdm_team');
    
 BEGIN
     
@@ -50,7 +50,7 @@ select_statement := $$ with cte_providerzscore as (
     select
         distinct providerid
     from
-        mdm_team.mst.provider_profile_processing as ppp 
+        $$ || mdm_db || $$.mst.provider_profile_processing as ppp 
         join base.provider as p on ppp.ref_provider_code = p.providercode 
 ),
 cte_union as (

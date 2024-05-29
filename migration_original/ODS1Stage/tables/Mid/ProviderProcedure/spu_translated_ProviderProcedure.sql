@@ -29,7 +29,8 @@ declare
     status string;
     procedure_name varchar(50) default('sp_load_providerprocedure');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
+    
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------  
@@ -39,7 +40,7 @@ begin
     select_statement := $$
                         with CTE_ProviderBatch as (
                         select p.providerid
-                        from MDM_team.mst.Provider_Profile_Processing as ppp
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                             join base.provider as p on ppp.ref_provider_code = p.providercode
                         order by p.providerid
                         ),

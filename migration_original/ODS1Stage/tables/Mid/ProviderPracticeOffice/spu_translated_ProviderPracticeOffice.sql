@@ -34,6 +34,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerpracticeoffice');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -42,7 +43,7 @@ declare
 begin
 select_statement := $$ with CTE_ProviderBatch as (
                             select p.providerid
-                            from MDM_team.mst.Provider_Profile_Processing as ppp
+                            from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                             join base.provider as p on ppp.ref_provider_code = p.providercode),
             CTE_ServiceNumbers as (
                 select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc, 

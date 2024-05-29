@@ -64,7 +64,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providersponsorship');
     execution_start datetime default getdate();
-   
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -79,7 +79,7 @@ select_statement :=
                     p.providerid,
                     ppp.ref_provider_code as providercode
                 from
-                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                     join base.provider as P on p.providercode = ppp.ref_provider_code
                 order by
                     p.providerid),

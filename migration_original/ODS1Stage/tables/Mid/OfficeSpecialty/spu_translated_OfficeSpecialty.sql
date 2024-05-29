@@ -28,6 +28,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_officespecialty');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -36,7 +37,7 @@ declare
 begin
 --- select Statement
 select_statement := $$ with CTE_OfficeBatch as (select distinct pto.officeid
-            from MDM_team.mst.Provider_Profile_Processing as pdp 
+            from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp 
             join base.provider as P on p.providercode = pdp.ref_provider_code
             join base.providertooffice as pto on pto.providerid = p.providerid
             order by pto.officeid),

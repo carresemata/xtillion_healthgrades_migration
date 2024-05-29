@@ -54,6 +54,7 @@ as 'declare
     status string; -- status monitoring
     procedure_name varchar(50) default(''sp_load_solrpractice'');
     execution_start datetime default getdate();
+    mdm_db string default(''mdm_team'');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -66,7 +67,7 @@ select_statement := $$ with cte_practice_batch as (
                     select distinct 
                         BasePrac.PracticeID, 
                         BasePrac.PracticeCode
-                    from MDM_TEAM.MST.Provider_Profile_Processing as ppp
+                    from $$ || mdm_db || $$.MST.Provider_Profile_Processing as ppp
                     join Base.Provider as P on p.providercode = ppp.ref_provider_code
                     inner join base.ProviderToOffice PTO on p.ProviderID = PTO.ProviderID
                     inner join base.Office Off on PTO.OfficeID = Off.OfficeID

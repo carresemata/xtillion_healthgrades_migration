@@ -45,14 +45,14 @@ declare
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
-select_statement string;
-insert_statement string;
-update_statement string;
-merge_statement string;
-status string;
+    select_statement string;
+    insert_statement string;
+    update_statement string;
+    merge_statement string;
+    status string;
     procedure_name varchar(50) default('sp_load_providerlastupdatedate');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
 
 begin
 
@@ -63,7 +63,7 @@ begin
 select_statement := $$
                     with CTE_Provider as (
                         select ppp.providerid
-                        from MDM_team.mst.Provider_Profile_Processing ppp 
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing ppp 
                         inner join base.provider p on p.providercode = ppp.ref_Provider_Code
                     ),
                     

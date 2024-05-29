@@ -48,7 +48,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerattributemetadata');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team'); 
    
    
 begin
@@ -68,7 +68,7 @@ select_statement := $$
         p.providerid,
         pdp.ref_provider_code as ProviderCode
     from
-        MDM_team.mst.Provider_Profile_Processing as PDP
+        $$ || mdm_db || $$.mst.Provider_Profile_Processing as PDP
         join base.provider as P on pdp.ref_provider_code = p.providercode
     order by
         p.providerid
@@ -575,7 +575,7 @@ insert_statement := ' insert (
 ---------------------------------------------------------  
 
 
-merge_statement := ' merge into dev.providerattributemetadata as target using 
+merge_statement := ' merge into show.providerattributemetadata as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
                    WHEN MATCHED then '||update_statement|| '
