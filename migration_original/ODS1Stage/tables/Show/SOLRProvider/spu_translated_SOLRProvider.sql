@@ -53,7 +53,6 @@ declare
 --- base.malpracticestate
 --- base.sanctionaction
 --- base.sanctionactiontype
---- base.specialitygroup
 --- base.specialtygrouptospecialty
 --- base.client
 --- base.clienttoproduct
