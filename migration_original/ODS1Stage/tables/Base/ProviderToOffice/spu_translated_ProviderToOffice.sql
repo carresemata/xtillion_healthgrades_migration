@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOOFFICE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOOFFICE(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -95,8 +95,12 @@ merge_statement := ' merge into base.providertooffice as TARGET
                     when not matched then' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
+-------------------  5. execution ------------------------
 ---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.ProviderToOffice;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

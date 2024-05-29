@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCERTIFICATIONSPECIALTY()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOCERTIFICATIONSPECIALTY(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -124,8 +124,12 @@ WHEN MATCHED then delete
 when not matched then' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
+-------------------  5. execution ------------------------
 ---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.ProviderToCertificationSpecialty;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

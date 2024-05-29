@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLICENSE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERLICENSE(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -101,9 +101,12 @@ merge_statement := ' merge into base.providerlicense as target using
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ProviderLicense;
+end if; 
 execute immediate delete_statement ;
 execute immediate merge_statement ;
 

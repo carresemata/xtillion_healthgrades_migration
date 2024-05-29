@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PARTNER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PARTNER(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -217,9 +217,12 @@ merge_statement := ' merge into base.partner as target using
                    not exists (select 1 from base.partner as p where p.partnercode = p.partnercode) then'||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.Partner;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

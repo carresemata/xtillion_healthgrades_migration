@@ -681,9 +681,12 @@ merge_statement :=      $$
 
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Show.SOLRAutosuggestRefData;
+end if; 
 execute immediate create_temp_statement; 
 -- inserting xmls to temp table
 execute immediate insert_statement_union; 

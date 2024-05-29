@@ -1,6 +1,6 @@
 -- sp_load_solrprovideraddress
 
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -187,8 +187,12 @@ delete_statement := '
                     ';
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Show.SOLRProviderAddress;
+end if; 
 execute immediate delete_statement; 
 execute immediate merge_statement;
 

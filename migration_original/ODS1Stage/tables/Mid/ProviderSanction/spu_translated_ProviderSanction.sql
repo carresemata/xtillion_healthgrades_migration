@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSANCTION()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSANCTION(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -198,9 +198,12 @@ merge_statement := ' merge into mid.providersanction as target using
                    when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Mid.ProviderSanction;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

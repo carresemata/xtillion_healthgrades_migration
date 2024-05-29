@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSPONSORSHIP() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSPONSORSHIP(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -1669,10 +1669,13 @@ merge_statement := ' merge into mid.providersponsorship as target using
                    
         
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
-    execute immediate merge_statement;
+if (is_full) then
+    truncate table Mid.ProviderSponsorship;
+end if; 
+execute immediate merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

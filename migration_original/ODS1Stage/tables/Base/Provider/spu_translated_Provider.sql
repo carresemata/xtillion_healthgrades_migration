@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -165,9 +165,12 @@ merge_statement_1 := ' merge into base.provider as target using
                    when not matched then '||insert_statement_1;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.Provider;
+end if; 
 execute immediate merge_statement_1 ;
 execute immediate update_statement_2;
 

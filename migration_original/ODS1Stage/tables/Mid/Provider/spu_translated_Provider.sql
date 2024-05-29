@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDER(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -343,6 +343,10 @@ declare
      ---------------------------------------------------------
      ------------------- 5. execution ------------------------
      --------------------------------------------------------- 
+
+     if (is_full) then
+        truncate table mid.provider;
+     end if; 
      execute immediate create_temp;        
      execute immediate insert_temp;
 

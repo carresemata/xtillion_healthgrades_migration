@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -148,10 +148,13 @@ merge_statement_3 := ' merge into show.solrproviderdelta as target
 
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
-    execute immediate merge_statement_1;
+if (is_full) then
+    truncate table Show.SOLRProviderDelta;
+end if; 
+execute immediate merge_statement_1;
     execute immediate merge_statement_2;
     execute immediate merge_statement_3;
     execute immediate update_statement ;

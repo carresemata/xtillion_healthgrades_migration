@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_URL()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_URL(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -79,8 +79,12 @@ on source.urlid = target.urlid
 when not matched then '||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
+-------------------  5. execution ------------------------
 ---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.URL;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERPRACTICEOFFICE(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -479,9 +479,12 @@ merge_statement :=  $$
 
                 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Mid.ProviderPracticeOffice;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

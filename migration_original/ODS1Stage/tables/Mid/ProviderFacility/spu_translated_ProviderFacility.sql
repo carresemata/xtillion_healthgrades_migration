@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERFACILITY()
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERFACILITY(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -781,9 +781,12 @@ merge_statement := ' merge into mid.providerfacility as target using
                    
         
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Mid.ProviderFacility;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

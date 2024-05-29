@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOEDUCATIONINSTITUTION()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOEDUCATIONINSTITUTION(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -86,9 +86,12 @@ merge_statement := ' merge into base.providertoeducationinstitution as target us
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.ProviderToEducationInstitution;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

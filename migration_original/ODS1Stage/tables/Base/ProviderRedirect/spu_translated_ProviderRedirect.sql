@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERREDIRECT()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERREDIRECT(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -55,9 +55,12 @@ merge_statement := $$ merge into base.providerredirect as target
 
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ProviderRedirect;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

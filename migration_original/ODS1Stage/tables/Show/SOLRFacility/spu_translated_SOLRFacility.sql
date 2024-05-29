@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRFACILITY() 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRFACILITY(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -1827,10 +1827,13 @@ merge_statement := ' merge into show.solrfacility as target using
                    
         
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
-    execute immediate merge_statement;
+if (is_full) then
+    truncate table Show.SOLRFacility;
+end if; 
+execute immediate merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

@@ -1,5 +1,5 @@
 -- Show_spuSOLRLineOfServiceGenerateFromMid
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRLINEOFSERVICE() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRLINEOFSERVICE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -116,9 +116,12 @@ merge_statement := 'merge into show.solrlineofservice as solrLine using
                             || insert_statement ;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Show.SOLRLineOfService;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

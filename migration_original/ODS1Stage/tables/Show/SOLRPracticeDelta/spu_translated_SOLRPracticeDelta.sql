@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICEDELTA() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICEDELTA(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -86,11 +86,13 @@ merge_statement_2 := 'merge into show.solrpracticedelta as target using
                         target.enddeltaprocessdate  = current_timestamp()';
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
-
-        execute immediate merge_statement_1;
+if (is_full) then
+    truncate table Show.SOLRPracticeDelta;
+end if; 
+execute immediate merge_statement_1;
         execute immediate merge_statement_2;
 
 

@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CITYSTATEPOSTALCODE() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CITYSTATEPOSTALCODE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -123,9 +123,12 @@ merge_statement_2 := ' merge into base.citystatepostalcode as target using
                    when not matched then '||insert_statement_2;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.CityStatePostalCode;
+end if; 
 execute immediate merge_statement_1 ;
 execute immediate merge_statement_2 ;
 

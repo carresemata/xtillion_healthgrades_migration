@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOMAPCUSTOMERPRODUCT() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOMAPCUSTOMERPRODUCT(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -255,9 +255,12 @@ merge_statement_2 := ' merge into base.providertomapcustomerproduct as target us
                     
  
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ProviderToMAPCustomerProduct;
+end if; 
 execute immediate merge_statement_1 ;
 execute immediate merge_statement_2 ;
 

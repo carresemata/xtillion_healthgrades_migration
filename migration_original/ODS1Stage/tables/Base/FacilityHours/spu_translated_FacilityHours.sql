@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYHOURS() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYHOURS(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -91,9 +91,12 @@ merge_statement := $$ merge into base.facilityhours as target using
                    when not matched then $$ ||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.FacilityHours;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

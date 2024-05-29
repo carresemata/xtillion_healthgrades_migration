@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSURVEYSUPPRESSION()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSURVEYSUPPRESSION(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -70,8 +70,12 @@ WHEN MATCHED then delete
 when not matched then'||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
+-------------------  5. execution ------------------------
 ---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.ProviderSurveySuppression;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------
