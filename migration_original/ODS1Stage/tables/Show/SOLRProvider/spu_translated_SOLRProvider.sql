@@ -57,11 +57,91 @@ declare
 --- base.client
 --- base.clienttoproduct
 --- base.specialty
---- 
 
-
-
-
+--- XML LOAD
+-- Base.OfficeHours
+-- Base.DaysOfWeek
+-- Base.State
+-- Base.Award
+-- Base.AwardCategory
+-- Base.ProviderTypeToMedicalTerm
+-- Base.ProviderToProviderType
+-- Base.EntityType
+-- Base.MedicalTerm
+-- Base.MedicalTermType
+-- Base.CohortToProcedure
+-- Base.TempSpecialtyToServiceLineGhetto
+-- Base.CertificationSpecialty
+-- Base.ProviderToCertificationSpecialty
+-- Base.CertificationAgency
+-- Base.CertificationBoard
+-- Base.CertificationStatus
+-- Base.MOCLevel
+-- Base.MOCPathway
+-- Base.Language
+-- Base.ClientEntityToClientFeature
+-- Base.ClientFeatureToClientFeatureValue
+-- Base.ClientFeature
+-- Base.ClientFeatureValue
+-- Base.ClientFeatureGroup
+-- Base.ClinicalFocusDCP
+-- Base.ProviderToClinicalFocus
+-- Base.ClinicalFocus
+-- Base.ClinicalFocusToSpecialty
+-- Base.ProviderTraining
+-- Base.Training
+-- Base.ProviderLastUpdateDate
+-- Base.Provider
+-- Base.ProviderToClientToOASPartner
+-- Base.OASPartner
+-- Base.EntityToMedicalTerm
+-- Base.SpecialtyToProcedureMedical
+-- Base.SanctionType
+-- Base.SanctionCategory
+-- Base.StateReportingAgency
+-- Base.ProviderIdentification
+-- Base.IdentificationType
+-- Base.Degree
+-- Base.ProviderToTelehealthMethod
+-- Base.TelehealthMethod
+-- Base.TelehealthMethodType
+-- Base.ProviderToClientProductToDisplayPartner
+-- Base.SyndicationPartner
+-- Base.HealthInsurancePlanToPlanType
+-- Base.HealthInsurancePlan
+-- Base.HealthInsurancePlanType
+-- Base.HealthInsurancePayor
+-- Base.HealthInsurancePayorOrganization
+-- Base.ProviderMedia
+-- Base.MediaType
+-- ERMART1.Facility_ServiceLine
+-- ERMART1.Facility_FacilityToAward
+-- ERMART1.Facility_FacilityToProcedureRating
+-- ERMART1.Facility_vwuFacilityHGDisplayProcedures
+-- ERMART1.Facility_ProcedureToServiceLine
+-- ERMART1.Facility_Procedure
+-- Mid.Practice
+-- Mid.SurveyQuestionRangeMapping
+-- Mid.ProviderHealthInsurance
+-- Mid.PartnerEntity
+-- Mid.ProviderRecognition
+-- Show.SOLRProviderSurveyQuestionAndAnswer
+--- Base.ClientProductImage (Base.vwuPDCClientDetail)
+--- Base.MediaImageType (Base.vwuPDCClientDetail)
+--- Base.ClientProductEntityToURL (Base.vwuPDCClientDetail)
+--- Base.URLType (Base.vwuPDCClientDetail)
+--- Base.URL (Base.vwuPDCClientDetail)
+--- Base.ClientProductToEntity (Base.vwuPDCClientDetail)
+--- BASE.CLIENTPRODUCTENTITYTOPHONE (Base.vwuPDCClientDetail)
+--- BASE.PHONETYPE (Base.vwuPDCClientDetail)
+--- BASE.PHONE (Base.vwuPDCClientDetail)
+--- Base.CallCenter (Base.vwuCallCenterDetails)
+--- Base.CallCenterType (Base.vwuCallCenterDetails)
+--- Base.ClientProductToCallCenter (Base.vwuCallCenterDetails)
+--- Base.CallCenterToEmail (Base.vwuCallCenterDetails)
+--- Base.Email (Base.vwuCallCenterDetails)
+--- Base.EmailType (Base.vwuCallCenterDetails)
+--- Base.CallCenterToPhone (Base.vwuCallCenterDetails)
 
 
 ---------------------------------------------------------
@@ -94,7 +174,6 @@ declare
     update_statement_19 string;
     update_statement_20 string;
     temp_table_statement_1 string;
-    temp_table_statement_2 string;
     update_statement_temp_1 string;
     update_statement_temp_2 string;
     update_statement_21 string;
@@ -1988,18 +2067,8 @@ temp_table_statement_1 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
     from
         $$ || mdm_db || $$.mst.provider_profile_processing as ppp
         join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
-    LIMIT 50000
 );';
 
--- temp_table_statement_2 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
---                     select
---                         src.providerid,
---                         src.edwbaserecordid,
---                         0 as IsInClientMarket
---                     from
---                         base.provider as src
---                     LIMIT 50000
---                 );';
 
 update_statement_temp_1 := 'update
                                     temp_provider target
