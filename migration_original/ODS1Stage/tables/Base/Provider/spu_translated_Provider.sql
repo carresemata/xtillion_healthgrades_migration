@@ -68,7 +68,7 @@ select_statement_1 := $$ select
                             json.demographics_ISPATIENTFAVORITE as IsPatientFavorite
                         from
                             raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.source as S on s.sourcecode = json.demographics_SOURCECODE
+                            left join ((select distinct(sourcecode), sourceid from base.source where lastupdatedate != 'NaT')) as S on s.sourcecode = json.demographics_SOURCECODE
                         where
                             PROVIDER_PROFILE is not null
                         qualify row_number() over(partition by ProviderID order by json.providercode, CREATE_DATE desc, NPI) = 1 $$;
