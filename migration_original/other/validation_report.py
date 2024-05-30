@@ -183,7 +183,7 @@ class SnowflakeTableValidator(Validator):
         FONT_SIZE = 10  
 
         # Create a PDF document
-        doc = SimpleDocTemplate("report.pdf", pagesize=letter)
+        doc = SimpleDocTemplate(f"{table_name_snowflake}-report.pdf", pagesize=letter)
         dataframes = [nulls_df, distincts_df]
         elements = []
         styles = getSampleStyleSheet()
@@ -245,7 +245,6 @@ class SnowflakeTableValidator(Validator):
         rows_margin = np.where((total_rows_sql_server == 0) & (total_rows_sql_server == 0), 0,
                         (np.abs(total_rows_sql_server - total_rows_snowflake) / total_rows_sql_server) * 100)
         elements.append(Paragraph(f"Rows Margin (%): {rows_margin}", styles['Normal']))
-
 
         ####### 2.3-2.4 Total Nulls per Column and Total Distincts per Column ######
         for idx, df in enumerate(dataframes):
