@@ -36,6 +36,8 @@ class SnowflakeTableValidator(Validator):
         for match_id in match_ids:
             snowflake_ids[match_id] = [str(i) for i in df_snowflake[match_id.upper()].tolist()]
 
+        print(df_snowflake)
+
         # ----------------- SQL Server -----------------
         sql_server_sub_dfs = []
         for i in range(len(snowflake_ids[match_ids[0]])):  # Assuming all lists have the same length
@@ -50,6 +52,8 @@ class SnowflakeTableValidator(Validator):
         df_sql_server = df_sql_server.astype(str)
         df_sql_server.columns = df_sql_server.columns.str.upper()
 
+        print(df_sql_server)
+
         # ----------------- Compare -----------------
         identical_cols = []
         different_cols = []
@@ -60,18 +64,25 @@ class SnowflakeTableValidator(Validator):
             else:
                 different_cols.append(col)
 
-        different_cols_dict = {}
-
+        different_cols_df = pd.DataFrame(columns=["Column Name", "Match ID", "SQL Server Value", "Snowflake Value"])
         for col in different_cols:
-            diff_row = None
-            for _, (val_sql_server, val_snowflake) in enumerate(zip(df_sql_server[col], df_snowflake[col])):
+            found_difference = False
+            for index, (val_sql_server, val_snowflake) in enumerate(zip(df_sql_server[col], df_snowflake[col])):
                 if val_sql_server != val_snowflake:
-                    diff_row = {"SQL Server": val_sql_server, "Snowflake": val_snowflake}
+                    val_id = df_sql_server[match_ids[0].upper()].iloc[index]
+                    diff_row = {"Column Name": col, f"Match ID": val_id, "SQL Server Value": val_sql_server, "Snowflake Value": val_snowflake}
+                    #concatenated_match_ids = ', '.join(match_ids)
+                    #diff_row = {"Column Name": col, f"Match ID ({concatenated_match_ids})": val_id, "SQL Server Value": val_sql_server, "Snowflake Value": val_snowflake}
+                    different_cols_df = different_cols_df.append(diff_row, ignore_index=True)
+                    found_difference = True
                     break
-            if diff_row:
-                different_cols_dict[col] = diff_row
 
-        return identical_cols, different_cols_dict
+            if found_difference:
+                continue
+
+        print(different_cols_df)
+
+        return identical_cols, different_cols_df
     
 
     def aggregate_validation(self, table_name_sql_server, table_name_snowflake):
@@ -158,29 +169,25 @@ class SnowflakeTableValidator(Validator):
         This function generates a PDF report with the results of the sample and aggregate validations.
         """
 
-        identical_cols, different_cols_dict = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
+        # identical_cols, different_cols_dict = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
+        identical_cols, different_cols_df = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
         total_cols_sql_server, total_cols_snowflake, total_rows_sql_server, total_rows_snowflake, nulls_df, distincts_df = self.aggregate_validation(table_name_sql_server, table_name_snowflake)
 
         ## Some postprocessing to make ouputs dfs for report
         identical_count = len(identical_cols)
-        different_count = len(different_cols_dict)
+        different_count = len(different_cols_df)
         identical_percentage = (identical_count / total_cols_sql_server) * 100
         different_percentage = (different_count / total_cols_sql_server) * 100
 
-        data_list = []
-        for key, value in different_cols_dict.items():
-            data_list.append({'Column_Name': key, 'SQL Server': value['SQL Server'], 'Snowflake': value['Snowflake']})
-        different_cols_df = pd.DataFrame(data_list)
-
         for column in different_cols_df.columns:
             if different_cols_df[column].dtype == 'object':  # Check if the column contains strings
-                different_cols_df[column] = different_cols_df[column].apply(lambda x: x[:25] if len(x) > 25 else x)
+                different_cols_df[column] = different_cols_df[column].apply(lambda x: x[:50] if len(x) > 50 else x)
 
         #######################################################################################################
         ########################################## Create PDF Report ##########################################
         #######################################################################################################
 
-        FONT_SIZE = 10  
+        FONT_SIZE = 6
 
         # Create a PDF document
         doc = SimpleDocTemplate(f"{table_name_snowflake}-report.pdf", pagesize=letter)
@@ -280,26 +287,25 @@ class SnowflakeTableValidator(Validator):
 
 if __name__ == "__main__":
     sql_server = "hgTestmdmdb01.sql.hgw-test.aws.healthgrades.zone"
-    sql_server_username = ""
-    sql_server_password = ""
+    sql_server_username = "XT-OJimenez"
+    sql_server_password = "Gumersindo147"
     sql_server_db = "ODS1Stage"
 
-    snowflake_account = "jab25078.us-east-1" # Healthgrades account
+    snowflake_account = "OPA66287.us-east-1"  # HG-01 account
     snowflake_username = "OJIMENEZ@RVOHEALTH.COM"
-    snowflake_warehouse = "XITTILLION"
-    snowflake_db = "ODS1_STAGE"
-    snowflake_role = "APP-SNOWFLAKE-UNGOVERNED-XTILLION"
+    snowflake_warehouse = "MDM_XSMALL"
+    snowflake_db = "ODS1_STAGE_TEAM"
+    snowflake_role = "APP-SNOWFLAKE-HG-MDM-POWERUSER"
 
     # outside of Migrator class since at some point different authenticators might be used (e.g., future projects)
     sql_server_connector = pymssql.connect(server=sql_server, user=sql_server_username, password=sql_server_password, database=sql_server_db)
     snowflake_connector = snowflake.connector.connect(user=snowflake_username, account=snowflake_account, authenticator="externalbrowser",
                                                     warehouse=snowflake_warehouse, database=snowflake_db, role=snowflake_role, arrow_number_to_decimal=True)
 
-
     ############################### Example Usage ###############################
-    table_name_sql_server = "Show.SOLRProviderAddress"  
-    table_name_snowflake = "SHOW.SOLRPROVIDERADDRESS"  # in case it's a different schema or has different naming convention 
-    match_ids = ["PROVIDERCODE", "OFFICECODE"] # we should remember to never use IDs since we are creating them in runtime
+    table_name_sql_server = "Base.Provider"  
+    table_name_snowflake = "BASE.PROVIDER"  # in case it's a different schema or has different naming convention 
+    match_ids = ["PROVIDERCODE"] # we should remember to never use IDs since we are creating them in runtime
     sample_size = 10 # rows for sample validation
     snowflake_validator = SnowflakeTableValidator(sql_server_connector, snowflake_connector)
     snowflake_validator.generate_report(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
