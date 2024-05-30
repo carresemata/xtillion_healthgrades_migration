@@ -161,7 +161,6 @@ class SnowflakeTableValidator(Validator):
         This function generates a PDF report with the results of the sample and aggregate validations.
         """
 
-        # identical_cols, different_cols_dict = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
         identical_cols, different_cols_df = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
         total_cols_sql_server, total_cols_snowflake, total_rows_sql_server, total_rows_snowflake, nulls_df, distincts_df = self.aggregate_validation(table_name_sql_server, table_name_snowflake)
 
