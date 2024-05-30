@@ -1,4 +1,4 @@
-create or replace procedure ods1_stage_team.show.sp_load_solrproviderredirect()
+create or replace procedure ods1_stage_team.show.sp_load_solrproviderredirect(is_full BOOLEAN)
     returns string
     language sql
     as  

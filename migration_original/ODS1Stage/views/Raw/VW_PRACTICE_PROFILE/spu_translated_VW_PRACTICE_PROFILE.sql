@@ -1,4 +1,4 @@
-CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE.RAW.VW_PRACTICE_PROFILE AS (
+CREATE OR REPLACE MATERIALIZED VIEW ODS1_STAGE_TEAM.RAW.VW_PRACTICE_PROFILE AS (
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------

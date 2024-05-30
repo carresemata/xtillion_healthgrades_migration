@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUCLIENTPRODUCTENTITYTOPHONE AS
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUCLIENTPRODUCTENTITYTOPHONE AS
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------

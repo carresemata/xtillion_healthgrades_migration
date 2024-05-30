@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW ODS1_STAGE.SHOW.VWUPROVIDERINDEX AS 
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPROVIDERINDEX AS 
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
