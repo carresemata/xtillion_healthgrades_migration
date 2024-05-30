@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhone() -- Parameters
+CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhone(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     as CALLER
@@ -706,6 +706,10 @@ merge_statement_2:= '     merge into base.clientproductentitytodisplaypartnerpho
     ---------------------------------------------------------
     ------------------- 5. execution ------------------------
     ---------------------------------------------------------
+
+    if (is_full) then
+        truncate table base.clientproductentitytodisplaypartnerphone;
+    end if; 
     -- execute immediate update_statement;
     execute immediate merge_statement_1;
     execute immediate merge_statement_2;

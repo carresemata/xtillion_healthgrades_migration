@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSPECIALTYZSCORE()
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSPECIALTYZSCORE(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE AS CALLER
@@ -195,9 +195,12 @@ merge_statement := ' merge into base.providerspecialtyzscore  as target using
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ProviderSpecialtyZScore;
+end if; 
 execute immediate delete_statement ;                     
 execute immediate merge_statement ;
 

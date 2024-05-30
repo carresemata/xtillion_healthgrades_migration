@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     as CALLER
@@ -289,7 +289,11 @@ from
 
     ---------------------------------------------------------
     ------------------- 5. execution ------------------------
-    -------------------------------------------------------
+    ---------------------------------------------------------
+
+    if (is_full) then
+        truncate table base.clientproducttoentity;
+    end if; 
     -- return merge_statement_1;
     execute immediate merge_statement_1;
     execute immediate merge_statement_2;

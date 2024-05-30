@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODISPLAYSPECIALTY(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -124,10 +124,13 @@ insert_statement := ' insert INTO base.providertodisplayspecialty
                         SpecialtyId) ' ||select_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
-    execute immediate delete_statement;
+if (is_full) then
+    truncate table Base.ProviderToDisplaySpecialty;
+end if; 
+execute immediate delete_statement;
     execute immediate insert_statement ;
 
 ---------------------------------------------------------

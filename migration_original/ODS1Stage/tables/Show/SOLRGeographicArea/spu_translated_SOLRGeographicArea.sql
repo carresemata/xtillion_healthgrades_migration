@@ -1,5 +1,5 @@
 -- spuSOLRGeographicAreaGenerateFromMid
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRGEOGRAPHICAREA() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRGEOGRAPHICAREA(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     as  
@@ -105,9 +105,12 @@ merge_statement :=
         || insert_statement ;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Show.SOLRGeographicArea;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

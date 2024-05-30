@@ -1,5 +1,5 @@
 -- hack_spuMAPFreeze
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER_FREEZE() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDER_FREEZE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     as  
@@ -65,9 +65,12 @@ cleanup_2 := 'delete from
 
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Show.SOLRProvider_Freeze;
+end if; 
 execute immediate cleanup_1;
 execute immediate cleanup_2;  
 ---------------------------------------------------------

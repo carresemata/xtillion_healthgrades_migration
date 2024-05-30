@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSANCTION()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERSANCTION(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -114,6 +114,9 @@ when not matched then' || insert_statement;
 ------------------- 4. Execution ------------------------
 ---------------------------------------------------------
 
+if (is_full) then
+    truncate table base.providersanction;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

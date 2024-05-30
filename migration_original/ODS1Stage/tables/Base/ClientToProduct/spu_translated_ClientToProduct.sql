@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTTOPRODUCT()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTTOPRODUCT(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -82,9 +82,12 @@ merge_statement := $$ merge into base.clienttoproduct as target using
 
     
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ClientToProduct;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

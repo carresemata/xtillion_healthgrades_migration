@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PRACTICESPONSORSHIP(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -244,9 +244,12 @@ merge_statement := ' merge into mid.practicesponsorship as target using
                    when not matched and ActionCode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Mid.PracticeSponsorship;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

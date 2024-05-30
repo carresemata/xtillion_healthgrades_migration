@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PHONE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PHONE(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -680,9 +680,12 @@ merge_statement_3 := ' merge into base.phone as target using
                             source.lastupdatedate)';                            
                    
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Base.Phone;
+end if; 
 execute immediate merge_statement_1 ;
 execute immediate merge_statement_2 ;
 execute immediate merge_statement_3 ;

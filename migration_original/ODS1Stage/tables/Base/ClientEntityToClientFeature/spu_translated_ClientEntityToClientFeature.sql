@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTENTITYTOCLIENTFEATURE() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTENTITYTOCLIENTFEATURE(is_full BOOLEAN) -- Parameters
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -589,6 +589,9 @@ merge_statement := ' merge into base.cliententitytoclientfeature as target using
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
+if (is_full) then
+    truncate table base.cliententitytoclientfeature;
+end if; 
 -- execute immediate update_statement;                    
 execute immediate merge_statement;
 

@@ -1,6 +1,6 @@
 
 -- 1. spuSOLRTreatmentEntryLevel (validated in snowflake)
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRTREATMENTENTRYLEVEL() 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRTREATMENTENTRYLEVEL(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -99,9 +99,12 @@ merge_statement := ' merge into show.solrtreatmententrylevel as target
                             || insert_statement ;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Show.SOLRTreatmentEntryLevel;
+end if; 
 execute immediate merge_statement ;
 
 ---------------------------------------------------------

@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -94,6 +94,9 @@ merge_statement := ' merge into base.client as target using
 ------------------- 5. execution ------------------------
 --------------------------------------------------------- 
 
+if (is_full) then
+    truncate table base.client;
+end if; 
 -- execute immediate update_statement;                    
 execute immediate merge_statement;
 

@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -777,9 +777,12 @@ merge_statement_4 := ''merge into Show.solrpractice as target
 
 
 ---------------------------------------------------------
-------------------- 5. Execution ------------------------
---------------------------------------------------------- 
-                    
+-------------------  5. execution ------------------------
+---------------------------------------------------------
+
+if (is_full) then
+    truncate table Show.SOLRPractice;
+end if; 
 execute immediate merge_statement_1 ;
 execute immediate merge_statement_2 ;
 execute immediate merge_statement_3 ;

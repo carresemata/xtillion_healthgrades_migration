@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE() -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTENTITYTOPHONE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     as CALLER
@@ -696,7 +696,7 @@ select_statement_3 := $$with cte_json_data as (
             SourceCode,
             LastUpdateDate
         )';
----------------------------------------------------------
+    ---------------------------------------------------------
     --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------
     merge_statement_1 := '     merge into base.clientproductentitytophone as target using 
@@ -720,6 +720,10 @@ merge_statement_3 := '     merge into base.clientproductentitytophone as target 
     ---------------------------------------------------------
     ------------------- 5. execution ------------------------
     ---------------------------------------------------------
+
+    if (is_full) then
+        truncate table base.clientproductentitytophone;
+    end if; 
     -- execute immediate update_statement;
     execute immediate merge_statement_1;
     execute immediate merge_statement_2;

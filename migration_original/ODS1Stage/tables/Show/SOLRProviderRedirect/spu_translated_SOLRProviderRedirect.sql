@@ -326,9 +326,12 @@ delete_statement := 'delete from
                         
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Show.SOLRProviderRedirect;
+end if; 
 execute immediate merge_statement_else_1;
 execute immediate merge_statement_else_2;
 execute immediate merge_statement;

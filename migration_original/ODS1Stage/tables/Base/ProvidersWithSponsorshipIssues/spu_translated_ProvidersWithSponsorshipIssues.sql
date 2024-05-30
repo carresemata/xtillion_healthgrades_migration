@@ -105,9 +105,12 @@ merge_statement := $$ merge into base.providerswithsponsorshipissues as target
                     when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ProvidersWithSponsorshipIssues;
+end if; 
 execute immediate merge_statement;
 
 ---------------------------------------------------------

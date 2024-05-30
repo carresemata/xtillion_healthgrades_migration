@@ -216,9 +216,12 @@ merge_statement_practice := $$ merge into base.clientproductentityrelationship a
 
     
 ---------------------------------------------------------
-------------------- 5. execution ------------------------
---------------------------------------------------------- 
+-------------------  5. execution ------------------------
+---------------------------------------------------------
 
+if (is_full) then
+    truncate table Base.ClientProductEntityRelationship;
+end if; 
 execute immediate merge_statement_facility;
 execute immediate merge_statement_office;
 execute immediate merge_statement_practice;
