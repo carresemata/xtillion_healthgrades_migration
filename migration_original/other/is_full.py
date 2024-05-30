@@ -15,7 +15,6 @@ def is_full():
     # file_path = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables/Base/Address/spu_translated_Address.sql')
                     with open(file_path, 'r') as f:
                         content = f.read()
-                        # content = og.lower()
 
                         # Match the proc name CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.SCHEMA.SP_LOAD_TABLE()
                         proc_name = f'.SP_LOAD_{table.upper()}()'
