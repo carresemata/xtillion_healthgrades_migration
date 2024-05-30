@@ -281,8 +281,8 @@ class SnowflakeTableValidator(Validator):
 
 if __name__ == "__main__":
     sql_server = "hgTestmdmdb01.sql.hgw-test.aws.healthgrades.zone"
-    sql_server_username = "XT-ASanchez"
-    sql_server_password = "mysqlpassword"
+    sql_server_username = ""
+    sql_server_password = ""
     sql_server_db = "ODS1Stage"
 
     snowflake_account = "jab25078.us-east-1" # Healthgrades account
