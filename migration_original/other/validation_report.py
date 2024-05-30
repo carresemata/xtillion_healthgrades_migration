@@ -36,8 +36,6 @@ class SnowflakeTableValidator(Validator):
         for match_id in match_ids:
             snowflake_ids[match_id] = [str(i) for i in df_snowflake[match_id.upper()].tolist()]
 
-        print(df_snowflake)
-
         # ----------------- SQL Server -----------------
         sql_server_sub_dfs = []
         for i in range(len(snowflake_ids[match_ids[0]])):  # Assuming all lists have the same length
@@ -51,8 +49,6 @@ class SnowflakeTableValidator(Validator):
         df_sql_server = pd.concat(sql_server_sub_dfs, ignore_index=True)
         df_sql_server = df_sql_server.astype(str)
         df_sql_server.columns = df_sql_server.columns.str.upper()
-
-        print(df_sql_server)
 
         # ----------------- Compare -----------------
         identical_cols = []
@@ -71,16 +67,12 @@ class SnowflakeTableValidator(Validator):
                 if val_sql_server != val_snowflake:
                     val_id = df_sql_server[match_ids[0].upper()].iloc[index]
                     diff_row = {"Column Name": col, f"Match ID": val_id, "SQL Server Value": val_sql_server, "Snowflake Value": val_snowflake}
-                    #concatenated_match_ids = ', '.join(match_ids)
-                    #diff_row = {"Column Name": col, f"Match ID ({concatenated_match_ids})": val_id, "SQL Server Value": val_sql_server, "Snowflake Value": val_snowflake}
                     different_cols_df = different_cols_df.append(diff_row, ignore_index=True)
                     found_difference = True
                     break
 
             if found_difference:
                 continue
-
-        print(different_cols_df)
 
         return identical_cols, different_cols_df
     
