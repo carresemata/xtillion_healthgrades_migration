@@ -275,6 +275,65 @@ class SnowflakeTableValidator(Validator):
 
         return None
     
+    def generate_report_markdown(self, table_name_sql_server, table_name_snowflake, match_ids, sample_size) -> str:
+        """
+        This function generates a Markdown report with the results of the sample and aggregate validations.
+        """
+
+        identical_cols, different_cols_df = self.sample_validation(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
+        total_cols_sql_server, total_cols_snowflake, total_rows_sql_server, total_rows_snowflake, nulls_df, distincts_df = self.aggregate_validation(table_name_sql_server, table_name_snowflake)
+
+        ## Some postprocessing to make outputs dfs for report
+        identical_count = len(identical_cols)
+        different_count = len(different_cols_df)
+        identical_percentage = (identical_count / total_cols_sql_server) * 100
+        different_percentage = (different_count / total_cols_sql_server) * 100
+
+        report = f"# {table_name_sql_server} Report\n\n"
+
+        ## 1. Sample Validation ##
+        report += "## 1. Sample Validation\n\n"
+        report += f"Percentage of Identical Columns: {identical_percentage:.2f}% ({identical_count}/{total_cols_sql_server}).\n"
+        report += f"Percentage of Different Columns: {different_percentage:.2f}% ({different_count}/{total_cols_sql_server}).\n\n"
+        report += "The example below shows a sample row where values are not identical. Important to remember that fields like IDs are never expected to match. Long outputs are truncated since they will be hard to visualize.\n\n"
+        report += different_cols_df.to_markdown() + "\n\n"
+
+        ## 2. Aggregate Validation ##
+        report += "## 2. Aggregate Validation\n\n"
+
+        ### 2.1 Total Columns ###
+        report += "### 2.1 Total Columns\n"
+        report += f"- SQL Server: {total_cols_sql_server}\n"
+        report += f"- Snowflake: {total_cols_snowflake}\n"
+        cols_margin = np.where((total_cols_sql_server == 0) & (total_cols_snowflake == 0), 0,
+                        (np.abs(total_cols_sql_server - total_cols_snowflake) / total_cols_sql_server) * 100)
+        report += f"- Columns Margin (%): {cols_margin}\n\n"
+
+        ### 2.2 Total Rows ###
+        report += "### 2.2 Total Rows\n"
+        report += f"- SQL Server: {total_rows_sql_server}\n"
+        report += f"- Snowflake: {total_rows_snowflake}\n"
+        rows_margin = np.where((total_rows_sql_server == 0) & (total_rows_sql_server == 0), 0,
+                        (np.abs(total_rows_sql_server - total_rows_snowflake) / total_rows_sql_server) * 100)
+        report += f"- Rows Margin (%): {rows_margin}\n\n"
+
+        ### 2.3 Total Nulls per Column ###
+        report += "### 2.3 Nulls per Column\n"
+        report += nulls_df.to_markdown() + "\n\n"
+
+        ### 2.4 Total Distincts per Column ###
+        report += "### 2.4 Distincts per Column\n"
+        report += distincts_df.to_markdown()
+
+        output_file = f"{table_name_snowflake}-report.md"
+
+        with open(output_file, "w") as file:
+            file.write(report)
+
+        print(f"Markdown report generated successfully for {table_name_snowflake}!")
+
+        return report
+    
 
 if __name__ == "__main__":
     sql_server = "hgTestmdmdb01.sql.hgw-test.aws.healthgrades.zone"
@@ -294,9 +353,10 @@ if __name__ == "__main__":
                                                     warehouse=snowflake_warehouse, database=snowflake_db, role=snowflake_role, arrow_number_to_decimal=True)
 
     ############################### Example Usage ###############################
-    table_name_sql_server = "Base.Provider"  
-    table_name_snowflake = "BASE.PROVIDER"  # in case it's a different schema or has different naming convention 
-    match_ids = ["PROVIDERCODE"] # we should remember to never use IDs since we are creating them in runtime
+    table_name_sql_server = "Base.Practice"  
+    table_name_snowflake = "BASE.PRACTICE"  # in case it's a different schema or has different naming convention 
+    match_ids = ["PRACTICECODE"] # we should remember to never use IDs since we are creating them in runtime
     sample_size = 10 # rows for sample validation
     snowflake_validator = SnowflakeTableValidator(sql_server_connector, snowflake_connector)
-    snowflake_validator.generate_report(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
+    # snowflake_validator.generate_report(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
+    snowflake_validator.generate_report_markdown(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
