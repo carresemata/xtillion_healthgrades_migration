@@ -44,7 +44,7 @@ select_statement := $$
                         uuid_string() as DegreeID,
                         cte_d.degreecode as DegreeAbbreviation,
                         cte_d.degreecode as DegreeDescription, -- weird but what the original proc does
-                        (select MAX(refRank) from base.degree) + row_number() over (order by cte_d.degreecode) as refRank
+                        (select ifnull(MAX(refRank), 0) from base.degree) + row_number() over (order by cte_d.degreecode) as refRank 
                     from CTE_degrees as cte_d
                     order by cte_d.degreecode
                     $$;
