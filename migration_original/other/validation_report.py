@@ -67,7 +67,7 @@ class SnowflakeTableValidator(Validator):
                 if val_sql_server != val_snowflake:
                     val_id = df_sql_server[match_ids[0].upper()].iloc[index]
                     diff_row = {"Column Name": col, f"Match ID": val_id, "SQL Server Value": val_sql_server, "Snowflake Value": val_snowflake}
-                    different_cols_df = different_cols_df.append(diff_row, ignore_index=True)
+                    different_cols_df = pd.concat([different_cols_df, pd.DataFrame(diff_row, index=[0])], ignore_index=True)                    
                     found_difference = True
                     break
 
@@ -106,14 +106,18 @@ class SnowflakeTableValidator(Validator):
         ############### Validation Metric 3: Total Nulls per Column ###############
         col_names_query = f"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '{schema}' AND TABLE_NAME = '{name}'"
         col_names = pd.read_sql(col_names_query, self.sql_server_connector)["COLUMN_NAME"].tolist()
-        nulls_df = pd.DataFrame()
+        nulls_df = pd.DataFrame(columns=['Column_Name','Total_Nulls_SQLServer','Total_Nulls_Snowflake'])
         for col_name in col_names:
             query_nulls = f"SELECT COUNT(*) FROM {table_name_sql_server} WHERE {col_name} IS NULL"
             total_nulls_sql_server = pd.read_sql(query_nulls, self.sql_server_connector).iloc[0, 0]
             total_nulls_snowflake = pd.read_sql(query_nulls, self.snowflake_connector).iloc[0, 0]
-            nulls_df = nulls_df.append({"Column_Name": col_name, 
-                                        "Total_Nulls_SQLServer": total_nulls_sql_server,
-                                        "Total_Nulls_Snowflake": total_nulls_snowflake}, ignore_index=True)
+            nulls_df['Column_Name'] = col_name
+            nulls_df['Total_Nulls_Snowflake'] = total_nulls_sql_server
+            nulls_df['Total_Nulls_SQLServer'] = total_nulls_snowflake
+            # nulls_df = nulls_df.concat({"Column_Name": col_name, 
+            #                             "Total_Nulls_SQLServer": total_nulls_sql_server,
+            #                             "Total_Nulls_Snowflake": total_nulls_snowflake}, ignore_index=True)
+            
 
         nulls_df["Total_Nulls_SQLServer"] = nulls_df["Total_Nulls_SQLServer"].astype(int)
         nulls_df["Total_Nulls_Snowflake"] = nulls_df["Total_Nulls_Snowflake"].astype(int)
@@ -128,7 +132,7 @@ class SnowflakeTableValidator(Validator):
         nulls_df['Margin (%)'] = nulls_df['Margin (%)'].round(1)
 
         ############### Validation Metric 4: Total Distincts per Column ###############
-        distincts_df = pd.DataFrame()
+        distincts_df = pd.DataFrame(columns=['Column_Name','Total_Distincts_SQLServer','Total_Distincts_Snowflake'])
         for col_name in col_names:
             # some columns like geography may give errors with count distinct
             try:
@@ -136,9 +140,13 @@ class SnowflakeTableValidator(Validator):
                 query_ditincts_snowflake = f"SELECT COUNT(DISTINCT {col_name}) FROM {table_name_snowflake}"
                 total_distincts_sql_server = pd.read_sql(query_distincts_sql_server, self.sql_server_connector).iloc[0, 0]
                 total_distincts_snowflake = pd.read_sql(query_ditincts_snowflake, self.snowflake_connector).iloc[0, 0]
-                distincts_df = distincts_df.append({"Column_Name": col_name, 
-                                                    "Total_Distincts_SQLServer": total_distincts_sql_server,
-                                                    "Total_Distincts_Snowflake": total_distincts_snowflake}, ignore_index=True)
+                distincts_df['Column_Name'] = col_name
+                distincts_df['Total_Distincts_Snowflake']= total_distincts_snowflake
+                distincts_df['Total_Distincts_SQLServer']= total_distincts_sql_server
+
+                # distincts_df = distincts_df.concat({"Column_Name": col_name, 
+                #                                     "Total_Distincts_SQLServer": total_distincts_sql_server,
+                #                                     "Total_Distincts_Snowflake": total_distincts_snowflake}, ignore_index=True)
             except:
                 pass
 
@@ -283,7 +291,7 @@ if __name__ == "__main__":
     sql_server_db = "ODS1Stage"
 
     snowflake_account = "OPA66287.us-east-1"  # HG-01 account
-    snowflake_username = "OJIMENEZ@RVOHEALTH.COM"
+    snowflake_username = "ASANCHEZ@RVOHEALTH.COM"
     snowflake_warehouse = "MDM_XSMALL"
     snowflake_db = "ODS1_STAGE_TEAM"
     snowflake_role = "APP-SNOWFLAKE-HG-MDM-POWERUSER"
