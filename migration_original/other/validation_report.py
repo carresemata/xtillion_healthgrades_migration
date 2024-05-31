@@ -358,5 +358,4 @@ if __name__ == "__main__":
     match_ids = ["PRACTICECODE"] # we should remember to never use IDs since we are creating them in runtime
     sample_size = 10 # rows for sample validation
     snowflake_validator = SnowflakeTableValidator(sql_server_connector, snowflake_connector)
-    # snowflake_validator.generate_report(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
     snowflake_validator.generate_report_markdown(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
