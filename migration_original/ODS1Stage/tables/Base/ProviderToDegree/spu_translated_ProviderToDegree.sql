@@ -8,7 +8,7 @@ AS 'declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertodegree depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.degree
 
@@ -19,9 +19,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default(''sp_load_providertodegree'');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default(''sp_load_providertodegree'');
+execution_start datetime default getdate();
+mdm_db string default(''mdm_team'');
 
 
 begin
@@ -32,17 +32,26 @@ begin
 ---------------------------------------------------------     
 
 select_statement := $$                 
+                    with CTE_degree as (
+                    SELECT
+                        p.ref_provider_code as providercode,
+                        to_varchar(json.value:DEGREE_CODE) as Degree_DegreeCode,
+                        to_varchar(json.value:DEGREE_RANK) as Degree_DegreeRank,
+                        to_varchar(json.value:DATA_SOURCE_CODE) as Degree_SourceCode,
+                        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Degree_LastUpdateDate
+                    FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+                    , lateral flatten(input => p.PROVIDER_PROFILE:DEGREE) as json)
+                
                     select 
                         uuid_string() as ProviderToDegreeID,
                         p.providerid,
                         d.DegreeID,
-                        json.degree_DegreeRank as DegreePriority,
-                        ifnull(json.degree_SourceCode, ''Profisee'') as SourceCode,
-                        ifnull(json.degree_LastUpdateDate, sysdate()) as LastUpdateDate
-                    from raw.vw_PROVIDER_PROFILE as JSON
-                        inner join base.provider p on p.providercode = json.providercode
-                        inner join base.degree d on d.degreeabbreviation = json.degree_DegreeCode
-                    where json.provider_PROFILE is not null
+                        cte.degree_DegreeRank as DegreePriority,
+                        ifnull(cte.degree_SourceCode, ''Profisee'') as SourceCode,
+                        ifnull(cte.degree_LastUpdateDate, sysdate()) as LastUpdateDate
+                    from cte_degree as cte
+                        inner join base.provider p on p.providercode = cte.providercode
+                        inner join base.degree d on d.degreeabbreviation = cte.degree_DegreeCode
                     $$;
 
 
