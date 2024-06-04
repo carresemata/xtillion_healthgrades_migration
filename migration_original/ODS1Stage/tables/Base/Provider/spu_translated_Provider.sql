@@ -42,32 +42,32 @@ select_statement_1 := $$ select
                             uuid_string() as ProviderId,
                             -- EDWBaseRecordID
                             json.ref_provider_code as providercode,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:FIRSTNAME as FirstName,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:MIDDLENAME as MiddleName,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:LASTNAME as LastName,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:SUFFIXCODE as Suffix,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:GENDERCODE as Gender,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:FIRST_NAME) as FirstName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:MIDDLE_NAME) as MiddleName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:LAST_NAME) as LastName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:SUFFIX_CODE) as Suffix,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:GENDER_CODE) as Gender,
                             CASE
-                                WHEN json.PROVIDER_PROFILE:DEMOGRAPHICS:NPI = json.ref_provider_code then null
-                                else json.PROVIDER_PROFILE:DEMOGRAPHICS:NPI
+                                WHEN to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:NPI) = json.ref_provider_code then null
+                                else to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:NPI)
                             END as NPI,
-                            TO_DATE(json.PROVIDER_PROFILE:DEMOGRAPHICS:DATEOFBIRTH) as DateOfBirth,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:ACCEPTSNEWPATIENTS as AcceptsNewPatients,
+                            TO_DATE(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATE_OF_BIRTH) as DateOfBirth,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:ACCEPTS_NEW_PATIENTS) as AcceptsNewPatients,
                             -- HasElectronicMedicalRecords,
                             -- HasElectronicPrescription,
-                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS:SOURCECODE, ''Profisee'') as SourceCode,
+                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATA_SOURCE_CODE, ''Profisee'') as SourceCode,
                             s.sourceid,
-                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS:LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:LAST_UPDATE_DATE, sysdate()) as LastUpdateDate,
                             -- PatientVolume
                             -- IsInClinicalPractice
                             -- PatientCountIsFew
                             -- IsPCPCalculated
                             -- ProfessionalInterest
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:SURVIVERESIDENTIALADDRESSES as SurviveResidentialAddresses,
-                            json.PROVIDER_PROFILE:DEMOGRAPHICS:ISPATIENTFAVORITE as IsPatientFavorite
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:SURVIVE_RESIDENTIAL_ADDRESSES) as SurviveResidentialAddresses,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:IS_PATIENT_FAVORITE) as IsPatientFavorite
                         from
                             mdm_team.mst.provider_profile_processing as JSON
-                            left join ((select distinct(sourcecode), sourceid from base.source where lastupdatedate != ''NaT'')) as S on s.sourcecode = json.PROVIDER_PROFILE:DEMOGRAPHICS:SOURCECODE $$;
+                            left join ((select distinct(sourcecode), sourceid from base.source where lastupdatedate != ''NaT'')) as S on s.sourcecode = to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATA_SOURCE_CODE) $$;
 
 
 
@@ -143,9 +143,10 @@ update_statement_2 := $$update base.provider as target
        SET target.carephilosophy = source.provideraboutmetext
          from (select 
                     json.ref_provider_code as providercode,
-                    json.PROVIDER_PROFILE:ABOUTME:ABOUTMECODE as AboutMeCode,
-                    json.PROVIDER_PROFILE:ABOUTME:ABOUTMETEXT as ProviderAboutMeText
+                    to_varchar(aboutme.VALUE:ABOUT_ME_CODE) as AboutMeCode,
+                    to_varchar(aboutme.VALUE:ABOUT_ME_TEXT) as ProviderAboutMeText
                 from mdm_team.mst.provider_profile_processing as JSON
+                    , lateral flatten (input => json.PROVIDER_PROFILE:ABOUT_ME) ABOUTME
                     where AboutMeCode = ''CarePhilosophy'') as source
          where target.providercode = source.providercode
     $$;
@@ -156,7 +157,7 @@ update_statement_2 := $$update base.provider as target
 
 merge_statement_1 := '' merge into base.provider as target using 
                    (''||select_statement_1||'') as source 
-                   on source.providerid = target.providerid
+                   on source.providercode = target.providercode
                    WHEN MATCHED and'' || update_clause_1 || ''then ''||update_statement_1|| ''
                    when not matched then ''||insert_statement_1;
                    
