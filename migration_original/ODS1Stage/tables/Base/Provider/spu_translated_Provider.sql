@@ -25,7 +25,7 @@ AS 'declare
     status string; -- status monitoring
     procedure_name varchar(50) default(''sp_load_provider'');
     execution_start datetime default getdate();
-
+    mdm_db string default(''mdm_team'');
    
    
 begin
@@ -66,7 +66,7 @@ select_statement_1 := $$ select
                             to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:SURVIVE_RESIDENTIAL_ADDRESSES) as SurviveResidentialAddresses,
                             to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:IS_PATIENT_FAVORITE) as IsPatientFavorite
                         from
-                            mdm_team.mst.provider_profile_processing as JSON
+                            $$ || mdm_db || $$.mst.provider_profile_processing as JSON
                             left join ((select distinct(sourcecode), sourceid from base.source where lastupdatedate != ''NaT'')) as S on s.sourcecode = to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATA_SOURCE_CODE) $$;
 
 
@@ -145,7 +145,7 @@ update_statement_2 := $$update base.provider as target
                     json.ref_provider_code as providercode,
                     to_varchar(aboutme.VALUE:ABOUT_ME_CODE) as AboutMeCode,
                     to_varchar(aboutme.VALUE:ABOUT_ME_TEXT) as ProviderAboutMeText
-                from mdm_team.mst.provider_profile_processing as JSON
+                from $$ || mdm_db || $$.mst.provider_profile_processing as JSON
                     , lateral flatten (input => json.PROVIDER_PROFILE:ABOUT_ME) ABOUTME
                     where AboutMeCode = ''CarePhilosophy'') as source
          where target.providercode = source.providercode
