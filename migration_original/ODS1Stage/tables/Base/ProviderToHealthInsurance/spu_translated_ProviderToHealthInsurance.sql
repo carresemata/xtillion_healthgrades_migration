@@ -2,7 +2,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOHEALTHINSURAN
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE AS CALLER
-AS 'declare
+AS declare
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
