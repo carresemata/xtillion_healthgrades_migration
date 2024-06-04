@@ -22,7 +22,7 @@ AS 'declare
     status string; -- status monitoring
     procedure_name varchar(50) default(''sp_load_providertoaboutme'');
     execution_start datetime default getdate();
-
+    mdm_db string default(''mdm_team'');
    
    
 begin
@@ -42,7 +42,7 @@ select_statement := $$
                         to_varchar(ABOUTME.value:ABOUT_ME_TEXT) as ProviderAboutMeText,
                         a.displayorder as CustomDisplayOrder,
                         ifnull(ABOUTME.value:UPDATED_DATETIME, current_timestamp()) as LastUpdateDate
-                    from mdm_team.mst.provider_profile_processing as JSON
+                    from $$ || mdm_db || $$.mst.provider_profile_processing as JSON
                           inner join base.provider P on json.ref_provider_code = p.providercode
                           , lateral flatten (input => json.PROVIDER_PROFILE:ABOUT_ME) ABOUTME
                           inner join base.aboutme A on to_varchar(aboutme.value:ABOUT_ME_CODE) = a.aboutmecode
