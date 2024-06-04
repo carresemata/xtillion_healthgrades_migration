@@ -7,7 +7,7 @@ AS 'declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertoappointmentavailability depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.appointmentavailability
 
@@ -18,8 +18,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default(''sp_load_providertoappointmentavailability'');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default(''sp_load_providertoappointmentavailability'');
+execution_start datetime default getdate();
+mdm_db string default(''mdm_team'');
 
 begin
 ---------------------------------------------------------
@@ -31,12 +32,10 @@ select_statement :=  $$ select
                             aa.appointmentavailabilityid,
                             ifnull(appav.value:DATA_SOURCE_CODE, ''Profisee'') as SourceCode,
                             ifnull(appav.value:UPDATED_DATETIME, sysdate()) as LastUpdatedDate
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            inner join base.provider as P on p.providercode = json.providercode,
-                            lateral flatten (input => json.appointmentavailability) appav
-                            inner join base.appointmentavailability as AA on aa.appointmentavailabilitycode = to_varchar(appav.value:APPOINTMENT_AVAILABILITY_CODE)
-                        where
-                            PROVIDER_PROFILE is not null $$;
+                        from $$ || mdm_db || $$.mst.provider_profile_processing as json
+                            inner join base.provider as P on p.providercode = json.ref_provider_code,
+                            lateral flatten (input => json.PROVIDER_PROFILE:APPOINTMENT_AVAILABILITY) appav
+                            inner join base.appointmentavailability as AA on aa.appointmentavailabilitycode = to_varchar(appav.value:APPOINTMENT_AVAILABILITY_CODE) $$;
 
 -- insert Statement
 insert_statement := '' insert 
