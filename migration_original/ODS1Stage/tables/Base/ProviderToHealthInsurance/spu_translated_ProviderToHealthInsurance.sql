@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOHEALTHINSURANCE("IS_FULL" BOOLEAN)
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOHEALTHINSURANCE(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
 EXECUTE AS CALLER
@@ -110,4 +110,4 @@ status := 'completed successfully';
                 select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
             return status;
-end';
+end;
