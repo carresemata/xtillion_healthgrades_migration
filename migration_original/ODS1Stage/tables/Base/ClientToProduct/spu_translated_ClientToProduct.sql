@@ -24,7 +24,6 @@ procedure_name varchar(50) default('sp_load_clienttoproduct');
 execution_start datetime default getdate();
 
 
-
 begin
 
 ---------------------------------------------------------
@@ -32,7 +31,6 @@ begin
 ---------------------------------------------------------   
 select_statement := $$
                     select
-                        uuid_string() as ClientToProductID,
                         s.customerproductcode as ClientToProductCode,
                         c.clientid,
                         p.productid,
@@ -61,7 +59,7 @@ insert_statement := $$
                          QueueSize
                          )
                     values 
-                        (source.clienttoproductid,
+                        (uuid_string(),
                         source.clienttoproductcode,
                         source.clientid,
                         source.productid,
@@ -78,7 +76,7 @@ insert_statement := $$
 
 merge_statement := $$ merge into base.clienttoproduct as target using 
                    ($$||select_statement||$$) as source 
-                   on source.clientid = target.clientid and source.productid = target.productid and source.sourcecode = target.sourcecode and source.queuesize = target.queuesize
+                   on source.clienttoproductcode = target.clienttoproductcode
                    when not matched then $$||insert_statement;
 
     
