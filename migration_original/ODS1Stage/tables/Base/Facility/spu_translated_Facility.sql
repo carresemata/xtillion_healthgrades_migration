@@ -7,7 +7,7 @@ AS declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 
---- base.client depends on:   
+--- base.facility depends on:   
 --- mdm_team.mst.facility_profile_processing 
 
 ---------------------------------------------------------
