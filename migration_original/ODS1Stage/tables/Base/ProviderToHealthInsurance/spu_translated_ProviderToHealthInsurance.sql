@@ -1,9 +1,8 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOHEALTHINSURANCE(is_full BOOLEAN)
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOHEALTHINSURANCE(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
-EXECUTE as CALLER
-as
-declare
+EXECUTE AS CALLER
+AS declare
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
@@ -21,8 +20,11 @@ select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providertohealthinsurance');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default('sp_load_providertohealthinsurance');
+execution_start datetime default getdate();
+
+mdm_db string default('mdm_team');
+
 
 
 
@@ -35,20 +37,24 @@ begin
 
 --- select Statement
 select_statement := $$ 
-select distinct
-        p.providerid,
-        ptp.healthinsuranceplantoplantypeid,
-        ifnull(json.healthinsurance_SourceCode, 'Profisee') as SourceCode,
-        ifnull(json.healthinsurance_LastUpdateDate, current_timestamp()) as LastUpdateDate
-        
-from raw.vw_PROVIDER_PROFILE as JSON
-    left join base.provider P on p.providercode = json.providercode
-    left join base.healthinsuranceplantoplantype as PTP on ptp.insuranceproductcode = json.healthinsurance_HealthInsuranceProductCode
-
-where json.provider_PROFILE is not null
-        and json.healthinsurance_HealthInsuranceProductCode is not null
-        
-qualify row_number() over (partition by ProviderId, json.healthinsurance_HealthInsuranceProductCode order by CREATE_DATE desc) = 1
+with cte_health_insurance as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:HEALTH_INSURANCE_PRODUCT_CODE) as HealthInsurance_HealthInsuranceProductCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as HealthInsurance_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as HealthInsurance_LastUpdateDate
+    FROM $$|| mdm_db ||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:HEALTH_INSURANCE) as json
+)
+select 
+    p.providerid,
+    ptp.healthinsuranceplantoplantypeid,
+    ft.HealthInsurance_SourceCode as SourceCode,
+    ft.HealthInsurance_LastUpdateDate as LastUpdateDate
+ from cte_health_insurance as ft
+    inner join base.provider P on p.providercode = ft.providercode
+    inner join base.healthinsuranceplantoplantype as PTP on ptp.insuranceproductcode = ft.HealthInsurance_HealthInsuranceProductCode
+where ft.HealthInsurance_HealthInsuranceProductCode is not null
 $$;
 
 --- insert Statement
