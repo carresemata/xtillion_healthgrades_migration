@@ -52,9 +52,8 @@ select distinct
     f.facilityid,
     ifnull(cte.Facility_SourceCode, 'Profisee') as SourceCode,
     ifnull(cte.Facility_LastUpdateDate, current_timestamp()) as LastUpdateDate
-from mdm_team.mst.provider_profile as JSON
-    inner join base.provider as P on json.ref_provider_code = p.providercode
-    inner join cte_facility as cte on cte.providercode = p.providercode
+from cte_facility as cte
+    inner join base.provider as P on cte.providercode = p.providercode
     inner join base.facility as F on cte.Facility_FacilityCode = f.facilitycode
 $$;
 
