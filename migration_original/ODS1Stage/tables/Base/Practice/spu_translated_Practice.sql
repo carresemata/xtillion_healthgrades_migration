@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.practice depends on: 
---- mdmm_team.mst.practice_profile_processing (raw.vw_practice_profile)
+--- mdmm_team.mst.practice_profile_processing 
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -22,7 +22,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_practice');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
    
 begin
@@ -35,21 +35,18 @@ begin
 
 --- select Statement
 select_statement := $$ select 
-                            ifnull(json.demographics_LastUpdateDate, current_timestamp()) as LastUpdateDate,
-                            json.demographics_NPI as NPI,
-                            json.practicecode,
-                            CASE WHEN json.demographics_Logo = 'None' then null else json.demographics_Logo END as PracticeLogo,
-                            CASE WHEN json.demographics_MedicalDirector = 'None' then null else json.demographics_MedicalDirector END as PracticeMedicalDirector,
-                            CASE WHEN json.demographics_PracticeName LIKE '%&amp;%' then REPLACE(json.demographics_PracticeName, '&amp;', '&') else ifnull(json.demographics_PracticeName, '' ) END as PracticeName,
-                            ifnull(json.demographics_SourceCode, 'Profisee') as SourceCode,
-                            json.demographics_YearPracticeEstablished as YearPracticeEstablished
-                        from raw.vw_PRACTICE_PROFILE as JSON
+                            ifnull(TO_TIMESTAMP_NTZ(PRACTICE_PROFILE:DEMOGRAPHICS[0].UPDATED_DATETIME), current_timestamp()) as LastUpdateDate,
+                            TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].NPI) as NPI,
+                            REF_PRACTICE_CODE as practicecode,
+                            CASE WHEN TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].LOGO) = 'None' then null else TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].LOGO) END as PracticeLogo,
+                            CASE WHEN TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].MEDICAL_DIRECTOR) = 'None' then null else TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].MEDICAL_DIRECTOR) END as PracticeMedicalDirector,
+                            CASE WHEN TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].PRACTICE_NAME) LIKE '%&amp;%' then REPLACE(TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].PRACTICE_NAME), '&amp;', '&') else ifnull(TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].PRACTICE_NAME), '' ) END as PracticeName,
+                            ifnull(TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].DATA_SOURCE_CODE), 'Profisee') as SourceCode,
+                            TO_VARCHAR(PRACTICE_PROFILE:DEMOGRAPHICS[0].YEAR_PRACTICE_ESTABLISHED) as YearPracticeEstablished
+                        from $$ || mdm_db || $$.mst.practice_profile_processing
                         where 
-                            PRACTICE_PROFILE is not null and
-                            PracticeCode is not null and
                             PracticeName is not null and
-                            LENGTH(PracticeCode) <= 10
-                        qualify row_number() over(partition by PracticeCode order by CREATE_DATE desc) = 1$$;
+                            LENGTH(PracticeCode) <= 10 $$;
 
 --- update Statement
 update_statement := ' update
