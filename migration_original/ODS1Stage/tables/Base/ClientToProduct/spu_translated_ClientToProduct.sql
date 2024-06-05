@@ -20,9 +20,8 @@ select_statement string;
 insert_statement string; 
 merge_statement string;
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_clienttoproduct');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_clienttoproduct');
+execution_start datetime default getdate();
 
 
 begin
@@ -32,7 +31,7 @@ begin
 ---------------------------------------------------------   
 select_statement := $$
                     select
-                        uuid_string() as ClientToProductID,
+                        s.customerproductcode as ClientToProductCode,
                         c.clientid,
                         p.productid,
                         ifnull(s.activeflag, true) as ActiveFlag,
@@ -44,15 +43,14 @@ select_statement := $$
                     inner join base.client c on c.clientcode = s.clientcode 
                     inner join base.product p on p.productcode = s.productcode
                     where
-                        s.clientcode is not null
-                        and s.productcode is not null
-                    qualify DENSE_RANK() over( partition by s.customerproductcode order by s.created_datetime desc) = 1
+                        s.customerproductcode is not null
                     $$;
 
 
 insert_statement := $$ 
                     insert  
                         (ClientToProductID,
+                         ClientToProductCode,
                          ClientID, 
                          ProductID, 
                          ActiveFlag, 
@@ -61,7 +59,8 @@ insert_statement := $$
                          QueueSize
                          )
                     values 
-                        (source.clienttoproductid,
+                        (uuid_string(),
+                        source.clienttoproductcode,
                         source.clientid,
                         source.productid,
                         source.activeflag,
@@ -77,7 +76,7 @@ insert_statement := $$
 
 merge_statement := $$ merge into base.clienttoproduct as target using 
                    ($$||select_statement||$$) as source 
-                   on source.clientid = target.clientid and source.productid = target.productid and source.sourcecode = target.sourcecode and source.queuesize = target.queuesize
+                   on source.clienttoproductcode = target.clienttoproductcode
                    when not matched then $$||insert_statement;
 
     
