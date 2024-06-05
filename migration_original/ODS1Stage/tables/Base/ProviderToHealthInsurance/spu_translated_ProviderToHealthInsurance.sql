@@ -43,7 +43,7 @@ with cte_health_insurance as (
         to_varchar(json.value:HEALTH_INSURANCE_PRODUCT_CODE) as HealthInsurance_HealthInsuranceProductCode,
         to_varchar(json.value:DATA_SOURCE_CODE) as HealthInsurance_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as HealthInsurance_LastUpdateDate
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$|| mdm_db ||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:HEALTH_INSURANCE) as json
 )
 select 
@@ -51,12 +51,10 @@ select
     ptp.healthinsuranceplantoplantypeid,
     ft.HealthInsurance_SourceCode as SourceCode,
     ft.HealthInsurance_LastUpdateDate as LastUpdateDate
- from $$|| mdm_db ||$$.mst.provider_profile_processing as JSON
-    inner join base.provider P on p.providercode = json.ref_provider_code
-    inner join cte_health_insurance as ft on json.ref_provider_code = ft.providercode
+ from cte_health_insurance as ft
+    inner join base.provider P on p.providercode = ft.providercode
     inner join base.healthinsuranceplantoplantype as PTP on ptp.insuranceproductcode = ft.HealthInsurance_HealthInsuranceProductCode
-where json.provider_PROFILE is not null
-        and ft.HealthInsurance_HealthInsuranceProductCode is not null
+where ft.HealthInsurance_HealthInsuranceProductCode is not null
 $$;
 
 --- insert Statement
