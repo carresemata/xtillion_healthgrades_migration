@@ -9,8 +9,8 @@ declare
 ---------------------------------------------------------
     
 -- base.address depends on: 
---- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.office_profile_processing 
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.citystatepostalcode
 
@@ -27,11 +27,10 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_address');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
    
 begin
-    
 
 
 ---------------------------------------------------------
@@ -39,21 +38,43 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement_1 := $$ select distinct
+select_statement_1 := $$ with cte_address as (
+                            select
+                                p.ref_facility_code as facilitycode,
+                                to_varchar(json.value:ADDRESS_LINE_1) AS Address_AddressLine1,
+                                to_varchar(json.value:LATITUDE) AS Address_Latitude,
+                                to_varchar(json.value:LONGITUDE) AS Address_Longitude,
+                                to_varchar(json.value:CITY) AS Address_City,
+                                to_varchar(json.value:STATE) AS Address_State, 
+                                to_varchar(json.value:ZIP) AS Address_PostalCode ,
+                                to_varchar(json.value:UPDATED_DATETIME) as address_LastUpdateDate,
+                                ifnull(to_varchar(json.value:TIME_ZONE), 'None') as address_Timezone,
+                                to_varchar(json.value:SUITE) as address_Suite,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as address_sourcecode
+                            from  
+                                $$ || mdm_db || $$.mst.facility_profile_processing as p
+                                , lateral flatten(input => p.FACILITY_PROFILE:ADDRESS) as json
+                            where
+                                nullif(Address_City,'') is not null 
+                                and nullif(Address_State,'') is not null 
+                                and nullif(Address_PostalCode,'') is not null
+                                and Address_AddressLine1 != ''
+                            )
+
+                            select distinct
                                 json.address_AddressLine1 as AddressLine1,
                                 json.address_Latitude as Latitude,
                                 json.address_Longitude as Longitude,
-                                cspc.citystatepostalcodeid 
-                                
+                                cspc.citystatepostalcodeid,
+                                cspc.nationid,
+                                json.address_suite as suite,
+                                json.address_timezone as timezone,
+                                ifnull(json.address_lastupdatedate, current_timestamp()) as lastupdatedate
                             from
-                                raw.vw_FACILITY_PROFILE as JSON 
+                                cte_address as JSON 
                                 join base.facility as Facility on json.facilitycode = facility.facilitycode
-                                join base.citystatepostalcode as CSPC on json.address_City = cspc.city and json.address_State = cspc.state and json.address_PostalCode = cspc.postalcode 
-                            where
-                                json.facility_PROFILE is not null and 
-                                nullif(Address_City,'') is not null 
-                                and nullif(Address_State,'') is not null 
-                                and nullif(Address_PostalCode,'') is not null $$;
+                                join base.citystatepostalcode as CSPC on json.address_City = cspc.city and json.address_State = cspc.state and json.address_PostalCode = cspc.postalcode  
+                            qualify row_number() over(partition by json.address_AddressLine1, json.address_Suite, json.address_State, cspc.city, json.address_PostalCode order by address_lastupdatedate desc) = 1  $$;
 
 
 
@@ -65,19 +86,49 @@ insert_statement_1 := $$ insert (
                                 Latitude, 
                                 Longitude, 
                                 TimeZone, 
-                                CityStatePostalCodeId
+                                CityStatePostalCodeId,
+                                suite,
+                                lastupdatedate
                         )
                         values (
                                 uuid_string(),
-                                '00415355-0000-0000-0000-000000000000',
+                                source.nationid,
                                 source.addressline1, 
                                 source.latitude, 
                                 source.longitude, 
-                                null, 
-                                source.citystatepostalcodeid
+                                source.timezone, 
+                                source.citystatepostalcodeid,
+                                source.suite,
+                                source.lastupdatedate
                         )$$;
 
-select_statement_2 := $$ select distinct
+select_statement_2 := $$  with cte_address as (
+                            select
+                                p.ref_office_code as officecode,
+                                p.CREATED_DATETIME AS CREATE_DATE,
+                                to_varchar(json.value:ADDRESS_LINE_1) AS Address_AddressLine1,
+                                to_varchar(json.value:ADDRESS_LINE_2) AS Address_AddressLine2,
+                                to_varchar(json.value:LATITUDE) AS Address_Latitude,
+                                to_varchar(json.value:LONGITUDE) AS Address_Longitude,
+                                to_varchar(json.value:CITY) AS Address_City,
+                                to_varchar(json.value:STATE) AS Address_State, 
+                                to_varchar(json.value:ZIP) AS Address_PostalCode,
+                                ifnull(to_varchar(json.value:TIME_ZONE), 'None') AS Address_TimeZone,
+                                to_varchar(json.value:SUITE) AS Address_Suite,
+                                to_varchar(json.value:UPDATED_DATETIME) as address_LastUpdateDate,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as address_sourcecode
+                            from  
+                                $$ || mdm_db || $$.mst.office_profile_processing as p
+                                , lateral flatten(input => p.OFFICE_PROFILE:ADDRESS) as json
+                            where
+                                nullif(Address_City,'') is not null 
+                                and nullif(Address_State,'') is not null 
+                                and nullif(Address_PostalCode,'') is not null
+                                and LENGTH(trim(upper(Address_AddressLine1)) || ifnull(trim(upper(Address_AddressLine2)),'') || ifnull(trim(upper(Address_Suite)),'')) > 0
+                                and Address_AddressLine1 != ''
+                            )
+
+                            select distinct
                                     cspc.citystatepostalcodeid, 
                                     cspc.nationid, 
                                     json.address_AddressLine1 as AddressLine1, 
@@ -85,19 +136,12 @@ select_statement_2 := $$ select distinct
                                     json.address_Latitude as Latitude, 
                                     json.address_Longitude as Longitude, 
                                     json.address_TimeZone as TimeZone, 
-                                    json.address_Suite as Suite
+                                    json.address_Suite as Suite,
+                                    ifnull(json.address_lastupdatedate, current_timestamp()) as lastupdatedate
                             from
-                                raw.vw_OFFICE_PROFILE as JSON 
-                                join base.citystatepostalcode as CSPC on json.address_PostalCode = cspc.postalcode and json.address_City = cspc.city and json.address_State = cspc.state
-                                
-                            where
-                                json.office_PROFILE is not null and 
-                                    nullif(Address_City,'') is not null 
-                                    and nullif(Address_State,'') is not null 
-                                    and nullif(Address_PostalCode,'') is not null
-                                    and LENGTH(trim(upper(Address_AddressLine1)) || ifnull(trim(upper(Address_AddressLine2)),'') || ifnull(trim(upper(Address_Suite)),'')) > 0
-                                    and cspc.citystatepostalcodeid is not null
-                            qualify row_number() over(partition by json.address_AddressLine1, json.address_AddressLine2, json.address_Suite, cspc.city, json.address_State, json.address_PostalCode order by CREATE_DATE desc) = 1  $$;
+                                cte_address as JSON 
+                                join base.citystatepostalcode as CSPC on json.address_PostalCode = cspc.postalcode and json.address_City = cspc.city and json.address_State = cspc.state 
+                            qualify row_number() over(partition by json.address_AddressLine1, json.address_AddressLine2, json.address_Suite, json.address_State, cspc.city, json.address_PostalCode order by address_lastupdatedate desc) = 1 $$;
 
 insert_statement_2 := $$insert (
                            AddressID, 
@@ -109,7 +153,7 @@ insert_statement_2 := $$insert (
                            Longitude, 
                            TimeZone, 
                            Suite, 
-                           LastUpdateDate 
+                           LastUpdateDate
                         )
                         values 
                         (   uuid_string(),
@@ -121,7 +165,7 @@ insert_statement_2 := $$insert (
                             source.longitude, 
                             source.timezone, 
                             source.suite, 
-                            current_timestamp()
+                            source.lastupdatedate
                            
                         );$$;
 
