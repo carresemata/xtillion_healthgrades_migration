@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.facilityhours depends on: 
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.daysofweek
 
