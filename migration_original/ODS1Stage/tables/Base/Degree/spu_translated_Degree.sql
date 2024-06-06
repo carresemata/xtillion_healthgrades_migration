@@ -8,7 +8,7 @@ as declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.degree depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -17,9 +17,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_degree');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_degree');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 begin
@@ -30,22 +30,22 @@ begin
 ---------------------------------------------------------     
 
 select_statement := $$
-                    with CTE_degrees as (
-                        select distinct json.degree_DegreeCode as DegreeCode
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                        where not exists (
-                            select d.degreeabbreviation
-                            from base.degree as d
-                            where d.degreeabbreviation = json.degree_DegreeCode
-                        ) and DegreeCode is not null
+                    with Cte_degree as (
+                        select
+                            distinct
+                            to_varchar(json.value:DEGREE_CODE) as DegreeCode,
+                            MAX(to_varchar(json.value:UPDATED_DATETIME)) as LastUpdateDate
+                        from $$ || mdm_db || $$.mst.provider_profile_processing as p
+                        , lateral flatten(input => p.PROVIDER_PROFILE:DEGREE) as json
+                        group by 
+                            to_varchar(json.value:DEGREE_CODE)
                     )
-                    
                     select 
                         uuid_string() as DegreeID,
                         cte_d.degreecode as DegreeAbbreviation,
-                        cte_d.degreecode as DegreeDescription, -- weird but what the original proc does
-                        (select ifnull(MAX(refRank), 0) from base.degree) + row_number() over (order by cte_d.degreecode) as refRank 
-                    from CTE_degrees as cte_d
+                        (select ifnull(MAX(refRank), 0) from base.degree) + row_number() over (order by cte_d.degreecode) as refRank,
+                        cte_d.LastUpdateDate
+                    from CTE_degree as cte_d
                     order by cte_d.degreecode
                     $$;
 
@@ -55,15 +55,15 @@ insert_statement := $$
                        (   
                         DegreeID,
                         DegreeAbbreviation,
-                        DegreeDescription,
-                        refRank
+                        refRank,
+                        LastUpdateDate
                         )
                       values 
                         (   
                         source.degreeid,
                         source.degreeabbreviation,
-                        source.degreedescription,
-                        source.refrank
+                        source.refrank,
+                        source.lastupdatedate
                         )
                      $$;
 
