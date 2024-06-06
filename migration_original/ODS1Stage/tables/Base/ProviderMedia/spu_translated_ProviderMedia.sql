@@ -9,7 +9,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providermedia depends on the following tables:
---- mdm_team.mst.provider_profile_processing
+--- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
 --- base.provider
 --- base.mediatype
 
@@ -23,7 +23,6 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providermedia');
     execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
 
 
    
@@ -36,34 +35,25 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ with Cte_media as (
-SELECT
-    p.ref_provider_code as providercode,
-    to_varchar(json.value:MEDIA_TYPE_CODE) as Media_MediaTypeCode,
-    to_varchar(json.value:MEDIA_DATE) as Media_MediaDate,
-    to_varchar(json.value:MEDIA_TITLE) as Media_MediaTitle,
-    to_varchar(json.value:MEDIA_PUBLISHER) as Media_MediaPublisher,
-    to_varchar(json.value:MEDIA_SYNOPSIS) as Media_MediaSynopsis,
-    to_varchar(json.value:MEDIA_LINK) as Media_MediaLink,
-    to_varchar(json.value:DATA_SOURCE_CODE) as Media_SourceCode,
-    to_timestamp_ntz(json.value:UPDATED_DATETIME) as Media_LastUpdateDate
-FROM $$||mdm_db||$$.mst.provider_profile_processing as p
-, lateral flatten(input => p.PROVIDER_PROFILE:MEDIA) as json
-)
-select
-    p.providerid,
-    mt.mediatypeid,
-    json.media_MEDIADATE as MediaDate,
-    json.media_MEDIATITLE as MediaTitle,
-    json.media_MEDIAPUBLISHER as MediaPublisher,
-    json.media_MEDIASYNOPSIS as MediaSynopsis,
-    json.media_MEDIALINK as MediaLink,
-    ifnull(json.media_SOURCECODE, 'Profisee') as SourceCode,
-    ifnull(json.media_LASTUPDATEDATE, current_timestamp()) as LastUpdateDate
-
-from cte_media as JSON
-    join base.provider as P on p.providercode = json.providercode
-    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE $$;
+select_statement := $$ select
+                            p.providerid,
+                            mt.mediatypeid,
+                            json.media_MEDIADATE as MediaDate,
+                            json.media_MEDIATITLE as MediaTitle,
+                            json.media_MEDIAPUBLISHER as MediaPublisher,
+                            json.media_MEDIASYNOPSIS as MediaSynopsis,
+                            json.media_MEDIALINK as MediaLink,
+                            ifnull(json.media_SOURCECODE, 'Profisee') as SourceCode,
+                            ifnull(json.media_LASTUPDATEDATE, current_timestamp()) as LastUpdateDate
+                            
+                        from raw.vw_PROVIDER_PROFILE as JSON
+                            left join base.provider as P on p.providercode = json.providercode
+                            left join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE
+                        where
+                            PROVIDER_PROFILE is not null and
+                            PROVIDERID is not null and
+                            MediaTypeID is not null
+                        qualify row_number() over(partition by ProviderId, json.media_MEDIATYPECODE,  json.media_MEDIADATE, json.media_MEDIALINK, json.media_MEDIAPUBLISHER, json.media_MEDIASYNOPSIS, json.media_MEDIATITLE order by CREATE_DATE desc) = 1 $$;
 
 --- insert Statement
 insert_statement := '       insert  
