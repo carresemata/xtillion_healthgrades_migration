@@ -28,6 +28,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertocertificationspecialty');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -54,7 +55,7 @@ with Cte_certification_specialty as (
         to_varchar(json.value:MOC_LEVEL_CODE ) as  CertificationSpecialty_MocLevelCode,
         to_varchar(json.value:DATA_SOURCE_CODE ) as  CertificationSpecialty_SourceCode,
         to_varchar(json.value:UPDATED_DATETIME ) as  CertificationSpecialty_LastUpdateDate
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
         , lateral flatten (input => p.PROVIDER_PROFILE:CERTIFICATION_SPECIALTY ) as json
 )
 select distinct
