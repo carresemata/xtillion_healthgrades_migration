@@ -24,6 +24,7 @@ merge_statement string; -- merge statement to final table
 status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertooffice');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 
 
@@ -46,7 +47,7 @@ select_statement := $$ with Cte_office as (
         to_varchar(json.value:OFFICE_RANK) as Office_OfficeRank,
         to_varchar(json.value:PHONE_NUMBER) as Office_PhoneNumber,
         to_varchar(json.value:OFFICE_OAS) as Office_OfficeOAS
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:OFFICE) as json
 )
 select distinct
