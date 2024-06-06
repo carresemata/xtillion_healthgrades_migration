@@ -40,37 +40,48 @@ begin
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$  select distinct
-                            p.providerid,
-                            cs.certificationspecialtyid,
-                            ifnull(json.certificationspecialty_SOURCECODE, 'Profisee') as SourceCode,
-                            ifnull(json.certificationspecialty_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
-                            cb.certificationboardid, 
-                            ca.certificationagencyid,
-                            --CertificationSpecialtyRank
-                            cst.certificationstatusid,
-                            -- CertificationStatusDate, 
-                            json.certificationspecialty_CERTIFICATIONEFFECTIVEDATE as CertificationEffectiveDate, 
-                            json.certificationspecialty_CERTIFICATIONEXPIRATIONDATE as CertificationExpirationDate, 
-                            -- IsSearchable, 
-                            -- CertificationAgencyVerified, 
-                            mp.mocpathwayid, 
-                            ml.moclevelid
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            inner join base.provider as P on p.providercode = json.providercode
-                            inner join base.certificationspecialty as CS on cs.certificationspecialtycode = json.certificationspecialty_CERTIFICATIONSPECIALTYCODE
-                            inner join base.certificationboard as CB on cb.certificationboardcode = json.certificationspecialty_CERTIFICATIONBOARDCODE
-                            inner join base.certificationagency as CA on ca.certificationagencycode = json.certificationspecialty_CERTIFICATIONAGENCYCODE
-                            inner join base.certificationstatus as CST on cst.certificationstatuscode = json.certificationspecialty_CERTIFICATIONSTATUSCODE
-                            inner join base.mocpathway as MP on mp.mocpathwaycode = json.certificationspecialty_MOCPATHWAYCODE
-                            inner join base.moclevel as ML on ml.moclevelcode = json.certificationspecialty_MOCLEVELCODE
-                        where
-                            PROVIDER_PROFILE is not null and
-                            PROVIDERID is not null and
-                            CERTIFICATIONSPECIALTYID is not null and
-                            CERTIFICATIONBOARDID is not null and
-                            CERTIFICATIONAGENCYID is not null 
-                        qualify row_number() over(partition by PROVIDERID, json.certificationspecialty_CERTIFICATIONAGENCYCODE, json.certificationspecialty_CERTIFICATIONBOARDCODE, json.certificationspecialty_CERTIFICATIONSPECIALTYCODE order by json.certificationspecialty_CERTIFICATIONEFFECTIVEDATE desc, json.certificationspecialty_CERTIFICATIONEXPIRATIONDATE desc, case when json.certificationspecialty_CERTIFICATIONSTATUSCODE = 'C' then 1 else 9 end, CREATE_DATE desc) = 1 $$;
+select_statement := $$  
+with Cte_certification_specialty as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:CERTIFICATION_SPECIALTY_CODE ) as  CertificationSpecialty_CertificationSpecialtyCode,
+        to_varchar(json.value:CERTIFICATION_BOARD_CODE ) as  CertificationSpecialty_CertificationBoardCode,
+        to_varchar(json.value:CERTIFICATION_AGENCY_CODE ) as  CertificationSpecialty_CertificationAgencyCode,
+        to_varchar(json.value:CERTIFICATION_STATUS_CODE ) as  CertificationSpecialty_CertificationStatusCode,
+        to_varchar(json.value:CERTIFICATION_EFFECTIVE_DATE ) as  CertificationSpecialty_CertificationEffectiveDate,
+        to_varchar(json.value:CERTIFICATION_EXPIRATION_DATE ) as  CertificationSpecialty_CertificationExpirationDate,
+        to_varchar(json.value:MOC_PATHWAY_CODE ) as  CertificationSpecialty_MocPathwayCode,
+        to_varchar(json.value:MOC_LEVEL_CODE ) as  CertificationSpecialty_MocLevelCode,
+        to_varchar(json.value:DATA_SOURCE_CODE ) as  CertificationSpecialty_SourceCode,
+        to_varchar(json.value:UPDATED_DATETIME ) as  CertificationSpecialty_LastUpdateDate
+    FROM mdm_team.mst.provider_profile_processing as p
+        , lateral flatten (input => p.PROVIDER_PROFILE:CERTIFICATION_SPECIALTY ) as json
+)
+select distinct
+    p.providerid,
+    cs.certificationspecialtyid,
+    ifnull(json.certificationspecialty_SOURCECODE, 'Profisee') as SourceCode,
+    ifnull(json.certificationspecialty_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+    cb.certificationboardid, 
+    ca.certificationagencyid,
+    --CertificationSpecialtyRank
+    cst.certificationstatusid,
+    -- CertificationStatusDate, 
+    json.certificationspecialty_CERTIFICATIONEFFECTIVEDATE as CertificationEffectiveDate, 
+    json.certificationspecialty_CERTIFICATIONEXPIRATIONDATE as CertificationExpirationDate, 
+    -- IsSearchable, 
+    -- CertificationAgencyVerified, 
+    mp.mocpathwayid, 
+    ml.moclevelid
+    from Cte_certification_specialty as JSON
+    inner join base.provider as P on p.providercode = json.providercode
+    inner join base.certificationspecialty as CS on cs.certificationspecialtycode = json.certificationspecialty_CERTIFICATIONSPECIALTYCODE
+    inner join base.certificationboard as CB on cb.certificationboardcode = json.certificationspecialty_CERTIFICATIONBOARDCODE
+    inner join base.certificationagency as CA on ca.certificationagencycode = json.certificationspecialty_CERTIFICATIONAGENCYCODE
+    inner join base.certificationstatus as CST on cst.certificationstatuscode = json.certificationspecialty_CERTIFICATIONSTATUSCODE
+    left join base.mocpathway as MP on mp.mocpathwaycode = json.certificationspecialty_MOCPATHWAYCODE
+    left join base.moclevel as ML on ml.moclevelcode = json.certificationspecialty_MOCLEVELCODE
+                        $$;
 
 -- insert Statement
 insert_statement := ' insert (
