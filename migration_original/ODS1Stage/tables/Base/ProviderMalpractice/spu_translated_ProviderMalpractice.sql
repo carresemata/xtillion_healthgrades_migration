@@ -23,6 +23,7 @@ merge_statement string;
 status string;
     procedure_name varchar(50) default('sp_load_providermalpractice');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
 
 
@@ -52,7 +53,7 @@ select_statement := $$  with Cte_malpractice as (
         to_varchar(json.value:LICENSE_NUMBER) as Malpractice_LicenseNumber,
         to_varchar(json.value:DATA_SOURCE_CODE) as Malpractice_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as Malpractice_LastUpdateDate
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:MALPRACTICE) as json
 ),
 CTE_Swimlane as (select
