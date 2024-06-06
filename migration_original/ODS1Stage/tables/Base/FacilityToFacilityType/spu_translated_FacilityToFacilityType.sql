@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.facilitytofacilitytype depends on: 
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.facilitytype
 
@@ -23,31 +23,35 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilitytofacilitytype');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
+select_statement := $$ with Cte_facility_type as (
+                            SELECT
+                                p.ref_facility_code as facilitycode,
+                                to_varchar(json.value:FACILITY_TYPE_CODE) as Facility_Type_Code,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as Facility_Type_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as Facility_Type_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.facility_profile_processing as p
+                            , lateral flatten(input => p.FACILITY_PROFILE:FACILITY_TYPE) as json
+                        )
+                        
+                        select distinct
                             facility.facilityid,
                             type.facilitytypeid,
                             ifnull(json.facility_Type_SourceCode, 'Profisee') as SourceCode,
                             ifnull(json.facility_Type_LastUpdateDate, current_timestamp()) as LastUpdateDate
-                            
                         from
-                            raw.vw_FACILITY_PROFILE as JSON
+                            cte_facility_type as JSON
                             join base.facility as Facility on json.facilitycode = facility.facilitycode
-                            join base.facilitytype as Type on type.facilitytypecode = json.facility_Type_Code
-                        where
-                            FACILITY_PROFILE is not null
-                            and FacilityID is not null$$;
+                            join base.facilitytype as Type on type.facilitytypecode = json.facility_Type_Code $$;
 
 
 
@@ -72,7 +76,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.facilitytofacilitytype as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid
+                   on source.facilityid = target.facilityid and source.facilitytypeid = target.facilitytypeid
                    WHEN MATCHED then delete
                    when not matched then '||insert_statement;
                    
