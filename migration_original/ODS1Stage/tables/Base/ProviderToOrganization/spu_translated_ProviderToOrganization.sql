@@ -20,6 +20,7 @@ merge_statement string;
 status string;
     procedure_name varchar(50) default('sp_load_providertoorganization');
     execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
@@ -31,20 +32,30 @@ begin
 ---------------------------------------------------------     
 
 select_statement := $$
-                    select
-                        ifnull(json.organization_SourceCode, 'Profisee') as SourceCode,
-                        uuid_string() as ProviderToOrganizationID,
-                        p.providerid as ProviderID,
-                        -- OrganizationID,
-                        -- PositionID,
-                        -- PositionStartDate,
-                        -- PositionEndDate,
-                        json.organization_PositionRank as PositionRank,
-                        sysdate() as LastUpdateDate,
-                        CURRENT_USER() as InsertedBy
-                    from raw.vw_PROVIDER_PROFILE as JSON
-                    left join base.provider as p on p.providercode = json.providercode
-                    where p.providerid is not null
+                    with Cte_organization as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:ORGANIZATION_DESCRIPTION) as Organization_OrganizationDescription,
+        to_varchar(json.value:POSITION_DESCRIPTION) as Organization_PositionDescription,
+        to_varchar(json.value:POSITION_RANK) as Organization_PositionRank,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Organization_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Organization_LastUpdateDate
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:ORGANIZATION) as json
+)
+select
+    ifnull(json.organization_SourceCode, 'Profisee') as SourceCode,
+    uuid_string() as ProviderToOrganizationID,
+    p.providerid as ProviderID,
+    -- OrganizationID,
+    -- PositionID,
+    -- PositionStartDate,
+    -- PositionEndDate,
+    json.organization_PositionRank as PositionRank,
+    sysdate() as LastUpdateDate,
+    CURRENT_USER() as InsertedBy
+from Cte_organization as JSON
+    join base.provider as p on p.providercode = json.providercode
                     $$;
 
 
