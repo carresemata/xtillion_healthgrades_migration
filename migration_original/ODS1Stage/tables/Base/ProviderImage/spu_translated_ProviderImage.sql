@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providerimage depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.mediaimagehost
 --- base.mediaimagetype
@@ -27,7 +27,6 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerimage');
     execution_start datetime default getdate();
-
     mdm_db string default('mdm_team');
 
    
