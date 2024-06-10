@@ -32,7 +32,6 @@ begin
 select_statement := $$
                     with Cte_degree as (
                         select
-                            distinct
                             to_varchar(json.value:DEGREE_CODE) as DegreeCode,
                             MAX(to_varchar(json.value:UPDATED_DATETIME)) as LastUpdateDate
                         from $$ || mdm_db || $$.mst.provider_profile_processing as p
