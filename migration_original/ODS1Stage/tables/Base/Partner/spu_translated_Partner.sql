@@ -158,7 +158,8 @@ select distinct
     pt.partnertypeid,
     cte.productcode as PartnerProductCode,
     p.productdescription as PartnerProductDescription,
-    cte.oasurlpath as URLPath 
+    cte.oasurlpath as URLPath,
+    cte.lastupdatedate
 from CTE_FinalSwimlane as cte
     inner join base.partnertype as PT on pt.partnertypecode = cte.oaspartnertypecode
     inner join base.client as C on c.clientcode = cte.clientcode
@@ -173,7 +174,8 @@ update_statement := ' update
                         target.partnerproductcode = source.partnerproductcode, 
                         target.urlpath = source.urlpath,
                         target.partnerdescription = source.partnerdescription,
-                        target.partnerproductdescription = source.partnerproductdescription';
+                        target.partnerproductdescription = source.partnerproductdescription,
+                        target.lastupdatedate = source.lastupdatedate';
                             
 -- update Clause
 update_clause := $$ ifnull(target.partnertypeid,'00000000-0000-0000-0000-000000000000') != ifnull(source.partnertypeid,'00000000-0000-0000-0000-000000000000') 
@@ -192,7 +194,8 @@ insert_statement := ' insert
                             PartnerTypeID,
                             PartnerProductCode,
                             PartnerProductDescription,
-                            URLPath )
+                            URLPath,
+                            LastUpdateDate)
                       values 
                             (source.partnerid,
                             source.partnercode,
@@ -200,7 +203,8 @@ insert_statement := ' insert
                             source.partnertypeid,
                             source.partnerproductcode,
                             source.partnerproductdescription,
-                            source.urlpath
+                            source.urlpath,
+                            source.lastupdatedate
                             )';
 
 
