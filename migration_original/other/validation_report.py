@@ -337,7 +337,7 @@ class SnowflakeTableValidator(Validator):
 
 if __name__ == "__main__":
     sql_server = "hgTestmdmdb01.sql.hgw-test.aws.healthgrades.zone"
-    sql_server_username = ""
+    sql_server_username = "XT-OJIMENEZ"
     sql_server_password = ""
     sql_server_db = "ODS1Stage"
 
@@ -353,9 +353,9 @@ if __name__ == "__main__":
                                                     warehouse=snowflake_warehouse, database=snowflake_db, role=snowflake_role, arrow_number_to_decimal=True)
 
     ############################### Example Usage ###############################
-    table_name_sql_server = "Base.Practice"  
-    table_name_snowflake = "BASE.PRACTICE"  # in case it's a different schema or has different naming convention 
-    match_ids = ["PRACTICECODE"] # we should remember to never use IDs since we are creating them in runtime
+    table_name_sql_server = "Base.ProviderToFacility"  
+    table_name_snowflake = "BASE.PROVIDERTOFACILITY"  # in case it's a different schema or has different naming convention 
+    match_ids = ["PROVIDERID"] # we should remember to never use IDs since we are creating them in runtime
     sample_size = 10 # rows for sample validation
     snowflake_validator = SnowflakeTableValidator(sql_server_connector, snowflake_connector)
     snowflake_validator.generate_report_markdown(table_name_sql_server, table_name_snowflake, match_ids, sample_size)
