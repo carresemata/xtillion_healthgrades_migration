@@ -10,8 +10,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.url depends on:
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
---- mdm_team.mst.customer_product_profile_processing (raw.vw_customer_product_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.clienttoproduct
 
@@ -22,9 +21,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_url');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_url');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 begin
@@ -35,35 +34,31 @@ begin
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$  with CTE_swimlane as (select 
-                                uuid_string() as URLId,
-                                f.facilityid,
-                                jsonfacility.facilitycode,
-                                ctc.clienttoproductcode,
-                                'FCCIURL' as URLTypeCode,
-                                jsoncustomer.feature_FeatureFCCLURL as URL,
-                                sysdate() as LastUpdateDate
-                            from raw.vw_FACILITY_PROFILE as JSONFacility
-                                join base.facility as F on f.facilitycode = jsonfacility.facilitycode
-                                join base.clienttoproduct as CTC on ctc.clienttoproductcode = jsonfacility.customerproduct_CUSTOMERPRODUCTCODE
-                                left join raw.vw_CUSTOMER_PRODUCT_PROFILE as JSONCustomer on jsoncustomer.customerproductcode = jsonfacility.customerproduct_CUSTOMERPRODUCTCODE
+select_statement := $$   with Cte_customer_product as (
+                            SELECT
+                                p.ref_facility_code as facilitycode,
+                                to_varchar(json.value:CUSTOMER_PRODUCT_CODE) as CustomerProduct_CustomerProductCode,
+                                to_varchar(json.value:FEATURE_FCCLURL) as CustomerProduct_FeatureFcclUrl,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as CustomerProduct_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.facility_profile_processing as p
+                            , lateral flatten(input => p.FACILITY_PROFILE:CUSTOMER_PRODUCT) as json
                             where 
-                                jsonfacility.facility_PROFILE is not null and
-                                jsonfacility.facilitycode is not null and
-                                jsoncustomer.feature_FeatureFCCLURL is not null
-                            qualify row_number() over(partition by f.facilityid order by jsonfacility.create_DATE desc) = 1)
-                            select 
-                                URLid,
-                                URL,
-                                LastUpdateDate
-                            from CTE_Swimlane  $$;
+                                CustomerProduct_FeatureFcclUrl is not null
+                        )
+                        
+                        select distinct
+                                json.CustomerProduct_FeatureFcclUrl as URL,
+                                ifnull(json.CustomerProduct_LastUpdateDate, current_timestamp()) as LastUpdateDate
+                            from cte_customer_product as json
+                                join base.facility as F on f.facilitycode = json.facilitycode
+                                join base.clienttoproduct as CTC on ctc.clienttoproductcode = json.CustomerProduct_CustomerProductCode  $$;
 
 insert_statement := ' insert
                        (URLid,
                         URL,
                         LastUpdateDate)
                     values
-                        (source.urlid,
+                        (uuid_string(),
                         source.url,
                         source.lastupdatedate)';
 
@@ -74,9 +69,9 @@ insert_statement := ' insert
 
 
 merge_statement := ' merge into base.url as target 
-using ('||select_statement||') as source
-on source.urlid = target.urlid 
-when not matched then '||insert_statement;
+                    using ('||select_statement||') as source
+                    on source.url = target.url
+                    when not matched then '||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
