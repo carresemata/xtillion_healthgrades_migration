@@ -8,7 +8,7 @@ as declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertoorganization depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 
 ---------------------------------------------------------
