@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertoclinicalfocus depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing
 --- base.provider
 --- base.clinicalfocus
 
@@ -24,6 +24,8 @@ declare
     procedure_name varchar(50) default('sp_load_providertoclinicalfocus');
     execution_start datetime default getdate();
 
+    mdm_db string default('mdm_team');
+
    
    
 begin
@@ -36,7 +38,25 @@ begin
 
 --- select Statement
 select_statement := $$ 
-select distinct 
+with cte_clinicalfocus as (
+    select
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:CLINICAL_FOCUS_CODE) as clinicalfocus_ClinicalFocusCode,
+        to_varchar(json.value:CLINICAL_FOCUS_DCP_COUNT) as clinicalfocus_ClinicalFocusDCPCount,
+        to_varchar(json.value:CLINICAL_FOCUS_MIN_BUCKETS_CALCULATED) as clinicalfocus_ClinicalFocusMinBucketsCalculated,
+        to_varchar(json.value:PROVIDER_DCP_COUNT) as clinicalfocus_ProviderDCPCount,
+        to_varchar(json.value:AVERAGE_B_PERCENTILE) as clinicalfocus_AverageBPercentile,
+        to_varchar(json.value:PROVIDER_DCP_FILL_PERCENT) as clinicalfocus_ProviderDCPFillPercent,
+        to_boolean(json.value:IS_PROVIDER_DCP_COUNT_OVER_LOW_THRESHOLD) as clinicalfocus_IsProviderDCPCountOverLowThreshold,
+        to_varchar(json.value:CLINICAL_FOCUS_SCORE) as clinicalfocus_ClinicalFocusScore,
+        to_varchar(json.value:PROVIDER_CLINICAL_FOCUS_RANK) as clinicalfocus_ProviderClinicalFocusRank,
+        to_varchar(json.value:DATA_SOURCE_CODE) as clinicalfocus_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as clinicalfocus_LastUpdateDate
+    from $$||mdm_db||$$.mst.provider_profile_processing as p,
+    lateral flatten(input => p.PROVIDER_PROFILE:CLINICAL_FOCUS) as json
+)
+
+select distinct
     p.providerid,
     cf.clinicalfocusid,
     json.clinicalfocus_ClinicalFocusDCPCount as ClinicalFocusDCPCount,
@@ -49,14 +69,11 @@ select distinct
     json.clinicalfocus_ProviderClinicalFocusRank as ProviderClinicalFocusRank,
     ifnull(json.clinicalfocus_SourceCode, 'Profisee') as SourceCode,
     ifnull(json.clinicalfocus_LastUpdateDate, current_timestamp()) as LastUpdateDate
-
-from raw.vw_PROVIDER_PROFILE as JSON
-    join base.provider as P on json.providercode = p.providercode
-    join base.clinicalfocus as CF on json.clinicalfocus_ClinicalFocusCode = cf.clinicalfocuscode
-
-where json.provider_PROFILE is not null
-  and json.clinicalfocus_ClinicalFocusCode is not null
-qualify row_number() over(partition by p.providercode, ClinicalFocus_ClinicalFocusCode order by ProviderId desc) = 1
+from cte_clinicalfocus as json
+join base.provider as p on json.providercode = p.providercode
+join base.clinicalfocus as cf on json.clinicalfocus_ClinicalFocusCode = cf.clinicalfocuscode
+where json.clinicalfocus_ClinicalFocusCode is not null
+qualify row_number() over(partition by p.providercode, clinicalfocus_ClinicalFocusCode order by providerid desc) = 1
 $$
 ;
 
