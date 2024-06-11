@@ -8,7 +8,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertoclientproducttodisplaypartner depends on :
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.clienttoproduct
 --- base.syndicationpartner
@@ -31,26 +31,34 @@ begin
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$  select distinct
+select_statement := $$  
+                    with cte_customerproduct as (
+                        select
+                            p.ref_provider_code as providercode,
+                            to_varchar(json.value:CUSTOMER_PRODUCT_CODE) as customerproduct_CustomerProductCode,
+                            to_varchar(partner.value:DISPLAY_PARTNER_CODE) as customerproduct_DisplayPartner,
+                            to_varchar(json.value:DATA_SOURCE_CODE) as customerproduct_SourceCode,
+                            to_timestamp_ntz(json.value:UPDATED_DATETIME) as customerproduct_LastUpdateDate
+                        from mdm_team.mst.provider_profile_processing as p,
+                        lateral flatten(input => p.PROVIDER_PROFILE:CUSTOMER_PRODUCT) as json,
+                        lateral flatten(input => json.value:DISPLAY_PARTNER) as partner
+                    )
+                    
+                    select distinct
                         p.providerid,
                         cp.clienttoproductid,
                         sp.syndicationpartnerid,
-                        json.customerproduct_SOURCECODE as SourceCode,
-                        ifnull(json.customerproduct_LASTUPDATEDATE, sysdate()) as LastUpdateDate
-                        
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            inner join base.provider as P on p.providercode = json.providercode
-                            inner join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CUSTOMERPRODUCTCODE
-                            inner join base.syndicationpartner as SP on sp.syndicationpartnercode = json.customerproduct_DISPLAYPARTNER
-                        
-                        where
-                            PROVIDER_PROFILE is not null and
-                            json.customerproduct_CUSTOMERPRODUCTCODE is not null and
-                            json.customerproduct_DISPLAYPARTNER is not null and
-                            ClientToProductID is not null and
-                            ProviderID is not null
-                        
-                        qualify dense_rank() over(partition by ProviderID, json.customerproduct_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) = 1 $$;
+                        json.customerproduct_SourceCode as SourceCode,
+                        ifnull(json.customerproduct_LastUpdateDate, current_timestamp()) as LastUpdateDate
+                    from cte_customerproduct as json
+                    inner join base.provider as p on p.providercode = json.providercode
+                    inner join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CustomerProductCode
+                    inner join base.syndicationpartner as sp on sp.syndicationpartnercode = json.customerproduct_DisplayPartner
+                    where json.customerproduct_CustomerProductCode is not null
+                      and json.customerproduct_DisplayPartner is not null
+                      and clienttoproductid is not null
+                      and providerid is not null
+                    $$;
 
 -- insert Statement
 insert_statement := ' insert (
