@@ -35,37 +35,19 @@ begin
 
 --- select Statement
 -- if no conditionals:
-select_statement := $$with cte_product_id_pdchsp as (
-        select
-            cpcc.clienttoproductid
-        from
-            base.clientproducttocallcenter as CPCC
-            join base.clienttoproduct as CTP on cpcc.clienttoproductid = ctp.clienttoproductid
-            join base.callcenter as CC on cpcc.callcenterid = cc.callcenterid
-            join base.product as P on ctp.productid = p.productid
-        where
-            p.productcode IN ('MAP', 'PDCHSP')
-    )
-    select
-        cp.clienttoproductid,
-        '36334343-0000-0000-0000-000000000000' as CallCenterID,
-        1 as ActiveFlag,
-        cp.sourcecode,
-        getdate() as LastUpdateDate
-    from
-        base.clienttoproduct as CP
-        join base.product as P on cp.productid = p.productid
-        join base.client as c on c.clientid = cp.clientid
-        left join cte_product_id_pdchsp as CTE on cp.clienttoproductid = cte.clienttoproductid
-    where
-    (
-        p.productcode IN ('PDCHSP')
-        or (
-            p.productcode IN ('MAP')
-            and ClientCode IN ('COMO', 'PAGE1SLN')
-        )
-    )
-$$;
+select_statement := $$
+                    select
+                        cp.clienttoproductid,
+                        '36334343-0000-0000-0000-000000000000' as CallCenterID,
+                        1 as ActiveFlag,
+                        cp.sourcecode,
+                        getdate() as LastUpdateDate
+                    from
+                        base.clienttoproduct as CP
+                        join base.product as P on cp.productid = p.productid
+                        join base.client as c on c.clientid = cp.clientid
+                    where (p.productcode IN ('PDCHSP') or (p.productcode IN ('MAP') and ClientCode IN ('COMO', 'PAGE1SLN')))
+                    $$;
 
 --- insert Statement
 insert_statement := ' insert (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
@@ -87,7 +69,8 @@ merge_statement := ' merge into base.clientproducttocallcenter as target using
 ---------------------------------------------------------
 
 if (is_full) then
-    truncate table Base.ClientProductToCallCenter;
+    delete from base.clientproducttocallcenter
+    where callcenterid = '36334343-0000-0000-0000-000000000000';
 end if; 
 execute immediate merge_statement;
 
