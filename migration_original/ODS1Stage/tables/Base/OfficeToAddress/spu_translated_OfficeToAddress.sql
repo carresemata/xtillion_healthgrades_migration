@@ -24,6 +24,8 @@ status string;
     procedure_name varchar(50) default('sp_load_officetoaddress');
     execution_start datetime default getdate();
 
+    mdm_db string default('mdm_team');
+
 
 
 begin
@@ -34,26 +36,65 @@ begin
 ---------------------------------------------------------
 
     -- select Statement
-    select_statement := $$  select distinct
-                                    at.addresstypeid,
-                                    o.officeid,
-                                    -- addressId
-                                    json.address_SOURCECODE as SourceCode,
-                                    -- isderived
-                                    json.address_LASTUPDATEDATE as LastUpdateDate
-                            from
-                                raw.vw_OFFICE_PROFILE as JSON 
-                                left join base.addresstype as AT on at.addresstypecode = json.address_ADDRESSTYPECODE
-                                left join base.office as O on o.officecode = json.officecode
-                                
-                            where
-                                    json.office_PROFILE is not null  
-                                    and OfficeId is not null 
-                                    and nullif(json.address_CITY,'') is not null 
-                                    and nullif(json.address_STATE,'') is not null 
-                                    and nullif(json.address_POSTALCODE,'') is not null
-                                    and LENGTH(trim(upper(json.address_AddressLine1)) || ifnull(trim(upper(json.address_AddressLine2)),'') || ifnull(trim(upper(json.address_Suite)),'')) > 0
-                            qualify row_number() over(partition by OfficeID, json.address_ADDRESSLINE1, json.address_ADDRESSLINE2, json.address_SUITE, json.address_CITY, json.address_STATE, json.address_POSTALCODE order by CREATE_DATE desc) = 1$$;
+    select_statement := $$ with cte_address as (
+select
+    o.ref_office_code as officecode,
+    o.created_datetime as create_date,
+    o.office_profile,
+    to_varchar(json.value:ADDRESS_LINE_1) as address_addressline1,
+    to_varchar(json.value:ADDRESS_LINE_2) as address_addressline2,
+    to_varchar(json.value:ADDRESS_TYPE_CODE) as address_ADDRESSTYPECODE,
+    to_varchar(json.value:CITY) as address_city,
+    to_varchar(json.value:DATA_SOURCE_CODE) as address_SOURCECODE,
+    to_varchar(json.value:IS_INVALID_SUITE),
+    to_varchar(json.value:IS_MILITARY),
+    to_varchar(json.value:IS_MISSING_SUITE),
+    to_varchar(json.value:IS_PO_BOX),
+    to_varchar(json.value:IS_RESIDENTIAL),
+    to_varchar(json.value:IS_ROOFTOP_GEOCODE),
+    to_varchar(json.value:IS_VALID_ADDRESS),
+    to_varchar(json.value:LATITUDE),
+    to_varchar(json.value:LONGITUDE),
+    to_varchar(json.value:STATE) as address_state,
+    to_varchar(json.value:SUITE) as address_suite,
+    to_varchar(json.value:TIME_ZONE),
+    to_varchar(json.value:UPDATED_DATETIME) as address_LASTUPDATEDATE,
+    to_varchar(json.value:ZIP)as address_postalcode,
+from $$||mdm_db||$$.mst.office_profile_processing o,
+lateral flatten(input => o.office_profile:ADDRESS) json
+)
+select 
+        at.addresstypeid,
+        o.officeid,
+        a.addressId,
+        json.address_SOURCECODE as SourceCode,
+        -- isderived
+        json.address_LASTUPDATEDATE as LastUpdateDate,
+        cspc.citystatepostalcodeid,
+        json.address_addressline1,
+        json.address_addressline2,
+        json.address_suite
+from
+    cte_address as JSON 
+    left join base.office as O on o.officecode = json.officecode
+    left join base.addresstype as AT on at.addresstypecode = json.address_ADDRESSTYPECODE
+    left join base.citystatepostalcode as cspc on 
+        ifnull(cspc.state,'') = ifnull(json.address_state,'') and 
+        ifnull(cspc.city,'') = ifnull(json.address_city,'') and 
+        ifnull(cspc.postalcode,'') = ifnull(json.address_postalcode,'')
+    left join base.address as a on 
+        a.citystatepostalcodeid = cspc.citystatepostalcodeid and 
+        ifnull(a.addressline1,'') = ifnull(json.address_addressline1,'') and 
+        ifnull(a.addressline2,'') = ifnull(json.address_addressline2,'') and 
+        ifnull(a.suite,'') = ifnull(json.address_suite,'')
+where
+        json.office_PROFILE is not null  
+        and OfficeId is not null 
+        and nullif(json.address_CITY,'') is not null 
+        and nullif(json.address_STATE,'') is not null 
+        and nullif(json.address_POSTALCODE,'') is not null
+        and LENGTH(trim(upper(json.address_AddressLine1)) || ifnull(trim(upper(json.address_AddressLine2)),'') || ifnull(trim(upper(json.address_Suite)),'')) > 0
+$$;
 
 
     -- insert Statement
@@ -61,7 +102,7 @@ insert_statement := ' insert
                             (OfficeToAddressID,
                             AddressTypeID,
                             OfficeID,
-                            --AddressID,
+                            AddressID,
                             SourceCode,
                             --IsDerived,
                             LastUpdateDate)
@@ -69,7 +110,7 @@ insert_statement := ' insert
                           (uuid_string(),
                             source.addresstypeid,
                             source.officeid,
-                            --AddressID,
+                            source.addressID,
                             source.sourcecode,
                             --IsDerived,
                             source.lastupdatedate)';
