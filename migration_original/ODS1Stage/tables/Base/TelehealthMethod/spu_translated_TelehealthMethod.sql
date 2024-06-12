@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.telehealthmethod depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.telehealthmethodtype
 
 ---------------------------------------------------------
@@ -34,20 +34,42 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
-                            tmt.telehealthmethodtypeid,
-                            json.telehealth_TELEHEALTHMETHODCODE as TeleHealthMethod,
-                            json.telehealth_TELEHEALTHVENDORNAME as ServiceName,
-                            ifnull(json.telehealth_SourceCode, 'Profisee') as SourceCode,
-                            CASE WHEN ifnull(json.telehealth_HasTelehealth, 'N') IN ('yes', 'true', '1', 'Y', 'T') then 'TRUE' else 'FALSE' END as HasTeleHealth,
-                            json.telehealth_LastUpdateDate as LastUpdatedDate
-                        from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.telehealthmethodtype as TMT on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
-                        where
-                            PROVIDER_PROFILE is not null and
-                            HasTeleHealth = 'TRUE' and
-                            TelehealthMethod is not null$$;
+select_statement := $$ 
+                    with cte_telehealth as (
+                        select 
+                            case 
+                                when to_varchar(json.value:TELEHEALTH_URL) is not null then to_varchar(json.value:TELEHEALTH_URL)
+                                when to_varchar(json.value:TELEHEALTH_PHONE) is not null then to_varchar(json.value:TELEHEALTH_PHONE)
+                                else 'NA'
+                            end as telehealth_TelehealthMethod,
+                            case 
+                                when to_varchar(json.value:TELEHEALTH_URL) is not null then 'URL'
+                                when to_varchar(json.value:TELEHEALTH_PHONE) is not null then 'PHONE'
+                                else 'NA'
+                            end as telehealth_TelehealthMethodCode,
+                            to_varchar(json.value:TELEHEALTH_VENDOR_NAME) as telehealth_TelehealthVendorName,
+                            to_boolean(json.value:HAS_TELEHEALTH) as telehealth_HasTelehealth,
+                            to_varchar(json.value:DATA_SOURCE_CODE) as telehealth_SourceCode,
+                            to_timestamp_ntz(json.value:UPDATED_DATETIME) as telehealth_LastUpdateDate
+                        from mdm_team.mst.provider_profile_processing,
+                        lateral flatten(input => PROVIDER_PROFILE:TELEHEALTH) as json
+                        where telehealth_TelehealthMethodCode is not null
+                    )
+                    
+                    select distinct
+                        tmt.telehealthmethodtypeid,
+                        json.telehealth_TelehealthMethod as TeleHealthMethod,
+                        json.telehealth_TelehealthVendorName as ServiceName,
+                        ifnull(json.telehealth_SourceCode, 'Profisee') as SourceCode,
+                        case
+                            when ifnull(json.telehealth_HasTelehealth, 'N') in ('yes', 'true', '1', 'Y', 'T') then 'TRUE'
+                            else 'FALSE'
+                        end as HasTeleHealth,
+                        json.telehealth_LastUpdateDate as LastUpdatedDate
+                    from cte_telehealth as json
+                    left join base.telehealthmethodtype as tmt on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
+                    where HasTeleHealth = 'TRUE' 
+                    $$;
 
 
 
