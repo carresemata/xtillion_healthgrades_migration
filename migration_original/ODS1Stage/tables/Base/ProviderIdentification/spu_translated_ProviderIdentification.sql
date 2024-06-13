@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.provideridentification depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing
 --- base.provider
 --- base.identificationtype
 
@@ -23,6 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_provideridentification');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -35,25 +36,31 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
-                            p.providerid,
-                            i.identificationtypeid,
-                            json.identification_Identifier as IdentificationValue,
-                            json.identification_ExpirationDate as ExpirationDate,
-                            json.identification_SourceCode as SourceCode,
-                            json.identification_LastUpdateDate as LastUpdateDate
-                        from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            join base.provider as P on p.providercode = json.providercode
-                            join base.identificationtype as I on i.identificationtypecode = json.identification_IdentificationTypeCode
-                        from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            join base.provider as P on p.providercode = json.providercode
-                        where
-                            PROVIDER_PROFILE is not null and
-                            ProviderId is not null and
-                            IdentificationTypeID is not null
-                            qualify row_number() over(partition by ProviderID order by CREATE_DATE desc) = 1$$;
+select_statement := $$ 
+                    with cte_identification as (
+                        select
+                            p.ref_provider_code as providercode,
+                            to_varchar(json.value:IDENTIFICATION_TYPE_CODE) as identification_IdentificationTypeCode,
+                            to_varchar(json.value:IDENTIFIER) as identification_Identifier,
+                            to_varchar(json.value:EXPIRATION_DATE) as identification_ExpirationDate,
+                            to_varchar(json.value:DATA_SOURCE_CODE) as identification_SourceCode,
+                            to_timestamp_ntz(json.value:UPDATED_DATETIME) as identification_LastUpdateDate
+                        from $$|| mdm_db ||$$.mst.provider_profile_processing as p,
+                        lateral flatten(input => p.PROVIDER_PROFILE:IDENTIFICATION) as json
+                    )
+                    
+                    select distinct
+                        p.providerid,
+                        i.identificationtypeid,
+                        json.identification_Identifier as IdentificationValue,
+                        json.identification_ExpirationDate as ExpirationDate,
+                        json.identification_SourceCode as SourceCode,
+                        json.identification_LastUpdateDate as LastUpdateDate
+                    from cte_identification as json
+                    join base.provider as p on p.providercode = json.providercode
+                    join base.identificationtype as i on i.identificationtypecode = json.identification_IdentificationTypeCode
+                    where identificationtypeid is not null
+                    $$;
 
 --- insert Statement
 insert_statement := ' insert  
