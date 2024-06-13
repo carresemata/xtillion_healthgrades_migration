@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertraining depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing
 --- base.provider
 --- base.training
 
@@ -23,6 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertraining');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -37,21 +38,28 @@ begin
 --- select Statement
   -- select Statement
   select_statement := $$
-      select distinct
-        p.providerid,
-        t.trainingid,
-        json.training_TrainingLink as TrainingLink,
-        ifnull(json.training_SourceCode, 'Profisee') as SourceCode,
-        ifnull(json.training_LastUpdateDate, current_timestamp()) as LastUpdateDate
-      from raw.vw_PROVIDER_PROFILE as JSON
-      left join base.provider P on json.providercode = p.providercode
-      left join base.training T on json.training_TrainingCode = t.trainingcode
-      where 
-        json.provider_PROFILE is not null and
-        ProviderId is not null and
-        TrainingId is not null
-        qualify row_number() over (partition by ProviderId, Training_TrainingCode order by CREATE_DATE desc) = 1
-  $$;
+                        with cte_training as (
+                            select
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:TRAINING_CODE) as training_TrainingCode,
+                                to_varchar(json.value:TRAINING_LINK) as training_TrainingLink,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as training_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as training_LastUpdateDate
+                            from $$||mdm_db||$$.mst.provider_profile_processing as p,
+                            lateral flatten(input => p.PROVIDER_PROFILE:TRAINING) as json
+                        )
+                        
+                        select distinct
+                            p.providerid,
+                            t.trainingid,
+                            json.training_TrainingLink as TrainingLink,
+                            ifnull(json.training_SourceCode, 'Profisee') as SourceCode,
+                            ifnull(json.training_LastUpdateDate, current_timestamp()) as LastUpdateDate
+                        from cte_training as json
+                        join base.provider as p on p.providercode = json.providercode
+                        join base.training as t on t.trainingcode = json.training_TrainingCode
+                        where trainingid is not null
+                     $$;
 
 
 
