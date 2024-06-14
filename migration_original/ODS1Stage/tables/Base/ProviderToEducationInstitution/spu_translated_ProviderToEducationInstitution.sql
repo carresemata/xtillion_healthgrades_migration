@@ -24,7 +24,6 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoeducationinstitution');
     execution_start datetime default getdate();
-    
     mdm_db string default('mdm_team');
 
    
@@ -92,7 +91,6 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertoeducationinstitution as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
