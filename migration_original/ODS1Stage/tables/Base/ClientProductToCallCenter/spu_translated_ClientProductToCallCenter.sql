@@ -33,7 +33,6 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
--- if no conditionals:
 select_statement := $$
                     select
                         cp.clienttoproductid,
