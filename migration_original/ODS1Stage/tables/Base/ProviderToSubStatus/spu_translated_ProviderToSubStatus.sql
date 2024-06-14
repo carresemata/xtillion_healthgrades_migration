@@ -82,7 +82,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertosubstatus as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
+                   on source.providerid = target.providerid and source.substatusid = target.substatusid
                    WHEN MATCHED then delete
                    when not matched then '||insert_statement;
                    
