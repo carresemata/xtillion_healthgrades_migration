@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertospecialty depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.specialty
 
@@ -23,10 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertospecialty');
     execution_start datetime default getdate();
-
     mdm_db string default('mdm_team');
-
-   
    
 begin
     
@@ -128,7 +125,6 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertospecialty as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
