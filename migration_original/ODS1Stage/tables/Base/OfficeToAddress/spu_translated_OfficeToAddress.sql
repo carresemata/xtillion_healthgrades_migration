@@ -10,7 +10,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.officetoaddress depends on:
---- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- mdm_team.mst.office_profile_processing
 --- base.office
 --- base.addresstype
 
@@ -21,12 +21,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_officetoaddress');
-    execution_start datetime default getdate();
-
-    mdm_db string default('mdm_team');
-
-
+procedure_name varchar(50) default('sp_load_officetoaddress');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 begin
 
