@@ -2,7 +2,9 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADA
     RETURNS STRING
     LANGUAGE SQL EXECUTE
     as CALLER
-    as declare ---------------------------------------------------------
+    as declare 
+    
+    ---------------------------------------------------------
     --------------- 1. table dependencies -------------------
     ---------------------------------------------------------
     -- show.providerattributemetadata depends on:
@@ -33,27 +35,30 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_PROVIDERATTRIBUTEMETADA
     --- base.providersanction
     --- base.providertospecialty
     --- base.providervideo
+    
     ---------------------------------------------------------
     --------------- 2. declaring variables ------------------
     ---------------------------------------------------------
     select_statement string;
--- cte and select statement for the merge
+    -- cte and select statement for the merge
     update_statement string;
--- update statement for the merge
+    -- update statement for the merge
     insert_statement string;
--- insert statement for the merge
+    -- insert statement for the merge
     merge_statement string;
--- merge statement to final table
+    -- merge statement to final table
     status string;
--- status monitoring
+    -- status monitoring
     procedure_name varchar(50) default('sp_load_providerattributemetadata');
-execution_start datetime default getdate();
-mdm_db string default('mdm_team');
-begin ---------------------------------------------------------
+    execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
+
+    begin 
+    
+    ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------
     ---------------------------------------------------------
     --- select Statement
-    -- if no conditionals:
     select_statement:= $$
      with CTE_ProviderIdList as (
         select
@@ -560,8 +565,8 @@ merge_statement := ' merge into show.providerattributemetadata as target using
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
-    -------------------  5. execution ------------------------
-    ---------------------------------------------------------
+-------------------  5. execution -----------------------
+---------------------------------------------------------
 
 if (is_full) then
     truncate table Show.ProviderAttributeMetadata;
