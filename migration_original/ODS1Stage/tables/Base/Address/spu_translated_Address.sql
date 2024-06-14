@@ -177,6 +177,7 @@ insert_statement_2 := $$insert (
 merge_statement_1 := ' merge into base.address as target using 
                    ('||select_statement_1||') as source 
                    on source.addressline1 = target.addressline1 and source.citystatepostalcodeid = target.citystatepostalcodeid 
+                   when matched then delete
                    when not matched then '||insert_statement_1;
 
 merge_statement_2 := $$ merge into base.address as target using 
@@ -185,6 +186,7 @@ merge_statement_2 := $$ merge into base.address as target using
                    and iff(trim(upper(source.addressline2)) is null, '', trim(upper(source.addressline2))) = iff(trim(upper(target.addressline2)) is null, '', trim(upper(target.addressline2)))
                    and iff(trim(upper(source.suite)) is null, '', trim(upper(source.suite))) = iff(trim(upper(target.suite)) is null, '', trim(upper(target.suite)))
                    and source.citystatepostalcodeid = target.citystatepostalcodeid
+                   when matched then delete
                    when not matched then $$||insert_statement_2;
                    
 ---------------------------------------------------------
