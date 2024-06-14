@@ -10,7 +10,6 @@ declare
 
 --- base.clientproducttocallcenter depends on:
 --- base.clienttoproduct
---- base.callcenter
 --- base.product
 --- base.client
 
