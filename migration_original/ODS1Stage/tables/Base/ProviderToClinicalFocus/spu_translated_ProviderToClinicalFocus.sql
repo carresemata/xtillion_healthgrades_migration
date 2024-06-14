@@ -23,10 +23,8 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoclinicalfocus');
     execution_start datetime default getdate();
-
     mdm_db string default('mdm_team');
 
-   
    
 begin
     
