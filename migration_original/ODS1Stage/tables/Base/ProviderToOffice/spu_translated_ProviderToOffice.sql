@@ -10,7 +10,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertooffice depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.office
 
@@ -22,9 +22,9 @@ select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providertooffice');
-    execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
+procedure_name varchar(50) default('sp_load_providertooffice');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
