@@ -21,8 +21,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 begin
 
@@ -39,7 +40,7 @@ select_statement := $$
                             to_varchar(partner.value:DISPLAY_PARTNER_CODE) as customerproduct_DisplayPartner,
                             to_varchar(json.value:DATA_SOURCE_CODE) as customerproduct_SourceCode,
                             to_timestamp_ntz(json.value:UPDATED_DATETIME) as customerproduct_LastUpdateDate
-                        from mdm_team.mst.provider_profile_processing as p,
+                        from $$ || mdm_db || $$.mst.provider_profile_processing as p,
                         lateral flatten(input => p.PROVIDER_PROFILE:CUSTOMER_PRODUCT) as json,
                         lateral flatten(input => json.value:DISPLAY_PARTNER) as partner
                     )
