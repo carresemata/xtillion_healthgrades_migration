@@ -21,9 +21,8 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
-execution_start datetime default getdate();
-mdm_db string default('mdm_team');
+    procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
+    execution_start datetime default getdate();
 
 begin
 
@@ -40,7 +39,7 @@ select_statement := $$
                             to_varchar(partner.value:DISPLAY_PARTNER_CODE) as customerproduct_DisplayPartner,
                             to_varchar(json.value:DATA_SOURCE_CODE) as customerproduct_SourceCode,
                             to_timestamp_ntz(json.value:UPDATED_DATETIME) as customerproduct_LastUpdateDate
-                        from $$ || mdm_db || $$.mst.provider_profile_processing as p,
+                        from mdm_team.mst.provider_profile_processing as p,
                         lateral flatten(input => p.PROVIDER_PROFILE:CUSTOMER_PRODUCT) as json,
                         lateral flatten(input => json.value:DISPLAY_PARTNER) as partner
                     )
@@ -55,10 +54,6 @@ select_statement := $$
                     inner join base.provider as p on p.providercode = json.providercode
                     inner join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CustomerProductCode
                     inner join base.syndicationpartner as sp on sp.syndicationpartnercode = json.customerproduct_DisplayPartner
-                    where json.customerproduct_CustomerProductCode is not null
-                      and json.customerproduct_DisplayPartner is not null
-                      and clienttoproductid is not null
-                      and providerid is not null
                     $$;
 
 -- insert Statement
@@ -83,13 +78,11 @@ insert_statement := ' insert (
 ---------------------------------------------------------  
 
 merge_statement := 'merge into base.providertoclientproducttodisplaypartner as target
-using
-('||select_statement||') as source
-on source.providerid = target.providerid
-and source.clienttoproductid = target.clienttoproductid
-and source.syndicationpartnerid = target.syndicationpartnerid
-WHEN MATCHED then delete
-when not matched then' || insert_statement;
+                    using ('||select_statement||') as source
+                    on source.providerid = target.providerid
+                        and source.clienttoproductid = target.clienttoproductid
+                        and source.syndicationpartnerid = target.syndicationpartnerid
+                    when not matched then' || insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
