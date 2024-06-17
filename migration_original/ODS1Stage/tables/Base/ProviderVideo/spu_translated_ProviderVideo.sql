@@ -50,25 +50,18 @@ select_statement := $$ with Cte_video as (
     , lateral flatten(input => p.PROVIDER_PROFILE:VIDEO) as json
 )
 select 
-                            p.providerid, 
-                            json.video_SRCIDENTIFIER as ExternalIdentifier,
-                            mh.mediavideohostid,
-                            mr.mediareviewlevelid,
-                            ifnull(json.video_SourceCode, 'Profisee') as SourceCode,
-                            ifnull(json.video_LastUpdateDate, sysdate()) as LastUpdateDate,
-                            mc.mediacontexttypeid
-                        
-                        from Cte_video as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
-                            left join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
-                            left join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
-                        where 
-                            PROVIDERID is not null
-                            and json.video_SRCIDENTIFIER is not null
-                            and MEDIAVIDEOHOSTID is not null
-                            and MEDIAREVIEWLEVELID is not null
-                            and MEDIACONTEXTTYPEID is not null
+    p.providerid, 
+    json.video_SRCIDENTIFIER as ExternalIdentifier,
+    mh.mediavideohostid,
+    mr.mediareviewlevelid,
+    ifnull(json.video_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.video_LastUpdateDate, sysdate()) as LastUpdateDate,
+    mc.mediacontexttypeid
+from Cte_video as JSON
+     join base.provider as P on p.providercode = json.providercode
+     join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
+     join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
+     join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
 $$;
 
 -- insert Statement
