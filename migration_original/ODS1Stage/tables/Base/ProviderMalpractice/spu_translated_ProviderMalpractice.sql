@@ -21,8 +21,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_providermalpractice');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default('sp_load_providermalpractice');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
@@ -34,9 +35,30 @@ begin
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$  with CTE_Swimlane as (select
+select_statement := $$  with Cte_malpractice as (
+    SELECT
+        p.ref_provider_code as providercode,
+        p.created_datetime as CREATE_DATE,
+        to_varchar(json.value:MALPRACTICE_CLAIM_TYPE_CODE) as Malpractice_MalpracticeClaimTypeCode,
+        to_varchar(json.value:CLAIM_NUMBER) as Malpractice_ClaimNumber,
+        to_varchar(json.value:CLAIM_DATE) as Malpractice_ClaimDate,
+        to_varchar(json.value:CLAIM_YEAR) as Malpractice_ClaimYear,
+        to_varchar(json.value:CLAIM_AMOUNT) as Malpractice_ClaimAmount,
+        to_varchar(json.value:CLAIM_STATE) as Malpractice_ClaimState,
+        to_varchar(json.value:MALPRACTICE_CLAIM_RANGE) as Malpractice_MalpracticeClaimRange,
+        to_varchar(json.value:COMPLAINT) as Malpractice_Complaint,
+        to_varchar(json.value:INCIDENT_DATE) as Malpractice_IncidentDate,
+        to_varchar(json.value:CLOSED_DATE) as Malpractice_ClosedDate,
+        to_varchar(json.value:REPORT_DATE) as Malpractice_ReportDate,
+        to_varchar(json.value:LICENSE_NUMBER) as Malpractice_LicenseNumber,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Malpractice_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Malpractice_LastUpdateDate
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:MALPRACTICE) as json
+),
+CTE_Swimlane as (select
     p.providerid,
-    --pl.providerlicenseid,
+    -- pl.providerlicenseid,
     m.malpracticeclaimtypeid,
     json.providercode,
     json.malpractice_MALPRACTICECLAIMTYPECODE as MalpracticeClaimTypeCode,
@@ -56,13 +78,12 @@ select_statement := $$  with CTE_Swimlane as (select
     row_number() over(partition by p.providerid, json.malpractice_MALPRACTICECLAIMTYPECODE, json.malpractice_CLAIMDATE, json.malpractice_CLAIMYEAR, json.malpractice_CLAIMSTATE, json.malpractice_LICENSENUMBER, json.malpractice_MALPRACTICECLAIMRANGE order by CREATE_DATE desc, TO_NUMBER(json.malpractice_CLAIMAMOUNT) desc) as RowRank, 
 	row_number()over(order by p.providerid) as RN1
 from
-    raw.vw_PROVIDER_PROFILE as JSON
+    Cte_malpractice as JSON
     left join base.provider as P on json.providercode = p.providercode
-    --left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
+    -- left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
     left join base.malpracticeclaimtype as M on m.malpracticeclaimtypecode = json.malpractice_MALPRACTICECLAIMTYPECODE
-where
-    PROVIDER_PROFILE is not null
-    and json.malpractice_CLAIMAMOUNT is not null),
+where json.malpractice_CLAIMAMOUNT is not null
+    ),
     
 CTE_BadMalpracticeClaimTypeCode as (
     select distinct 
@@ -213,7 +234,7 @@ select
     RowRank,
     RN1
 from CTE_Delete1 as D
-where d.rn1 not IN (select RN1 from CTE_BadMalpracticeClaimTypeCode) $$;
+ $$;
 
 
     -- insert Statement
