@@ -59,7 +59,6 @@ select_statement := $$
                     from cte_identification as json
                     join base.provider as p on p.providercode = json.providercode
                     join base.identificationtype as i on i.identificationtypecode = json.identification_IdentificationTypeCode
-                    where identificationtypeid is not null
                     $$;
 
 --- insert Statement
@@ -87,8 +86,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.provideridentification as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid and source.identificationtypeid = target.identificationtypeid
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
