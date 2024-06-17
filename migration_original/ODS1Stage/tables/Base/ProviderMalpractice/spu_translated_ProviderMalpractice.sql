@@ -21,9 +21,9 @@ select_statement string;
 insert_statement string;
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_providermalpractice');
-    execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
+procedure_name varchar(50) default('sp_load_providermalpractice');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
