@@ -126,6 +126,7 @@ merge_statement := ' merge into base.providertospecialty as target using
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
                    and source.specialtyid = target.specialtyid
+                   when matched then delete
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
