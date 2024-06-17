@@ -58,7 +58,7 @@ select_statement := $$  with Cte_malpractice as (
 ),
 CTE_Swimlane as (select
     p.providerid,
-    pl.providerlicenseid,
+    -- pl.providerlicenseid,
     m.malpracticeclaimtypeid,
     json.providercode,
     json.malpractice_MALPRACTICECLAIMTYPECODE as MalpracticeClaimTypeCode,
@@ -80,7 +80,7 @@ CTE_Swimlane as (select
 from
     Cte_malpractice as JSON
     left join base.provider as P on json.providercode = p.providercode
-    left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
+    -- left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
     left join base.malpracticeclaimtype as M on m.malpracticeclaimtypecode = json.malpractice_MALPRACTICECLAIMTYPECODE
 where json.malpractice_CLAIMAMOUNT is not null
     ),
