@@ -58,7 +58,6 @@ select_statement :=     $$
                         from cte_providersubtype as json
                         join base.provider as p on p.providercode = json.providercode
                         join base.providersubtype as pst on pst.providersubtypecode = json.providersubtype_ProviderSubTypeCode
-                        where json.providersubtype_ProviderSubTypeCode is not null
                         qualify row_number() over(partition by providerid, ifnull(providersubtype_ProviderSubTypeCode, 'ALT') order by providersubtype_LastUpdateDate desc) = 1
                         $$;
 
