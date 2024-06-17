@@ -89,8 +89,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertoprovidersubtype as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid 
+                   and source.providersubtypeid = target.providersubtypeid
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
