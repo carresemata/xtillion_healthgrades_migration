@@ -58,7 +58,6 @@ begin
                         from cte_training as json
                         join base.provider as p on p.providercode = json.providercode
                         join base.training as t on t.trainingcode = json.training_TrainingCode
-                        where trainingid is not null
                      $$;
 
 
@@ -88,8 +87,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertraining as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid and source.trainingid = target.trainingid
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
