@@ -43,13 +43,6 @@ select
     to_varchar(json.value:ADDRESS_TYPE_CODE) as address_ADDRESSTYPECODE,
     to_varchar(json.value:CITY) as address_city,
     to_varchar(json.value:DATA_SOURCE_CODE) as address_SOURCECODE,
-    to_varchar(json.value:IS_INVALID_SUITE),
-    to_varchar(json.value:IS_MILITARY),
-    to_varchar(json.value:IS_MISSING_SUITE),
-    to_varchar(json.value:IS_PO_BOX),
-    to_varchar(json.value:IS_RESIDENTIAL),
-    to_varchar(json.value:IS_ROOFTOP_GEOCODE),
-    to_varchar(json.value:IS_VALID_ADDRESS),
     to_varchar(json.value:LATITUDE),
     to_varchar(json.value:LONGITUDE),
     to_varchar(json.value:STATE) as address_state,
@@ -57,15 +50,18 @@ select
     to_varchar(json.value:TIME_ZONE),
     to_varchar(json.value:UPDATED_DATETIME) as address_LASTUPDATEDATE,
     to_varchar(json.value:ZIP)as address_postalcode,
-from $$||mdm_db||$$.mst.office_profile_processing o,
+from mdm_team.mst.office_profile_processing o,
 lateral flatten(input => o.office_profile:ADDRESS) json
+where nullif(address_CITY,'') is not null 
+        and nullif(address_STATE,'') is not null 
+        and nullif(address_POSTALCODE,'') is not null
+        and LENGTH(trim(upper(address_AddressLine1)) || ifnull(trim(upper(address_AddressLine2)),'') || ifnull(trim(upper(address_Suite)),'')) > 0
 )
 select 
         at.addresstypeid,
         o.officeid,
         a.addressId,
         json.address_SOURCECODE as SourceCode,
-        -- isderived
         json.address_LASTUPDATEDATE as LastUpdateDate,
         cspc.citystatepostalcodeid,
         json.address_addressline1,
@@ -73,7 +69,7 @@ select
         json.address_suite
 from
     cte_address as JSON 
-    left join base.office as O on o.officecode = json.officecode
+    inner join base.office as O on o.officecode = json.officecode
     left join base.addresstype as AT on at.addresstypecode = json.address_ADDRESSTYPECODE
     left join base.citystatepostalcode as cspc on 
         ifnull(cspc.state,'') = ifnull(json.address_state,'') and 
@@ -84,13 +80,6 @@ from
         ifnull(a.addressline1,'') = ifnull(json.address_addressline1,'') and 
         ifnull(a.addressline2,'') = ifnull(json.address_addressline2,'') and 
         ifnull(a.suite,'') = ifnull(json.address_suite,'')
-where
-        json.office_PROFILE is not null  
-        and OfficeId is not null 
-        and nullif(json.address_CITY,'') is not null 
-        and nullif(json.address_STATE,'') is not null 
-        and nullif(json.address_POSTALCODE,'') is not null
-        and LENGTH(trim(upper(json.address_AddressLine1)) || ifnull(trim(upper(json.address_AddressLine2)),'') || ifnull(trim(upper(json.address_Suite)),'')) > 0
 $$;
 
 
