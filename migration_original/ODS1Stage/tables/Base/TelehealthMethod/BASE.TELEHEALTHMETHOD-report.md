@@ -19,8 +19,8 @@ The example below shows a sample row where values are not identical. Important t
 
 ### 2.2 Total Rows
 - SQL Server: 11545
-- Snowflake: 7732
-- Rows Margin (%): 33.02728453876137
+- Snowflake: 5112
+- Rows Margin (%): 55.72109138155046
 
 ### 2.3 Nulls per Column
 |    | Column_Name            |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,16 +28,16 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | TelehealthMethodId     |                       0 |                       0 |          0   |
 |  1 | TelehealthMethodTypeId |                       0 |                       0 |          0   |
 |  2 | TelehealthMethod       |                       0 |                       0 |          0   |
-|  3 | ServiceName            |                    9378 |                    7723 |         17.6 |
+|  3 | ServiceName            |                    9378 |                    5103 |         45.6 |
 |  4 | SourceCode             |                       0 |                       0 |          0   |
 |  5 | LastUpdatedDate        |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name            |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-----------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | TelehealthMethodId     |                       11545 |                        7732 |         33   |
+|  0 | TelehealthMethodId     |                       11545 |                        5112 |         55.7 |
 |  1 | TelehealthMethodTypeId |                           3 |                           3 |          0   |
 |  2 | TelehealthMethod       |                       11509 |                        5112 |         55.6 |
 |  3 | ServiceName            |                         656 |                           9 |         98.6 |
-|  4 | SourceCode             |                          12 |                         200 |       1566.7 |
-|  5 | LastUpdatedDate        |                        4735 |                        1571 |         66.8 |
+|  4 | SourceCode             |                          12 |                          23 |         91.7 |
+|  5 | LastUpdatedDate        |                        4735 |                         895 |         81.1 |
