@@ -19,6 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertraining');
@@ -47,6 +48,7 @@ begin
                                 to_timestamp_ntz(json.value:UPDATED_DATETIME) as training_LastUpdateDate
                             from $$||mdm_db||$$.mst.provider_profile_processing as p,
                             lateral flatten(input => p.PROVIDER_PROFILE:TRAINING) as json
+                            qualify row_number() over (partition by providercode, training_TrainingCode order by training_LastUpdateDate desc) = 1
                         )
                         
                         select distinct
@@ -80,6 +82,11 @@ insert_statement := ' insert
                           source.sourcecode,
                           source.lastupdatedate)';
 
+update_statement := 'update set
+                        target.TrainingLink = source.TrainingLink,
+                        target.SourceCode = source.SourceCode,
+                        target.LastUpdateDate = source.LastUpdateDate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -88,6 +95,7 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertraining as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid and source.trainingid = target.trainingid
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
