@@ -43,7 +43,7 @@ select_statement := $$
                         select
                             p.providerid
                         from
-                            mdm_team.mst.Provider_Profile_Processing as ppp
+                            $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
                         join base.provider as P on p.providercode = ppp.ref_provider_code
                     ),
                     CTE_PayorProductCount as (
