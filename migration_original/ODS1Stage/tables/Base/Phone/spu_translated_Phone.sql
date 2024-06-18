@@ -26,6 +26,7 @@ declare
     merge_statement_2 string;
     select_statement_3 string; 
     merge_statement_3 string;
+    insert_statement string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_phone');
     execution_start datetime default getdate();
@@ -759,6 +760,20 @@ cte_tmp_phones as (
             lastupdatedate 
     from cte_tmp_phones  $$;
 
+
+    -- insert statement
+    insert_statement := ' insert (
+                            PhoneId,
+                            PhoneNumber,
+                            SourceCode,
+                            LastUpdateDate)
+                         values (
+                            uuid_string(),
+                            source.phonenumber,
+                            source.sourcecode,
+                            source.lastupdatedate)';
+
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -767,41 +782,17 @@ cte_tmp_phones as (
 merge_statement_1 := ' merge into base.phone as target using 
                    ('||select_statement_1||') as source 
                    on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
-                   when not matched then
-                    insert (PhoneId,
-                            PhoneNumber,
-                            SourceCode,
-                            LastUpdateDate)
-                    values (uuid_string(),
-                            source.phonenumber,
-                            source.sourcecode,
-                            source.lastupdatedate)';
+                   when not matched then' || insert_statement;
 
 merge_statement_2 := ' merge into base.phone as target using 
                    ('||select_statement_2||') as source 
                    on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
-                   when not matched then
-                    insert (PhoneId,
-                            PhoneNumber,
-                            SourceCode,
-                            LastUpdateDate)
-                    values (uuid_string(),
-                            source.phonenumber,
-                            source.sourcecode,
-                            source.lastupdatedate)';
+                   when not matched then' || insert_statement;
 
 merge_statement_3 := ' merge into base.phone as target using 
                    ('||select_statement_3||') as source 
                    on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
-                   when not matched then
-                    insert (PhoneId,
-                            PhoneNumber,
-                            SourceCode,
-                            LastUpdateDate)
-                    values (uuid_string(),
-                            source.phonenumber,
-                            source.sourcecode,
-                            source.lastupdatedate)';                            
+                   when not matched then' || insert_statement;                            
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
