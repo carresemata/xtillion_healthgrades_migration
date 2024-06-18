@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 600369
-- Snowflake: 349303
-- Rows Margin (%): 41.81861488517895
+- SQL Server: 600573
+- Snowflake: 137065
+- Rows Margin (%): 77.17762869792682
 
 ### 2.3 Nulls per Column
 |    | Column_Name             |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -30,16 +30,16 @@ The example below shows a sample row where values are not identical. Important t
 |  2 | EntityTypeID            |                       0 |                       0 |          0   |
 |  3 | EntityID                |                       0 |                       0 |          0   |
 |  4 | IsEntityEmployed        |                  263626 |                       0 |        100   |
-|  5 | SourceCode              |                     512 |                  349303 |      68123.2 |
+|  5 | SourceCode              |                     513 |                  137065 |      26618.3 |
 |  6 | LastUpdateDate          |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name             |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ClientProductToEntityID |                      600369 |                      349303 |         41.8 |
-|  1 | ClientToProductID       |                         579 |                         476 |         17.8 |
+|  0 | ClientProductToEntityID |                      600573 |                      137065 |         77.2 |
+|  1 | ClientToProductID       |                         580 |                         476 |         17.9 |
 |  2 | EntityTypeID            |                           5 |                           4 |         20   |
-|  3 | EntityID                |                      550047 |                      133883 |         75.7 |
+|  3 | EntityID                |                      550246 |                      136578 |         75.2 |
 |  4 | IsEntityEmployed        |                           2 |                           1 |         50   |
 |  5 | SourceCode              |                         183 |                           0 |        100   |
-|  6 | LastUpdateDate          |                        3637 |                         707 |         80.6 |
+|  6 | LastUpdateDate          |                        3382 |                        3449 |          2   |

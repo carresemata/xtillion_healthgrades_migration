@@ -49,15 +49,21 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(i
     -- if no conditionals
     --------------------------------–------spuMergeCustomerProduct--------------------------------–------
     select_statement_1 := $$  
-    select
-    cp.clienttoproductid,
-    b.entitytypeid,
-    cp.clienttoproductid as EntityID,
-    ifnull(s.lastupdatedate, sysdate()) as LastUpdateDate
-from
-    base.vw_swimlane_base_client s
-    join base.clienttoproduct as cp on s.customerproductcode = cp.clienttoproductcode
-    join base.entitytype b on b.entitytypecode = 'CLPROD'
+    select 
+        cp.clienttoproductid,
+        b.entitytypeid,
+        cp.clienttoproductid as EntityID,
+        s.SourceCode,
+        ifnull(max(s.lastupdatedate), sysdate()) as LastUpdateDate
+    from
+        base.vw_swimlane_base_client s
+        join base.clienttoproduct as cp on s.customerproductcode = cp.clienttoproductcode
+        join base.entitytype b on b.entitytypecode = 'CLPROD'
+        group by 
+            cp.clienttoproductid,
+            b.entitytypeid,
+            EntityID,
+            s.SourceCode
  $$;
     --------------------------------–------spuMergeFacilityCustomerProduct--------------------------------–------
     select_statement_2 := $$ 
@@ -65,25 +71,24 @@ from
     SELECT 
         fpp.ref_facility_code AS FacilityCode,
         fpp.created_datetime as CREATE_DATE,
+        fpp.facility_profile,
         TO_VARCHAR(JSON.VALUE:CUSTOMER_PRODUCT_CODE) AS ClientToProductCode,
-    FROM mdm_team.mst.facility_profile_processing fpp,
+        TO_VARCHAR(JSON.VALUE:DATA_SOURCE_CODE) AS SourceCode,
+        TO_VARCHAR(JSON.VALUE:UPDATED_DATETIME) AS LastUpdateDate
+    FROM $$||mdm_db||$$.mst.facility_profile_processing fpp,
     LATERAL FLATTEN(input => fpp.FACILITY_PROFILE:CUSTOMER_PRODUCT) JSON
+    WHERE ClientToProductCode IS NOT NULL
 ),
 cte_swimlane as (
     select
         facilityid as FacilityID,
-        fpp.facilitycode as FacilityCode,
         cp.clienttoproductid,
-        fpp.ClientToProductCode as ClientToProductCode,
-        row_number() over(partition by FacilityID order by CREATE_DATE desc) as RowRank,
-        'Reltio' as SourceCode,
-        sysdate() as LastUpdateDate
+        fpp.SourceCode,
+        fpp.LastUpdateDate,
     from
         cte_facility_profile_processing as fpp
         join base.facility as f on fpp.facilitycode = f.facilitycode
         join base.clienttoproduct as cp on cp.clienttoproductcode = fpp.clienttoproductcode
-    where
-        fpp.ClientToProductCode is not null
 )
 select
     distinct 
@@ -95,9 +100,6 @@ select
 from
     cte_swimlane s
     inner join base.entitytype b on b.entitytypecode = 'FAC'
-    inner join base.facility o on s.facilityid = o.facilityid
-where
-    s.rowrank = 1
     $$;
     --------------------------------–------spuMergeProviderCustomerProduct--------------------------------–------
             select_statement_3 := $$        
@@ -109,49 +111,47 @@ where
         to_boolean(json.value:IS_EMPLOYED) as CustomerProduct_IsEmployed,
         to_varchar(json.value:DATA_SOURCE_CODE) as CustomerProduct_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as CustomerProduct_LastUpdateDate,
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:CUSTOMER_PRODUCT) as json
     WHERE p.PROVIDER_PROFILE:CUSTOMER_PRODUCT IS NOT NULL
 ),
 cte_swimlane as (
 select
-                p.providerid,
-                cp.clienttoproductid,
-                vw.CustomerProduct_LastUpdateDate as LastUpdateDate,
-                vw.create_date,
-                vw.CustomerProduct_SourceCode as SourceCode,
-                vw.CustomerProduct_IsEmployed as IsEmployed,
-                row_number() over(
-                    partition by p.providerid,
-                    vw.customerproduct_customerproductcode
-                    order by
-                        vw.create_date desc,
-                        case
-                            when ifnull(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1') then 1
-                            else 0
-                        end desc
-                ) as RowRank,
-            from
-                Cte_customer_product as vw
-                join base.provider as p on vw.providercode = p.providercode
-                join base.clienttoproduct as cp on vw.customerproduct_customerproductcode = cp.clienttoproductcode
-            where
-                vw.customerproduct_customerproductcode is not null
-        )
-        select 
-            s.clienttoproductid,
-            b.entitytypeid,
-            s.providerid as EntityID,
-            IsEmployed as IsEntityEmployed,
-            ifnull(s.sourcecode, 'Profisee') as SourceCode,
-            ifnull(s.lastupdatedate, sysdate()) as LastUpdateDate
-        from
-            cte_swimlane as s
-            join base.entitytype b on b.entitytypecode = 'PROV'
-            join base.clienttoproduct as cp on s.clienttoproductid = cp.clienttoproductid
-            join base.provider as p on s.providerid = p.providerid
-        where
-            s.rowrank = 1
+        p.providerid,
+        cp.clienttoproductid,
+        vw.CustomerProduct_LastUpdateDate as LastUpdateDate,
+        vw.create_date,
+        vw.CustomerProduct_SourceCode as SourceCode,
+        vw.CustomerProduct_IsEmployed as IsEmployed,
+        row_number() over(
+            partition by p.providerid,vw.customerproduct_customerproductcode
+            order by
+                vw.create_date desc,
+                case
+                    when ifnull(IsEmployed, 'false') in ('true', 'Y', 'Yes', '1','TRUE') then 1
+                    else 0
+                end desc
+        ) as RowRank,
+    from
+        Cte_customer_product as vw
+        join base.provider as p on vw.providercode = p.providercode
+        join base.clienttoproduct as cp on vw.customerproduct_customerproductcode = cp.clienttoproductcode
+    where
+        vw.customerproduct_customerproductcode is not null
+)
+select 
+    s.clienttoproductid,
+    b.entitytypeid,
+    s.providerid as EntityID,
+    IsEmployed as IsEntityEmployed,
+    ifnull(s.sourcecode, 'Profisee') as SourceCode,
+    ifnull(s.lastupdatedate, current_timestamp()) as LastUpdateDate
+from
+    cte_swimlane as s
+    join base.entitytype b on b.entitytypecode = 'PROV'
+where
+    s.rowrank = 1
+
             $$;
     --------------------------------–------spuMergeProviderOfficeCustomerProduct--------------------------------–------
     select_statement_4 := $$         
@@ -164,7 +164,7 @@ with Cte_office as (
         to_varchar(json.value:DATA_SOURCE_CODE) as Office_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as Office_LastUpdateDate,
         to_varchar(json.value:OFFICE_RANK) as Office_OfficeRank,
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:OFFICE) as json
     WHERE p.PROVIDER_PROFILE:OFFICE IS NOT NULL
 ),
@@ -180,10 +180,10 @@ cte_swimlane as (
             rt.relationshiptypeid,
             cp.clienttoproductid,
             row_number() over(
-                partition by pid.providerid,
-                OfficeCode
+                partition by cp.clienttoproductid,
+                o.officeid
                 order by
-                    x.create_DATE desc
+                    x.Office_LastUpdateDate desc
             ) as RowRank
         from
             Cte_office as x
@@ -194,18 +194,19 @@ cte_swimlane as (
         where
             x.office_officecode is not null
     )
-select
+select 
     cp.clienttoproductid,
     et.entitytypeid,
     t.officeid as EntityID,
-    'Profisee' as SourceCode,
-    sysdate() as LastUpdateDate
+    t.office_SourceCode as SourceCode,
+    ifnull(t.Office_LastUpdateDate,current_timestamp()) as LastUpdateDate
 from
     cte_swimlane T
     join base.entitytype et on et.entitytypecode = 'OFFICE'
     join base.clienttoproduct cp on t.clienttoproductid = cp.clienttoproductid
     join base.office o on o.officeid = t.officeid
     join base.product PR on pr.productid = cp.productid
+where rowrank = 1
     $$;
 
     --- insert Statement
@@ -216,6 +217,7 @@ from
                 ClientToProductID,
                 EntityTypeID,
                 EntityID,
+                SourceCode,
                 LastUpdateDate
             )
         values(
@@ -223,6 +225,7 @@ from
                 source.clienttoproductid,
                 source.entitytypeid,
                 source.entityid,
+                source.SourceCode,
                 source.lastupdatedate
             )';
     ---------------------------------------------------------
