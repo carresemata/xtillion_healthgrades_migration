@@ -20,9 +20,11 @@ declare
 
     select_statement_1 string; -- cte and select statement for the merge
     insert_statement_1 string; -- insert statement for the merge
+    update_statement_1 string; -- update statement for the merge
     merge_statement_1 string; -- merge statement to final table
     select_statement_2 string; -- cte and select statement for the merge
     insert_statement_2 string; -- insert statement for the merge
+    update_statement_2 string; -- update statement for the merge
     merge_statement_2 string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_address');
@@ -102,6 +104,14 @@ insert_statement_1 := $$ insert (
                                 source.lastupdatedate
                         )$$;
 
+--- update statement 
+update_statement_1 := $$ update set 
+                            target.Latitude = source.Latitude,
+                            target.Longitude = source.Longitude,
+                            target.TimeZone = source.TimeZone,
+                            target.LastUpdateDate = source.LastUpdateDate
+                        $$;
+
 select_statement_2 := $$  with cte_address as (
                             select
                                 p.ref_office_code as officecode,
@@ -143,7 +153,7 @@ select_statement_2 := $$  with cte_address as (
                                 join base.citystatepostalcode as CSPC on json.address_PostalCode = cspc.postalcode and json.address_City = cspc.city and json.address_State = cspc.state 
                             qualify row_number() over(partition by json.address_AddressLine1, json.address_AddressLine2, json.address_Suite, json.address_State, cspc.city, json.address_PostalCode order by address_lastupdatedate desc) = 1 $$;
 
-insert_statement_2 := $$insert (
+insert_statement_2 := $$ insert (
                            AddressID, 
                            CityStatePostalCodeID, 
                            NationID, 
@@ -166,8 +176,14 @@ insert_statement_2 := $$insert (
                             source.timezone, 
                             source.suite, 
                             source.lastupdatedate
-                           
                         );$$;
+
+update_statement_2 := $$ update set 
+                            target.Latitude = source.Latitude,
+                            target.Longitude = source.Longitude,
+                            target.TimeZone = source.TimeZone,
+                            target.LastUpdateDate = source.LastUpdateDate
+                        $$;
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -176,8 +192,8 @@ insert_statement_2 := $$insert (
 
 merge_statement_1 := ' merge into base.address as target using 
                    ('||select_statement_1||') as source 
-                   on source.addressline1 = target.addressline1 and source.citystatepostalcodeid = target.citystatepostalcodeid 
-                   when matched then delete
+                   on source.addressline1 = target.addressline1 and source.citystatepostalcodeid = target.citystatepostalcodeid and source.suite = target.suite 
+                   when matched then '||update_statement_1 || '
                    when not matched then '||insert_statement_1;
 
 merge_statement_2 := $$ merge into base.address as target using 
@@ -186,7 +202,7 @@ merge_statement_2 := $$ merge into base.address as target using
                    and iff(trim(upper(source.addressline2)) is null, '', trim(upper(source.addressline2))) = iff(trim(upper(target.addressline2)) is null, '', trim(upper(target.addressline2)))
                    and iff(trim(upper(source.suite)) is null, '', trim(upper(source.suite))) = iff(trim(upper(target.suite)) is null, '', trim(upper(target.suite)))
                    and source.citystatepostalcodeid = target.citystatepostalcodeid
-                   when matched then delete
+                   when matched then $$||update_statement_2 || $$
                    when not matched then $$||insert_statement_2;
                    
 ---------------------------------------------------------
