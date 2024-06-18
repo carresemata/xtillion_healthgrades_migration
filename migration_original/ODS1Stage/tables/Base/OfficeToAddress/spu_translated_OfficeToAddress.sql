@@ -50,7 +50,7 @@ select
     to_varchar(json.value:TIME_ZONE),
     to_varchar(json.value:UPDATED_DATETIME) as address_LASTUPDATEDATE,
     to_varchar(json.value:ZIP)as address_postalcode,
-from mdm_team.mst.office_profile_processing o,
+from $$||mdm_db||$$.mst.office_profile_processing o,
 lateral flatten(input => o.office_profile:ADDRESS) json
 where nullif(address_CITY,'') is not null 
         and nullif(address_STATE,'') is not null 
