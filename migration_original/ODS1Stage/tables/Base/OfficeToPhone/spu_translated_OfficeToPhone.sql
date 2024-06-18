@@ -10,9 +10,10 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.officetophone depends on:
---- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- mdm_team.mst.office_profile_processing 
 --- base.office
 --- base.phonetype
+--- base.phone
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -20,10 +21,11 @@ declare
 select_statement string;
 insert_statement string;
 merge_statement string;
+update_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_officetophone');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_officetophone');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 begin
@@ -34,20 +36,28 @@ begin
 ---------------------------------------------------------
 
     -- select Statement
-    select_statement := $$  select distinct
+    select_statement := $$   with CTE_Phone AS (
+                            SELECT
+                                p.ref_office_code AS officecode,
+                                created_datetime as create_date,
+                                TO_VARCHAR(json.value: PHONE_NUMBER) AS Phone_PhoneNumber,
+                                TO_VARCHAR(json.value: PHONE_TYPE_CODE) AS Phone_PhoneTypeCode,
+                                TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Phone_SourceCode,
+                                TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Phone_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.office_profile_processing AS p,
+                                 LATERAL FLATTEN(input => p.OFFICE_PROFILE:PHONE) AS json
+                        )
+                        select distinct
                             pt.phonetypeid,
-                            -- PhoneId
+                            p.PhoneId,
                             o.officeid,
                             ifnull(json.phone_SOURCECODE , 'Reltio') as SourceCode,
                             ifnull(json.phone_LASTUPDATEDATE , current_timestamp()) as LastUpdateDate,
                             1 as PhoneRank
-                        from raw.vw_OFFICE_PROFILE as JSON
-                            left join base.office as O on o.officecode = json.officecode
-                            left join base.phonetype as PT on pt.phonetypecode = json.phone_PHONETYPECODE
-                        where
-                            OFFICE_PROFILE is not null
-                            and OFFICEID is not null 
-                            and PhonetypeId is not null
+                        from cte_phone as JSON
+                            join base.office as O on o.officecode = json.officecode
+                            join base.phonetype as PT on pt.phonetypecode = json.phone_PHONETYPECODE
+                            join base.phone as p on p.phonenumber = json.phone_phonenumber and p.sourcecode = json.phone_sourcecode
                         qualify row_number() over(partition by OfficeID, json.phone_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
 
 
@@ -55,7 +65,7 @@ begin
 insert_statement := ' insert  
                             (OfficeToPhoneID,
                             PhoneTypeID,
-                            --PhoneID,
+                            PhoneID,
                             OfficeID,
                             SourceCode,
                             LastUpdateDate,
@@ -63,12 +73,18 @@ insert_statement := ' insert
                     values 
                           (uuid_string(),
                             source.phonetypeid,
-                            --source.phoneid,
+                            source.phoneid,
                             source.officeid,
                             source.sourcecode,
                             source.lastupdatedate,
                             source.phonerank)';
 
+    -- update statement
+update_statement := ' update
+                        set
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate,
+                            target.phonerank = source.phonerank';
 
 
 ---------------------------------------------------------
@@ -76,10 +92,10 @@ insert_statement := ' insert
 ---------------------------------------------------------
 
 merge_statement := ' merge into base.officetophone as target 
-using ('||select_statement||') as source
-on source.officeid = target.officeid and source.phonetypeid = target.phonetypeid
-WHEN MATCHED then delete 
-when not matched then'||insert_statement;
+                    using ('||select_statement||') as source
+                    on source.officeid = target.officeid and source.phonetypeid = target.phonetypeid and source.phoneid = target.phoneid
+                    when matched then' || update_statement || '
+                    when not matched then'||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
