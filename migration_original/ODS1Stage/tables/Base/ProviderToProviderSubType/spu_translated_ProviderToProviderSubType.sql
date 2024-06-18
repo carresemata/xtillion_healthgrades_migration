@@ -19,6 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoprovidersubtype');
@@ -81,6 +82,13 @@ insert_statement := ' insert
                         source.providersubtyperankcalculated,
                         source.lastupdatedate)';
 
+
+update_statement := ' update set
+                        target.SourceCode = source.SourceCode,
+                        target.providersubtyperank = source.providersubtyperank,
+                        target.providersubtyperankcalculated = source.providersubtyperankcalculated,
+                        target.LastUpdateDate = source.LastUpdateDate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -88,8 +96,9 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertoprovidersubtype as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid 
-                   and source.providersubtypeid = target.providersubtypeid
+                   on source.providerid = target.providerid
+                      and source.providersubtypeid = target.providersubtypeid
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
