@@ -386,22 +386,23 @@ select_statement := $$
                     pimg.providerid,
                     pimg.sourcecode
                 union all
-                    --Positions:
-                select
-                    po.providerid,
-                    'Positions' as DataElement,
-                    ifnull(po.sourcecode, 'N/A') as SourceCode,
-                    CURRENT_USER() as UpdatedBy, 
-                    MAX(po.lastupdatedate) as LastUpdateDate
-                from
-                    CTE_ProviderIDList pid
-                    join base.providertoorganization po on pid.providerid = po.providerid
-                where
-                    po.positionenddate is null
-                group by
-                    po.providerid,
-                    po.sourcecode
-                union all
+                --ProviderToOrganization is deprecated because Organization is deprecated
+                --     --Positions:
+                -- select
+                --     po.providerid,
+                --     'Positions' as DataElement,
+                --     ifnull(po.sourcecode, 'N/A') as SourceCode,
+                --     CURRENT_USER() as UpdatedBy, 
+                --     MAX(po.lastupdatedate) as LastUpdateDate
+                -- from
+                --     CTE_ProviderIDList pid
+                --     join base.providertoorganization po on pid.providerid = po.providerid
+                -- where
+                --     po.positionenddate is null
+                -- group by
+                --     po.providerid,
+                --     po.sourcecode
+                -- union all
                     --Practice Name:
                 select
                     po.providerid,
