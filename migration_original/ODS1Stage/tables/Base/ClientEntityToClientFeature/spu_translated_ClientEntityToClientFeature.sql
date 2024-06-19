@@ -620,8 +620,7 @@ select distinct
     clientfeaturecode, 
     clientfeaturevaluecode, 
     sourcecode 
-from cte_tmp_features
-qualify row_number() over(partition by customerproductcode, ClientFeaturecode, clientfeaturevaluecode,  sourcecode order by LastUpdateDate desc) = 1)
+from cte_tmp_features)
 
 select distinct
     b.entitytypeid,
@@ -636,12 +635,12 @@ from
     join base.clientfeature as CF on s.clientfeaturecode = cf.clientfeaturecode 
     join base.clientfeaturevalue as CFV on s.clientfeaturevaluecode = cfv.clientfeaturevaluecode 
     join base.clientfeaturetoclientfeaturevalue as CFTCFV on cf.clientfeatureid = cftcfv.clientfeatureid and cfv.clientfeaturevalueid = cftcfv.clientfeaturevalueid and cftcfv.sourcecode = s.sourcecode
-    join base.clienttoproduct as c on s.customerproductcode = c.clienttoproductcode$$;
+    join base.clienttoproduct as c on s.customerproductcode = c.clienttoproductcode 
+qualify row_number() over(partition by EntityTypeID, cf.ClientFeatureID, cftcfv.ClientFeatureToClientFeatureValueID, EntityID order by ifnull(s.lastupdatedate, current_timestamp()) desc) = 1 $$;
 
 --- insert Statement
 insert_statement := ' insert 
-    (
-        ClientEntityToClientFeatureID, 
+    (   ClientEntityToClientFeatureID, 
         EntityTypeID, 
         ClientFeatureID, 
         ClientFeatureToClientFeatureValueID, 
@@ -650,8 +649,7 @@ insert_statement := ' insert
         LastUpdateDate
     )
     values 
-    (
-        uuid_string(), 
+    (   uuid_string(), 
         source.entitytypeid, 
         source.clientfeatureid, 
         source.clientfeaturetoclientfeaturevalueid, 
@@ -673,8 +671,9 @@ update_statement := ' update set
 merge_statement := ' merge into base.cliententitytoclientfeature as target using 
                    ('||select_statement||') as source 
                    on target.clientfeatureid = source.clientfeatureid
-                   and target.clientfeaturetoclientfeaturevalueid = source.clientfeaturetoclientfeaturevalueid
-                   and target.entityid = source.entityid
+                       and target.clientfeaturetoclientfeaturevalueid = source.clientfeaturetoclientfeaturevalueid
+                       and target.entityid = source.entityid
+                       and target.entitytypeid = source.entitytypeid
                    when matched then ' || update_statement || '
                    when not matched then'||insert_statement;
                    

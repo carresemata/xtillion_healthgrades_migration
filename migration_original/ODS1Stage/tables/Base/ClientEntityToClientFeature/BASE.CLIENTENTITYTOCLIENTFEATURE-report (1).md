@@ -1,4 +1,4 @@
-# Base.cliententitytoclientfeature Report
+# base.cliententitytoclientfeature Report
 
 ## 1. Sample Validation
 
@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 3493
-- Snowflake: 5838
-- Rows Margin (%): 67.13426853707415
+- SQL Server: 3492
+- Snowflake: 49
+- Rows Margin (%): 98.59679266895762
 
 ### 2.3 Nulls per Column
 |    | Column_Name                         |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -36,10 +36,10 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name                         |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:------------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ClientEntityToClientFeatureID       |                        3493 |                        5838 |         67.1 |
+|  0 | ClientEntityToClientFeatureID       |                        3492 |                          49 |         98.6 |
 |  1 | EntityTypeID                        |                           2 |                           1 |         50   |
 |  2 | ClientFeatureID                     |                          35 |                          19 |         45.7 |
-|  3 | ClientFeatureToClientFeatureValueID |                          67 |                        5126 |       7550.7 |
-|  4 | EntityID                            |                         385 |                         476 |         23.6 |
-|  5 | SourceCode                          |                          28 |                         400 |       1328.6 |
-|  6 | LastUpdateDate                      |                         116 |                          58 |         50   |
+|  3 | ClientFeatureToClientFeatureValueID |                          67 |                          41 |         38.8 |
+|  4 | EntityID                            |                         385 |                          21 |         94.5 |
+|  5 | SourceCode                          |                          28 |                          20 |         28.6 |
+|  6 | LastUpdateDate                      |                         116 |                          11 |         90.5 |
