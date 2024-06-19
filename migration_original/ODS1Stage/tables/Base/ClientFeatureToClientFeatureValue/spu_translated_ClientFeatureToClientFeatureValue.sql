@@ -19,6 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_clientfeaturetoclientfeaturevalue');
@@ -618,9 +619,15 @@ cte_tmp_features as (
             cte_tmp_features as T
             inner join base.clientfeature as CF on cf.clientfeaturecode = t.clientfeaturecode
             inner join base.clientfeaturevalue as CFV on cfv.clientfeaturevaluecode = t.clientfeaturevaluecode
-        qualify row_number() over(partition by ClientFeatureID, ClientFeatureValueId, ifnull(t.sourcecode, 'Reltio') order by ifnull(t.lastupdatedate, current_timestamp()) desc) = 1
+        qualify row_number() over(partition by ClientFeatureID, ClientFeatureValueId order by ifnull(t.lastupdatedate, current_timestamp()) desc) = 1
 
 $$;
+
+--- update statement
+update_statement := ' update
+                        set
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate';
 
 --- insert Statement
 insert_statement := '  insert (
@@ -644,7 +651,7 @@ insert_statement := '  insert (
 merge_statement := ' merge into base.clientfeaturetoclientfeaturevalue as target using 
                    ('||select_statement||') as Source
                    on target.clientfeatureid = source.clientfeatureid and target.clientfeaturevalueid = source.clientfeaturevalueid
-                   when matched then delete
+                   when matched then ' || update_statement || '
                    when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
