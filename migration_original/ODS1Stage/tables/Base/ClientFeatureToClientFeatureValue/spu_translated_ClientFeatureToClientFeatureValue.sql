@@ -24,7 +24,6 @@ declare
     procedure_name varchar(50) default('sp_load_clientfeaturetoclientfeaturevalue');
     execution_start datetime default getdate();
 
-   
 
 begin
 
@@ -34,7 +33,7 @@ begin
 
 --- select Statement
 -- if no conditionals:
-select_statement := $$with cte_swimlane as (
+select_statement := $$ with cte_swimlane as (
     select
         *,
         rank() over(
@@ -49,7 +48,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCBFN' as ClientFeatureCode,
-        FeatureFCBFN as ClientFeatureValueCode
+        FeatureFCBFN as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -59,7 +60,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCBFN' as ClientFeatureCode,
-        FeatureFCBFN as ClientFeatureValueCode
+        FeatureFCBFN as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -69,7 +72,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
-        FeatureFCCCP_FVCLT as ClientFeatureValueCode
+        FeatureFCCCP_FVCLT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -79,7 +84,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
-        FeatureFCCCP_FVFAC as ClientFeatureValueCode
+        FeatureFCCCP_FVFAC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -89,7 +96,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCCCP' as ClientFeatureCode,
-        FeatureFCCCP_FVOFFICE as ClientFeatureValueCode
+        FeatureFCCCP_FVOFFICE as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -99,7 +108,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
-        FeatureFCDTP as ClientFeatureValueCode
+        FeatureFCDTP as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -109,7 +120,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDTP' as ClientFeatureCode,
-        FeatureFCDTP as ClientFeatureValueCode
+        FeatureFCDTP as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -119,7 +132,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
-        FeatureFCMWC as ClientFeatureValueCode
+        FeatureFCMWC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -129,7 +144,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCMWC' as ClientFeatureCode,
-        FeatureFCMWC as ClientFeatureValueCode
+        FeatureFCMWC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -139,7 +156,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
-        FeatureFCNPA as ClientFeatureValueCode
+        FeatureFCNPA as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -149,7 +168,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCNPA' as ClientFeatureCode,
-        FeatureFCNPA as ClientFeatureValueCode
+        FeatureFCNPA as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -159,7 +180,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
-        FeatureFCBRL as ClientFeatureValueCode
+        FeatureFCBRL as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -169,7 +192,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
-        FeatureFCBRL as ClientFeatureValueCode
+        FeatureFCBRL as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -179,7 +204,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCBRL' as ClientFeatureCode,
-        FeatureFCBRL as ClientFeatureValueCode
+        FeatureFCBRL as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -189,7 +216,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
-        FeatureFCEPR as ClientFeatureValueCode
+        FeatureFCEPR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -199,7 +228,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCEPR' as ClientFeatureCode,
-        FeatureFCEPR as ClientFeatureValueCode
+        FeatureFCEPR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -209,7 +240,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
-        FeatureFCOOACP as ClientFeatureValueCode
+        FeatureFCOOACP as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -219,7 +252,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOACP' as ClientFeatureCode,
-        FeatureFCOOACP as ClientFeatureValueCode
+        FeatureFCOOACP as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -229,7 +264,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCLOT' as ClientFeatureCode,
-        FeatureFCLOT as ClientFeatureValueCode
+        FeatureFCLOT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -239,7 +276,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCMAR' as ClientFeatureCode,
-        FeatureFCMAR as ClientFeatureValueCode
+        FeatureFCMAR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -249,7 +288,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
-        FeatureFCDOA as ClientFeatureValueCode
+        FeatureFCDOA as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -259,7 +300,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDOA' as ClientFeatureCode,
-        FeatureFCDOA as ClientFeatureValueCode
+        FeatureFCDOA as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -269,7 +312,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
-        FeatureFCDOS_FVFAX as ClientFeatureValueCode
+        FeatureFCDOS_FVFAX as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -279,7 +324,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCDOS' as ClientFeatureCode,
-        FeatureFCDOS_FVMMPEML as ClientFeatureValueCode
+        FeatureFCDOS_FVMMPEML as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -289,7 +336,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCEOARD' as ClientFeatureCode,
-        FeatureFCEOARD as ClientFeatureValueCode
+        FeatureFCEOARD as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -299,7 +348,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOBT' as ClientFeatureCode,
-        FeatureFCOBT as ClientFeatureValueCode
+        FeatureFCOBT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -309,7 +360,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
-        FeatureFCODC_FVDFC as ClientFeatureValueCode
+        FeatureFCODC_FVDFC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -319,7 +372,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
-        FeatureFCODC_FVDPR as ClientFeatureValueCode
+        FeatureFCODC_FVDPR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -329,7 +384,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
-        FeatureFCODC_FVMT as ClientFeatureValueCode
+        FeatureFCODC_FVMT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -339,7 +396,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCODC' as ClientFeatureCode,
-        FeatureFCODC_FVPSR as ClientFeatureValueCode
+        FeatureFCODC_FVPSR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -349,7 +408,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOAS' as ClientFeatureCode,
-        FeatureFCOAS as ClientFeatureValueCode
+        FeatureFCOAS as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -359,7 +420,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCSPC' as ClientFeatureCode,
-        FeatureFCSPC as ClientFeatureValueCode
+        FeatureFCSPC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -369,7 +432,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCPNI' as ClientFeatureCode,
-        FeatureFCPNI as ClientFeatureValueCode
+        FeatureFCPNI as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -379,7 +444,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
-        FeatureFCPQM as ClientFeatureValueCode
+        FeatureFCPQM as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -389,7 +456,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCPQM' as ClientFeatureCode,
-        FeatureFCPQM as ClientFeatureValueCode
+        FeatureFCPQM as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -399,7 +468,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVCPOFFICE as ClientFeatureValueCode
+        FeatureFCREL_FVCPOFFICE as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -409,7 +480,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVCPTOCC as ClientFeatureValueCode
+        FeatureFCREL_FVCPTOCC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -419,7 +492,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVCPTOFAC as ClientFeatureValueCode
+        FeatureFCREL_FVCPTOFAC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -429,7 +504,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVCPTOPRAC as ClientFeatureValueCode
+        FeatureFCREL_FVCPTOPRAC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -439,7 +516,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVCPTOPROV as ClientFeatureValueCode
+        FeatureFCREL_FVCPTOPROV as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -449,7 +528,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVPRACOFF as ClientFeatureValueCode
+        FeatureFCREL_FVPRACOFF as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -459,7 +540,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVPROVFAC as ClientFeatureValueCode
+        FeatureFCREL_FVPROVFAC as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -469,7 +552,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCREL' as ClientFeatureCode,
-        FeatureFCREL_FVPROVOFF as ClientFeatureValueCode
+        FeatureFCREL_FVPROVOFF as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -479,7 +564,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
-        FeatureFCOOPSR as ClientFeatureValueCode
+        FeatureFCOOPSR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -489,7 +576,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOPSR' as ClientFeatureCode,
-        FeatureFCOOPSR as ClientFeatureValueCode
+        FeatureFCOOPSR as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -499,7 +588,9 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
-        FeatureFCOOMT as ClientFeatureValueCode
+        FeatureFCOOMT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
@@ -509,28 +600,41 @@ cte_tmp_features as (
     select
         CustomerProductCode,
         'FCOOMT' as ClientFeatureCode,
-        FeatureFCOOMT as ClientFeatureValueCode
+        FeatureFCOOMT as ClientFeatureValueCode,
+        sourcecode,
+        lastupdatedate
     from
         cte_swimlane
     where
         FeatureFCOOMT = 'FVYES'
         and RowRank = 1
 )
-select distinct 
-            uuid_string() as ClientFeatureToClientFeatureValueID,
+        select distinct 
             ClientFeatureId,
             ClientFeatureValueId,
-            'Reltio' as SourceCode,
-            current_timestamp() as LastUpdateDate
+            ifnull(t.sourcecode, 'Reltio') as SourceCode,
+            ifnull(t.lastupdatedate, current_timestamp()) as LastUpdateDate
         from
             cte_tmp_features as T
             inner join base.clientfeature as CF on cf.clientfeaturecode = t.clientfeaturecode
             inner join base.clientfeaturevalue as CFV on cfv.clientfeaturevaluecode = t.clientfeaturevaluecode
+        qualify row_number() over(partition by ClientFeatureID, ClientFeatureValueId, ifnull(t.sourcecode, 'Reltio') order by ifnull(t.lastupdatedate, current_timestamp()) desc) = 1
+
 $$;
 
 --- insert Statement
-insert_statement := '  insert (ClientFeatureToClientFeatureValueID, ClientFeatureID, ClientFeatureValueID, SourceCode, LastUpdateDate)
-    values (source.clientfeaturetoclientfeaturevalueid, source.clientfeatureid, source.clientfeaturevalueid, source.sourcecode, source.lastupdatedate);';
+insert_statement := '  insert (
+                            ClientFeatureToClientFeatureValueID, 
+                            ClientFeatureID, 
+                            ClientFeatureValueID, 
+                            SourceCode, 
+                            LastUpdateDate)
+                        values (
+                            uuid_string(), 
+                            source.clientfeatureid, 
+                            source.clientfeaturevalueid, 
+                            source.sourcecode, 
+                            source.lastupdatedate);';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -539,7 +643,8 @@ insert_statement := '  insert (ClientFeatureToClientFeatureValueID, ClientFeatur
 
 merge_statement := ' merge into base.clientfeaturetoclientfeaturevalue as target using 
                    ('||select_statement||') as Source
-                    on target.clientfeatureid = source.clientfeatureid and target.clientfeaturevalueid = source.clientfeaturevalueid
+                   on target.clientfeatureid = source.clientfeatureid and target.clientfeaturevalueid = source.clientfeaturevalueid
+                   when matched then delete
                    when not matched then'||insert_statement;
                    
 ---------------------------------------------------------

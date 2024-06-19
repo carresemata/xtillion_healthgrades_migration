@@ -9,10 +9,11 @@ declare
 ---------------------------------------------------------
     
 -- base.facilitytoaddress depends on: 
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.citystatepostalcode
 --- base.address
+--- base.addresstype
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -24,37 +25,46 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilitytoaddress');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$  select distinct
+select_statement := $$  with Cte_address as (
+                                SELECT
+                                    p.ref_facility_code as facilitycode,
+                                    to_varchar(json.value:ADDRESS_TYPE_CODE) as Address_AddressTypeCode,
+                                    to_varchar(json.value:ADDRESS_LINE_1) as Address_AddressLine1,
+                                    to_varchar(json.value:CITY) as Address_City,
+                                    to_varchar(json.value:STATE) as Address_State,
+                                    to_varchar(json.value:ZIP) as Address_PostalCode,
+                                    to_varchar(json.value:DATA_SOURCE_CODE) as Address_SourceCode,
+                                    to_timestamp_ntz(json.value:UPDATED_DATETIME) as Address_LastUpdateDate
+                                FROM $$ || mdm_db || $$.mst.facility_profile_processing as p
+                                , lateral flatten(input => p.FACILITY_PROFILE:ADDRESS) as json
+                                where
+                                    nullif(Address_City,'') is not null 
+                                    and nullif(Address_State,'') is not null 
+                                    and nullif(Address_PostalCode,'') is not null
+                            )
+
+                            select distinct
                                 facility.facilityid,
                                 address.addressid,
-                                json.address_SourceCode as SourceCode
+                                type.addresstypeid,
+                                json.address_SourceCode as SourceCode,
+                                ifnull(json.address_lastupdatedate, current_timestamp()) as lastupdatedate
                             from
-                                raw.vw_FACILITY_PROFILE as JSON 
+                                cte_address as JSON 
                                 join base.facility as Facility on json.facilitycode = facility.facilitycode
                                 join base.citystatepostalcode as CSPC on json.address_City = cspc.city and json.address_State = cspc.state and json.address_PostalCode = cspc.postalcode 
                                 join base.address as Address on address.addressline1 = json.address_AddressLine1 and cspc.citystatepostalcodeid = address.citystatepostalcodeid 
-                            where
-                                json.facility_PROFILE is not null and 
-                                nullif(Address_City,'') is not null 
-                                and nullif(Address_State,'') is not null 
-                                and nullif(Address_PostalCode,'') is not null
-                            qualify row_number() over(
-                                partition by facility.facilityid
-                                order by
-                                    address.addressid desc
-                            ) = 1 $$;
+                                join base.addresstype as type on type.addresstypecode = json.address_addresstypecode
+                            qualify row_number() over(partition by facility.facilityid order by address.addressid desc ) = 1 $$;
 
 
 --- insert Statement
@@ -69,9 +79,9 @@ insert_statement := $$ insert (
                             uuid_string(), 
                             source.facilityid, 
                             source.addressid, 
-                            '4946464F-4543-0000-0000-000000000000',
+                            source.addresstypeid,
                             source.sourcecode, 
-                            current_timestamp())
+                            source.lastupdatedate)
                     $$;
 
 ---------------------------------------------------------
@@ -81,8 +91,7 @@ insert_statement := $$ insert (
 
 merge_statement := ' merge into base.facilitytoaddress as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid
-                   WHEN MATCHED then delete
+                   on source.facilityid = target.facilityid and source.addressid = target.addressid
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

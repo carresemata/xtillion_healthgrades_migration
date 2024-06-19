@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertoprovidertype depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.providertype
 
@@ -23,6 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoprovidertype');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -35,21 +36,31 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
+select_statement :=     $$ 
+                        with cte_providertype as (
+                            select
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:PROVIDER_TYPE_CODE) as providertype_ProviderTypeCode,
+                                to_varchar(json.value:PROVIDER_TYPE_RANK_CALCULATED) as providertype_ProviderTypeRankCalculated,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as providertype_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as providertype_LastUpdateDate
+                            from $$||mdm_db||$$.mst.provider_profile_processing as p,
+                            lateral flatten(input => p.PROVIDER_PROFILE:PROVIDER_TYPE) as json
+                        )
+                        
+                        select distinct
                             p.providerid,
                             pt.providertypeid,
                             ifnull(json.providertype_SourceCode, 'Profisee') as SourceCode,
                             ifnull(json.providertype_ProviderTypeRankCalculated, 1) as ProviderTypeRank,
                             2147483647 as ProviderTypeRankCalculated,
-                            ifnull(json.providertype_LastUpdateDate, current_timestamp()) as LastUpdateDate    
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                        left join base.provider as P on p.providercode = json.providercode
-                        left join base.providertype as PT on pt.providertypecode = ifnull(json.providertype_ProviderTypeCode, 'ALT')
-                        where
-                            PROVIDER_PROFILE is not null
-                            and ProviderType_ProviderTypeCode is not null
-                            and ProviderID is not null 
-                        qualify row_number() over( partition by ProviderID, ifnull(ProviderType_ProviderTypeCode, 'ALT') order by CREATE_DATE desc) = 1$$;
+                            ifnull(json.providertype_LastUpdateDate, current_timestamp()) as LastUpdateDate
+                        from cte_providertype as json
+                        join base.provider as p on p.providercode = json.providercode
+                        join base.providertype as pt on pt.providertypecode = ifnull(json.providertype_ProviderTypeCode, 'ALT')
+                        where json.providertype_ProviderTypeCode is not null
+                        qualify row_number() over(partition by providerid, ifnull(providertype_ProviderTypeCode, 'ALT') order by providertype_LastUpdateDate desc) = 1
+                        $$;
 
 
 

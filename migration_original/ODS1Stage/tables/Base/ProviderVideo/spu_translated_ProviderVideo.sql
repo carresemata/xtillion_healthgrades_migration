@@ -10,7 +10,7 @@ declare
 ---------------------------------------------------------
 
 -- base.providervideo depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing
 --- base.provider
 --- base.mediavideohost
 --- base.mediareviewlevel
@@ -24,40 +24,45 @@ select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providervideo');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default('sp_load_providervideo');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
 begin
--- No conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$ select 
-                            p.providerid, 
-                            json.video_SRCIDENTIFIER as ExternalIdentifier,
-                            mh.mediavideohostid,
-                            mr.mediareviewlevelid,
-                            ifnull(json.video_SourceCode, 'Profisee') as SourceCode,
-                            ifnull(json.video_LastUpdateDate, sysdate()) as LastUpdateDate,
-                            mc.mediacontexttypeid
-                        
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
-                            left join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
-                            left join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
-                        where PROVIDER_PROFILE is not null
-                            and PROVIDERID is not null
-                            and json.video_SRCIDENTIFIER is not null
-                            and MEDIAVIDEOHOSTID is not null
-                            and MEDIAREVIEWLEVELID is not null
-                            and MEDIACONTEXTTYPEID is not null
-                        qualify row_number() over(partition by ProviderId, json.video_REFMEDIACONTEXTTYPECODE, json.video_REFMEDIAVIDEOHOSTCODE order by CREATE_DATE desc) = 1 $$;
+select_statement := $$ with Cte_video as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:IDENTIFIER) as Video_SrcIdentifier,
+        to_varchar(json.value:MEDIA_VIDEO_HOST_CODE) as Video_RefMediaVideoHostCode,
+        to_varchar(json.value:MEDIA_REVIEW_LEVEL_CODE) as Video_RefMediaReviewLevelCode,
+        to_varchar(json.value:MEDIA_CONTEXT_TYPE_CODE) as Video_RefMediaContextTypeCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Video_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Video_LastUpdateDate
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:VIDEO) as json
+)
+select 
+    p.providerid, 
+    json.video_SRCIDENTIFIER as ExternalIdentifier,
+    mh.mediavideohostid,
+    mr.mediareviewlevelid,
+    ifnull(json.video_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.video_LastUpdateDate, sysdate()) as LastUpdateDate,
+    mc.mediacontexttypeid
+from Cte_video as JSON
+     join base.provider as P on p.providercode = json.providercode
+     join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
+     join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
+     join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
+$$;
 
 -- insert Statement
 insert_statement := 'insert 

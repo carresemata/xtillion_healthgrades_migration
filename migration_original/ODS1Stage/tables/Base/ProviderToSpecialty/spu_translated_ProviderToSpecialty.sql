@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertospecialty depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.specialty
 
@@ -23,8 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertospecialty');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
@@ -35,31 +34,48 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
-                            p.providerid,
-                            s.specialtyid,
-                            ifnull(json.specialty_SourceCode, 'Profisee') as SourceCode,
-                            ifnull(json.specialty_LastUpdatedate, current_timestamp()) as LastUpdateDate,
-                            json.specialty_SpecialtyRank as SpecialtyRank,
-                            ifnull(json.specialty_SpecialtyRankCalculated, 2147483647) as SpecialtyRankCalculated,
-                            json.specialty_IsSearchable as IsSearchable,
-                            ifnull(json.specialty_IsSearchableCalculated, 1) as IsSearchableCalculated,
-                            ifnull(json.specialty_IsSpecialtyRedundant, 0) as SpecialtyIsRedundant,
-                            json.specialty_SpecialtyDCPCount as SpecialtyDCPCount,
-                            json.specialty_SpecialtyDCPMinFillThreshold as SpecialtyDCPMinFillThreshold,
-                            json.specialty_ProviderSpecialtyDCPCount as ProviderSpecialtyDCPCount,
-                            json.specialty_ProviderSpecialtyAveragePercentile as ProviderSpecialtyAveragePercentile,
-                            json.specialty_IsMeetsLowThreshold as MeetsLowThreshold,
-                            json.specialty_ProviderRawSpecialtyScore as ProviderRawSpecialtyScore,
-                            json.specialty_ScaledSpecialtyBoost as ScaledSpecialtyBoost,
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                             left join base.provider as P on p.providercode = json.providercode
-                             left join base.specialty as S on s.specialtycode = json.specialty_SpecialtyCode
-                        where
-                             PROVIDER_PROFILE is not null
-                             and SpecialtyID is not null
-                             and ProviderID is not null 
-                        qualify row_number() over( partition by ProviderID, Specialty_SpecialtyCode order by Specialty_SpecialtyRankCalculated, CREATE_DATE desc) = 1 $$;
+select_statement := $$ with Cte_specialty as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:SPECIALTY_CODE) as Specialty_SpecialtyCode,
+        to_varchar(json.value:SPECIALTY_RANK) as Specialty_SpecialtyRank,
+        to_varchar(json.value:SPECIALTY_RANK_CALCULATED) as Specialty_SpecialtyRankCalculated,
+        to_boolean(json.value:IS_SEARCHABLE) as Specialty_IsSearchable,
+        to_boolean(json.value:IS_SEARCHABLE_CALCULATED) as Specialty_IsSearchableCalculated,
+        to_varchar(json.value:SPECIALTY_DCP_COUNT) as Specialty_SpecialtyDcpCount,
+        to_boolean(json.value:IS_SPECIALTY_REDUNDANT) as Specialty_IsSpecialtyRedundant,
+        to_varchar(json.value:SPECIALTY_DCP_MIN_FILL_THRESHOLD) as Specialty_SpecialtyDcpMinFillThreshold,
+        to_varchar(json.value:PROVIDER_SPECIALTY_DCP_COUNT) as Specialty_ProviderSpecialtyDcpCount,
+        to_varchar(json.value:PROVIDER_SPECIALTY_AVERAGE_PERCENTILE) as Specialty_ProviderSpecialtyAveragePercentile,
+        to_boolean(json.value:IS_MEETS_LOW_THRESHOLD) as Specialty_IsMeetsLowThreshold,
+        to_varchar(json.value:PROVIDER_RAW_SPECIALTY_SCORE) as Specialty_ProviderRawSpecialtyScore,
+        to_varchar(json.value:SCALED_SPECIALTY_BOOST) as Specialty_ScaledSpecialtyBoost,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Specialty_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Specialty_LastUpdateDate
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:SPECIALTY) as json
+)
+select distinct
+    p.providerid,
+    s.specialtyid,
+    ifnull(json.specialty_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.specialty_LastUpdatedate, current_timestamp()) as LastUpdateDate,
+    json.specialty_SpecialtyRank as SpecialtyRank,
+    ifnull(json.specialty_SpecialtyRankCalculated, 2147483647) as SpecialtyRankCalculated,
+    json.specialty_IsSearchable as IsSearchable,
+    ifnull(json.specialty_IsSearchableCalculated, 1) as IsSearchableCalculated,
+    ifnull(json.specialty_IsSpecialtyRedundant, 0) as SpecialtyIsRedundant,
+    json.specialty_SpecialtyDCPCount as SpecialtyDCPCount,
+    json.specialty_SpecialtyDCPMinFillThreshold as SpecialtyDCPMinFillThreshold,
+    json.specialty_ProviderSpecialtyDCPCount as ProviderSpecialtyDCPCount,
+    json.specialty_ProviderSpecialtyAveragePercentile as ProviderSpecialtyAveragePercentile,
+    json.specialty_IsMeetsLowThreshold as MeetsLowThreshold,
+    json.specialty_ProviderRawSpecialtyScore as ProviderRawSpecialtyScore,
+    json.specialty_ScaledSpecialtyBoost as ScaledSpecialtyBoost,
+from Cte_specialty as JSON
+    join base.provider as P on p.providercode = json.providercode
+    join base.specialty as S on s.specialtycode = json.specialty_SpecialtyCode 
+ $$;
 
 
 
@@ -109,7 +125,8 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertospecialty as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   and source.specialtyid = target.specialtyid
+                   when matched then delete
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

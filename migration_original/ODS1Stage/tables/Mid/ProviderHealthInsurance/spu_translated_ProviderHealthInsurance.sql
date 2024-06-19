@@ -38,55 +38,56 @@ declare
 begin
 --- select Statement
 
-select_statement := $$  with CTE_ProviderBatch as (
-            select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code
-        ),
-        CTE_PayorProductCount as (
-                            select
+select_statement := $$  
+                    with CTE_ProviderBatch as (
+                        select
+                            p.providerid
+                        from
+                            $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
+                        join base.provider as P on p.providercode = ppp.ref_provider_code
+                    ),
+                    CTE_PayorProductCount as (
+                        select
                             hipay.payorcode,
                             COUNT(*) as PayorProductCount
-                            from
-                                base.healthinsuranceplantoplantype as hipt
-                                join base.healthinsuranceplan as hip on hipt.healthinsuranceplanid = hip.healthinsuranceplanid
-                                join base.healthinsurancepayor as hipay on hip.healthinsurancepayorid = hipay.healthinsurancepayorid
-                            where
-                                hipay.payorname != hipt.productname
-                            group by
-                                hipay.payorcode
-                        )
-                        select
-                            distinct pthi.providertohealthinsuranceid,
-                            pthi.providerid,
-                            hipt.healthinsuranceplantoplantypeid,
-                            hipt.productname,
-                            hip.planname,
-                            hip.plandisplayname,
-                            hipay.payorname,
-                            hiptd.plantypedescription,
-                            hiptd.plantypedisplaydescription,
-                            CASE
-                                WHEN hipay.payorname IN (
-                                    'Name of Insurance Unknown',
-                                    'Accepts most insurance',
-                                    'Accepts most major Health Plans. Please contact our office for details.'
-                                ) then 0
-                                else 1
-                            END as Searchable,
-                            hipay.payorcode,
-                            hipay.healthinsurancepayorid,
-                            pc.payorproductcount
                         from
-                            CTE_ProviderBatch as pb
-                            join base.providertohealthinsurance as pthi on pthi.providerid = pb.providerid
-                            join base.healthinsuranceplantoplantype as hipt on pthi.healthinsuranceplantoplantypeid = hipt.healthinsuranceplantoplantypeid
+                            base.healthinsuranceplantoplantype as hipt
                             join base.healthinsuranceplan as hip on hipt.healthinsuranceplanid = hip.healthinsuranceplanid
-                            join base.healthinsurancepayor as hipay on hip.healthinsurancepayorid = hipay.healthinsurancepayorid
-                            join base.healthinsuranceplantype as hiptd on hipt.healthinsuranceplantypeid = hiptd.healthinsuranceplantypeid
-                            join CTE_PayorProductCount as pc on pc.payorcode = hipay.payorcode
+                            right join base.healthinsurancepayor as hipay on hip.healthinsurancepayorid = hipay.healthinsurancepayorid
+                        where
+                            hipay.payorname != hipt.productname
+                        group by
+                            hipay.payorcode
+                    )
+                    select distinct
+                        pthi.providertohealthinsuranceid,
+                        pthi.providerid,
+                        hipt.healthinsuranceplantoplantypeid,
+                        hipt.productname,
+                        hip.planname,
+                        hip.plandisplayname,
+                        hipay.payorname,
+                        hiptd.plantypedescription,
+                        hiptd.plantypedisplaydescription,
+                        CASE
+                            WHEN hipay.payorname IN (
+                                'Name of Insurance Unknown',
+                                'Accepts most insurance',
+                                'Accepts most major Health Plans. Please contact our office for details.'
+                            ) then 0
+                            else 1
+                        END as Searchable,
+                        hipay.payorcode,
+                        hipay.healthinsurancepayorid,
+                        pc.payorproductcount,
+                    from
+                        CTE_ProviderBatch as pb
+                        join base.providertohealthinsurance as pthi on pthi.providerid = pb.providerid
+                        join base.healthinsuranceplantoplantype as hipt on pthi.healthinsuranceplantoplantypeid = hipt.healthinsuranceplantoplantypeid
+                        join base.healthinsuranceplan as hip on hipt.healthinsuranceplanid = hip.healthinsuranceplanid
+                        join base.healthinsurancepayor as hipay on hip.healthinsurancepayorid = hipay.healthinsurancepayorid
+                        join base.healthinsuranceplantype as hiptd on hipt.healthinsuranceplantypeid = hiptd.healthinsuranceplantypeid
+                        join CTE_PayorProductCount as pc on pc.payorcode = hipay.payorcode
                     $$;
 
 --- update Statement
@@ -106,16 +107,16 @@ update_statement := ' update
 
 --- update Condition
 update_condition := 'target.healthinsurancepayorid != source.healthinsurancepayorid
-        or target.healthinsuranceplantoplantypeid != source.healthinsuranceplantoplantypeid
-        or target.payorcode != source.payorcode
-        or target.payorname != source.payorname
-        or target.plandisplayname != source.plandisplayname
-        or target.planname != source.planname
-        or target.plantypedescription != source.plantypedescription
-        or target.plantypedisplaydescription != source.plantypedisplaydescription
-        or target.productname != source.productname
-        or target.providerid != source.providerid
-        or target.searchable != source.searchable';
+                            or target.healthinsuranceplantoplantypeid != source.healthinsuranceplantoplantypeid
+                            or target.payorcode != source.payorcode
+                            or target.payorname != source.payorname
+                            or target.plandisplayname != source.plandisplayname
+                            or target.planname != source.planname
+                            or target.plantypedescription != source.plantypedescription
+                            or target.plantypedisplaydescription != source.plantypedisplaydescription
+                            or target.productname != source.productname
+                            or target.providerid != source.providerid
+                            or target.searchable != source.searchable';
 
 --- insert Statement
 insert_statement := ' insert
@@ -155,10 +156,10 @@ insert_statement := ' insert
 ---------------------------------------------------------  
 
 
-merge_statement := ' merge into show.providerhealthinsurance as target using 
+merge_statement := ' merge into mid.providerhealthinsurance as target using 
                    ('||select_statement||') as source 
                    on target.providertohealthinsuranceid = source.providertohealthinsuranceid
-                   WHEN MATCHED and (' || update_condition || ') then '||update_statement|| '
+                   WHEN MATCHED and ('||update_condition||') then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

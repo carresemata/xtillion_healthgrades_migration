@@ -1,3 +1,4 @@
+
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOOFFICE(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
@@ -9,7 +10,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providertooffice depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.office
 
@@ -21,8 +22,9 @@ select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providertooffice');
-    execution_start datetime default getdate();
+procedure_name varchar(50) default('sp_load_providertooffice');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 
@@ -34,27 +36,36 @@ begin
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$ select distinct
-                            p.providerid,
-                            o.officeid, 
-                            json.office_OfficeName as OfficeName,
-                            json.office_PracticeName as PracticeName, 
-                            -- IsPrimaryOffice
-                            json.office_OfficeRank as ProviderOfficeRank,
-                            ifnull(json.office_SourceCode, 'Profisee') as SourceCode,
-                            -- ProviderOfficeRankInferenceCode
-                            -- SourceAddressCount
-                            ifnull(json.office_LastUpdateDate, sysdate()) as LastUpdateDate
-                        
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            join base.office as O on o.officecode = json.office_OfficeCode
-                        where
-                            PROVIDER_PROFILE is not null and
-                            ProviderID is not null and
-                            OfficeID is not null and
-                            json.office_OfficeCode is not null
-                        qualify row_number() over(partition by ProviderId, json.office_OfficeCode order by CREATE_DATE desc)= 1 $$;
+select_statement := $$ with Cte_office as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:OFFICE_CODE) as Office_OfficeCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Office_SourceCode,
+        to_varchar(json.value:OFFICE_NAME) as Office_OfficeName,
+        to_varchar(json.value:PRACTICE_NAME) as Office_PracticeName,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Office_LastUpdateDate,
+        to_varchar(json.value:OFFICE_RANK) as Office_OfficeRank,
+        to_varchar(json.value:PHONE_NUMBER) as Office_PhoneNumber,
+        to_varchar(json.value:OFFICE_OAS) as Office_OfficeOAS
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:OFFICE) as json
+)
+select distinct
+    p.providerid,
+    o.officeid, 
+    json.office_OfficeName as OfficeName,
+    json.office_PracticeName as PracticeName, 
+    -- IsPrimaryOffice
+    json.office_OfficeRank as ProviderOfficeRank,
+    ifnull(json.office_SourceCode, 'Profisee') as SourceCode,
+    -- ProviderOfficeRankInferenceCode
+    -- SourceAddressCount
+    ifnull(json.office_LastUpdateDate, sysdate()) as LastUpdateDate
+
+from Cte_office as JSON
+    join base.provider as P on p.providercode = json.providercode
+    join base.office as O on o.officecode = json.office_OfficeCode
+ $$;
 
 -- insert Statement
 insert_statement := $$
