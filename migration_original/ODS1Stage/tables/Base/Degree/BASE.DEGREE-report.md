@@ -1,4 +1,4 @@
-# BASE.DEGREE Report
+# base.degree Report
 
 ## 1. Sample Validation
 
@@ -7,12 +7,12 @@ Percentage of Different Columns: 44.44% (4/9).
 
 The example below shows a sample row where values are not identical. Important to remember that fields like IDs are never expected to match. Long outputs are truncated since they will be hard to visualize.
 
-|    | Column Name       | Match ID   | SQL Server Value                         | Snowflake Value                      |
-|---:|:------------------|:-----------|:-----------------------------------------|:-------------------------------------|
-|  0 | DEGREEID          | MSCC       | 4343534d-0000-0000-0000-000000000000     | fc116184-7925-47ec-bc94-afcfce9c5dcf |
-|  1 | DEGREEDESCRIPTION | MSCC       | Master of Science in Clinical Counseling | None                                 |
-|  2 | LASTUPDATEDATE    | MSCC       | 2018-03-30 10:01:05.797                  | 2023-04-29 00:23:59.100              |
-|  3 | REFRANK           | MSCC       | 713                                      | 491                                  |
+|    | Column Name       | Match ID   | SQL Server Value                     | Snowflake Value                      |
+|---:|:------------------|:-----------|:-------------------------------------|:-------------------------------------|
+|  0 | DEGREEID          | MEDL       | 4c44454d-0000-0000-0000-000000000000 | bd9e3634-a536-481a-810c-713a82edace8 |
+|  1 | DEGREEDESCRIPTION | MEDL       | Masters of Education                 | None                                 |
+|  2 | LASTUPDATEDATE    | MEDL       | 2014-06-09 07:27:07.453              | 2022-01-12 22:22:58.037              |
+|  3 | REFRANK           | MEDL       | 621                                  | nan                                  |
 
 ## 2. Aggregate Validation
 
@@ -37,7 +37,7 @@ The example below shows a sample row where values are not identical. Important t
 |  5 | LegacyKeyName      |                     695 |                     683 |          1.7 |
 |  6 | SourceCode         |                     695 |                     683 |          1.7 |
 |  7 | LastUpdateDate     |                       3 |                       0 |        100   |
-|  8 | refRank            |                       0 |                       0 |          0   |
+|  8 | refRank            |                       0 |                     146 |        inf   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name        |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
@@ -49,5 +49,5 @@ The example below shows a sample row where values are not identical. Important t
 |  4 | LegacyKey          |                           0 |                           0 |          0   |
 |  5 | LegacyKeyName      |                           0 |                           0 |          0   |
 |  6 | SourceCode         |                           0 |                           0 |          0   |
-|  7 | LastUpdateDate     |                          35 |                         183 |        422.9 |
-|  8 | refRank            |                         695 |                         683 |          1.7 |
+|  7 | LastUpdateDate     |                          35 |                         556 |       1488.6 |
+|  8 | refRank            |                         695 |                         537 |         22.7 |

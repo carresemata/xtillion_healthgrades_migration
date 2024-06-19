@@ -15,6 +15,7 @@ as declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string;
 merge_statement string;
 status string;
 procedure_name varchar(50) default('sp_load_degree');
@@ -31,22 +32,30 @@ begin
 
 select_statement := $$
                     with Cte_degree as (
-                        select
-                            to_varchar(json.value:DEGREE_CODE) as DegreeCode,
-                            MAX(to_varchar(json.value:UPDATED_DATETIME)) as LastUpdateDate
-                        from $$ || mdm_db || $$.mst.provider_profile_processing as p
-                        , lateral flatten(input => p.PROVIDER_PROFILE:DEGREE) as json
-                        group by 
-                            to_varchar(json.value:DEGREE_CODE)
-                    )
-                    select 
-                        uuid_string() as DegreeID,
-                        cte_d.degreecode as DegreeAbbreviation,
-                        (select ifnull(MAX(refRank), 0) from base.degree) + row_number() over (order by cte_d.degreecode) as refRank,
-                        cte_d.LastUpdateDate
-                    from CTE_degree as cte_d
-                    order by cte_d.degreecode
+                            SELECT
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:DEGREE_CODE) as Degree_DegreeCode,
+                                to_varchar(json.value:DEGREE_RANK) as Degree_DegreeRank,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as Degree_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as Degree_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+                            , lateral flatten(input => p.PROVIDER_PROFILE:DEGREE) as json
+                        )
+                        select 
+                            cte_d.degree_degreecode as DegreeAbbreviation,
+                            cte_d.degree_degreerank as refRank,
+                            cte_d.degree_sourcecode as sourcecode,
+                            cte_d.degree_LastUpdateDate as lastupdatedate
+                        from CTE_degree as cte_d
+                        qualify row_number() over(partition by degree_degreecode order by degree_LastUpdateDate) = 1
                     $$;
+
+                    
+update_statement := $$ update 
+                        set
+                            target.refrank = source.refrank,
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate $$;
 
 
 insert_statement := $$ 
@@ -59,7 +68,7 @@ insert_statement := $$
                         )
                       values 
                         (   
-                        source.degreeid,
+                        uuid_string(),
                         source.degreeabbreviation,
                         source.refrank,
                         source.lastupdatedate
@@ -72,7 +81,8 @@ insert_statement := $$
 
 merge_statement := $$ merge into base.degree as target 
                     using ($$||select_statement||$$) as source 
-                   on source.degreeid = target.degreeid
+                   on source.degreeabbreviation = target.degreeabbreviation
+                   when matched then $$ || update_statement || $$
                    when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
