@@ -39,12 +39,12 @@ begin
 
     select_statement := $$
                         with CTE_ProviderBatch as (
-                        select p.providerid
-                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                            select p.providerid
+                            from $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
                             join base.provider as p on ppp.ref_provider_code = p.providercode
-                        order by p.providerid
+                            order by p.providerid
                         ),
-                    
+                        
                         CTE_ProviderProcedure as (
                             select
                                 etmt.entitytomedicaltermid as ProviderToProcedureID,
@@ -52,11 +52,7 @@ begin
                                 mt.medicaltermcode as ProcedureCode,
                                 mt.medicaltermdescription1 as ProcedureDescription,
                                 mt.medicaltermdescription2 as ProcedureGroupDescription,
-                                mt.legacykey,
-                                CASE
-                                    WHEN mpp.providertoprocedureid is null then 1
-                                    else 0
-                                END as ActionCode
+                                mt.legacykey
                             from CTE_ProviderBatch as pb
                             inner join base.entitytomedicalterm as etmt on etmt.entityid = pb.providerid
                             inner join base.medicalterm as mt on mt.medicaltermid = etmt.medicaltermid
@@ -64,6 +60,7 @@ begin
                             inner join base.medicaltermset as mts on mts.medicaltermsetid = mt.medicaltermsetid
                             inner join base.medicaltermtype as mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid
                             left join mid.providerprocedure as mpp on etmt.entitytomedicaltermid = mpp.providertoprocedureid
+                            where mts.MedicalTermSetCode = 'HGProvider' and mtt.MedicalTermTypeCode = 'Procedure'
                         )
                         
                         select
@@ -72,9 +69,8 @@ begin
                             pp.procedurecode,
                             pp.proceduredescription,
                             pp.proceduregroupdescription,
-                            pp.legacykey,
-                            pp.actioncode
-                        from CTE_ProviderProcedure pp)
+                            pp.legacykey
+                        from CTE_ProviderProcedure pp
                         $$;
       
 
@@ -116,16 +112,16 @@ begin
 
      merge_statement := $$
                         merge into mid.providerprocedure as target
-                        using $$ || select_statement || $$ as source
+                        using ($$||select_statement||$$) as source
                         on source.providertoprocedureid = target.providertoprocedureid
                         WHEN MATCHED and MD5(ifnull(CAST(target.legacykey as varchar), '')) <> MD5(ifnull(CAST(source.legacykey as varchar), '')) or 
                                         MD5(ifnull(CAST(target.procedurecode as varchar), '')) <> MD5(ifnull(CAST(source.procedurecode as varchar), '')) or 
                                         MD5(ifnull(CAST(target.proceduredescription as varchar), '')) <> MD5(ifnull(CAST(source.proceduredescription as varchar), '')) or 
                                         MD5(ifnull(CAST(target.proceduregroupdescription as varchar), '')) <> MD5(ifnull(CAST(source.proceduregroupdescription as varchar), '')) or 
                                         MD5(ifnull(CAST(target.providerid as varchar), '')) <> MD5(ifnull(CAST(source.providerid as varchar), '')) 
-                                        then $$ || update_statement || $$
+                                        then $$||update_statement||$$
                         WHEN MATCHED and source.providertoprocedureid = target.providertoprocedureid and target.providertoprocedureid is null then delete
-                        when not matched then $$ || insert_statement;
+                        when not matched then $$||insert_statement;
         
 
     ---------------------------------------------------------
@@ -155,4 +151,4 @@ begin
                 select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
             return status;
-end;  
+end;
