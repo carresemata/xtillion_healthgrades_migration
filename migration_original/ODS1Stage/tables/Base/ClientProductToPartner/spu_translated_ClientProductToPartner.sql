@@ -23,6 +23,7 @@ cte_sl string; -- bulk of swim lane
 select_statement_1 string; 
 select_statement_2 string; 
 insert_statement string; 
+update_statement string;
 merge_statement_1 string; 
 merge_statement_2 string;
 status string; -- status monitoring
@@ -38,142 +39,148 @@ begin
 ---------------------------------------------------------     
 
 cte_sl := $$
-          with cte_swimlane as (
+           with cte_swimlane as (
                 select *
                 from base.vw_swimlane_base_client 
                 qualify DENSE_RANK() over(partition by customerproductcode order by LastUpdateDate) = 1
             ),
             
-            CTE_FeatureFCBRL as (
-                select *,
-                CASE
-                    WHEN LEFT(FeatureFCBRL, 2) != 'FV' then 'FV' || upper(
-                        REPLACE(
-                            REPLACE(
-                                REPLACE(FeatureFCBRL, 'CLIENT', 'CLT'),
-                                'CUSTOMER',
-                                'CLT'
-                            ),
-                            'FACILITY',
-                            'FAC'
-                        )
-                    )
-                    else FeatureFCBRL
-                END as FeatureFCBRLNew
-                from CTE_swimlane
-            ),
-            
-            CTE_OASPartnerTypeCode as (
-                select *,
-                CASE
-                    WHEN PRODUCTCODE IN ('CDOAS', 'IOAS') and OASPartnerTypeCode is null then 'URL'
-                    else OASPartnerTypeCode
-                END as OASPartnerTypeCodeNew
-                from CTE_FeatureFCBRL
-            ),
-            
-            CTE_CustomerName as (
-                select cte.*,
-                CASE
-                    WHEN cte.customername is null and c.clientname is null then cte.clientcode
-                    WHEN cte.customername is null and c.clientname is not null then c.clientname
-                    else cte.customername
-                END as CustomerNameNew
-                from CTE_OASPartnerTypeCode as cte
-                left join base.client as c on c.clientcode = cte.clientcode
-            ),
-            
-            CTE_FinalSwimlane as (
-                select
-                    CREATED_DATETIME,
-                    CUSTOMERPRODUCTCODE,
-                    CLIENTCODE,
-                    PRODUCTCODE,
-                    CUSTOMERPRODUCTJSON,
-                    CUSTOMERNAMENEW as CustomerName,
-                    QUEUESIZE,
-                    LASTUPDATEDATE,
-                    SOURCECODE,
-                    ACTIVEFLAG,
-                    OASURLPATH,
-                    OASPARTNERTYPECODENEW as OASPartnerTypeCode,
-                    FEATUREFCBFN,
-                    FEATUREFCBRLNEW as FeatureFCBRL,
-                    FEATUREFCCCP_FVCLT,
-                    FEATUREFCCCP_FVFAC,
-                    FEATUREFCCCP_FVOFFICE,
-                    FEATUREFCCLLOGO,
-                    FEATUREFCCWALL,
-                    FEATUREFCCLURL,
-                    FEATUREFCDISLOC,
-                    FEATUREFCDOA,
-                    FEATUREFCDOS_FVFAX,
-                    FEATUREFCDOS_FVMMPEML,
-                    FEATUREFCDTP,
-                    FEATUREFCEOARD,
-                    FEATUREFCEPR,
-                    FEATUREFCOOACP,
-                    FEATUREFCLOT,
-                    FEATUREFCMAR,
-                    FEATUREFCMWC,
-                    FEATUREFCNPA,
-                    FEATUREFCOAS,
-                    FEATUREFCOASURL,
-                    FEATUREFCOASVT,
-                    FEATUREFCOBT,
-                    FEATUREFCODC_FVDFC,
-                    FEATUREFCODC_FVDPR,
-                    FEATUREFCODC_FVMT,
-                    FEATUREFCODC_FVPSR,
-                    FEATUREFCPNI,
-                    FEATUREFCPQM,
-                    FEATUREFCREL_FVCPOFFICE,
-                    FEATUREFCREL_FVCPTOCC,
-                    FEATUREFCREL_FVCPTOFAC,
-                    FEATUREFCREL_FVCPTOPRAC,
-                    FEATUREFCREL_FVCPTOPROV,
-                    FEATUREFCREL_FVPRACOFF,
-                    FEATUREFCREL_FVPROVFAC,
-                    FEATUREFCREL_FVPROVOFF,
-                    FEATUREFCSPC,
-                    FEATUREFCOOPSR,
-                    FEATUREFCOOMT
-                from CTE_CustomerName
+CTE_FeatureFCBRL as (
+    select *,
+    CASE
+        WHEN LEFT(FeatureFCBRL, 2) != 'FV' then 'FV' || upper(
+            REPLACE(
+                REPLACE(
+                    REPLACE(FeatureFCBRL, 'CLIENT', 'CLT'),
+                    'CUSTOMER',
+                    'CLT'
+                ),
+                'FACILITY',
+                'FAC'
             )
+        )
+        else FeatureFCBRL
+    END as FeatureFCBRLNew
+    from CTE_swimlane
+)
+-- select * from CTE_FeatureFCBRL;
+,
+CTE_OASPartnerTypeCode as (
+    select *,
+    CASE
+        WHEN PRODUCTCODE IN ('CDOAS', 'IOAS') and OASPartnerTypeCode is null then 'URL'
+        else OASPartnerTypeCode
+    END as OASPartnerTypeCodeNew
+    from CTE_FeatureFCBRL
+)
+-- select * from CTE_OASPartnerTypeCode;
+,
+
+CTE_CustomerName as (
+    select cte.*,
+    CASE
+        WHEN cte.customername is null and c.clientname is null then cte.clientcode
+        WHEN cte.customername is null and c.clientname is not null then c.clientname
+        else cte.customername
+    END as CustomerNameNew
+    from CTE_OASPartnerTypeCode as cte
+    left join base.client as c on c.clientcode = cte.clientcode
+)
+-- select * from CTE_CustomerName;
+,
+            
+CTE_FinalSwimlane as (
+    select
+        CREATED_DATETIME,
+        CUSTOMERPRODUCTCODE,
+        CLIENTCODE,
+        PRODUCTCODE,
+        CUSTOMERPRODUCTJSON,
+        CUSTOMERNAMENEW as CustomerName,
+        QUEUESIZE,
+        LASTUPDATEDATE,
+        SOURCECODE,
+        ACTIVEFLAG,
+        OASURLPATH,
+        OASPARTNERTYPECODENEW as OASPartnerTypeCode,
+        FEATUREFCBFN,
+        FEATUREFCBRLNEW as FeatureFCBRL,
+        FEATUREFCCCP_FVCLT,
+        FEATUREFCCCP_FVFAC,
+        FEATUREFCCCP_FVOFFICE,
+        FEATUREFCCLLOGO,
+        FEATUREFCCWALL,
+        FEATUREFCCLURL,
+        FEATUREFCDISLOC,
+        FEATUREFCDOA,
+        FEATUREFCDOS_FVFAX,
+        FEATUREFCDOS_FVMMPEML,
+        FEATUREFCDTP,
+        FEATUREFCEOARD,
+        FEATUREFCEPR,
+        FEATUREFCOOACP,
+        FEATUREFCLOT,
+        FEATUREFCMAR,
+        FEATUREFCMWC,
+        FEATUREFCNPA,
+        FEATUREFCOAS,
+        FEATUREFCOASURL,
+        FEATUREFCOASVT,
+        FEATUREFCOBT,
+        FEATUREFCODC_FVDFC,
+        FEATUREFCODC_FVDPR,
+        FEATUREFCODC_FVMT,
+        FEATUREFCODC_FVPSR,
+        FEATUREFCPNI,
+        FEATUREFCPQM,
+        FEATUREFCREL_FVCPOFFICE,
+        FEATUREFCREL_FVCPTOCC,
+        FEATUREFCREL_FVCPTOFAC,
+        FEATUREFCREL_FVCPTOPRAC,
+        FEATUREFCREL_FVCPTOPROV,
+        FEATUREFCREL_FVPRACOFF,
+        FEATUREFCREL_FVPROVFAC,
+        FEATUREFCREL_FVPROVOFF,
+        FEATUREFCSPC,
+        FEATUREFCOOPSR,
+        FEATUREFCOOMT
+    from CTE_CustomerName
+)
           $$;
 
 select_statement_1 := cte_sl || $$
-                                select distinct
-                                   uuid_string() as ClientProductToPartnerID,
+                                select
                                    ctp.clienttoproductid, 
                                    c.clientid as PartnerID,
-                                   'HG Reference' as SourceCode, 
-                                   sysdate() as LastUpdateDate, 
+                                   cte.SourceCode, 
+                                   cte.LastUpdateDate, 
                                    CURRENT_USER() as LastUpdateUser, 
                                 from CTE_FinalSwimlane as cte
-                                inner join base.client c on c.clientcode = LEFT(cte.clientcode, LEN(cte.clientcode) - 3)
-                                inner join base.clienttoproduct ctp on ctp.clientid = c.clientid
-                                left join base.clientproducttopartner cptp on cptp.clienttoproductid = ctp.clienttoproductid
-                                where cptp.clientproducttopartnerid is null
+                                    inner join base.client c on c.clientcode = LEFT(cte.clientcode, LEN(cte.clientcode) - 3)
+                                    inner join base.clienttoproduct ctp on ctp.clientid = c.clientid
+                                qualify row_number() over(partition by clienttoproductid, c.clientid order by cte.lastupdatedate desc) = 1
                                 $$;
 
 
 select_statement_2 := cte_sl || $$
                                 select distinct
-                                   uuid_string() as ClientProductToPartnerID,
                                    ctp.clienttoproductid, 
                                    (select PartnerId from base.partner where PartnerCode = 'MHD') as PartnerID,
-                                   'HG Reference' as SourceCode, 
-                                   sysdate() as LastUpdateDate, 
+                                   cte.sourcecode as SourceCode, 
+                                   cte.LastUpdateDate,
                                    CURRENT_USER() as LastUpdateUser, 
                                 from CTE_FinalSwimlane as cte
                                 inner join base.client c on c.clientcode = LEFT(cte.clientcode, LEN(cte.clientcode) - 3)
                                 inner join base.clienttoproduct ctp on ctp.clientid = c.clientid
-                                left join base.clientproducttopartner cptp on cptp.clienttoproductid = ctp.clienttoproductid
-                                where cptp.clientproducttopartnerid is null and ctp.clienttoproductid LIKE '%-MAP' 
-                                    and LEFT(ctp.clienttoproductid, POSITION('-', ctp.clienttoproductid) - 1) IN ('STDAVD','HCASAM','HCASM','HCAPASO','HCAWNV','HCAGC','HCAHL1','HCACKS','HCALEW','HCACARES','HCACVA','HCAFRFT','HCATRI','HCASATL','HCANFD','HCAMW','HCAWFD','HCAMT','HCANTD','HCACVA','HCAMT','HCAMW','HCACKS','HCAEFD','HCAGC','HCAHL1','HCALEW','HCANFD','HCAPASO','HCASAM','HCASATL','HCATRI','HCAWFD','HCAWNV','HCAFRFT','HCARES','STDAVD')
+                                where
+                                LEFT(ctp.clienttoproductid, POSITION('-', ctp.clienttoproductid) - 1) IN ('STDAVD','HCASAM','HCASM','HCAPASO','HCAWNV','HCAGC','HCAHL1','HCACKS','HCALEW','HCACARES','HCACVA','HCAFRFT','HCATRI','HCASATL','HCANFD','HCAMW','HCAWFD','HCAMT','HCANTD','HCACVA','HCAMT','HCAMW','HCACKS','HCAEFD','HCAGC','HCAHL1','HCALEW','HCANFD','HCAPASO','HCASAM','HCASATL','HCATRI','HCAWFD','HCAWNV','HCAFRFT','HCARES','STDAVD')
                                 $$;
-
+update_statement := $$
+                    update set 
+                        target.LastUpdateDate = source.LastUpdateDate, 
+                        target.LastUpdateUser = source.LastUpdateUser,
+                        target.sourcecode = source.SourceCode
+                    $$;
                                 
 insert_statement := $$ 
                     insert  
@@ -187,7 +194,7 @@ insert_statement := $$
                          )
                     values 
                         (
-                        source.clientproducttopartnerid,
+                        uuid_string(),                        
                         source.clienttoproductid,
                         source.partnerid,
                         source.sourcecode,
@@ -203,12 +210,14 @@ insert_statement := $$
 
 merge_statement_1 := $$ merge into base.clientproducttopartner as target using 
                    ($$||select_statement_1||$$) as source 
-                   on source.clientproducttopartnerid = target.clientproducttopartnerid 
+                   on source.clienttoproductid = target.clienttoproductid 
+                   and  source.partnerid = target.partnerid
                    when not matched then $$||insert_statement;
 
 merge_statement_2 := $$ merge into base.clientproducttopartner as target using 
                    ($$||select_statement_2||$$) as source 
-                   on source.clientproducttopartnerid = target.clientproducttopartnerid 
+                   on source.clienttoproductid = target.clienttoproductid 
+                   and  source.partnerid = target.partnerid                   
                    when not matched then $$||insert_statement;
 
 ---------------------------------------------------------
