@@ -22,12 +22,12 @@ declare
 
 select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
+update_statement string; -- update for merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
 procedure_name varchar(50) default('sp_load_providervideo');
 execution_start datetime default getdate();
 mdm_db string default('mdm_team');
-
 
 
 begin
@@ -62,18 +62,19 @@ from Cte_video as JSON
      join base.mediavideohost as MH on mh.mediavideohostcode = json.video_REFMEDIAVIDEOHOSTCODE
      join base.mediareviewlevel as MR on json.video_REFMEDIAREVIEWLEVELCODE = mr.mediareviewlevelcode
      join base.mediacontexttype as MC on json.video_REFMEDIACONTEXTTYPECODE = mc.mediacontexttypecode
+qualify row_number() over(partition by providerid, mediavideohostid, mediareviewlevelid, mediacontexttypeid order by ifnull(json.video_LastUpdateDate, sysdate()) desc) = 1
 $$;
 
 -- insert Statement
 insert_statement := 'insert 
-                        (PROVIDERVIDEOID, 
-                        PROVIDERID, 
-                        EXTERNALIDENTIFIER, 
-                        MEDIAVIDEOHOSTID, 
-                        MEDIAREVIEWLEVELID, 
-                        SOURCECODE, 
-                        LASTUPDATEDATE, 
-                        MEDIACONTEXTTYPEID)
+                      (  providervideoid, 
+                         providerid, 
+                         externalidentifier, 
+                         mediavideohostid, 
+                         mediareviewlevelid, 
+                         sourcecode, 
+                         lastupdatedate, 
+                         mediacontexttypeid)
                     values 
                         (uuid_string(), 
                         source.providerid, 
@@ -84,14 +85,21 @@ insert_statement := 'insert
                         source.lastupdatedate, 
                         source.mediacontexttypeid)';
 
+-- update statement
+update_statement := 'update
+                        set
+                            target.externalidentifier = source.externalidentifier,
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
 merge_statement := 'merge into base.providervideo as TARGET
 using ('||select_statement||') as SOURCE
-on target.providerid = source.providerid
-WHEN MATCHED then delete
+on target.providerid = source.providerid and target.mediareviewlevelid = source.mediareviewlevelid and target.mediavideohostid = source.mediavideohostid and target.mediacontexttypeid = source.mediacontexttypeid
+WHEN MATCHED then ' || update_statement || '
 when not matched then ' || insert_statement;
 
 ---------------------------------------------------------
