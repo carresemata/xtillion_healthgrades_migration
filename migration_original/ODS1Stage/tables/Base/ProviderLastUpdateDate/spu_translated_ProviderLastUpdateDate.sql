@@ -155,13 +155,13 @@ select_statement := $$
                         inner join base.providermalpractice m on m.providerid = cte_p.providerid
                         qualify row_number() over (partition by m.providerid order by m.lastupdatedate desc) = 1
                     ),
-                    
-                    CTE_Organization as (
-                        select pto.providerid, pto.sourcecode, pto.lastupdatedate
-                        from CTE_Provider cte_p
-                        inner join base.providertoorganization pto on pto.providerid = cte_p.providerid
-                        qualify row_number() over (partition by pto.providerid order by pto.lastupdatedate desc) = 1
-                    ),
+                    -- ProviderToOrganization is deprecated because organization is deprecated
+                    -- CTE_Organization as (
+                    --     select pto.providerid, pto.sourcecode, pto.lastupdatedate
+                    --     from CTE_Provider cte_p
+                    --     inner join base.providertoorganization pto on pto.providerid = cte_p.providerid
+                    --     qualify row_number() over (partition by pto.providerid order by pto.lastupdatedate desc) = 1
+                    -- ),
                     
                     CTE_Sponsorship as (
                         select cpte.entityid as ProviderID, ctp.clienttoproductcode as SourceCode, cpte.lastupdatedate
@@ -502,23 +502,23 @@ select_statement := $$
                         group by cte_p.providerid
                     ),
                     
-                    CTE_OrganizationXML as (
-                        select 
-                            cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
-                                    iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Organization', 
-                                ''
-                            ) as XML
-                        from CTE_Provider cte_p
-                        inner join CTE_Organization cte_o on cte_o.providerid = cte_p.providerid
-                        group by cte_p.providerid
-                    ),
+                    -- CTE_OrganizationXML as (
+                    --     select 
+                    --         cte_p.providerid,
+                    --         utils.p_json_to_xml(
+                    --             array_agg(
+                    --                 '{ '||
+                    --                 iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
+                    --                 iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
+                    --                 ||' }'
+                    --             )::varchar, 
+                    --             'Organization', 
+                    --             ''
+                    --         ) as XML
+                    --     from CTE_Provider cte_p
+                    --     inner join CTE_Organization cte_o on cte_o.providerid = cte_p.providerid
+                    --     group by cte_p.providerid
+                    -- ),
                     
                     CTE_SponsorshipXML as (
                         select 
@@ -790,7 +790,7 @@ select_statement := $$
                             COALESCE(cte_f.xml, '') ||
                             COALESCE(cte_i.xml, '') ||
                             COALESCE(cte_m.xml, '') ||
-                            COALESCE(cte_org.xml, '') ||
+                            -- COALESCE(cte_org.xml, '') ||
                             COALESCE(cte_sp.xml, '') ||
                             COALESCE(cte_deg.xml, '') ||
                             COALESCE(cte_edu.xml, '') ||
@@ -820,7 +820,7 @@ select_statement := $$
                         left join CTE_FacilityXML cte_f on cte_f.providerid = cte_p.providerid
                         left join CTE_ImageXML cte_i on cte_i.providerid = cte_p.providerid
                         left join CTE_MalpracticeXML cte_m on cte_m.providerid = cte_p.providerid
-                        left join CTE_OrganizationXML cte_org on cte_org.providerid = cte_p.providerid
+                        -- left join CTE_OrganizationXML cte_org on cte_org.providerid = cte_p.providerid
                         left join CTE_SponsorshipXML cte_sp on cte_sp.providerid = cte_p.providerid
                         left join CTE_DegreeXML cte_deg on cte_deg.providerid = cte_p.providerid
                         left join CTE_EducationXML cte_edu on cte_edu.providerid = cte_p.providerid
