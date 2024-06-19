@@ -20,6 +20,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoeducationinstitution');
@@ -29,7 +30,6 @@ declare
    
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -46,6 +46,7 @@ select_statement := $$ with cte_educationinstitution as (
                                 to_timestamp_ntz(json.value:UPDATED_DATETIME) as educationinstitution_LastUpdateDate
                             from $$||mdm_db||$$.mst.provider_profile_processing as p
                             , lateral flatten(input => p.PROVIDER_PROFILE:EDUCATION_INSTITUTION) as json
+                            qualify row_number() over(partition by providercode, educationinstitution_EducationInstitutionCode, educationinstitution_EducationInstitutionTypeCode order by educationinstitution_LastUpdateDate desc) = 1
                         )
                         
                         select
@@ -59,8 +60,6 @@ select_statement := $$ with cte_educationinstitution as (
                         join base.provider as p on p.providercode = json.providercode
                         join base.educationinstitution as ei on ei.educationinstitutioncode = json.educationinstitution_EducationInstitutionCode
                         join base.educationinstitutiontype as eit on eit.educationinstitutiontypecode = json.educationinstitution_EducationInstitutionTypeCode
-                        where educationinstitutionid is not null
-                          and educationinstitutiontypeid is not null
                         $$;
 
 
@@ -83,6 +82,12 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.lastupdatedate)';
 
+
+update_statement := 'update set
+                        target.GraduationYear = source.GraduationYear,
+                        target.SourceCode = source.SourceCode,
+                        target.LastUpdateDate = source.LastUpdateDate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -91,7 +96,9 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertoeducationinstitution as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                      and source.educationinstitutionid = target.educationinstitutionid
+                      and source.educationinstitutiontypeid = target.educationinstitutiontypeid
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
