@@ -27,16 +27,14 @@ declare
     select_statement_3 string; 
     merge_statement_3 string;
     insert_statement string;
+    update_statement string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_phone');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
    
-   
 begin
     
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
@@ -369,7 +367,13 @@ cte_tmp_phones as (
         where
             PhonePTDPPNP is not null
     )
-select distinct sourcecode, phonenumber, lastupdatedate from cte_tmp_phones $$;
+select 
+    distinct 
+        sourcecode, 
+        phonenumber, 
+        lastupdatedate 
+from cte_tmp_phones 
+qualify row_number() over(partition by phonenumber order by lastupdatedate desc) = 1 $$;
 
 
 
@@ -388,7 +392,7 @@ select_statement_2 := $$ with Cte_phone as (
                             ifnull(json.phone_SOURCECODE, 'Profisee') as SourceCode,
                             json.phone_LASTUPDATEDATE as LastUpdateDate
                         from cte_phone as JSON
-                        qualify row_number() over(partition by json.phone_phonenumber, json.phone_sourcecode order by Phone_LastUpdateDate desc) = 1  $$;
+                        qualify row_number() over(partition by json.phone_phonenumber order by Phone_LastUpdateDate desc) = 1  $$;
 
 
                         
@@ -758,7 +762,8 @@ cte_tmp_phones as (
             phonenumber, 
             sourcecode, 
             lastupdatedate 
-    from cte_tmp_phones  $$;
+    from cte_tmp_phones  
+    qualify row_number() over(partition by phonenumber order by lastupdatedate desc) = 1 $$;
 
 
     -- insert statement
@@ -773,6 +778,11 @@ cte_tmp_phones as (
                             source.sourcecode,
                             source.lastupdatedate)';
 
+     -- update statement
+     update_statement := ' update
+                            set
+                                target.sourcecode = source.sourcecode,
+                                target.lastupdatedate = source.lastupdatedate';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -781,17 +791,20 @@ cte_tmp_phones as (
 
 merge_statement_1 := ' merge into base.phone as target using 
                    ('||select_statement_1||') as source 
-                   on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
+                   on source.phonenumber = target.phonenumber 
+                   when matched then ' || update_statement || '
                    when not matched then' || insert_statement;
 
 merge_statement_2 := ' merge into base.phone as target using 
                    ('||select_statement_2||') as source 
-                   on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
+                   on source.phonenumber = target.phonenumber 
+                   when matched then ' || update_statement || '
                    when not matched then' || insert_statement;
 
 merge_statement_3 := ' merge into base.phone as target using 
                    ('||select_statement_3||') as source 
-                   on source.phonenumber = target.phonenumber and source.sourcecode = target.sourcecode
+                   on source.phonenumber = target.phonenumber 
+                   when matched then ' || update_statement || '
                    when not matched then' || insert_statement;                            
                    
 ---------------------------------------------------------
