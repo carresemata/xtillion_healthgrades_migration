@@ -19,6 +19,7 @@ declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string;
 merge_statement string;
 status string;
 procedure_name varchar(50) default('sp_load_officetoaddress');
@@ -62,11 +63,7 @@ select
         o.officeid,
         a.addressId,
         json.address_SOURCECODE as SourceCode,
-        json.address_LASTUPDATEDATE as LastUpdateDate,
-        cspc.citystatepostalcodeid,
-        json.address_addressline1,
-        json.address_addressline2,
-        json.address_suite
+        json.address_LASTUPDATEDATE as LastUpdateDate
 from
     cte_address as JSON 
     inner join base.office as O on o.officecode = json.officecode
@@ -80,6 +77,7 @@ from
         ifnull(a.addressline1,'') = ifnull(json.address_addressline1,'') and 
         ifnull(a.addressline2,'') = ifnull(json.address_addressline2,'') and 
         ifnull(a.suite,'') = ifnull(json.address_suite,'')
+    qualify row_number() over(partition by at.addresstypeid, o.officeid, a.addressId order by json.address_LASTUPDATEDATE desc) = 1
 $$;
 
 
@@ -90,7 +88,6 @@ insert_statement := ' insert
                             OfficeID,
                             AddressID,
                             SourceCode,
-                            --IsDerived,
                             LastUpdateDate)
                     values 
                           (uuid_string(),
@@ -98,8 +95,12 @@ insert_statement := ' insert
                             source.officeid,
                             source.addressID,
                             source.sourcecode,
-                            --IsDerived,
                             source.lastupdatedate)';
+                            
+update_statement := ' update set 
+                        target.SourceCode = source.sourcecode,
+                        target.LastUpdateDate = source.lastupdatedate';
+
 
 
 
@@ -110,7 +111,7 @@ insert_statement := ' insert
 merge_statement := ' merge into base.officetoaddress as target 
 using ('||select_statement||') as source
 on source.officeid = target.officeid and source.addresstypeid = target.addresstypeid
-WHEN MATCHED then delete 
+WHEN MATCHED then'|| update_statement ||' 
 when not matched then'||insert_statement;
 
 ---------------------------------------------------------
