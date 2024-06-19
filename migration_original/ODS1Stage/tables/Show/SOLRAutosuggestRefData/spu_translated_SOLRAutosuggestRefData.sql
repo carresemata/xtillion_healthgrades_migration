@@ -429,23 +429,13 @@ select_statement_payor := $$
                           cte_rel_xml as (
                               select 
                                 InsurancePayorCode,
-                                TO_VARIANT(utils.p_json_to_xml(
-                                    array_agg(
-                                    REPLACE(
-                                    '{ '||
-                                    iff(cte_rel.productcd is not null, '"productCd":' || '"' || cte_rel.productcd || '"' || ',', '') ||
-                                    iff(cte_rel.productid is not null, '"productId":' || '"' || cte_rel.productid || '"' || ',', '') ||
-                                    iff(cte_rel.plancd is not null, '"planCd":' || '"' || cte_rel.plancd || '"' || ',', '') ||
-                                    iff(cte_rel.plannm is not null, '"planNm":' || '"' || replace(cte_rel.plannm,'\"','') || '"' || ',', '') || -- 
-                                    iff(cte_rel.plantpcd is not null, '"planTpCd":' || '"' || cte_rel.plantpcd || '"' || ',', '') ||
-                                    iff(cte_rel.plantpnm is not null, '"planTpNm":' || '"' || cte_rel.plantpnm || '"' || ',', '') ||
-                                    iff(cte_rel.pktdokplnm is not null, '"pktdokPlNm":' || '"' || replace(cte_rel.pktdokplnm,'\"','') || '"', '') --
-                                    ||' }'
-                                    ,'\'','\\\'')
-                                    )::varchar,
-                                    'insuranceL',
-                                    'insurance'
-                                )) as RelationshipXML
+                                TO_VARIANT('<insuranceL>' || listagg( '<insurance>' || iff(cte_rel.productcd is not null,'<productCd>' || cte_rel.productcd || '</productCd>','') ||
+iff(cte_rel.productid is not null,'<productId>' || cte_rel.productid || '</productId>','') ||
+iff(cte_rel.plancd is not null,'<planCd>' || cte_rel.plancd || '</planCd>','') ||
+iff(cte_rel.plannm is not null,'<planNm>' || cte_rel.plannm || '</planNm>','') ||
+iff(cte_rel.plantpcd is not null,'<planTpCd>' || cte_rel.plantpcd || '</planTpCd>','') ||
+iff(cte_rel.plantpnm is not null,'<planTpNm>' || cte_rel.plantpnm || '</planTpNm>','') ||
+iff(cte_rel.pktdokplnm is not null,'<pktdokPlNm>' || cte_rel.pktdokplnm || '</pktdokPlNm>','')  || '</insurance>','') || '</insuranceL') as RelationshipXML
                                 from cte_rel
                                 group by InsurancePayorCode
                             )
@@ -481,22 +471,12 @@ select_statement_product := $$
                             cte_rel_xml as (
                               select 
                                 HealthInsurancePlanToPlanTypeID,
-                                TO_VARIANT(utils.p_json_to_xml(
-                                    array_agg(
-                                    REPLACE(
-                                    '{ '||
-                                    iff(cte_rel.payorcd is not null, '"payorCd":' || '"' || cte_rel.payorcd || '"' || ',', '') ||
-                                    iff(cte_rel.payornm is not null, '"payorNm":' || '"' || cte_rel.payornm || '"' || ',', '') ||
-                                    iff(cte_rel.plancd is not null, '"planCd":' || '"' || cte_rel.plancd || '"' || ',', '') ||
-                                    iff(cte_rel.plannm is not null, '"planNm":' || '"' || replace(cte_rel.plannm,'\"','') || '"' || ',', '') || 
-                                    iff(cte_rel.plantpcd is not null, '"planTpCd":' || '"' || cte_rel.plantpcd || '"' || ',', '') ||
-                                    iff(cte_rel.plantpnm is not null, '"planTpNm":' || '"' || cte_rel.plantpnm || '"' || ',', '') 
-                                    ||' }'
-                                    ,'\'','\\\'')
-                                    )::varchar,
-                                    'insuranceL',
-                                    'insurance'
-                                )) as RelationshipXML
+                                TO_VARIANT('<insuranceL>' || listagg( '<insurance>' || iff(cte_rel.payorcd is not null,'<payorCd>' || cte_rel.payorcd || '</payorCd>','') ||
+iff(cte_rel.payornm is not null,'<payorNm>' || cte_rel.payornm || '</payorNm>','') ||
+iff(cte_rel.plancd is not null,'<planCd>' || cte_rel.plancd || '</planCd>','') ||
+iff(cte_rel.plannm is not null,'<planNm>' || cte_rel.plannm || '</planNm>','') ||
+iff(cte_rel.plantpcd is not null,'<planTpCd>' || cte_rel.plantpcd || '</planTpCd>','') ||
+iff(cte_rel.plantpnm is not null,'<planTpNm>' || cte_rel.plantpnm || '</planTpNm>','')  || '</insurance>','') || '</insuranceL') as RelationshipXML
                                 from cte_rel
                                 group by HealthInsurancePlanToPlanTypeID
                              )
@@ -531,20 +511,10 @@ select_statement_certspec := $$
                             cte_rel_xml as (
                               select 
                                 CertificationSpecialtyID,
-                                TO_VARIANT(utils.p_json_to_xml(
-                                    array_agg(
-                                    REPLACE(
-                                    '{ '||
-                                    iff(cte_rel.cacd is not null, '"caD":' || '"' || cte_rel.cacd || '"' || ',', '') ||
-                                    iff(cte_rel.cad is not null, '"caD":' || '"' || cte_rel.cad || '"' || ',', '') ||
-                                    iff(cte_rel.cbcd is not null, '"cbCd":' || '"' || cte_rel.cbcd || '"' || ',', '') ||
-                                    iff(cte_rel.cbd is not null, '"cbD":' || '"' || replace(cte_rel.cbd,'\"','') || '"' || ',', '') 
-                                    ||' }'
-                                    ,'\'','\\\'')
-                                    )::varchar,
-                                    'certL',
-                                    'cert'
-                                )) as RelationshipXML
+                                TO_VARIANT('<certL>' || listagg( '<cert>' || iff(cte_rel.cacd is not null,'<caD>' || cte_rel.cacd || '</caD>','') ||
+iff(cte_rel.cad is not null,'<caD>' || cte_rel.cad || '</caD>','') ||
+iff(cte_rel.cbcd is not null,'<cbCd>' || cte_rel.cbcd || '</cbCd>','') ||
+iff(cte_rel.cbd is not null,'<cbD>' || cte_rel.cbd || '</cbD>','')  || '</cert>','') || '</certL') as RelationshipXML
                                 from cte_rel
                                 group by CertificationSpecialtyID
                              )
@@ -574,18 +544,8 @@ select_statement_dispstatus := $$
                             cte_rel_xml as (
                               select 
                                 DisplayStatusCode,
-                                TO_VARIANT(utils.p_json_to_xml(
-                                    array_agg(
-                                    REPLACE(
-                                    '{ '||
-                                    iff(cte_rel.substatuscode is not null, '"SubStatusCode":' || '"' || cte_rel.substatuscode || '"' || ',', '') ||
-                                    iff(cte_rel.substatusdesc is not null, '"SubStatusDesc":' || '"' || cte_rel.substatusdesc || '"' || ',', '')
-                                    ||' }'
-                                    ,'\'','\\\'')
-                                    )::varchar,
-                                    'subStatusL',
-                                    'subStatus'
-                                )) as RelationshipXML
+                                TO_VARIANT('<subStatusL>' || listagg( '<subStatus>' || iff(cte_rel.substatuscode is not null,'<SubStatusCode>' || cte_rel.substatuscode || '</SubStatusCode>','') ||
+iff(cte_rel.substatusdesc is not null,'<SubStatusDesc>' || cte_rel.substatusdesc || '</SubStatusDesc>','')  || '</subStatus>','') || '</subStatusL') as RelationshipXML
                                 from cte_rel
                                 group by DisplayStatusCode
                              )

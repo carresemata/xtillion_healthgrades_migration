@@ -177,16 +177,9 @@ select_statement := $$ with cte_practice_batch as (
                          cte_phoneL_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                        ''{ '' ||
-                        iff(ph is not null, ''"ph":'' || ''"'' || ph || ''"'' || '','', '''') ||
-                        iff(phTyp is not null, ''"phTyp":'' || ''"'' || phTyp || ''"'', '''')
-                        ||'' }''
-                                    )::varchar,
-                                    '''',
-                                    ''phone''
-                                ) as phoneL
+                                iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') ||
+ as phoneL
                             from
                                 cte_phoneL
                             where
@@ -199,16 +192,9 @@ select_statement := $$ with cte_practice_batch as (
                         cte_mobile_phoneL_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(ph is not null, ''"ph":'' || ''"'' || ph || ''"'' || '','', '''') ||
-                                        iff(phTyp is not null, ''"phTyp":'' || ''"'' || phTyp || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    '''',
-                                    ''mobilePhone''
-                                ) as mobilePhoneL
+                                iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') ||
+ as mobilePhoneL
                             from
                                 cte_phoneL
                             where
@@ -234,16 +220,9 @@ select_statement := $$ with cte_practice_batch as (
                         cte_imageL_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(img is not null, ''"img":'' || ''"'' || img || ''"'' || '','', '''') ||
-                                        iff(imgTyp is not null, ''"imgTyp":'' || ''"'' || imgTyp || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    '''',
-                                    ''image''
-                                ) as imageL
+                                iff(img is not null,'<img>' || img || '</img>','') ||
+iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','') ||
+ as imageL
                             from
                                 cte_imageL
                             group by
@@ -276,19 +255,11 @@ select_statement := $$ with cte_practice_batch as (
                         cte_practice_sponsorship_xml as (
                             select
                                 PracticeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(prCd is not null, ''"prCd":'' || ''"'' || prCd || ''"'' || '','', '''') ||
-                                        iff(prGrCd is not null, ''"prGrCd":'' || ''"'' || prGrCd || ''"'' || '','', '''') ||
-                                        iff(spnCd is not null, ''"spnCd":'' || ''"'' || spnCd || ''"'' || '','', '''') ||
-                                        iff(spnNm is not null, ''"spnNm":'' || ''"'' || spnNm || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar
-                                    ,
-                                    ''sponsorL'',
-                                    ''sponsor''
-                                ) as SponsorshipXML
+                                iff(prCd is not null,'<prCd>' || prCd || '</prCd>','') ||
+iff(prGrCd is not null,'<prGrCd>' || prGrCd || '</prGrCd>','') ||
+iff(spnCd is not null,'<spnCd>' || spnCd || '</spnCd>','') ||
+iff(spnNm is not null,'<spnNm>' || spnNm || '</spnNm>','') ||
+ as SponsorshipXML
                             from
                                 cte_practice_sponsorship
                             group by
@@ -311,15 +282,8 @@ select_statement := $$ with cte_practice_batch as (
                         cte_email_xml as (
                             select
                                 PracticeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(pEmail is not null, ''"pEmail":'' || ''"'' || pEmail || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    ''pEmailL'',
-                                    ''''
-                                ) as PracticeEmailXML
+                                iff(pEmail is not null,'<pEmail>' || pEmail || '</pEmail>','') ||
+ as PracticeEmailXML
                             from
                                 cte_email
                             group by
@@ -353,21 +317,12 @@ select_statement := $$ with cte_practice_batch as (
                         cte_hours_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff("day" is not null, ''"day":'' || ''"'' || "day" || ''"'' || '','', '''') ||
-                                        iff(dispOrder is not null, ''"dispOrder":'' || ''"'' || dispOrder || ''"'' || '','', '''') ||
-                                        iff("start" is not null, ''"start":'' || ''"'' || "start" || ''"'' || '','', '''') ||
-                                        iff("end" is not null, ''"end":'' || ''"'' || "end" || ''"'' || '','', '''') ||
-                                        iff("closed" is not null, ''"closed":'' || ''"'' || "closed" || ''"'' || '','', '''') ||
-                                        iff("open24Hrs" is not null, ''"open24Hrs":'' || ''"'' || "open24Hrs" || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar
-                                    ,
-                                    ''hoursL'',
-                                    ''hours''
-                                ) as hours_xml
+                                iff(day is not null,'<day>' || day || '</day>','') ||
+iff(dispOrder is not null,'<dispOrder>' || dispOrder || '</dispOrder>','') ||
+iff(start is not null,'<start>' || start || '</start>','') ||
+iff(end is not null,'<end>' || end || '</end>','') ||
+iff(closed is not null,'<closed>' || closed || '</closed>','') ||
+ as hours_xml
                             from
                                 cte_hours
                             group by
@@ -377,15 +332,8 @@ select_statement := $$ with cte_practice_batch as (
                         cte_phone_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(phFull is not null, ''"phFull":'' || ''"'' || phFull || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    ''phL'',
-                                    ''''
-                                ) as phone_xml
+                                iff(phFull is not null,'<phFull>' || phFull || '</phFull>','') ||
+ as phone_xml
                             from
                                 cte_phone
                             group by
@@ -396,15 +344,8 @@ select_statement := $$ with cte_practice_batch as (
                         cte_fax_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(faxFull is not null, ''"faxFull":'' || ''"'' || faxFull || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    ''faxL'',
-                                    ''''
-                                ) as fax_xml
+                                iff(faxFull is not null,'<faxFull>' || faxFull || '</faxFull>','') ||
+ as fax_xml
                             from
                                 cte_fax
                             group by
@@ -415,19 +356,12 @@ select_statement := $$ with cte_practice_batch as (
                         cte_specialty_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(spCd is not null, ''"spCd":'' || ''"'' || spCd || ''"'' || '','', '''') ||
-                                        iff(spY is not null, ''"spY":'' || ''"'' || spY || ''"'' || '','', '''') ||
-                                        iff(spIst is not null, ''"spIst":'' || ''"'' || spIst || ''"'' || '','', '''') ||
-                                        iff(spIsts is not null, ''"spIsts":'' || ''"'' || spIsts || ''"'' || '','', '''') ||
-                                        iff(lKey is not null, ''"lKey":'' || ''"'' || lKey || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    ''spcL'',
-                                    ''spc''
-                                ) as specialty_xml
+                                iff(spCd is not null,'<spCd>' || spCd || '</spCd>','') ||
+iff(spY is not null,'<spY>' || spY || '</spY>','') ||
+iff(spIst is not null,'<spIst>' || spIst || '</spIst>','') ||
+iff(spIsts is not null,'<spIsts>' || spIsts || '</spIsts>','') ||
+iff(lKey is not null,'<lKey>' || lKey || '</lKey>','') ||
+ as specialty_xml
                             from
                                 cte_specialty
                             group by
@@ -438,17 +372,10 @@ select_statement := $$ with cte_practice_batch as (
                         cte_sponsor_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        ''{ '' ||
-                                        iff(phoneL is not null, ''"phoneL":'' || ''"'' || phoneL || ''"'' || '','', '''') ||
-                                        iff(mobilePhoneL is not null, ''"mobilePhoneL":'' || ''"'' || mobilePhoneL || ''"'' || '','', '''') ||
-                                        iff(imageL is not null, ''"imageL":'' || ''"'' || imageL || ''"'', '''')
-                                        ||'' }''
-                                    )::varchar,
-                                    ''dispL'',
-                                    ''disp''
-                                ) as sponsor
+                                iff(phoneL is not null,'<phoneL>' || phoneL || '</phoneL>','') ||
+iff(mobilePhoneL is not null,'<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>','') ||
+iff(imageL is not null,'<imageL>' || imageL || '</imageL>','') ||
+ as sponsor
                             from
                                 cte_sponsor
                             group by
@@ -548,51 +475,35 @@ select_statement := $$ with cte_practice_batch as (
                         cte_office_xml as (
                             select
                                 OfficeID,
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        REPLACE(
-                                        ''{ ''||
-                                            iff(oID is not null, ''"oID":'' || ''"'' || oID || ''"'' || '','', '''') ||
-                                            iff(oNm is not null, ''"oNm":'' || ''"'' || replace(onm,''"'','''') || ''"'' || '','', '''') ||
-                                            iff(oRank is not null, ''"oRank":'' || ''"'' || oRank || ''"'' || '','', '''') ||
-                                            iff(addTp is not null, ''"addTp":'' || ''"'' || addTp || ''"'' || '','', '''') ||
-                                            iff(ad1 is not null, ''"ad1":'' || ''"'' || ad1 || ''"'' || '','', '''') ||
-                                            iff(ad2 is not null, ''"ad2":'' || ''"'' || ad2 || ''"'' || '','', '''') ||
-                                            iff(ad3 is not null, ''"ad3":'' || ''"'' || ad3 || ''"'' || '','', '''') ||
-                                            iff(ad4 is not null, ''"ad4":'' || ''"'' || ad4 || ''"'' || '','', '''') ||
-                                            iff(city is not null, ''"city":'' || ''"'' || city || ''"'' || '','', '''') ||
-                                            iff(st is not null, ''"st":'' || ''"'' || st || ''"'' || '','', '''') ||
-                                            iff(zip is not null, ''"zip":'' || ''"'' || zip || ''"'' || '','', '''') ||
-                                            iff(lat is not null, ''"lat":'' || ''"'' || lat || ''"'' || '','', '''') ||
-                                            iff(lng is not null, ''"lng":'' || ''"'' || lng || ''"'' || '','', '''') ||
-                                            iff(isBStf is not null, ''"isBStf":'' || ''"'' || isBStf || ''"'' || '','', '''') ||
-                                            iff(isHcap is not null, ''"isHcap":'' || ''"'' || isHcap || ''"'' || '','', '''') ||
-                                            iff(isLab is not null, ''"isLab":'' || ''"'' || isLab || ''"'' || '','', '''') ||
-                                            iff(isPhrm is not null, ''"isPhrm":'' || ''"'' || isPhrm || ''"'' || '','', '''') ||
-                                            iff(isXray is not null, ''"isXray":'' || ''"'' || isXray || ''"'' || '','', '''') ||
-                                            iff(isSrg is not null, ''"isSrg":'' || ''"'' || isSrg || ''"'' || '','', '''') ||
-                                            iff(hasSrg is not null, ''"hasSrg":'' || ''"'' || hasSrg || ''"'' || '','', '''') ||
-                                            iff(avVol is not null, ''"avVol":'' || ''"'' || avVol || ''"'' || '','', '''') ||
-                                            iff(ocNm is not null, ''"ocNm":'' || ''"'' || ocNm || ''"'' || '','', '''') ||
-                                            iff(prkInf is not null, ''"prkInf":'' || ''"'' || prkInf || ''"'' || '','', '''') ||
-                                            iff(payPol is not null, ''"payPol":'' || ''"'' || payPol || ''"'' || '','', '''') ||
-                                            iff(hours is not null, ''"hours":'' || ''"'' || hours || ''"'' || '','', '''') ||
-                                            iff(phone is not null, ''"phone":'' || ''"'' || phone || ''"'' || '','', '''') ||
-                                            iff(fax is not null, ''"fax":'' || ''"'' || fax || ''"'' || '','', '''') ||
-                                            iff(specialty is not null, ''"specialty":'' || ''"'' || specialty || ''"'' || '','', '''') ||
-                                            iff(sponsor is not null, ''"sponsor":'' || ''"'' || sponsor || ''"'' || '','', '''') ||
-                                            iff(oLegacyID is not null, ''"oLegacyID":'' || ''"'' || oLegacyID || ''"'' || '','', '''') ||
-                                            iff(oLegacyID2 is not null, ''"oLegacyID2":'' || ''"'' || oLegacyID2 || ''"'' || '','', '''') ||
-                                            iff(oRank2 is not null, ''"oRank2":'' || ''"'' || oRank2 || ''"'' || '','', '''') ||
-                                            iff(PracticeURL is not null, ''"PracticeURL":'' || ''"'' || PracticeURL || ''"'' || '','', '''') ||
-                                            iff(GoogleScriptBlock is not null, ''"GoogleScriptBlock":'' || ''"'' || GoogleScriptBlock || ''"'', '''')
-                                            ||'' }''
-                                    ,''\\'''',''\\\\\\'''')
-                                    )::varchar
-                                    ,
-                                    '''',
-                                    ''''
-                                 ) as OfficeXML
+                                iff(oID is not null,'<oID>' || oID || '</oID>','') ||
+iff(onm is not null,'<oNm>' || onm || '</oNm>','') ||
+iff(oRank is not null,'<oRank>' || oRank || '</oRank>','') ||
+iff(addTp is not null,'<addTp>' || addTp || '</addTp>','') ||
+iff(city is not null,'<city>' || city || '</city>','') ||
+iff(st is not null,'<st>' || st || '</st>','') ||
+iff(zip is not null,'<zip>' || zip || '</zip>','') ||
+iff(lat is not null,'<lat>' || lat || '</lat>','') ||
+iff(lng is not null,'<lng>' || lng || '</lng>','') ||
+iff(isBStf is not null,'<isBStf>' || isBStf || '</isBStf>','') ||
+iff(isHcap is not null,'<isHcap>' || isHcap || '</isHcap>','') ||
+iff(isLab is not null,'<isLab>' || isLab || '</isLab>','') ||
+iff(isPhrm is not null,'<isPhrm>' || isPhrm || '</isPhrm>','') ||
+iff(isXray is not null,'<isXray>' || isXray || '</isXray>','') ||
+iff(isSrg is not null,'<isSrg>' || isSrg || '</isSrg>','') ||
+iff(hasSrg is not null,'<hasSrg>' || hasSrg || '</hasSrg>','') ||
+iff(avVol is not null,'<avVol>' || avVol || '</avVol>','') ||
+iff(ocNm is not null,'<ocNm>' || ocNm || '</ocNm>','') ||
+iff(prkInf is not null,'<prkInf>' || prkInf || '</prkInf>','') ||
+iff(payPol is not null,'<payPol>' || payPol || '</payPol>','') ||
+iff(hours is not null,'<hours>' || hours || '</hours>','') ||
+iff(phone is not null,'<phone>' || phone || '</phone>','') ||
+iff(fax is not null,'<fax>' || fax || '</fax>','') ||
+iff(specialty is not null,'<specialty>' || specialty || '</specialty>','') ||
+iff(sponsor is not null,'<sponsor>' || sponsor || '</sponsor>','') ||
+iff(oLegacyID is not null,'<oLegacyID>' || oLegacyID || '</oLegacyID>','') ||
+iff(PracticeURL is not null,'<PracticeURL>' || PracticeURL || '</PracticeURL>','') ||
+iff(GoogleScriptBlock is not null,'<GoogleScriptBlock>' || GoogleScriptBlock || '</GoogleScriptBlock>','') ||
+ as OfficeXML
                             from
                                 cte_office
                             group by
@@ -613,17 +524,7 @@ select_statement := $$ with cte_practice_batch as (
                             p.PracticeSoftware,
                             p.PracticeTIN,
                             TO_VARIANT(
-                                utils.p_json_to_xml(
-                                    array_agg(
-                                        REPLACE(
-                                            ''{ ''||
-                                            iff(OfficeXML is not null, ''"xml_1":'' || ''"'' || OfficeXML || ''"'', '''')
-                                            ||'' }''
-                                            ,''\\'''',''\\\\\\'''')
-                                            )::varchar
-                                            , 
-                                            ''offL'', 
-                                            ''off'')) 
+                                ) 
                                             as OfficeXML,
                             p.LegacyKeyPractice,
                             p.PhysicianCount,
