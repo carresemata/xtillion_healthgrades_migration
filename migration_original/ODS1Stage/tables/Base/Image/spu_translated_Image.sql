@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.image depends on:
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
 --- base.clienttoproduct
 
@@ -19,18 +19,15 @@ declare
 
     select_statement string; -- cte and select statement for the insert
     insert_statement string; -- insert statement 
+    update_statement string; -- update
     merge_statement string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_image');
     execution_start datetime default getdate();
-
-    
-   
+    mdm_db string default('mdm_team');
    
 begin
-    
-
-
+  
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
@@ -38,56 +35,88 @@ begin
 --- select Statement
 
 -- if conditionals:
-select_statement := $$ with CTE_Swimlane as (select 
-                                uuid_string() as URLId,
-                                f.facilityid,
-                                jsonfacility.facilitycode,
-                                ctc.clienttoproductcode,
-                                'FCCIURL' as URLTypeCode,
-                                jsonfacility.customerproduct_FEATUREFCCLURL as URL,
-                                sysdate() as LastUpdateDate,
-                                jsonfacility.customerproduct_FEATUREFCFLOGO as FeatureFCFLogo
-                            from raw.vw_FACILITY_PROFILE as JSONFacility
-                                join base.facility as F on f.facilitycode = jsonfacility.facilitycode
-                                join base.clienttoproduct as CTC on ctc.clienttoproductcode = jsonfacility.customerproduct_CUSTOMERPRODUCTCODE
-                                
-                            where 
-                                jsonfacility.facility_PROFILE is not null and
-                                jsonfacility.facilitycode is not null and
-                                jsonfacility.customerproduct_FEATUREFCCLURL is not null
-                            qualify row_number() over(partition by f.facilityid order by jsonfacility.create_DATE desc) = 1),
-                            CTE_TempImage as (select distinct
-                                FacilityID, 
-                                FacilityCode, 
-                                ClientToProductCode, 
-                                'FCFLOGO' as ImageTypeCode, 
-                                'LOGO' as ImageSize, 
-                                FeatureFCFLOGO as ImageFilePath 
-                            from CTE_Swimlane
-                            where FeatureFCFLOGO is not null)
-                            select
-                                uuid_string() as ImageID,
-                                ImageFilePath,
-                                sysdate() as LastUpdateDate
-                            from CTE_TempImage  $$;
+select_statement := $$ WITH CTE_CustomerProduct AS (
+                                SELECT
+                                    p.ref_facility_code AS facilitycode,
+                                    TO_VARCHAR(json.value: CUSTOMER_PRODUCT_CODE) AS CustomerProduct_CustomerProductCode,
+                                    TO_VARCHAR(json.value: FEATURE_FCFLOGO) AS CustomerProduct_FeatureFcfLogo,
+                                    TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS CustomerProduct_SourceCode,
+                                    TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS CustomerProduct_LastUpdateDate
+                                FROM $$ || mdm_db || $$.mst.facility_profile_processing AS p,
+                                     LATERAL FLATTEN(input => p.FACILITY_PROFILE:CUSTOMER_PRODUCT) AS json
+                                where CustomerProduct_FeatureFcfLogo is not null
+                            ),
+                            cte_image_1 as (select
+                                customerproduct_FeatureFCFLOGO as ImageFilePath,
+                                customerproduct_sourcecode as sourcecode,
+                                CustomerProduct_LastUpdateDate as lastupdatedate
+                            from cte_customerproduct as json
+                                join base.facility as f on f.facilitycode = json.facilitycode
+                                join base.clienttoproduct as cp on cp.clienttoproductcode = json.CustomerProduct_CustomerProductCode
+                            qualify row_number() over(partition by ImageFilePath order by CustomerProduct_LastUpdateDate desc) = 1),
+                            
+                            CTE_Image AS (
+                                SELECT
+                                    p.ref_facility_code AS facilitycode,
+                                    TO_VARCHAR(json.value: S3_PREFIX) AS Image_Path,
+                                    TO_VARCHAR(json.value: FACILITY_IMAGE_FILE_NAME) AS Image_FileName,
+                                    TO_VARCHAR(json.value: MEDIA_IMAGE_TYPE_CODE) AS Image_TypeCode,
+                                    TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Image_SourceCode,
+                                    TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Image_LastUpdateDate
+                                FROM mdm_Team.mst.facility_profile AS p,
+                                     LATERAL FLATTEN(input => p.FACILITY_PROFILE:IMAGE) AS json
+                                where TO_VARCHAR(json.value: S3_PREFIX) is not null
+                                    and TO_VARCHAR(json.value: FACILITY_IMAGE_FILE_NAME) is not null
+                            ),
+                            cte_image_2 as (select distinct
+                                '/' || image_path|| '/'||image_filename as imagefilepath,
+                                image_sourcecode as sourcecode,
+                                image_lastupdatedate as lastupdatedate
+                            from cte_image
+                            qualify row_number() over(partition by ImageFilePath order by LastUpdateDate desc) = 1),
+                            cte_union as (
+                                select
+                                    imagefilepath,
+                                    sourcecode,
+                                    lastupdatedate
+                                from cte_image_1
+                                union all
+                                select 
+                                    imagefilepath,
+                                    sourcecode,
+                                    lastupdatedate
+                                from cte_image_2
+                            )
+                            select distinct
+                                imagefilepath,
+                                sourcecode,
+                                lastupdatedate
+                            from cte_union $$;
 
+update_statement := ' update
+                        set
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate';
 
 insert_statement := ' insert
                         (ImageId,
                         ImageFilePath,
+                        sourcecode,
                         LastUpdateDate)
                       values
-                        (source.imageid,
+                        (uuid_string(),
                         source.imagefilepath,
+                        source.sourcecode,
                         source.lastupdatedate)';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement:= ' merge into dev.image as target using 
+merge_statement:= ' merge into base.image as target using 
                    ('||select_statement||') as source 
-                   on source.imageid = target.imageid 
+                   on source.imagefilepath = target.imagefilepath 
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
