@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertoeducationinstitution depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.educationinstitution
 --- base.educationinstitutiontype
@@ -20,39 +20,47 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoeducationinstitution');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
-   
    
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select 
+select_statement := $$ with cte_educationinstitution as (
+                            select
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:EDUCATION_INSTITUTION_CODE) as educationinstitution_EducationInstitutionCode,
+                                to_varchar(json.value:EDUCATION_INSTITUTION_TYPE_CODE) as educationinstitution_EducationInstitutionTypeCode,
+                                to_varchar(json.value:GRADUATION_YEAR) as educationinstitution_GraduationYear,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as educationinstitution_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as educationinstitution_LastUpdateDate
+                            from $$||mdm_db||$$.mst.provider_profile_processing as p
+                            , lateral flatten(input => p.PROVIDER_PROFILE:EDUCATION_INSTITUTION) as json
+                            qualify row_number() over(partition by providercode, educationinstitution_EducationInstitutionCode, educationinstitution_EducationInstitutionTypeCode order by educationinstitution_LastUpdateDate desc) = 1
+                        )
+                        
+                        select
                             p.providerid,
                             ei.educationinstitutionid,
                             eit.educationinstitutiontypeid,
                             json.educationinstitution_GraduationYear as GraduationYear,
                             ifnull(json.educationinstitution_SourceCode, 'Profisee') as SourceCode,
-                            ifnull(json.educationinstitution_LastUpdateDate, sysdate()) as LastUpdateDate,
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.educationinstitution as EI on ei.educationinstitutioncode = json.educationinstitution_EDUCATIONINSTITUTIONCODE
-                            left join base.educationinstitutiontype as EIT on eit.educationinstitutiontypecode = json.educationinstitution_EDUCATIONINSTITUTIONTYPECODE
-                        where 
-                            PROVIDER_PROFILE is not null and
-                            ProviderID is not null and
-                            EducationInstitutionID is not null and
-                            EducationInstitutionTypeID is not null
-$$;
+                            ifnull(json.educationinstitution_LastUpdateDate, current_timestamp()) as LastUpdateDate
+                        from cte_educationinstitution as json
+                        join base.provider as p on p.providercode = json.providercode
+                        join base.educationinstitution as ei on ei.educationinstitutioncode = json.educationinstitution_EducationInstitutionCode
+                        join base.educationinstitutiontype as eit on eit.educationinstitutiontypecode = json.educationinstitution_EducationInstitutionTypeCode
+                        $$;
 
 
 
@@ -74,6 +82,12 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.lastupdatedate)';
 
+
+update_statement := 'update set
+                        target.GraduationYear = source.GraduationYear,
+                        target.SourceCode = source.SourceCode,
+                        target.LastUpdateDate = source.LastUpdateDate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -82,7 +96,9 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertoeducationinstitution as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                      and source.educationinstitutionid = target.educationinstitutionid
+                      and source.educationinstitutiontypeid = target.educationinstitutiontypeid
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

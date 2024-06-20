@@ -9,7 +9,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providersanction procedure depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.statereportingagency
 --- base.sanctiontype
@@ -24,20 +24,39 @@ select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providersanction');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_providersanction');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 
 begin
--- No conditionals
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------
 
 -- select Statement
-select_statement := $$ select
+select_statement := $$ with Cte_sanction as (
+                        SELECT
+                            p.ref_provider_code as providercode,
+                            CREATED_DATETIME AS CREATE_DATE,
+                            to_varchar(json.value:SANCTION_LICENSE) as Sanction_SanctionLicense,
+                            to_varchar(json.value:SANCTION_TYPE_CODE) as Sanction_SanctionTypeCode,
+                            to_varchar(json.value:SANCTION_CATEGORY_CODE) as Sanction_SanctionCategoryCode,
+                            to_varchar(json.value:SANCTION_ACTION_CODE) as Sanction_SanctionActionCode,
+                            to_varchar(json.value:SANCTION_DESCRIPTION) as Sanction_SanctionDescription,
+                            to_varchar(json.value:SANCTION_DATE) as Sanction_SanctionDate,
+                            to_varchar(json.value:SANCTION_REINSTATEMENT_DATE) as Sanction_SanctionReinstatementDate,
+                            to_varchar(json.value:DATA_SOURCE_CODE) as Sanction_SourceCode,
+                            to_timestamp_ntz(json.value:UPDATED_DATETIME) as Sanction_LastUpdateDate,
+                            to_varchar(json.value:STATE_REPORTING_AGENCY_CODE) as Sanction_StateReportingAgencyCode
+                        FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+                        , lateral flatten(input => p.PROVIDER_PROFILE:SANCTION) as json
+                        where
+                            sanction_SANCTIONDATE is not null
+                    )
+
+                    select distinct
                         p.providerid,
                         json.sanction_SANCTIONLICENSE as SanctionLicense,
                         sra.statereportingagencyid,
@@ -50,20 +69,13 @@ select_statement := $$ select
                         -- SanctionAccuracyDate
                         ifnull(json.sanction_SOURCECODE, 'Profisee') as SourceCode,
                         ifnull(json.sanction_LASTUPDATEDATE, current_timestamp()) as LastUpdateDate
-                    from raw.vw_PROVIDER_PROFILE as JSON
-                        left join base.provider as P on p.providercode = json.providercode
-                        left join base.statereportingagency as SRA on sra.statereportingagencycode = json.sanction_STATEREPORTINGAGENCYCODE
+                    from cte_sanction as JSON
+                        join base.provider as P on p.providercode = json.providercode
+                        join base.statereportingagency as SRA on sra.statereportingagencycode = json.sanction_STATEREPORTINGAGENCYCODE
                         left join base.sanctiontype as ST on st.sanctiontypecode = json.sanction_SANCTIONTYPECODE
-                        left join base.sanctioncategory as SC on sc.sanctioncategorycode = json.sanction_SANCTIONCATEGORYCODE
+                        join base.sanctioncategory as SC on sc.sanctioncategorycode = json.sanction_SANCTIONCATEGORYCODE
                         left join base.sanctionaction as SA on sa.sanctionactioncode = json.sanction_SANCTIONACTIONCODE
-                        
-                    where
-                        PROVIDER_PROFILE is not null and
-                        PROVIDERID is not null and
-                        json.sanction_SANCTIONDATE is not null and
-                        SanctionCategoryID is not null and
-                        StateReportingAgencyID is not null 
-                    qualify row_number() over(partition by ProviderId, json.sanction_SANCTIONDATE, json.sanction_SANCTIONACTIONCODE, json.sanction_SANCTIONCATEGORYCODE, json.sanction_SANCTIONTYPECODE, json.sanction_STATEREPORTINGAGENCYCODE order by CREATE_DATE desc) = 1 $$;
+                    qualify row_number() over(partition by ProviderId, json.sanction_SANCTIONDATE, json.sanction_SANCTIONACTIONCODE, json.sanction_SANCTIONCATEGORYCODE, json.sanction_SANCTIONTYPECODE, json.sanction_STATEREPORTINGAGENCYCODE order by CREATE_DATE desc) = 1  $$;
 
 -- insert Statement
 insert_statement := ' insert (
@@ -77,7 +89,6 @@ insert_statement := ' insert (
                             SanctionDescription,
                             SanctionDate,
                             SanctionReinstatementDate,
-                            --SanctionAccuracyDate,
                             SourceCode,
                             LastUpdateDate
                         )
@@ -92,7 +103,6 @@ insert_statement := ' insert (
                             source.sanctiondescription,
                             source.sanctiondate,
                             source.sanctionreinstatementdate,
-                            --source.sanctionaccuracydate,
                             source.sourcecode,
                             source.lastupdatedate
                         )';
@@ -107,7 +117,6 @@ on target.providerid = source.providerid
     and target.sanctiontypeid = source.sanctiontypeid
     and target.sanctioncategoryid = source.sanctioncategoryid
     and target.sanctionactionid = source.sanctionactionid
-WHEN MATCHED then delete
 when not matched then' || insert_statement;
 
 ---------------------------------------------------------

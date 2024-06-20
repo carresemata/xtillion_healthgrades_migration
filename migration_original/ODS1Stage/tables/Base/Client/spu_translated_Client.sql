@@ -1,9 +1,8 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT(is_full BOOLEAN)
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE as CALLER
-    as  
-declare 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENT(is_full BOOLEAN)
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS declare 
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
@@ -32,10 +31,10 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select
-         distinct
+select_statement := $$     
+    select
+        distinct
         swimlane.clientcode,
-        uuid_string() as clientid,
         case
             when swimlane.customername is null
             and c.clientname is null then swimlane.clientcode
@@ -46,12 +45,10 @@ select_statement := $$ select
         ifnull(swimlane.lastupdatedate, current_timestamp()) as LastUpdateDate,
         ifnull(swimlane.sourcecode, 'Profisee') as SourceCode
     from
-        base.swimlane_base_client as swimlane
-        left join base.client as c on c.clientcode = swimlane.clientcode qualify dense_rank() over(
-            partition by swimlane.clientcode
-            order by
-                swimlane.lastupdatedate desc
-        ) = 1 $$;
+        base.vw_swimlane_base_client as swimlane
+        left join base.client as c on c.clientcode = swimlane.clientcode  
+    qualify row_number() over (partition by swimlane.clientcode order by swimlane.lastupdatedate desc) =1
+    $$;
 
 --- update Statement
 update_statement := '
@@ -71,7 +68,7 @@ insert_statement := ' insert
     )
 values
     (
-        source.clientid,
+        uuid_string(),
         source.clientcode,
         source.clientname,
         source.sourcecode,
@@ -85,10 +82,9 @@ values
 
 merge_statement := ' merge into base.client as target using 
                    ('||select_statement||') as source 
-                   on source.clientid = target.clientid
+                   on source.clientcode = target.clientcode
                    WHEN MATCHED then '||update_statement||'
-                   when not matched and source.clientid is not null
-                    and source.clientcode is not null then'||insert_statement;
+                   when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
 ------------------- 5. execution ------------------------

@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providerimage depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.mediaimagehost
 --- base.mediaimagetype
@@ -27,6 +27,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerimage');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -39,31 +40,45 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
-                            p.providerid,
-                            mt.mediaimagetypeid,
-                            json.image_ImageFileName as FileName,
-                            ms.mediasizeid,
-                            mrl.mediareviewlevelid,
-                            ifnull(json.image_SourceCode, 'Profisee') as SourceCode,
-                            ifnull(json.image_LastUpdateDate, current_timestamp()) as LastUpdateDate,
-                            mct.mediacontexttypeid,
-                            m.mediaimagehostid,
-                            json.image_Identifier as ExternalIdentifier,
-                            json.image_ImagePath as ImagePath
-                        from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.mediaimagehost as M on json.image_MediaImageHostCode = m.mediaimagehostcode
-                            left join base.mediaimagetype as MT on mt.mediaimagetypecode = json.image_MediaImageTypeCode
-                            left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
-                            left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
-                            left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode    
-                        where
-                            PROVIDER_PROFILE is not null
-                            and Image_ImageFileName is not null
-                            and ProviderID is not null 
-                        qualify row_number() over( partition by ProviderID, Image_MediaImageTypeCode, Image_MediaSizeCode, Image_MediaContextTypeCode, Image_MediaImageHostCode order by CREATE_DATE desc) = 1$$;
+select_statement := $$ 
+with Cte_image as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:IDENTIFIER) as Image_Identifier,
+        to_varchar(json.value:IMAGE_FILE_NAME) as Image_ImageFileName,
+        to_varchar(json.value:MEDIA_IMAGE_TYPE_CODE) as Image_MediaImageTypeCode,
+        to_varchar(json.value:MEDIA_REVIEW_LEVEL_CODE) as Image_MediaReviewLevelCode,
+        to_varchar(json.value:MEDIA_SIZE_CODE) as Image_MediaSizeCode,
+        to_varchar(json.value:MEDIA_IMAGE_HOST_CODE) as Image_MediaImageHostCode,
+        to_varchar(json.value:MEDIA_CONTEXT_TYPE_CODE) as Image_MediaContextTypeCode,
+        to_varchar(json.value:IMAGE_PATH) as Image_ImagePath,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Image_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Image_LastUpdateDate
+    FROM mdm_team.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:IMAGE) as json
+)
+select distinct
+    p.providerid,
+    mt.mediaimagetypeid,
+    json.image_ImageFileName as FileName,
+    ms.mediasizeid,
+    mrl.mediareviewlevelid,
+    ifnull(json.image_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.image_LastUpdateDate, current_timestamp()) as LastUpdateDate,
+    mct.mediacontexttypeid,
+    m.mediaimagehostid,
+    json.image_Identifier as ExternalIdentifier,
+    json.image_ImagePath as ImagePath
+from
+    Cte_image as JSON
+    join base.provider as P on p.providercode = json.providercode
+    left join base.mediaimagehost as M on json.image_MediaImageHostCode = m.mediaimagehostcode
+    left join base.mediaimagetype as MT on mt.mediaimagetypecode = json.image_MediaImageTypeCode
+    left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
+    left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
+    left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode    
+
+$$;
 
 
 --- insert Statement

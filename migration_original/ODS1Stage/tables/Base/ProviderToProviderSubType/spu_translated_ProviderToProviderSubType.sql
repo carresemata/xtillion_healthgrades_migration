@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertoprovidersubtype depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.providersubtype
 
@@ -19,10 +19,12 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoprovidersubtype');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -35,21 +37,30 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
+select_statement :=     $$ 
+                        with cte_providersubtype as (
+                            select
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:PROVIDER_SUB_TYPE_CODE) as providersubtype_ProviderSubTypeCode,
+                                to_varchar(json.value:PROVIDER_SUB_TYPE_RANK) as providersubtype_ProviderSubTypeRank,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as providersubtype_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as providersubtype_LastUpdateDate
+                            from $$||mdm_db||$$.mst.provider_profile_processing as p,
+                            lateral flatten(input => p.PROVIDER_PROFILE:PROVIDER_SUB_TYPE) as json
+                        )
+                        
+                        select distinct
                             p.providerid,
                             pst.providersubtypeid,
                             ifnull(json.providersubtype_SourceCode, 'Profisee') as SourceCode,
                             json.providersubtype_ProviderSubTypeRank as ProviderSubTypeRank,
                             2147483647 as ProviderSubTypeRankCalculated,
                             ifnull(json.providersubtype_LastUpdateDate, current_timestamp()) as LastUpdateDate
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            join base.providersubtype as PST on pst.providersubtypecode = json.providersubtype_ProviderSubTypeCode
-                        where
-                            PROVIDER_PROFILE is not null
-                            and ProviderSubType_ProviderSubTypeCode is not null
-                            and ProviderID is not null 
-                        qualify row_number() over( partition by ProviderID, ifnull(ProviderSubType_ProviderSubTypeCode, 'ALT') order by CREATE_DATE desc) = 1 $$;
+                        from cte_providersubtype as json
+                        join base.provider as p on p.providercode = json.providercode
+                        join base.providersubtype as pst on pst.providersubtypecode = json.providersubtype_ProviderSubTypeCode
+                        qualify row_number() over(partition by providerid, ifnull(providersubtype_ProviderSubTypeCode, 'ALT') order by providersubtype_LastUpdateDate desc) = 1
+                        $$;
 
 
 
@@ -71,6 +82,13 @@ insert_statement := ' insert
                         source.providersubtyperankcalculated,
                         source.lastupdatedate)';
 
+
+update_statement := ' update set
+                        target.SourceCode = source.SourceCode,
+                        target.providersubtyperank = source.providersubtyperank,
+                        target.providersubtyperankcalculated = source.providersubtyperankcalculated,
+                        target.LastUpdateDate = source.LastUpdateDate';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -79,7 +97,8 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertoprovidersubtype as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                      and source.providersubtypeid = target.providersubtypeid
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

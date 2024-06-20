@@ -24,6 +24,8 @@ status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertolanguage');
     execution_start datetime default getdate();
 
+mdm_db string default ('mdm_team');
+
 
 
 begin
@@ -35,22 +37,24 @@ begin
 
 --- select Statement
 select_statement := $$ 
+with Cte_language as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:LANGUAGE_CODE) as Language_LanguageCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Language_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Language_LastUpdateDate
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p, 
+        lateral flatten(input => p.PROVIDER_PROFILE:LANGUAGE) as json
+)
 select distinct
     p.providerid,
     l.languageid,
-    ifnull(json.language_SourceCode, 'Profisee') as SourceCode,
-    ifnull(json.language_LastUpdateDate, current_timestamp()) as LastUpdateDate 
-
-from raw.vw_PROVIDER_PROFILE as JSON
-    left join base.provider P on json.providercode = p.providercode
-    left join base.language L on json.language_LanguageCode = l.languagecode
-    
-where json.provider_PROFILE is not null
-  and json.language_LanguageCode is not null
-  and ProviderID is not null
-  and LanguageID is not null
-  and json.language_LanguageCode != 'LN0000C3A1' -- Discard English
-qualify row_number() over (partition by ProviderId, json.language_LanguageCode order by CREATE_DATE desc) = 1
+    ifnull(cte.language_SourceCode, 'Profisee') as SourceCode,
+    ifnull(cte.language_LastUpdateDate, current_timestamp()) as LastUpdateDate 
+from cte_language as cte
+    left join base.provider P on cte.providercode = p.providercode
+    left join base.language L on cte.language_LanguageCode = l.languagecode
+where cte.language_LanguageCode != 'LN0000C3A1' -- Discard English
 $$;
 
 --- insert Statement

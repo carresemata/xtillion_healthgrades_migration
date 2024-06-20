@@ -1,6 +1,6 @@
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOFACILITY(is_full BOOLEAN)
     RETURNS STRING
-    LANGUAGE SQL
+LANGUAGE SQL
     EXECUTE as CALLER
     as  
 declare 
@@ -23,6 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertofacility');
     execution_start datetime default getdate();
+    mdm_db string default ('mdm_team');
 
    
    
@@ -36,19 +37,24 @@ begin
 
 --- select Statement
 select_statement := $$
+with cte_facility as (
+    SELECT
+        p.ref_provider_code as providercode,
+        to_varchar(json.value:FACILITY_CODE) as Facility_FacilityCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as Facility_SourceCode,
+        to_timestamp_ntz(json.value:UPDATED_DATETIME) as Facility_LastUpdateDate,
+        to_varchar(json.value:CUSTOMER_PRODUCT) as Facility_CustomerProduct
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:FACILITY) as json
+)
 select distinct 
     p.providerid,
     f.facilityid,
-    ifnull(json.facility_SourceCode, 'Profisee') as SourceCode,
-    ifnull(json.facility_LastUpdateDate, current_timestamp()) as LastUpdateDate
-from raw.vw_PROVIDER_PROFILE as JSON
-    left join base.provider as P on json.providercode = p.providercode
-    left join base.facility as F on json.facility_FacilityCode = f.facilitycode
-where json.provider_PROFILE is not null
-  and json.facility_FacilityCode is not null
-  and ProviderID is not null
-  and FacilityID is not null
-qualify row_number() over (partition by ProviderId, Facility_FacilityCode order by CREATE_DATE desc) = 1
+    ifnull(cte.Facility_SourceCode, 'Profisee') as SourceCode,
+    ifnull(cte.Facility_LastUpdateDate, current_timestamp()) as LastUpdateDate
+from cte_facility as cte
+    inner join base.provider as P on cte.providercode = p.providercode
+    inner join base.facility as F on cte.Facility_FacilityCode = f.facilitycode
 $$;
 
 --- insert Statement

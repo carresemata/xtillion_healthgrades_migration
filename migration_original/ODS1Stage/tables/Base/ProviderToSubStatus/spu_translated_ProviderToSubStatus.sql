@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertosubstatus depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.substatus
 
@@ -23,6 +23,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertosubstatus');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
 
    
    
@@ -35,20 +36,28 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := 'select distinct
+select_statement := $$
+                    with cte_providerstatus as (
+                        select
+                            p.ref_provider_code as providercode,
+                            to_varchar(json.value:PROVIDER_STATUS_CODE) as providerstatus_ProviderStatusCode,
+                            to_varchar(json.value:PROVIDER_STATUS_RANK) as providerstatus_ProviderStatusRank,
+                            to_varchar(json.value:DATA_SOURCE_CODE) as providerstatus_SourceCode,
+                            to_timestamp_ntz(json.value:UPDATED_DATETIME) as providerstatus_LastUpdateDate
+                        from $$||mdm_db||$$.mst.provider_profile_processing as p,
+                        lateral flatten(input => p.PROVIDER_PROFILE:PROVIDER_STATUS) as json
+                    )
+                    
+                    select distinct
                         p.providerid,
                         s.substatusid,
                         ifnull(json.providerstatus_ProviderStatusRank, 2147483647) as HierarchyRank,
                         json.providerstatus_SourceCode as SourceCode,
                         json.providerstatus_LastUpdateDate as LastUpdateDate
-                    from raw.vw_PROVIDER_PROFILE as JSON
-                        left join base.provider as P on p.providercode = json.providercode
-                        left join base.substatus as S on s.substatuscode = json.providerstatus_ProviderStatusCode
-                    where 
-                        PROVIDER_PROFILE is not null and
-                        ProviderId is not null and
-                        ProviderStatus_ProviderStatusCode is not null
-                    qualify row_number() over( partition by ProviderID, ProviderStatus_ProviderStatusCode order by CREATE_DATE desc) = 1';
+                    from cte_providerstatus as json
+                    join base.provider as p on p.providercode = json.providercode
+                    join base.substatus as s on s.substatuscode = json.providerstatus_ProviderStatusCode
+                    where providerstatus_ProviderStatusCode is not null$$;
 
 
 --- insert Statement
@@ -73,7 +82,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertosubstatus as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
+                   on source.providerid = target.providerid and source.substatusid = target.substatusid
                    WHEN MATCHED then delete
                    when not matched then '||insert_statement;
                    

@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYIMAGE(is_full BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_FACILITYIMAGE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -9,9 +9,8 @@ declare
 ---------------------------------------------------------
     
 -- base.facilityimage depends on: 
---- mdm_team.mst.facility_profile_processing (raw.vw_facility_profile)
+--- mdm_team.mst.facility_profile_processing 
 --- base.facility
---- base.entitytype
 --- base.mediaimagetype
 --- base.mediasize
 --- base.mediareviewlevel
@@ -26,39 +25,47 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilityimage');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
    
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
-                            SHA1(to_varchar(facility.facilityid) || entity.entitytypecode || Image_TypeCode || Image_FileName) as FacilityImageID,
+select_statement := $$ with Cte_image as (
+                            SELECT
+                                p.ref_facility_code as facilitycode,
+                                to_varchar(json.value:S3_PREFIX) as Image_Path, 
+                                to_varchar(json.value:FACILITY_IMAGE_FILE_NAME) as Image_FileName,
+                                to_varchar(json.value:MEDIA_IMAGE_TYPE_CODE) as Image_TypeCode,
+                                to_varchar(json.value:MEDIA_SIZE_CODE) as Image_SizeCode,
+                                to_varchar(json.value:MEDIA_REVIEW_LEVEL_CODE) as Image_ReviewLevel,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as Image_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as Image_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.facility_profile_processing as p
+                            , lateral flatten(input => p.FACILITY_PROFILE:IMAGE) as json
+                            where
+                                image_filename is not null
+                        )
+                        
+                        select distinct
                             facility.facilityid,
                             json.image_FileName as FileName,
                             json.image_Path as ImagePath,
                             mit.mediaimagetypeid,
                             ms.mediasizeid,
                             mrl.mediareviewlevelid,
-                            'MergeFacilityImage' as SourceCode
-                            
-                        from raw.vw_FACILITY_PROFILE as JSON
-                        left join base.facility as Facility on json.facilitycode = facility.facilitycode 
-                        left join base.entitytype Entity on entity.entitytypecode = 'FAC'
-                        left join base.mediaimagetype as MIT on mit.mediaimagetypecode = json.image_TypeCode
-                        left join base.mediasize as MS on ms.mediasizecode = json.image_SizeCode
-                        left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_ReviewLevel
-                        where 
-                            FACILITY_PROFILE is not null and
-                            FileName is not null and
-                            FacilityID is not null
-                        qualify row_number() over(partition by facility.facilityid, MediaImageTypeID, MediaSizeid order by CREATE_DATE desc) = 1 $$;
+                            json.Image_SourceCode as SourceCode,
+                            ifnull(json.Image_LastUpdateDate, current_timestamp() ) as LastUpdateDate
+                        from cte_image as JSON
+                            join base.facility as Facility on json.facilitycode = facility.facilitycode 
+                            left join base.mediaimagetype as MIT on mit.mediaimagetypecode = json.image_TypeCode
+                            left join base.mediasize as MS on ms.mediasizecode = json.image_SizeCode
+                            left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_ReviewLevel $$;
 
 
 
@@ -74,7 +81,7 @@ insert_statement := ' insert
                         SourceCode, 
                         LastUpdateDate)
                       values 
-                        (source.facilityimageid, 
+                        (uuid_string(), 
                         source.facilityid, 
                         source.filename, 
                         source.imagepath, 
@@ -82,7 +89,7 @@ insert_statement := ' insert
                         source.mediasizeid, 
                         source.mediareviewlevelid, 
                         source.sourcecode, 
-                        current_timestamp())';
+                        source.lastupdatedate)';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -91,8 +98,7 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.facilityimage as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid
-                   WHEN MATCHED then delete
+                   on source.facilityid = target.facilityid 
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
