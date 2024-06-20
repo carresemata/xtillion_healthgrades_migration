@@ -271,16 +271,8 @@ select_statement := $$
                     CTE_DemographicsXML as (
                         select 
                         cte_p.providerid,
-                        utils.p_json_to_xml(
-                            array_agg(
-                                '{ '||
-                                iff(cte_d.sourcecode is not null, '"SourceCode":' || '"' || cte_d.sourcecode || '"' || ',', '') ||
-                                iff(cte_d.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_d.lastupdatedate || '"', '')
-                                ||' }'
-                            )::varchar, 
-                            'Demographics', 
-                            ''
-                        ) as XML
+                        '<Demographics>' || listagg( iff(cte_d.sourcecode is not null,'<SourceCode>' || cte_d.sourcecode || '</SourceCode>','') ||
+iff(cte_d.lastupdatedate is not null,'<LastUpdateDate>' || cte_d.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Demographics' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Demographics cte_d on cte_d.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -289,16 +281,8 @@ select_statement := $$
                     CTE_AboutMeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                '{ '||
-                                iff(cte_am.sourcecode is not null, '"SourceCode":' || '"' || cte_am.sourcecode || '"' || ',', '') ||
-                                iff(cte_am.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_am.lastupdatedate || '"', '')
-                                ||' }'
-                                )::varchar, 
-                                'AboutMe', 
-                                ''
-                            ) as XML
+                            '<AboutMe>' || listagg( iff(cte_am.sourcecode is not null,'<SourceCode>' || cte_am.sourcecode || '</SourceCode>','') ||
+iff(cte_am.lastupdatedate is not null,'<LastUpdateDate>' || cte_am.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</AboutMe' as XML
                         from CTE_Provider cte_p
                         inner join CTE_AboutMe cte_am on cte_am.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -307,16 +291,8 @@ select_statement := $$
                     CTE_AppointmentAvailabilityStatementXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                '{ '||
-                                iff(cte_aas.sourcecode is not null, '"SourceCode":' || '"' || cte_aas.sourcecode || '"' || ',', '') ||
-                                iff(cte_aas.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_aas.lastupdatedate || '"', '')
-                                ||' }'
-                                )::varchar, 
-                                'AppointmentAvailabilityStatement', 
-                                ''
-                            ) as XML
+                            '<AppointmentAvailabilityStatement>' || listagg( iff(cte_aas.sourcecode is not null,'<SourceCode>' || cte_aas.sourcecode || '</SourceCode>','') ||
+iff(cte_aas.lastupdatedate is not null,'<LastUpdateDate>' || cte_aas.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</AppointmentAvailabilityStatement' as XML
                         from CTE_Provider cte_p
                         inner join CTE_AppointmentAvailabilityStatement cte_aas on cte_aas.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -325,16 +301,8 @@ select_statement := $$
                     CTE_EmailXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                '{ '||
-                                iff(cte_e.sourcecode is not null, '"SourceCode":' || '"' || cte_e.sourcecode || '"' || ',', '') ||
-                                iff(cte_e.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_e.lastupdatedate || '"', '')
-                                ||' }'
-                                )::varchar, 
-                                'Email', 
-                                ''
-                            ) as XML
+                            '<Email>' || listagg( iff(cte_e.sourcecode is not null,'<SourceCode>' || cte_e.sourcecode || '</SourceCode>','') ||
+iff(cte_e.lastupdatedate is not null,'<LastUpdateDate>' || cte_e.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Email' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Email cte_e on cte_e.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -343,16 +311,8 @@ select_statement := $$
                     CTE_LicenseXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                '{ '||
-                                iff(cte_l.sourcecode is not null, '"SourceCode":' || '"' || cte_l.sourcecode || '"' || ',', '') ||
-                                iff(cte_l.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_l.lastupdatedate || '"', '')
-                                ||' }'
-                                )::varchar, 
-                                'License', 
-                                ''
-                            ) as XML
+                            '<License>' || listagg( iff(cte_l.sourcecode is not null,'<SourceCode>' || cte_l.sourcecode || '</SourceCode>','') ||
+iff(cte_l.lastupdatedate is not null,'<LastUpdateDate>' || cte_l.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</License' as XML
                         from CTE_Provider cte_p
                         inner join CTE_License cte_l on cte_l.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -361,16 +321,8 @@ select_statement := $$
                     CTE_OfficeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
-                                    iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Office', 
-                                ''
-                            ) as XML
+                            '<Office>' || listagg( iff(cte_o.sourcecode is not null,'<SourceCode>' || cte_o.sourcecode || '</SourceCode>','') ||
+iff(cte_o.lastupdatedate is not null,'<LastUpdateDate>' || cte_o.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Office' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Office cte_o on cte_o.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -379,16 +331,8 @@ select_statement := $$
                     CTE_ProviderTypeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_pt.sourcecode is not null, '"SourceCode":' || '"' || cte_pt.sourcecode || '"' || ',', '') ||
-                                    iff(cte_pt.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_pt.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'ProviderType', 
-                                ''
-                            ) as XML
+                            '<ProviderType>' || listagg( iff(cte_pt.sourcecode is not null,'<SourceCode>' || cte_pt.sourcecode || '</SourceCode>','') ||
+iff(cte_pt.lastupdatedate is not null,'<LastUpdateDate>' || cte_pt.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</ProviderType' as XML
                         from CTE_Provider cte_p
                         inner join CTE_ProviderType cte_pt on cte_pt.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -397,16 +341,8 @@ select_statement := $$
                     CTE_StatusXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_s.sourcecode is not null, '"SourceCode":' || '"' || cte_s.sourcecode || '"' || ',', '') ||
-                                    iff(cte_s.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_s.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Status', 
-                                ''
-                            ) as XML
+                            '<Status>' || listagg( iff(cte_s.sourcecode is not null,'<SourceCode>' || cte_s.sourcecode || '</SourceCode>','') ||
+iff(cte_s.lastupdatedate is not null,'<LastUpdateDate>' || cte_s.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Status' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Status cte_s on cte_s.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -415,16 +351,8 @@ select_statement := $$
                     CTE_AppointmentAvailabilityXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_aa.sourcecode is not null, '"SourceCode":' || '"' || cte_aa.sourcecode || '"' || ',', '') ||
-                                    iff(cte_aa.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_aa.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'AppointmentAvailability', 
-                                ''
-                            ) as XML
+                            '<AppointmentAvailability>' || listagg( iff(cte_aa.sourcecode is not null,'<SourceCode>' || cte_aa.sourcecode || '</SourceCode>','') ||
+iff(cte_aa.lastupdatedate is not null,'<LastUpdateDate>' || cte_aa.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</AppointmentAvailability' as XML
                         from CTE_Provider cte_p
                         inner join CTE_AppointmentAvailability cte_aa on cte_aa.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -433,16 +361,8 @@ select_statement := $$
                     CTE_CertificationSpecialtyXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_cs.sourcecode is not null, '"SourceCode":' || '"' || cte_cs.sourcecode || '"' || ',', '') ||
-                                    iff(cte_cs.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_cs.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'CertificationSpecialty', 
-                                ''
-                            ) as XML
+                            '<CertificationSpecialty>' || listagg( iff(cte_cs.sourcecode is not null,'<SourceCode>' || cte_cs.sourcecode || '</SourceCode>','') ||
+iff(cte_cs.lastupdatedate is not null,'<LastUpdateDate>' || cte_cs.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</CertificationSpecialty' as XML
                         from CTE_Provider cte_p
                         inner join CTE_CertificationSpecialty cte_cs on cte_cs.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -451,16 +371,8 @@ select_statement := $$
                     CTE_FacilityXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_f.sourcecode is not null, '"SourceCode":' || '"' || cte_f.sourcecode || '"' || ',', '') ||
-                                    iff(cte_f.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_f.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Facility', 
-                                ''
-                            ) as XML
+                            '<Facility>' || listagg( iff(cte_f.sourcecode is not null,'<SourceCode>' || cte_f.sourcecode || '</SourceCode>','') ||
+iff(cte_f.lastupdatedate is not null,'<LastUpdateDate>' || cte_f.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Facility' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Facility cte_f on cte_f.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -469,16 +381,8 @@ select_statement := $$
                     CTE_ImageXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_i.sourcecode is not null, '"SourceCode":' || '"' || cte_i.sourcecode || '"' || ',', '') ||
-                                    iff(cte_i.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_i.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Image', 
-                                ''
-                            ) as XML
+                            '<Image>' || listagg( iff(cte_i.sourcecode is not null,'<SourceCode>' || cte_i.sourcecode || '</SourceCode>','') ||
+iff(cte_i.lastupdatedate is not null,'<LastUpdateDate>' || cte_i.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Image' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Image cte_i on cte_i.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -487,16 +391,8 @@ select_statement := $$
                     CTE_MalpracticeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{ '||
-                                    iff(cte_m.sourcecode is not null, '"SourceCode":' || '"' || cte_m.sourcecode || '"' || ',', '') ||
-                                    iff(cte_m.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_m.lastupdatedate || '"', '')
-                                    ||' }'
-                                )::varchar, 
-                                'Malpractice', 
-                                ''
-                            ) as XML
+                            '<Malpractice>' || listagg( iff(cte_m.sourcecode is not null,'<SourceCode>' || cte_m.sourcecode || '</SourceCode>','') ||
+iff(cte_m.lastupdatedate is not null,'<LastUpdateDate>' || cte_m.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Malpractice' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Malpractice cte_m on cte_m.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -505,16 +401,8 @@ select_statement := $$
                     -- CTE_OrganizationXML as (
                     --     select 
                     --         cte_p.providerid,
-                    --         utils.p_json_to_xml(
-                    --             array_agg(
-                    --                 '{ '||
-                    --                 iff(cte_o.sourcecode is not null, '"SourceCode":' || '"' || cte_o.sourcecode || '"' || ',', '') ||
-                    --                 iff(cte_o.lastupdatedate is not null, '"LastUpdateDate":' || '"' || cte_o.lastupdatedate || '"', '')
-                    --                 ||' }'
-                    --             )::varchar, 
-                    --             'Organization', 
-                    --             ''
-                    --         ) as XML
+                    --         '<Organization>' || listagg( iff(cte_o.sourcecode is not null,'<SourceCode>' || cte_o.sourcecode || '</SourceCode>','') ||
+iff(cte_o.lastupdatedate is not null,'<LastUpdateDate>' || cte_o.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Organization' as XML
                     --     from CTE_Provider cte_p
                     --     inner join CTE_Organization cte_o on cte_o.providerid = cte_p.providerid
                     --     group by cte_p.providerid
@@ -523,16 +411,8 @@ select_statement := $$
                     CTE_SponsorshipXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_s.sourcecode is not null, '"SourceCode":"' || cte_s.sourcecode || '"', '') ||
-                                    iff(cte_s.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_s.lastupdatedate || '"', '')
-                                    || '}'
-                                )::varchar, 
-                                'Sponsorship', 
-                                ''
-                            ) as XML
+                            '<Sponsorship>' || listagg( iff(cte_s.sourcecode is not null,'<SourceCode>' || cte_s.sourcecode || '</SourceCode>','') ||
+iff(cte_s.lastupdatedate is not null,'<LastUpdateDate>' || cte_s.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Sponsorship' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Sponsorship cte_s on cte_s.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -541,16 +421,8 @@ select_statement := $$
                     CTE_DegreeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_d.sourcecode is not null, '"SourceCode":"' || cte_d.sourcecode || '"', '') ||
-                                    iff(cte_d.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_d.lastupdatedate || '"', '')
-                                    || '}'
-                                )::varchar, 
-                                'Degree', 
-                                ''
-                            ) as XML
+                            '<Degree>' || listagg( iff(cte_d.sourcecode is not null,'<SourceCode>' || cte_d.sourcecode || '</SourceCode>','') ||
+iff(cte_d.lastupdatedate is not null,'<LastUpdateDate>' || cte_d.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Degree' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Degree cte_d on cte_d.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -559,16 +431,8 @@ select_statement := $$
                     CTE_EducationXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_e.sourcecode is not null, '"SourceCode":"' || cte_e.sourcecode || '"', '') ||
-                                    iff(cte_e.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_e.lastupdatedate || '"', '')
-                                    || '}'
-                                )::varchar, 
-                                'Education', 
-                                ''
-                            ) as XML
+                            '<Education>' || listagg( iff(cte_e.sourcecode is not null,'<SourceCode>' || cte_e.sourcecode || '</SourceCode>','') ||
+iff(cte_e.lastupdatedate is not null,'<LastUpdateDate>' || cte_e.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Education' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Education cte_e on cte_e.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -577,16 +441,8 @@ select_statement := $$
                     CTE_HealthInsuranceXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_hi.sourcecode is not null, '"SourceCode":"' || cte_hi.sourcecode || '"', '') ||
-                                    iff(cte_hi.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_hi.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'HealthInsurance', 
-                                ''
-                            ) as XML
+                            '<HealthInsurance>' || listagg( iff(cte_hi.sourcecode is not null,'<SourceCode>' || cte_hi.sourcecode || '</SourceCode>','') ||
+iff(cte_hi.lastupdatedate is not null,'<LastUpdateDate>' || cte_hi.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</HealthInsurance' as XML
                         from CTE_Provider cte_p
                         inner join CTE_HealthInsurance cte_hi on cte_hi.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -595,16 +451,8 @@ select_statement := $$
                     CTE_LanguageXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_l.sourcecode is not null, '"SourceCode":"' || cte_l.sourcecode || '"', '') ||
-                                    iff(cte_l.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_l.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Language', 
-                                ''
-                            ) as XML
+                            '<Language>' || listagg( iff(cte_l.sourcecode is not null,'<SourceCode>' || cte_l.sourcecode || '</SourceCode>','') ||
+iff(cte_l.lastupdatedate is not null,'<LastUpdateDate>' || cte_l.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Language' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Language cte_l on cte_l.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -613,16 +461,8 @@ select_statement := $$
                     CTE_MediaXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_m.sourcecode is not null, '"SourceCode":"' || cte_m.sourcecode || '"', '') ||
-                                    iff(cte_m.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_m.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Media', 
-                                ''
-                            ) as XML
+                            '<Media>' || listagg( iff(cte_m.sourcecode is not null,'<SourceCode>' || cte_m.sourcecode || '</SourceCode>','') ||
+iff(cte_m.lastupdatedate is not null,'<LastUpdateDate>' || cte_m.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Media' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Media cte_m on cte_m.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -632,16 +472,8 @@ select_statement := $$
                     CTE_SpecialtyXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_s.sourcecode is not null, '"SourceCode":"' || cte_s.sourcecode || '"', '') ||
-                                    iff(cte_s.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_s.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Specialty', 
-                                ''
-                            ) as XML
+                            '<Specialty>' || listagg( iff(cte_s.sourcecode is not null,'<SourceCode>' || cte_s.sourcecode || '</SourceCode>','') ||
+iff(cte_s.lastupdatedate is not null,'<LastUpdateDate>' || cte_s.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Specialty' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Specialty cte_s on cte_s.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -650,16 +482,8 @@ select_statement := $$
                     CTE_VideoXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_v.sourcecode is not null, '"SourceCode":"' || cte_v.sourcecode || '"', '') ||
-                                    iff(cte_v.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_v.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Video', 
-                                ''
-                            ) as XML
+                            '<Video>' || listagg( iff(cte_v.sourcecode is not null,'<SourceCode>' || cte_v.sourcecode || '</SourceCode>','') ||
+iff(cte_v.lastupdatedate is not null,'<LastUpdateDate>' || cte_v.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Video' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Video cte_v on cte_v.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -668,16 +492,8 @@ select_statement := $$
                     CTE_TelehealthXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_th.sourcecode is not null, '"SourceCode":"' || cte_th.sourcecode || '"', '') ||
-                                    iff(cte_th.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_th.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Telehealth', 
-                                ''
-                            ) as XML
+                            '<Telehealth>' || listagg( iff(cte_th.sourcecode is not null,'<SourceCode>' || cte_th.sourcecode || '</SourceCode>','') ||
+iff(cte_th.lastupdatedate is not null,'<LastUpdateDate>' || cte_th.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Telehealth' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Telehealth cte_th on cte_th.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -686,16 +502,8 @@ select_statement := $$
                     CTE_ConditionXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_c.sourcecode is not null, '"SourceCode":"' || cte_c.sourcecode || '"', '') ||
-                                    iff(cte_c.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_c.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Condition', 
-                                ''
-                            ) as XML
+                            '<Condition>' || listagg( iff(cte_c.sourcecode is not null,'<SourceCode>' || cte_c.sourcecode || '</SourceCode>','') ||
+iff(cte_c.lastupdatedate is not null,'<LastUpdateDate>' || cte_c.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Condition' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Condition cte_c on cte_c.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -704,16 +512,8 @@ select_statement := $$
                     CTE_ProcedureXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_pr.sourcecode is not null, '"SourceCode":"' || cte_pr.sourcecode || '"', '') ||
-                                    iff(cte_pr.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_pr.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Procedure', 
-                                ''
-                            ) as XML
+                            '<Procedure>' || listagg( iff(cte_pr.sourcecode is not null,'<SourceCode>' || cte_pr.sourcecode || '</SourceCode>','') ||
+iff(cte_pr.lastupdatedate is not null,'<LastUpdateDate>' || cte_pr.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Procedure' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Procedure cte_pr on cte_pr.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -722,16 +522,8 @@ select_statement := $$
                     CTE_ProviderSubTypeXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_pst.sourcecode is not null, '"SourceCode":"' || cte_pst.sourcecode || '"', '') ||
-                                    iff(cte_pst.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_pst.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'ProviderSubType', 
-                                ''
-                            ) as XML
+                            '<ProviderSubType>' || listagg( iff(cte_pst.sourcecode is not null,'<SourceCode>' || cte_pst.sourcecode || '</SourceCode>','') ||
+iff(cte_pst.lastupdatedate is not null,'<LastUpdateDate>' || cte_pst.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</ProviderSubType' as XML
                         from CTE_Provider cte_p
                         inner join CTE_ProviderSubType cte_pst on cte_pst.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -740,16 +532,8 @@ select_statement := $$
                     CTE_TrainingXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_t.sourcecode is not null, '"SourceCode":"' || cte_t.sourcecode || '"', '') ||
-                                    iff(cte_t.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_t.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Training', 
-                                ''
-                            ) as XML
+                            '<Training>' || listagg( iff(cte_t.sourcecode is not null,'<SourceCode>' || cte_t.sourcecode || '</SourceCode>','') ||
+iff(cte_t.lastupdatedate is not null,'<LastUpdateDate>' || cte_t.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Training' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Training cte_t on cte_t.providerid = cte_p.providerid
                         group by cte_p.providerid
@@ -758,16 +542,8 @@ select_statement := $$
                     CTE_IdentificationXML as (
                         select 
                             cte_p.providerid,
-                            utils.p_json_to_xml(
-                                array_agg(
-                                    '{' ||
-                                    iff(cte_i.sourcecode is not null, '"SourceCode":"' || cte_i.sourcecode || '"', '') ||
-                                    iff(cte_i.lastupdatedate is not null, ',"LastUpdateDate":"' || cte_i.lastupdatedate || '"', '') 
-                                    || '}'
-                                )::varchar, 
-                                'Identification', 
-                                ''
-                            ) as XML
+                            '<Identification>' || listagg( iff(cte_i.sourcecode is not null,'<SourceCode>' || cte_i.sourcecode || '</SourceCode>','') ||
+iff(cte_i.lastupdatedate is not null,'<LastUpdateDate>' || cte_i.lastupdatedate || '</LastUpdateDate>','')  ,'') || '</Identification' as XML
                         from CTE_Provider cte_p
                         inner join CTE_Identification cte_i on cte_i.providerid = cte_p.providerid
                         group by cte_p.providerid

@@ -146,16 +146,11 @@ join
 cte_facility_hours_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-             '{ '||
-IFF(day IS NOT NULL, '"day":' || '"' || day || '"' || ',', '') ||
-IFF(disporder IS NOT NULL, '"disporder":' || '"' || disporder || '"' || ',', '') ||
-IFF("start" IS NOT NULL, '"start":' || '"' || "start" || '"' || ',', '') ||
-IFF("end" IS NOT NULL, '"end":' || '"' || "end" || '"' || ',', '') ||
-IFF(closed IS NOT NULL, '"closed":' || '"' || closed || '"' || ',', '') ||
-IFF(open24hrs IS NOT NULL, '"open24hrs":' || '"' || open24hrs || '"', '')
-||' }'
-        )::varchar, 'hoursL', 'hours') as facilityhoursxml
+    '<hoursL>' || listagg( '<hours>' || iff(day is not null,'<day>' || day || '</day>','') ||
+iff(disporder is not null,'<disporder>' || disporder || '</disporder>','') ||
+iff(start is not null,'<start>' || start || '</start>','') ||
+iff(end is not null,'<end>' || end || '</end>','') ||
+iff(closed is not null,'<closed>' || closed || '</closed>','')  || '</hours>','') || '</hoursL' as facilityhoursxml
 from cte_facility_hours 
 group by facilityid
 ),
@@ -175,17 +170,12 @@ from
 cte_address_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ad1 IS NOT NULL, '"ad1":' || '"' || ad1 || '"' || ',', '') ||
-IFF(city IS NOT NULL, '"city":' || '"' || city || '"' || ',', '') ||
-IFF(st IS NOT NULL, '"st":' || '"' || st || '"' || ',', '') ||
-IFF(zip IS NOT NULL, '"zip":' || '"' || zip || '"' || ',', '') ||
-IFF(lat IS NOT NULL, '"lat":' || '"' || lat || '"' || ',', '') ||
-IFF(lng IS NOT NULL, '"lng":' || '"' || lng || '"' || ',', '') ||
-IFF(tzn IS NOT NULL, '"tzn":' || '"' || tzn || '"', '')
-||' }'
-        )::varchar, 'addrL', 'addr') as addressxml
+    '<addrL>' || listagg( '<addr>' || iff(city is not null,'<city>' || city || '</city>','') ||
+iff(st is not null,'<st>' || st || '</st>','') ||
+iff(zip is not null,'<zip>' || zip || '</zip>','') ||
+iff(lat is not null,'<lat>' || lat || '</lat>','') ||
+iff(lng is not null,'<lng>' || lng || '</lng>','') ||
+iff(tzn is not null,'<tzn>' || tzn || '</tzn>','')  || '</addr>','') || '</addrL' as addressxml
 from cte_address
 group by facilityid
 ),
@@ -203,11 +193,8 @@ cte_related_spec_xml as (
 select 
     awardname,
     awardid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(speccd IS NOT NULL, '"speccd":' || '"' || speccd || '"' || ',', '') ||
-IFF(awtospecsort IS NOT NULL, '"awtospecsort":' || '"' || awtospecsort || '"', '')
-||' }')::varchar, 'relatedSpecL', 'relatedSpec') as relatedspecl
+    '<relatedSpecL>' || listagg( '<relatedSpec>' || iff(speccd is not null,'<speccd>' || speccd || '</speccd>','') ||
+iff(awtospecsort is not null,'<awtospecsort>' || awtospecsort || '</awtospecsort>','')  || '</relatedSpec>','') || '</relatedSpecL' as relatedspecl
 from cte_related_spec
 group by 
     awardname,
@@ -235,12 +222,8 @@ where pc.facilityidparent in (select facilityid from cte_facility_id_child)
 cte_child_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(faccd IS NOT NULL, '"faccd":' || '"' || faccd || '"' || ',', '') ||
-IFF(facnm IS NOT NULL, '"facnm":' || '"' || facnm || '"', '')
-||' }'
-        )::varchar, 'childL', 'child') as childl
+    '<childL>' || listagg( '<child>' || iff(faccd is not null,'<faccd>' || faccd || '</faccd>','') ||
+iff(facnm is not null,'<facnm>' || facnm || '</facnm>','')  || '</child>','') || '</childL' as childl
 from cte_child
 group by facilityid
 ),
@@ -274,24 +257,17 @@ from ermart1.facility_facilitytoaward as fta -- x
 cte_award_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(awcd IS NOT NULL, '"awcd":' || '"' || awcd || '"' || ',', '') ||
-IFF(awtypcd IS NOT NULL, '"awtypcd":' || '"' || awtypcd || '"' || ',', '') ||
-IFF(awnm IS NOT NULL, '"awnm":' || '"' || awnm || '"' || ',', '') ||
-IFF(awyr IS NOT NULL, '"awyr":' || '"' || awyr || '"' || ',', '') ||
-IFF(dispawyr IS NOT NULL, '"dispawyr":' || '"' || dispawyr || '"' || ',', '') ||
-IFF(mrgd IS NOT NULL, '"mrgd":' || '"' || mrgd || '"' || ',', '') ||
-IFF(isbest IS NOT NULL, '"isbest":' || '"' || isbest || '"' || ',', '') ||
-IFF(is50best IS NOT NULL, '"is50best":' || '"' || is50best || '"' || ',', '') ||
-IFF(isbestnonsea IS NOT NULL, '"isbestnonsea":' || '"' || isbestnonsea || '"' || ',', '') ||
-IFF(ismaxyr IS NOT NULL, '"ismaxyr":' || '"' || ismaxyr || '"' || ',', '') ||
-IFF(awrnk IS NOT NULL, '"awrnk":' || '"' || awrnk || '"' || ',', '') ||
-IFF(isstrnk IS NOT NULL, '"isstrnk":' || '"' || isstrnk || '"' || ',', '') ||
-IFF(relatedspecl IS NOT NULL, '"":' || '"' || relatedspecl || '"' || ',', '') ||
-IFF(childl IS NOT NULL, '"":' || '"' || childl || '"', '')
-||' }'
-        )::varchar, 'awardL', 'award') as awardxml
+    '<awardL>' || listagg( '<award>' || iff(awcd is not null,'<awcd>' || awcd || '</awcd>','') ||
+iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
+iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
+iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
+iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
+iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
+iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
+iff(isbestnonsea is not null,'<isbestnonsea>' || isbestnonsea || '</isbestnonsea>','') ||
+iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+iff(awrnk is not null,'<awrnk>' || awrnk || '</awrnk>','') ||
+iff(isstrnk is not null,'<isstrnk>' || isstrnk || '</isstrnk>','')  || '</award>','') || '</awardL' as awardxml
 from cte_award
 group by facilityid
 ),
@@ -375,14 +351,10 @@ select
     procedureid,
     ratingsource,
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(state IS NOT NULL, '"state":' || '"' || state || '"' || ',', '') ||
-IFF(fullstate IS NOT NULL, '"fullstate":' || '"' || fullstate || '"' || ',', '') ||
-IFF(statelos IS NOT NULL, '"statelos":' || '"' || statelos || '"' || ',', '') ||
-IFF(statecost IS NOT NULL, '"statecost":' || '"' || statecost || '"', '')
-||' }'
-        )::varchar, 'stateAvgL', 'stateAvg') as stateavg
+    '<stateAvgL>' || listagg( '<stateAvg>' || iff(state is not null,'<state>' || state || '</state>','') ||
+iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
+iff(statelos is not null,'<statelos>' || statelos || '</statelos>','') ||
+iff(statecost is not null,'<statecost>' || statecost || '</statecost>','')  || '</stateAvg>','') || '</stateAvgL' as stateavg
 from cte_state_avg
 group by 
     datayear,
@@ -434,13 +406,9 @@ select
     servicelineid,
     procedureid,
     ratingsourceid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ryr IS NOT NULL, '"ryr":' || '"' || ryr || '"' || ',', '') ||
-IFF(rdispyr IS NOT NULL, '"rdispyr":' || '"' || rdispyr || '"' || ',', '') ||
-IFF(ismaxyr IS NOT NULL, '"ismaxyr":' || '"' || ismaxyr || '"', '')
-||' }'
-        )::varchar, 'rateTrendL', 'rateTrend') as ratetrend
+    '<rateTrendL>' || listagg( '<rateTrend>' || iff(ryr is not null,'<ryr>' || ryr || '</ryr>','') ||
+iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
+iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</rateTrend>','') || '</rateTrendL' as ratetrend
 from cte_rate_trend
 group by 
     facilityid,
@@ -475,18 +443,14 @@ cte_related_award_xml as (
 select 
     facilityid,
     procedureid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(awcd IS NOT NULL, '"awcd":' || '"' || awcd || '"' || ',', '') ||
-IFF(awtypcd IS NOT NULL, '"awtypcd":' || '"' || awtypcd || '"' || ',', '') ||
-IFF(awnm IS NOT NULL, '"awnm":' || '"' || awnm || '"' || ',', '') ||
-IFF(awyr IS NOT NULL, '"awyr":' || '"' || awyr || '"' || ',', '') ||
-IFF(dispawyr IS NOT NULL, '"dispawyr":' || '"' || dispawyr || '"' || ',', '') ||
-IFF(mrgd IS NOT NULL, '"mrgd":' || '"' || mrgd || '"' || ',', '') ||
-IFF(isbest IS NOT NULL, '"isbest":' || '"' || isbest || '"' || ',', '') ||
-IFF(ismaxyr IS NOT NULL, '"ismaxyr":' || '"' || ismaxyr || '"', '')
-||' }'
-        )::varchar, 'relatedAwardL', 'relatedAward') as relatedaward
+    '<relatedAwardL>' || listagg( '<relatedAward>' || iff(awcd is not null,'<awcd>' || awcd || '</awcd>','') ||
+iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
+iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
+iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
+iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
+iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
+iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
+iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</relatedAward>','') || '</relatedAwardL' as relatedaward
 from cte_related_award
 group by 
     facilityid,
@@ -614,52 +578,41 @@ select
     facilityid,
     servicelineid,
     ratingsourceid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(pcd IS NOT NULL, '"pcd":' || '"' || pcd || '"' || ',', '') ||
-IFF(pnm IS NOT NULL, '"pnm":' || '"' || pnm || '"' || ',', '') ||
-IFF(rmth IS NOT NULL, '"rmth":' || '"' || rmth || '"' || ',', '') ||
-IFF(mcare IS NOT NULL, '"mcare":' || '"' || mcare || '"' || ',', '') ||
-IFF(ryr IS NOT NULL, '"ryr":' || '"' || ryr || '"' || ',', '') ||
-IFF(rdispyr IS NOT NULL, '"rdispyr":' || '"' || rdispyr || '"' || ',', '') ||
-IFF(ismaxyr IS NOT NULL, '"ismaxyr":' || '"' || ismaxyr || '"' || ',', '') ||
-IFF(rstr IS NOT NULL, '"rstr":' || '"' || rstr || '"' || ',', '') ||
-IFF(rstr30 IS NOT NULL, '"rstr30":' || '"' || rstr30 || '"' || ',', '') ||
-IFF(chgstr IS NOT NULL, '"chgstr":' || '"' || chgstr || '"' || ',', '') ||
-IFF(chgstrdisp IS NOT NULL, '"chgstrdisp":' || '"' || chgstrdisp || '"' || ',', '') ||
-IFF(cost IS NOT NULL, '"cost":' || '"' || cost || '"' || ',', '') ||
-IFF(losstr IS NOT NULL, '"losstr":' || '"' || losstr || '"' || ',', '') ||
-IFF(losstrdisp IS NOT NULL, '"losstrdisp":' || '"' || losstrdisp || '"' || ',', '') ||
-IFF(los IS NOT NULL, '"los":' || '"' || los || '"' || ',', '') ||
-IFF(vol IS NOT NULL, '"vol":' || '"' || vol || '"' || ',', '') ||
-IFF(actpct IS NOT NULL, '"actpct":' || '"' || actpct || '"' || ',', '') ||
-IFF(actpct30 IS NOT NULL, '"actpct30":' || '"' || actpct30 || '"' || ',', '') ||
-IFF(prdpct IS NOT NULL, '"prdpct":' || '"' || prdpct || '"' || ',', '') ||
-IFF(prdpct30 IS NOT NULL, '"prdpct30":' || '"' || prdpct30 || '"' || ',', '') ||
-IFF(csectactpct IS NOT NULL, '"csectactpct":' || '"' || csectactpct || '"' || ',', '') ||
-IFF(csectnatpct IS NOT NULL, '"csectnatpct":' || '"' || csectnatpct || '"' || ',', '') ||
-IFF(csectvol IS NOT NULL, '"csectvol":' || '"' || csectvol || '"' || ',', '') ||
-IFF(vagactpct IS NOT NULL, '"vagactpct":' || '"' || vagactpct || '"' || ',', '') ||
-IFF(vagnatpct IS NOT NULL, '"vagnatpct":' || '"' || vagnatpct || '"' || ',', '') ||
-IFF(vagvol IS NOT NULL, '"vagvol":' || '"' || vagvol || '"' || ',', '') ||
-IFF(nwbrnstr IS NOT NULL, '"nwbrnstr":' || '"' || nwbrnstr || '"' || ',', '') ||
-IFF(nwbrnstrdesc IS NOT NULL, '"nwbrnstrdesc":' || '"' || nwbrnstrdesc || '"' || ',', '') ||
-IFF(zscr IS NOT NULL, '"zscr":' || '"' || zscr || '"' || ',', '') ||
-IFF(psort IS NOT NULL, '"psort":' || '"' || psort || '"' || ',', '') ||
-IFF(actsurnatper IS NOT NULL, '"actsurnatper":' || '"' || actsurnatper || '"' || ',', '') ||
-IFF(predsurnatper IS NOT NULL, '"predsurnatper":' || '"' || predsurnatper || '"' || ',', '') ||
-IFF(ovrallsurnatstr IS NOT NULL, '"ovrallsurnatstr":' || '"' || ovrallsurnatstr || '"' || ',', '') ||
-IFF(surnatstr30 IS NOT NULL, '"surnatstr30":' || '"' || surnatstr30 || '"' || ',', '') ||
-IFF(avgcasesnatl IS NOT NULL, '"avgcasesnatl":' || '"' || avgcasesnatl || '"' || ',', '') ||
-IFF(losnatl IS NOT NULL, '"losnatl":' || '"' || losnatl || '"' || ',', '') ||
-IFF(costnatl IS NOT NULL, '"costnatl":' || '"' || costnatl || '"' || ',', '') ||
-IFF(stateavg IS NOT NULL, '"":' || '"' || stateavg || '"' || ',', '') ||
-IFF(ratetrend IS NOT NULL, '"":' || '"' || ratetrend || '"' || ',', '') ||
-IFF(relatedaward IS NOT NULL, '"":' || '"' || relatedaward || '"' || ',', '') ||
-IFF(wstr IS NOT NULL, '"wstr":' || '"' || wstr || '"' || ',', '') ||
-IFF(qualpctscr IS NOT NULL, '"qualpctscr":' || '"' || qualpctscr || '"', '')
-||' }'
-        )::varchar, 'procL', 'proc') as procxml
+    '<procL>' || listagg( '<proc>' || iff(pcd is not null,'<pcd>' || pcd || '</pcd>','') ||
+iff(pnm is not null,'<pnm>' || pnm || '</pnm>','') ||
+iff(rmth is not null,'<rmth>' || rmth || '</rmth>','') ||
+iff(mcare is not null,'<mcare>' || mcare || '</mcare>','') ||
+iff(ryr is not null,'<ryr>' || ryr || '</ryr>','') ||
+iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
+iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+iff(rstr is not null,'<rstr>' || rstr || '</rstr>','') ||
+iff(chgstr is not null,'<chgstr>' || chgstr || '</chgstr>','') ||
+iff(chgstrdisp is not null,'<chgstrdisp>' || chgstrdisp || '</chgstrdisp>','') ||
+iff(cost is not null,'<cost>' || cost || '</cost>','') ||
+iff(losstr is not null,'<losstr>' || losstr || '</losstr>','') ||
+iff(losstrdisp is not null,'<losstrdisp>' || losstrdisp || '</losstrdisp>','') ||
+iff(los is not null,'<los>' || los || '</los>','') ||
+iff(vol is not null,'<vol>' || vol || '</vol>','') ||
+iff(actpct is not null,'<actpct>' || actpct || '</actpct>','') ||
+iff(prdpct is not null,'<prdpct>' || prdpct || '</prdpct>','') ||
+iff(csectactpct is not null,'<csectactpct>' || csectactpct || '</csectactpct>','') ||
+iff(csectnatpct is not null,'<csectnatpct>' || csectnatpct || '</csectnatpct>','') ||
+iff(csectvol is not null,'<csectvol>' || csectvol || '</csectvol>','') ||
+iff(vagactpct is not null,'<vagactpct>' || vagactpct || '</vagactpct>','') ||
+iff(vagnatpct is not null,'<vagnatpct>' || vagnatpct || '</vagnatpct>','') ||
+iff(vagvol is not null,'<vagvol>' || vagvol || '</vagvol>','') ||
+iff(nwbrnstr is not null,'<nwbrnstr>' || nwbrnstr || '</nwbrnstr>','') ||
+iff(nwbrnstrdesc is not null,'<nwbrnstrdesc>' || nwbrnstrdesc || '</nwbrnstrdesc>','') ||
+iff(zscr is not null,'<zscr>' || zscr || '</zscr>','') ||
+iff(psort is not null,'<psort>' || psort || '</psort>','') ||
+iff(actsurnatper is not null,'<actsurnatper>' || actsurnatper || '</actsurnatper>','') ||
+iff(predsurnatper is not null,'<predsurnatper>' || predsurnatper || '</predsurnatper>','') ||
+iff(ovrallsurnatstr is not null,'<ovrallsurnatstr>' || ovrallsurnatstr || '</ovrallsurnatstr>','') ||
+iff(avgcasesnatl is not null,'<avgcasesnatl>' || avgcasesnatl || '</avgcasesnatl>','') ||
+iff(losnatl is not null,'<losnatl>' || losnatl || '</losnatl>','') ||
+iff(costnatl is not null,'<costnatl>' || costnatl || '</costnatl>','') ||
+iff(wstr is not null,'<wstr>' || wstr || '</wstr>','') ||
+iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','')  || '</proc>','') || '</procL' as procxml
 from cte_procl
 group by 
     facilityid,
@@ -721,20 +674,15 @@ join cte_rating_sort_value as rsv on  rsv.facilityid = sl.facilityid
 cte_service_line_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(svccd IS NOT NULL, '"svccd":' || '"' || svccd || '"' || ',', '') ||
-IFF(svczscore IS NOT NULL, '"svczscore":' || '"' || svczscore || '"' || ',', '') ||
-IFF(svcnm IS NOT NULL, '"svcnm":' || '"' || svcnm || '"' || ',', '') ||
-IFF(svclnrtg IS NOT NULL, '"svclnrtg":' || '"' || svclnrtg || '"' || ',', '') ||
-IFF(scyr IS NOT NULL, '"scyr":' || '"' || scyr || '"' || ',', '') ||
-IFF(svcdispyr IS NOT NULL, '"svcdispyr":' || '"' || svcdispyr || '"' || ',', '') ||
-IFF(ismaxyr IS NOT NULL, '"ismaxyr":' || '"' || ismaxyr || '"' || ',', '') ||
-IFF(qualpctscr IS NOT NULL, '"qualpctscr":' || '"' || qualpctscr || '"' || ',', '') ||
-IFF(procxml IS NOT NULL, '"":' || '"' || procxml || '"' || ',', '') ||
-IFF(ratingsortvalue IS NOT NULL, '"ratingsortvalue":' || '"' || ratingsortvalue || '"', '')
-||' }'
-        )::varchar, 'svcLnL', 'svcLn') as servicelinexml
+    '<svcLnL>' || listagg( '<svcLn>' || iff(svccd is not null,'<svccd>' || svccd || '</svccd>','') ||
+iff(svczscore is not null,'<svczscore>' || svczscore || '</svczscore>','') ||
+iff(svcnm is not null,'<svcnm>' || svcnm || '</svcnm>','') ||
+iff(svclnrtg is not null,'<svclnrtg>' || svclnrtg || '</svclnrtg>','') ||
+iff(scyr is not null,'<scyr>' || scyr || '</scyr>','') ||
+iff(svcdispyr is not null,'<svcdispyr>' || svcdispyr || '</svcdispyr>','') ||
+iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','') ||
+iff(ratingsortvalue is not null,'<ratingsortvalue>' || ratingsortvalue || '</ratingsortvalue>','')  || '</svcLn>','') || '</svcLnL' as servicelinexml
 from cte_service_line
 group by 
     facilityid
@@ -771,20 +719,16 @@ where
 cte_patient_satisfaction_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(queid IS NOT NULL, '"queid":' || '"' || queid || '"' || ',', '') ||
-IFF(quetxt IS NOT NULL, '"quetxt":' || '"' || quetxt || '"' || ',', '') ||
-IFF(noofsurv IS NOT NULL, '"noofsurv":' || '"' || noofsurv || '"' || ',', '') ||
-IFF(surresrateperc IS NOT NULL, '"surresrateperc":' || '"' || surresrateperc || '"' || ',', '') ||
-IFF(ansid IS NOT NULL, '"ansid":' || '"' || ansid || '"' || ',', '') ||
-IFF(anstxt IS NOT NULL, '"anstxt":' || '"' || anstxt || '"' || ',', '') ||
-IFF(ansperc IS NOT NULL, '"ansperc":' || '"' || ansperc || '"' || ',', '') ||
-IFF(cat IS NOT NULL, '"cat":' || '"' || cat || '"' || ',', '') ||
-IFF(catsort IS NOT NULL, '"catsort":' || '"' || catsort || '"' || ',', '') ||
-IFF(natavg IS NOT NULL, '"natavg":' || '"' || natavg || '"', '')
-||' }'
-        )::varchar, 'satisL', 'satis') as patientsatisfactionxml
+    '<satisL>' || listagg( '<satis>' || iff(queid is not null,'<queid>' || queid || '</queid>','') ||
+iff(quetxt is not null,'<quetxt>' || quetxt || '</quetxt>','') ||
+iff(noofsurv is not null,'<noofsurv>' || noofsurv || '</noofsurv>','') ||
+iff(surresrateperc is not null,'<surresrateperc>' || surresrateperc || '</surresrateperc>','') ||
+iff(ansid is not null,'<ansid>' || ansid || '</ansid>','') ||
+iff(anstxt is not null,'<anstxt>' || anstxt || '</anstxt>','') ||
+iff(ansperc is not null,'<ansperc>' || ansperc || '</ansperc>','') ||
+iff(cat is not null,'<cat>' || cat || '</cat>','') ||
+iff(catsort is not null,'<catsort>' || catsort || '</catsort>','') ||
+iff(natavg is not null,'<natavg>' || natavg || '</natavg>','')  || '</satis>','') || '</satisL' as patientsatisfactionxml
 from cte_patient_satisfaction
 group by 
     facilityid
@@ -803,15 +747,11 @@ from ermart1.facility_facilitytocertification
 cte_distinction_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(certnm IS NOT NULL, '"certnm":' || '"' || certnm || '"' || ',', '') ||
-IFF(certsrcnm IS NOT NULL, '"certsrcnm":' || '"' || certsrcnm || '"' || ',', '') ||
-IFF(certsrclgnm IS NOT NULL, '"certsrclgnm":' || '"' || certsrclgnm || '"' || ',', '') ||
-IFF(certstdt IS NOT NULL, '"certstdt":' || '"' || certstdt || '"' || ',', '') ||
-IFF(certenddt IS NOT NULL, '"certenddt":' || '"' || certenddt || '"', '')
-||' }'
-        )::varchar, 'distL', 'dist') as distinctionxml
+    '<distL>' || listagg( '<dist>' || iff(certnm is not null,'<certnm>' || certnm || '</certnm>','') ||
+iff(certsrcnm is not null,'<certsrcnm>' || certsrcnm || '</certsrcnm>','') ||
+iff(certsrclgnm is not null,'<certsrclgnm>' || certsrclgnm || '</certsrclgnm>','') ||
+iff(certstdt is not null,'<certstdt>' || certstdt || '</certstdt>','') ||
+iff(certenddt is not null,'<certenddt>' || certenddt || '</certenddt>','')  || '</dist>','') || '</distL' as distinctionxml
 from cte_distinction
 group by 
     facilityid
@@ -846,20 +786,16 @@ cte_readmission_rate as (
 cte_readmission_rate_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(condc IS NOT NULL, '"condc":' || '"' || condc || '"' || ',', '') ||
-IFF(condnm IS NOT NULL, '"condnm":' || '"' || condnm || '"' || ',', '') ||
-IFF(measc IS NOT NULL, '"measc":' || '"' || measc || '"' || ',', '') ||
-IFF(measnm IS NOT NULL, '"measnm":' || '"' || measnm || '"' || ',', '') ||
-IFF(scperc IS NOT NULL, '"scperc":' || '"' || scperc || '"' || ',', '') ||
-IFF(sampvol IS NOT NULL, '"sampvol":' || '"' || sampvol || '"' || ',', '') ||
-IFF(comprnat IS NOT NULL, '"comprnat":' || '"' || comprnat || '"' || ',', '') ||
-IFF(natscperc IS NOT NULL, '"natscperc":' || '"' || natscperc || '"' || ',', '') ||
-IFF(condsort IS NOT NULL, '"condsort":' || '"' || condsort || '"' || ',', '') ||
-IFF(meassort IS NOT NULL, '"meassort":' || '"' || meassort || '"', '')
-||' }'
-        )::varchar, 'reAdminL', 'reAdmin') as readmissionratexml
+    '<reAdminL>' || listagg( '<reAdmin>' || iff(condc is not null,'<condc>' || condc || '</condc>','') ||
+iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
+iff(measc is not null,'<measc>' || measc || '</measc>','') ||
+iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
+iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
+iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
+iff(comprnat is not null,'<comprnat>' || comprnat || '</comprnat>','') ||
+iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
+iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
+iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</reAdmin>','') || '</reAdminL' as readmissionratexml
 from cte_readmission_rate
 group by 
     facilityid
@@ -900,22 +836,18 @@ select distinct
 cte_effective_care_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(condc IS NOT NULL, '"condc":' || '"' || condc || '"' || ',', '') ||
-IFF(condnm IS NOT NULL, '"condnm":' || '"' || condnm || '"' || ',', '') ||
-IFF(measc IS NOT NULL, '"measc":' || '"' || measc || '"' || ',', '') ||
-IFF(measnm IS NOT NULL, '"measnm":' || '"' || measnm || '"' || ',', '') ||
-IFF(scperc IS NOT NULL, '"scperc":' || '"' || scperc || '"' || ',', '') ||
-IFF(sampvol IS NOT NULL, '"sampvol":' || '"' || sampvol || '"' || ',', '') ||
-IFF(state IS NOT NULL, '"state":' || '"' || state || '"' || ',', '') ||
-IFF(fullstate IS NOT NULL, '"fullstate":' || '"' || fullstate || '"' || ',', '') ||
-IFF(statescperc IS NOT NULL, '"statescperc":' || '"' || statescperc || '"' || ',', '') ||
-IFF(natscperc IS NOT NULL, '"natscperc":' || '"' || natscperc || '"' || ',', '') ||
-IFF(condsort IS NOT NULL, '"condsort":' || '"' || condsort || '"' || ',', '') ||
-IFF(meassort IS NOT NULL, '"meassort":' || '"' || meassort || '"', '')
-||' }'
-        )::varchar, 'effCareL', 'effCare') as timelyandeffectivecarexml
+    '<effCareL>' || listagg( '<effCare>' || iff(condc is not null,'<condc>' || condc || '</condc>','') ||
+iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
+iff(measc is not null,'<measc>' || measc || '</measc>','') ||
+iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
+iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
+iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
+iff(state is not null,'<state>' || state || '</state>','') ||
+iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
+iff(statescperc is not null,'<statescperc>' || statescperc || '</statescperc>','') ||
+iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
+iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
+iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</effCare>','') || '</effCareL' as timelyandeffectivecarexml
 from cte_effective_care
 group by 
     facilityid
@@ -939,13 +871,9 @@ where
 cte_patient_safety_xml as (
 select 
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ratedesc IS NOT NULL, '"ratedesc":' || '"' || ratedesc || '"' || ',', '') ||
-IFF(ratestr IS NOT NULL, '"ratestr":' || '"' || ratestr || '"' || ',', '') ||
-IFF(evtcount IS NOT NULL, '"evtcount":' || '"' || evtcount || '"', '')
-||' }'
-        )::varchar, 'pSafeL', 'pSafe') as patientsafetyxml
+    '<pSafeL>' || listagg( '<pSafe>' || iff(ratedesc is not null,'<ratedesc>' || ratedesc || '</ratedesc>','') ||
+iff(ratestr is not null,'<ratestr>' || ratestr || '</ratestr>','') ||
+iff(evtcount is not null,'<evtcount>' || evtcount || '</evtcount>','')  || '</pSafe>','') || '</pSafeL' as patientsafetyxml
 from cte_patient_safety
 group by 
     facilityid
@@ -965,12 +893,8 @@ cte_trauma_level as (
 cte_trauma_level_xml as (
     select 
         facilitycode,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(adutralev IS NOT NULL, '"adutralev":' || '"' || adutralev || '"' || ',', '') ||
-            IFF(pedtralev IS NOT NULL, '"pedtralev":' || '"' || pedtralev || '"', '')
-            ||' }'
-            )::varchar, 'traumaL', 'trauma') as traumalevelxml
+        '<traumaL>' || listagg( '<trauma>' || iff(adutralev is not null,'<adutralev>' || adutralev || '</adutralev>','') ||
+iff(pedtralev is not null,'<pedtralev>' || pedtralev || '</pedtralev>','')  || '</trauma>','') || '</traumaL' as traumalevelxml
     from cte_trauma_level
     group by 
         facilitycode
@@ -1009,11 +933,7 @@ cte_affiliation as (
 cte_affiliation_xml as (
     select 
         facilityid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(nm IS NOT NULL, '"nm":' || '"' || nm || '"', '')
-            ||' }'
-            )::varchar, 'affilL', 'affil') as affiliationxml
+        '<affilL>' || listagg( '<affil>' || iff(nm is not null,'<nm>' || nm || '</nm>','')  || '</affil>','') || '</affilL' as affiliationxml
     from cte_affiliation
     group by 
         facilityid
@@ -1058,15 +978,11 @@ cte_leadership as (
 cte_leadership_xml as (
     select 
         facilityid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(leadnm IS NOT NULL, '"leadnm":' || '"' || leadnm || '"' || ',', '') ||
-            IFF(title IS NOT NULL, '"title":' || '"' || title || '"' || ',', '') ||
-            IFF(bio IS NOT NULL, '"bio":' || '"' || bio || '"' || ',', '') ||
-            IFF(img IS NOT NULL, '"img":' || '"' || img || '"' || ',', '') ||
-            IFF(email IS NOT NULL, '"email":' || '"' || email || '"', '')
-            ||' }'
-            )::varchar, 'leaderL', 'leader') as leadershipxml
+        '<leaderL>' || listagg( '<leader>' || iff(leadnm is not null,'<leadnm>' || leadnm || '</leadnm>','') ||
+iff(title is not null,'<title>' || title || '</title>','') ||
+iff(bio is not null,'<bio>' || bio || '</bio>','') ||
+iff(img is not null,'<img>' || img || '</img>','') ||
+iff(email is not null,'<email>' || email || '</email>','')  || '</leader>','') || '</leaderL' as leadershipxml
     from cte_leadership
     group by 
         facilityid
@@ -1111,15 +1027,11 @@ cte_award_achievement as (
 cte_award_achievement_xml as (
     select 
         facilityid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(awnm IS NOT NULL, '"awnm":' || '"' || awnm || '"' || ',', '') ||
-            IFF(standmsg IS NOT NULL, '"standmsg":' || '"' || standmsg || '"' || ',', '') ||
-            IFF(dispyr IS NOT NULL, '"dispyr":' || '"' || dispyr || '"' || ',', '') ||
-            IFF(pri IS NOT NULL, '"pri":' || '"' || pri || '"' || ',', '') ||
-            IFF(imgpath IS NOT NULL, '"imgpath":' || '"' || imgpath || '"', '')
-            ||' }'
-            )::varchar, 'awardMsgL', 'awardMsg') as awardachievementxml
+        '<awardMsgL>' || listagg( '<awardMsg>' || iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
+iff(standmsg is not null,'<standmsg>' || standmsg || '</standmsg>','') ||
+iff(dispyr is not null,'<dispyr>' || dispyr || '</dispyr>','') ||
+iff(pri is not null,'<pri>' || pri || '</pri>','') ||
+iff(imgpath is not null,'<imgpath>' || imgpath || '</imgpath>','')  || '</awardMsg>','') || '</awardMsgL' as awardachievementxml
     from cte_award_achievement
     group by 
         facilityid
@@ -1148,12 +1060,8 @@ cte_facility_language as (
 cte_language_xml as (
     select 
         facilityid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(langnm IS NOT NULL, '"langnm":' || '"' || langnm || '"' || ',', '') ||
-            IFF(langcd IS NOT NULL, '"langcd":' || '"' || langcd || '"', '')
-            ||' }'
-            )::varchar, 'langL', 'lang') as languagexml
+        '<langL>' || listagg( '<lang>' || iff(langnm is not null,'<langnm>' || langnm || '</langnm>','') ||
+iff(langcd is not null,'<langcd>' || langcd || '</langcd>','')  || '</lang>','') || '</langL' as languagexml
     from cte_facility_language
     group by 
         facilityid
@@ -1172,12 +1080,8 @@ cte_facility_service as (
 cte_service_xml as (
     select 
         facilityid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(servnm IS NOT NULL, '"servnm":' || '"' || servnm || '"' || ',', '') ||
-            IFF(servcd IS NOT NULL, '"servcd":' || '"' || servcd || '"', '')
-            ||' }'
-            )::varchar, 'servL', 'serv') as servicexml
+        '<servL>' || listagg( '<serv>' || iff(servnm is not null,'<servnm>' || servnm || '</servnm>','') ||
+iff(servcd is not null,'<servcd>' || servcd || '</servcd>','')  || '</serv>','') || '</servL' as servicexml
     from cte_facility_service
     group by 
         facilityid
@@ -1211,14 +1115,10 @@ cte_spnfeat as (
 cte_spnfeat_xml as (
     select 
         clienttoproductid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(featcd IS NOT NULL, '"featCd":' || '"' || featcd || '"' || ',', '') ||
-            IFF(featdesc IS NOT NULL, '"featDesc":' || '"' || featdesc || '"' || ',', '') ||
-            IFF(featvalcd IS NOT NULL, '"featValCd":' || '"' || featvalcd || '"' || ',', '') ||
-            IFF(featvaldesc IS NOT NULL, '"featValDesc":' || '"' || featvaldesc || '"', '')
-            ||' }'
-            )::varchar, '', 'spnFeat') as spnfeatl
+        listagg( '<spnFeat>' || iff(featcd is not null,'<featCd>' || featcd || '</featCd>','') ||
+iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
+iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
+iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</spnFeat>','') as spnfeatl
     from cte_spnfeat
     group by clienttoproductid
 ),
@@ -1237,13 +1137,9 @@ where f.clientcode is not null
 cte_spn_xml as (
  select 
         facilitycode,
-        utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(spncd IS NOT NULL, '"spncd":' || '"' || spncd || '"' || ',', '') ||
-IFF(spnnm IS NOT NULL, '"spnnm":' || '"' || spnnm || '"' || ',', '') ||
-IFF(spnfeatl IS NOT NULL, '"spnfeatl":' || '"' || spnfeatl || '"', '')
-||' }'
-            )::varchar, '', 'spn') as spn
+        listagg( '<spn>' || iff(spncd is not null,'<spncd>' || spncd || '</spncd>','') ||
+iff(spnnm is not null,'<spnnm>' || spnnm || '</spnnm>','') ||
+iff(spnfeatl is not null,'<spnfeatl>' || spnfeatl || '</spnfeatl>','')  || '</spn>','') as spn
     from cte_spn
     group by facilitycode
 ),
@@ -1275,14 +1171,10 @@ cte_clctr_featl as (
 cte_clctr_featl_xml as (
     select 
         callcenterid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(featcd IS NOT NULL, '"featCd":' || '"' || featcd || '"' || ',', '') ||
-            IFF(featdesc IS NOT NULL, '"featDesc":' || '"' || featdesc || '"' || ',', '') ||
-            IFF(featvalcd IS NOT NULL, '"featValCd":' || '"' || featvalcd || '"' || ',', '') ||
-            IFF(featvaldesc IS NOT NULL, '"featValDesc":' || '"' || featvaldesc || '"', '')
-            ||' }'
-            )::varchar, '', 'clCtrFeat') as clctrfeatl
+        listagg( '<clCtrFeat>' || iff(featcd is not null,'<featCd>' || featcd || '</featCd>','') ||
+iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
+iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
+iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</clCtrFeat>','') as clctrfeatl
     from cte_clctr_featl
     group by callcenterid
 ),
@@ -1306,17 +1198,13 @@ cte_clctr as (
 cte_clctr_xml as (
     select 
         clienttoproductid,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(clctrcd IS NOT NULL, '"clCtrCd":' || '"' || clctrcd || '"' || ',', '') ||
-            IFF(clctrnm IS NOT NULL, '"clCtrNm":' || '"' || clctrnm || '"' || ',', '') ||
-            IFF(aptcoffday IS NOT NULL, '"aptCoffDay":' || '"' || aptcoffday || '"' || ',', '') ||
-            IFF(aptcoffhr IS NOT NULL, '"aptCoffHr":' || '"' || aptcoffhr || '"' || ',', '') ||
-            IFF(eml IS NOT NULL, '"eml":' || '"' || eml || '"' || ',', '') ||
-            IFF(fxno IS NOT NULL, '"fxNo":' || '"' || fxno || '"' || ',', '') ||
-            IFF(clctrfeatl IS NOT NULL, '"clctrfeatl":' || '"' || clctrfeatl || '"', '')
-||' }'
-            )::varchar, '', 'clCtrL') as clctrl
+        listagg( '<clCtrL>' || iff(clctrcd is not null,'<clCtrCd>' || clctrcd || '</clCtrCd>','') ||
+iff(clctrnm is not null,'<clCtrNm>' || clctrnm || '</clCtrNm>','') ||
+iff(aptcoffday is not null,'<aptCoffDay>' || aptcoffday || '</aptCoffDay>','') ||
+iff(aptcoffhr is not null,'<aptCoffHr>' || aptcoffhr || '</aptCoffHr>','') ||
+iff(eml is not null,'<eml>' || eml || '</eml>','') ||
+iff(fxno is not null,'<fxNo>' || fxno || '</fxNo>','') ||
+iff(clctrfeatl is not null,'<clctrfeatl>' || clctrfeatl || '</clctrfeatl>','')  || '</clCtrL>','') as clctrl
     from cte_clctr
     group by
         clienttoproductid
@@ -1344,16 +1232,12 @@ cte_display as (
 cte_displ_xml as (
     select 
         facilitycode,
-        utils.p_json_to_xml(array_agg(
-            '{ '||
-            IFF(phonel IS NOT NULL, '"phoneL":' || '"' || phonel || '"' || ',', '') ||
-            IFF(mobilephonel IS NOT NULL, '"mobilePhoneL":' || '"' || mobilephonel || '"' || ',', '') ||
-            IFF(urll IS NOT NULL, '"urlL":' || '"' || urll || '"' || ',', '') ||
-            IFF(imagel IS NOT NULL, '"imageL":' || '"' || imagel || '"' || ',', '') ||
-            IFF(tabletphonel IS NOT NULL, '"tabletPhoneL":' || '"' || tabletphonel || '"' || ',', '') ||
-            IFF(desktopphonel IS NOT NULL, '"desktopPhoneL":' || '"' || desktopphonel || '"', '')
-            ||' }'
-            )::varchar, 'dispL', 'disp') as displ
+        '<dispL>' || listagg( '<disp>' || iff(phonel is not null,'<phoneL>' || phonel || '</phoneL>','') ||
+iff(mobilephonel is not null,'<mobilePhoneL>' || mobilephonel || '</mobilePhoneL>','') ||
+iff(urll is not null,'<urlL>' || urll || '</urlL>','') ||
+iff(imagel is not null,'<imageL>' || imagel || '</imageL>','') ||
+iff(tabletphonel is not null,'<tabletPhoneL>' || tabletphonel || '</tabletPhoneL>','') ||
+iff(desktopphonel is not null,'<desktopPhoneL>' || desktopphonel || '</desktopPhoneL>','')  || '</disp>','') || '</dispL' as displ
     from cte_display
     group by facilitycode
 ),
@@ -1377,14 +1261,7 @@ where f.clienttoproductid is not null
 cte_sponsorship_xml as (
     select 
         facilitycode,
-        utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(prgrcd IS NOT NULL, '"prgrcd":' || '"' || prgrcd || '"' || ',', '') ||
-IFF(spn IS NOT NULL, '"":' || '"' || spn || '"' || ',', '') ||
-IFF(clctrl IS NOT NULL, '"":' || '"' || clctrl || '"' || ',', '') ||
-IFF(displ IS NOT NULL, '"":' || '"' || displ || '"', '')
-||' }'
-            )::varchar, 'sponsorL', 'sponsor') as sponsorshipxml
+        '<sponsorL>' || listagg( '<sponsor>' || iff(prgrcd is not null,'<prgrcd>' || prgrcd || '</prgrcd>','')  || '</sponsor>','') || '</sponsorL' as sponsorshipxml
     from cte_sponsorship
     group by 
         facilitycode

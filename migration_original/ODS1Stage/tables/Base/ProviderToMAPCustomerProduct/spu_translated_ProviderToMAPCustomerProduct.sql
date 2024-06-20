@@ -125,14 +125,8 @@ CTE_Phone1 as (
 CTE_PhoneXML1 as (
     select
         providerId,
-        utils.p_json_to_xml(
-            array_agg('{ '||
-                            iff(ph is not null, '"ph":' || '"' || ph || '"' || ',', '') ||
-                            iff(phTyp is not null, '"phTyp":' || '"' || phTyp || '"', '')
-                            ||' }')::varchar,
-                                    '',
-                                    'phone'
-                                ) as phoneXML
+        listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as phoneXML
     from CTE_Phone1
     group by ProviderId
         
@@ -173,14 +167,8 @@ CTE_Phone2 as (
 CTE_PhoneXML2 as (
         select
         OfficeId,
-        utils.p_json_to_xml(
-            array_agg('{ '||
-                            iff(ph is not null, '"ph":' || '"' || ph || '"' || ',', '') ||
-                            iff(phTyp is not null, '"phTyp":' || '"' || phTyp || '"', '')
-                            ||' }')::varchar,
-                                    '',
-                                    'phone'
-                                ) as phoneXML
+        listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as phoneXML
     from CTE_Phone2
     group by OfficeId
 ),

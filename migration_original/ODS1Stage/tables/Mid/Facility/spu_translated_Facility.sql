@@ -220,15 +220,8 @@ where fa.phonetypecode in ('PTUFS', 'PTHFS') -- hospital - facility specific
 cte_facility_detail_phone_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as phonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as phonexml
 from cte_facility_detail_phone
 group by
     clientproducttoentityid
@@ -245,15 +238,8 @@ where cl.phonetypecode = 'PTHOS' -- pdc affiliated hospital
 cte_client_detail_phone_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as phonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as phonexml
 from cte_client_detail_phone
 group by
     clientproducttoentityid
@@ -270,15 +256,8 @@ cte_facility_detail_mobile as (
 cte_facility_mobile_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as mobilephonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as mobilephonexml
 from cte_facility_detail_mobile
 group by
     clientproducttoentityid
@@ -294,15 +273,8 @@ cte_client_detail_mobile as (
 cte_client_mobile_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as mobilephonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as mobilephonexml
 from cte_client_detail_mobile
 group by
     clientproducttoentityid
@@ -327,15 +299,8 @@ cte_client_detail_desktop as (
 cte_facility_desktop_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as desktopphonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as desktopphonexml
 from cte_facility_detail_desktop
 group by
     clientproducttoentityid
@@ -343,15 +308,8 @@ group by
 cte_client_desktop_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as desktopphonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as desktopphonexml
 from cte_client_detail_desktop
 group by
     clientproducttoentityid
@@ -376,15 +334,8 @@ cte_client_detail_tablet as (
 cte_facility_tablet_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as tabletphonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as tabletphonexml
 from cte_facility_detail_tablet
 group by
     clientproducttoentityid
@@ -392,15 +343,8 @@ group by
 cte_client_tablet_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(ph IS NOT NULL, '"ph":' || '"' || ph || '"' || ',', '') ||
-IFF(phTyp IS NOT NULL, '"phTyp":' || '"' || phTyp || '"', '')
-||' }'
-    )::varchar
-    ,
-    '',
-    'phone') as tabletphonexml
+    listagg( '<phone>' || iff(ph is not null,'<ph>' || ph || '</ph>','') ||
+iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as tabletphonexml
 from cte_client_detail_tablet
 group by
     clientproducttoentityid
@@ -440,16 +384,8 @@ cte_facility_url as (
 cte_facility_checkin_url_xml as (
 select
     facilitycode,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(urlval IS NOT NULL, '"urlval":' || '"' || urlval || '"' || ',', '') ||
-IFF(urltyp IS NOT NULL, '"urltyp":' || '"' || urltyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as urlxml
+    listagg( '<url>' || iff(urlval is not null,'<urlval>' || urlval || '</urlval>','') ||
+iff(urltyp is not null,'<urltyp>' || urltyp || '</urltyp>','')  || '</url>','') as urlxml
 from cte_facility_checkin_url
 group by
     facilitycode
@@ -458,16 +394,8 @@ group by
 cte_facility_url_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(urlval IS NOT NULL, '"urlval":' || '"' || urlval || '"' || ',', '') ||
-IFF(urltyp IS NOT NULL, '"urltyp":' || '"' || urltyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as urlxml
+    listagg( '<url>' || iff(urlval is not null,'<urlval>' || urlval || '</urlval>','') ||
+iff(urltyp is not null,'<urltyp>' || urltyp || '</urltyp>','')  || '</url>','') as urlxml
 from cte_facility_detail_url
 group by
     clientproducttoentityid
@@ -475,16 +403,8 @@ group by
 cte_client_url_xml as (
 select
     clienttoproductid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(urlval IS NOT NULL, '"urlval":' || '"' || urlval || '"' || ',', '') ||
-IFF(urltyp IS NOT NULL, '"urltyp":' || '"' || urltyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as urlxml
+    listagg( '<url>' || iff(urlval is not null,'<urlval>' || urlval || '</urlval>','') ||
+iff(urltyp is not null,'<urltyp>' || urltyp || '</urltyp>','')  || '</url>','') as urlxml
 from cte_client_detail_url
 group by
     clienttoproductid
@@ -492,16 +412,8 @@ group by
 cte_facilityurl_xml as (
 select
     facilityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(urlval IS NOT NULL, '"urlval":' || '"' || urlval || '"' || ',', '') ||
-IFF(urltyp IS NOT NULL, '"urltyp":' || '"' || urltyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as urlxml
+    listagg( '<url>' || iff(urlval is not null,'<urlval>' || urlval || '</urlval>','') ||
+iff(urltyp is not null,'<urltyp>' || urltyp || '</urltyp>','')  || '</url>','') as urlxml
 from cte_facility_url
 group by
     facilityid
@@ -541,16 +453,8 @@ cte_combined_image as (
 cte_client_image_xml as (
 select
     clienttoproductid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(img IS NOT NULL, '"img":' || '"' || img || '"' || ',', '') ||
-IFF(imgTyp IS NOT NULL, '"imgTyp":' || '"' || imgTyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as imagexml
+    listagg( '<url>' || iff(img is not null,'<img>' || img || '</img>','') ||
+iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','')  || '</url>','') as imagexml
 from cte_client_image
 group by
     clienttoproductid
@@ -559,16 +463,8 @@ group by
 cte_facility_image_xml as (
 select
     clientproducttoentityid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(img IS NOT NULL, '"img":' || '"' || img || '"' || ',', '') ||
-IFF(imgTyp IS NOT NULL, '"imgTyp":' || '"' || imgTyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as imagexml
+    listagg( '<url>' || iff(img is not null,'<img>' || img || '</img>','') ||
+iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','')  || '</url>','') as imagexml
 from cte_facility_img
 group by
     clientproducttoentityid
@@ -576,16 +472,8 @@ group by
 cte_combined_image_xml as (
 select
     clienttoproductid,
-    utils.p_json_to_xml(array_agg(
-'{ '||
-IFF(img IS NOT NULL, '"img":' || '"' || img || '"' || ',', '') ||
-IFF(imgTyp IS NOT NULL, '"imgTyp":' || '"' || imgTyp || '"', '')
-||' }'
-    
-    )::varchar
-    ,
-    '',
-    'url') as imagexml
+    listagg( '<url>' || iff(img is not null,'<img>' || img || '</img>','') ||
+iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','')  || '</url>','') as imagexml
 from cte_combined_image
 group by
     clienttoproductid
