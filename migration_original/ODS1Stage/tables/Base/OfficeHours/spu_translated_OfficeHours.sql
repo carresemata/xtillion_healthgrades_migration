@@ -28,34 +28,43 @@ declare
     execution_start datetime default getdate();
 
    
-   
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement_1 := $$ with CTE_Swimlane as (
-select
-	o.officeid,
-	dw.daysofweekid,
-	ifnull(json.hours_LastUpdateDate, sysdate()) as LastUpdateDate,
-	TO_TIME(json.hours_ClosingTime) as OfficeHoursClosingTime, 
-	TO_TIME(json.hours_OpeningTime) as OfficeHoursOpeningTime,  
-	case when json.hours_IsClosed is null and json.hours_OpeningTime is not null then 0 when json.hours_IsClosed is null then 1 else json.hours_IsClosed end as OfficeIsClosed,
-	ifnull(json.hours_IsOpen24Hours, 0) as OfficeIsOpen24Hours, 
-	ifnull( json.hours_SourceCode , 'Profisee' ) as SourceCode, 
-	json.officecode,
-    row_number() over(partition by o.officeid, json.hours_DaysOfWeekCode order by CREATE_DATE desc) as RowRank 
-
-from raw.vw_OFFICE_PROFILE as JSON
-	left join base.office as O on o.officecode = json.officecode
-	left join base.daysofweek as DW on dw.daysofweekcode = 
-json.hours_DaysOfWeekCode
-where OFFICE_PROFILE is not null ),
+select_statement_1 := $$ WITH CTE_Hours AS (
+    SELECT
+        p.ref_office_code AS officecode,
+        TO_VARCHAR(json.value: DAYS_OF_WEEK_CODE) AS Hours_DaysOfWeekCode,
+        TO_VARCHAR(json.value: OPENING_TIME) AS Hours_OpeningTime,
+        TO_VARCHAR(json.value: CLOSING_TIME) AS Hours_ClosingTime,
+        TO_BOOLEAN(json.value: IS_CLOSED) AS Hours_IsClosed,
+        TO_BOOLEAN(json.value: IS_OPEN_24_HOURS) AS Hours_IsOpen24Hours,
+        TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Hours_SourceCode,
+        TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Hours_LastUpdateDate
+    FROM mdm_team.mst.office_profile_processing AS p,
+         LATERAL FLATTEN(input => p.OFFICE_PROFILE:HOURS) AS json
+    where TO_VARCHAR(json.value: DAYS_OF_WEEK_CODE) is not null
+),
+cte_swimlane as (
+    select
+        o.officeid,
+        dw.daysofweekid,
+        ifnull(json.hours_LastUpdateDate, sysdate()) as LastUpdateDate,
+        case when json.hours_ClosingTime = 'None' or json.hours_ClosingTime is null then '00:00' else json.hours_ClosingTime end as OfficeHoursClosingTime, 
+    	case when json.hours_OpeningTime = 'None' or json.hours_OpeningTime is null then '00:00' else json.hours_OpeningTime end as OfficeHoursOpeningTime,  
+    	case when json.hours_IsClosed is null and json.hours_OpeningTime is not null then 0 when json.hours_IsClosed is null then 1 else json.hours_IsClosed end as OfficeIsClosed,
+    	ifnull(json.hours_IsOpen24Hours, FALSE) as OfficeIsOpen24Hours, 
+    	ifnull( json.hours_SourceCode , 'Profisee' ) as SourceCode, 
+    	json.officecode,
+        row_number() over(partition by o.officeid, dw.daysofweekid order by hours_LastUpdateDate desc) as RowRank 
+    from cte_hours as json
+        join base.office as o on o.officecode = json.officecode
+        join base.daysofweek as DW on dw.daysofweekcode = json.hours_DaysOfWeekCode
+),
 
 CTE_NotExists as (
 select 1
@@ -74,7 +83,8 @@ from CTE_Swimlane as S
 	inner join base.daysofweek as DW on dw.daysofweekid = s.daysofweekid
 where not exists (select * from CTE_NotExists)) $$;
 
-select_statement_2 := select_statement_1 || $$ select distinct
+select_statement_2 := select_statement_1 || $$ 
+select distinct
 	OfficeID, 
 	SourceCode, 
 	DaysOfWeekID, 
@@ -85,31 +95,26 @@ select_statement_2 := select_statement_1 || $$ select distinct
 	LastUpdateDate
 from CTE_swimlane
 where 
-	OfficeID is not null and
-	DaysOfWeekID is not null and
-	OfficeIsClosed is not null and
-	OfficeIsOpen24Hours is not null and
-	RowRank = 1  $$;
+	RowRank = 1   $$;
 
 
 
 --- update Statement
 update_statement := ' update
-					SET
-	target.sourcecode = source.sourcecode, 
-	target.officehoursopeningtime = source.officehoursopeningtime, 
-	target.officehoursclosingtime = source.officehoursclosingtime, 
-	target.officeisclosed = source.officeisclosed, 
-	target.officeisopen24Hours = source.officeisopen24Hours, 
-	target.lastupdatedate = source.lastupdatedate';
+					   SET
+                    	target.sourcecode = source.sourcecode, 
+                    	target.officehoursopeningtime = source.officehoursopeningtime, 
+                    	target.officehoursclosingtime = source.officehoursclosingtime, 
+                    	target.officeisclosed = source.officeisclosed, 
+                    	target.officeisopen24Hours = source.officeisopen24Hours, 
+                    	target.lastupdatedate = source.lastupdatedate';
                             
 -- update Clause
 update_clause := $$ target.sourcecode != source.sourcecode
 or ifnull(target.officehoursopeningtime, '08:00:00.0000000') != ifnull(source.officehoursopeningtime, '08:00:00.0000000')
 or ifnull(target.officehoursclosingtime, '17:00:00.0000000') != ifnull(source.officehoursclosingtime, '17:00:00.0000000')
 or ifnull(target.officeisclosed, 1) != ifnull(source.officeisclosed, 1)
-or ifnull(target.officeisopen24Hours, 0) != ifnull(source.officeisopen24Hours, 0)
-                    $$;                        
+or ifnull(target.officeisopen24Hours, 0) != ifnull(source.officeisopen24Hours, 0) $$;                        
         
 --- insert Statement
 insert_statement := 'insert ( 
@@ -142,7 +147,7 @@ values (
 
 merge_statement := ' merge into base.officehours as target using 
                    ('||select_statement_2 ||') as source 
-                   on source.officeid = target.officeid
+                   on source.officeid = target.officeid and source.daysofweekid = target.daysofweekid
 		           WHEN MATCHED and target.officeid IN (' || select_statement_1 || ' select OfficeId from CTE_DeleteOfficeHours ) then delete
                    WHEN MATCHED and' || update_clause || 'then '||update_statement|| '
                    when not matched then '||insert_statement ;
