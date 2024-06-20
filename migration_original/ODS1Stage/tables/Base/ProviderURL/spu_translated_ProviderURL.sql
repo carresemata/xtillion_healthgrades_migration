@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providerurl depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.providertype
 
@@ -19,23 +19,35 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerurl');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
    
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select
+select_statement := $$ with Cte_provider_type as (
+                            SELECT
+                                p.ref_provider_code as providercode,
+                                to_varchar(json.value:PROVIDER_TYPE_CODE) as ProviderType_ProviderTypeCode,
+                                to_varchar(json.value:PROVIDER_TYPE_RANK) as ProviderType_ProviderTypeRank,
+                                to_varchar(json.value:PROVIDER_TYPE_RANK_CALCULATED) as ProviderType_ProviderTypeRankCalculated,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as ProviderType_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as ProviderType_LastUpdateDate
+                            FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+                            , lateral flatten(input => p.PROVIDER_PROFILE:PROVIDER_TYPE) as json
+                        )
+                        select
+                            json.providercode,
                             p.providerid,
                             replace(
                                 replace(
@@ -53,29 +65,33 @@ select_statement := $$ select
                             ifnull(json.providertype_SourceCode, 'Profisee') as SourceCode,
                             ifnull(json.providertype_LastUpdateDate, sysdate()) as LastUpdateDate
                         from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.providertype as PT on pt.providertypecode = json.providertype_ProviderTypeCode
-                        where 
-                            PROVIDER_PROFILE is not null and
-                            ProviderTypeCode is not null and 
-                            ProviderID is not null
-                        qualify row_number() over(partition by ProviderID order by ifnull(json.providertype_ProviderTypeRankCalculated,1), CREATE_DATE desc) = 1
+                            cte_provider_type as JSON
+                            join base.provider as P on p.providercode = json.providercode
+                            join base.providertype as PT on pt.providertypecode = json.providertype_ProviderTypeCode
+                        qualify row_number() over(partition by ProviderID order by ifnull(json.providertype_ProviderTypeRankCalculated,1), ProviderType_LastUpdateDate desc) = 1
 $$;
 
 
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.url = source.url,
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate';
 
 --- insert Statement
 insert_statement := ' insert  
                         (ProviderURLID,
                         ProviderID,
+                        providercode,
                         URL,
                         SourceCode,
                         LastUpdateDate)
                       values 
                         (uuid_string(),
                         source.providerid,
+                        source.providercode,
                         source.url,
                         source.sourcecode,
                         source.lastupdatedate)';
@@ -87,11 +103,12 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providerurl as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
+                   on source.providercode = target.providercode
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
--------------------  5. execution ------------------------
+-------------------  5. execution -----------------------
 ---------------------------------------------------------
 
 if (is_full) then
