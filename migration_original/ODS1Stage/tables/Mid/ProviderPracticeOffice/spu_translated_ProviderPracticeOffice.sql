@@ -41,114 +41,135 @@ declare
 ---------------------------------------------------------     
 
 begin
-select_statement := $$ with CTE_ProviderBatch as (
+select_statement := 
+                $$ 
+                with CTE_ProviderBatch as (
                             select p.providerid
                             from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                            join base.provider as p on ppp.ref_provider_code = p.providercode),
-            CTE_ServiceNumbers as (
-                select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc, 
-                       o.lastupdatedate, pto.phoneid) as SequenceId1   
-                from base.officetophone pto
-                join base.phone o on (pto.phoneid = o.phoneid)
-                where pto.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'Service') 
-            ),
-            
-            CTE_FaxNumbers as (
-                select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc,                      o.lastupdatedate, pto.phoneid) as SequenceId1
-                from base.officetophone pto
-                join base.phone o on (pto.phoneid = o.phoneid)
-                where pto.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'Fax') 
-            ),
-            
-            CTE_ProviderOfficeRank as (
-                select ProviderID, MIN(ProviderOfficeRank) as ProviderOfficeRank
-                from base.providertooffice
-                where ProviderOfficeRank is not null
-                group by ProviderID
-            ),
-            
-            CTE_PracticeEmails as (
-                select PracticeID, EmailAddress, row_number() over (partition by PracticeID order by LEN(EmailAddress)) as EmailRank
-                from base.practiceemail
-                where EmailAddress is not null
-            ),
-            
-            CTE_ProviderPracticeOffice as (
-                select distinct 
-                    pto.providertoofficeid, 
-                    pto.providerid,  
-                    p.practiceid, 
-                    p.practicecode, 
-                    CASE 
-                        WHEN pto.practicename is not null then pto.practicename 
-                        else p.practicename 
-                    END as PracticeName,
-                    p.yearpracticeestablished, 
-                    p.npi as PracticeNPI, 
-                    cte_pe.emailaddress as PracticeEmail,
-                    p.practicewebsite, 
-                    p.practicedescription, 
-                    p.practicelogo, 
-                    p.practicemedicaldirector, 
-                    p.practicesoftware, 
-                    p.practicetin, 
-                    ota.officetoaddressid, 
-                    o.officeid, 
-                    o.officecode, 
-                    CASE 
-                        WHEN pto.officename is not null then pto.officename 
-                        else o.officename 
-                    END as OfficeName, 
-                    CASE
-                        WHEN cte_por.providerid is not null then 1
-                        else null 
-                    END as IsPrimaryOffice, 
-                    pto.providerofficerank, 
-                    a.addressid, 
-                    a.addresscode, 
-                    'Office' as AddressTypeCode, 
-                    a.addressline1 as AddressLine1, 
-                    null as AddressLine2, 
-                    a.addressline3, 
-                    a.addressline4,
-                    cspc.city, 
-                    cspc.state, 
-                    cspc.postalcode as ZipCode, 
-                    cspc.county, 
-                    n.nationname as Nation, 
-                    a.latitude, 
-                    a.longitude,
-                    cte_sn.phonenumber as FullPhone,
-                    cte_fn.phonenumber as FullFax,
-                    ota.isderived, 
-                    o.hasbillingstaff,
-                    o.hashandicapaccess, 
-                    o.haslabservicesonsite, 
-                    o.haspharmacyonsite, 
-                    o.hasxrayonsite, 
-                    o.issurgerycenter, 
-                    o.hassurgeryonsite, 
-                    o.averagedailypatientvolume, 
-                    null as PhysicianCount, 
-                    o.officecoordinatorname, 
-                    o.parkinginformation, 
-                    o.paymentpolicy,
-                    o.legacykey as LegacyKeyOffice, 
-                    p.legacykey as LegacyKeyPractice,
-                    0 as ActionCode
-                from CTE_ProviderBatch pb 
-                inner join base.providertooffice as pto on pb.providerid = pto.providerid
-                inner join base.office as o on o.officeid = pto.officeid
-                inner join base.officetoaddress as ota on o.officeid = ota.officeid
-                inner join base.address as a on a.addressid = ota.addressid	
-                left join CTE_ServiceNumbers as cte_sn on cte_sn.officeid = o.officeid and cte_sn.sequenceid1 = 1
-                left join CTE_FaxNumbers as cte_fn on cte_fn.officeid = o.officeid and cte_fn.sequenceid1 = 1
-                left join base.citystatepostalcode as cspc on a.citystatepostalcodeid = cspc.citystatepostalcodeid
-                left join base.nation as n on cspc.nationid = n.nationid
-                left join base.practice as p on o.practiceid = p.practiceid
-                left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
-                left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
-            ),
+                            join base.provider as p on ppp.ref_provider_code = p.providercode
+                    ),
+
+                -- ***** does return rows because now we only have 'MAIN' and 'FAX' Numbers instead of 'MAIN' and 'Service' *****
+                CTE_MainNumbers as (
+                    select 
+                        o.phonenumber, 
+                        otp.officeid, 
+                        row_number() over(partition by otp.officeid order by otp.phonerank, otp.lastupdatedate desc, o.lastupdatedate, otp.phoneid) as SequenceId1   
+                    from base.officetophone otp
+                    join base.phone o on otp.phoneid = o.phoneid
+                    where otp.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'MAIN') 
+                ),
+                
+                -- ***** returns 0 rows because we don't have 'Service' PhoneTypeCodes in Snowflake MDM (we only have 'MAIN' and 'FAX') *****
+                CTE_ServiceNumbers as (
+                    select 
+                        o.phonenumber, 
+                        otp.officeid, 
+                        row_number() over(partition by otp.officeid order by otp.phonerank, otp.lastupdatedate desc, o.lastupdatedate, otp.phoneid) as SequenceId1   
+                    from base.officetophone otp
+                    join base.phone o on otp.phoneid = o.phoneid
+                    where otp.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'Service')
+                ),
+                
+                
+                CTE_FaxNumbers as (
+                    select o.phonenumber, pto.officeid, row_number() over(partition by pto.officeid order by pto.phonerank, pto.lastupdatedate desc, o.lastupdatedate, pto.phoneid) as SequenceId1
+                    from base.officetophone pto
+                    join base.phone o on (pto.phoneid = o.phoneid)
+                    where pto.phonetypeid = (select PhoneTypeID from base.phonetype where PhoneTypeCode = 'FAX') 
+                ),
+                
+                CTE_ProviderOfficeRank as (
+                    select ProviderID, MIN(ProviderOfficeRank) as ProviderOfficeRank
+                    from base.providertooffice
+                    where ProviderOfficeRank is not null
+                    group by ProviderID
+                ),
+                
+                -- this has 0 rows in SQL server as well
+                CTE_PracticeEmails as (
+                    select PracticeID, EmailAddress, row_number() over (partition by PracticeID order by LEN(EmailAddress)) as EmailRank
+                    from base.practiceemail
+                    where EmailAddress is not null
+                ),
+                
+                CTE_ProviderPracticeOffice as (
+                    select distinct
+                        pto.providertoofficeid, 
+                        pto.providerid,  
+                        p.practiceid, 
+                        p.practicecode, 
+                        CASE 
+                            WHEN pto.practicename is not null then pto.practicename 
+                            else p.practicename 
+                        END as PracticeName,
+                        p.yearpracticeestablished, 
+                        p.npi as PracticeNPI, 
+                        cte_pe.emailaddress as PracticeEmail,
+                        p.practicewebsite, 
+                        p.practicedescription, 
+                        p.practicelogo, 
+                        p.practicemedicaldirector, 
+                        p.practicesoftware, 
+                        p.practicetin, 
+                        ota.officetoaddressid, 
+                        o.officeid, 
+                        o.officecode, 
+                        CASE 
+                            WHEN pto.officename is not null then pto.officename 
+                            else o.officename 
+                        END as OfficeName, 
+                        CASE
+                            WHEN cte_por.providerid is not null then 1
+                            else null 
+                        END as IsPrimaryOffice, 
+                        pto.providerofficerank, 
+                        a.addressid, 
+                        a.addresscode, 
+                        'Office' as AddressTypeCode, 
+                        a.addressline1 as AddressLine1, 
+                        null as AddressLine2, 
+                        a.addressline3, 
+                        a.addressline4,
+                        cspc.city, 
+                        cspc.state, 
+                        cspc.postalcode as ZipCode, 
+                        cspc.county, 
+                        n.nationname as Nation, 
+                        a.latitude, 
+                        a.longitude,
+                        cte_mn.phonenumber as FullPhone,
+                        cte_fn.phonenumber as FullFax,
+                        ota.isderived, 
+                        o.hasbillingstaff,
+                        o.hashandicapaccess, 
+                        o.haslabservicesonsite, 
+                        o.haspharmacyonsite, 
+                        o.hasxrayonsite, 
+                        o.issurgerycenter, 
+                        o.hassurgeryonsite, 
+                        o.averagedailypatientvolume, 
+                        null as PhysicianCount, 
+                        o.officecoordinatorname, 
+                        o.parkinginformation, 
+                        o.paymentpolicy,
+                        o.legacykey as LegacyKeyOffice, 
+                        p.legacykey as LegacyKeyPractice,
+                        0 as ActionCode
+                    from CTE_ProviderBatch pb 
+                    inner join base.providertooffice as pto on pb.providerid = pto.providerid
+                    inner join base.office as o on o.officeid = pto.officeid
+                    inner join base.officetoaddress as ota on o.officeid = ota.officeid
+                    inner join base.address as a on a.addressid = ota.addressid	
+                    left join CTE_MainNumbers as cte_mn on cte_mn.officeid = o.officeid and cte_mn.sequenceid1 = 1
+                    left join CTE_ServiceNumbers as cte_sn on cte_sn.officeid = o.officeid and cte_sn.sequenceid1 = 1
+                    left join CTE_FaxNumbers as cte_fn on cte_fn.officeid = o.officeid and cte_fn.sequenceid1 = 1
+                    left join base.citystatepostalcode as cspc on a.citystatepostalcodeid = cspc.citystatepostalcodeid
+                    left join base.nation as n on cspc.nationid = n.nationid
+                    left join base.practice as p on o.practiceid = p.practiceid
+                    left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
+                    left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
+                ),
             
             -- insert Action
             CTE_Action_1 as (
@@ -231,66 +252,66 @@ select_statement := $$ with CTE_ProviderBatch as (
                         MD5(ifnull(cte.state::varchar,'''')) <> MD5(ifnull(mid.state::varchar,'''')) or
                         MD5(ifnull(cte.yearpracticeestablished::varchar,'''')) <> MD5(ifnull(mid.yearpracticeestablished::varchar,'''')) or
                         MD5(ifnull(cte.zipcode::varchar,'''')) <> MD5(ifnull(mid.zipcode::varchar,''''))
-            )
+                )
             
-            select distinct
-                A0.AddressCode,
-                A0.AddressID,
-                A0.AddressLine1,
-                A0.AddressLine2,
-                A0.AddressLine3,
-                A0.AddressLine4,
-                A0.AddressTypeCode,
-                A0.AverageDailyPatientVolume,
-                A0.City,
-                A0.County,
-                A0.FullFax,
-                A0.FullPhone,
-                A0.HasBillingStaff,
-                A0.HasHandicapAccess,
-                A0.HasLabServicesOnSite,
-                A0.HasPharmacyOnSite,
-                A0.HasSurgeryOnSite,
-                A0.HasXrayOnSite,
-                A0.IsDerived,
-                A0.IsPrimaryOffice,
-                A0.IsSurgeryCenter,
-                A0.Latitude,
-                A0.LegacyKeyOffice,
-                A0.LegacyKeyPractice,
-                A0.Longitude,
-                A0.Nation,
-                A0.OfficeCode,
-                A0.OfficeCoordinatorName,
-                A0.OfficeID,
-                A0.OfficeName,
-                A0.OfficeToAddressID,
-                A0.ParkingInformation,
-                A0.PaymentPolicy,
-                A0.PhysicianCount,
-                A0.PracticeCode,
-                A0.PracticeDescription,
-                A0.PracticeEmail,
-                A0.PracticeID,
-                A0.PracticeLogo,
-                A0.PracticeMedicalDirector,
-                A0.PracticeName,
-                A0.PracticeNPI,
-                A0.PracticeSoftware,
-                A0.PracticeTIN,
-                A0.PracticeWebsite,
-                A0.ProviderID,
-                A0.ProviderOfficeRank,
-                A0.ProviderToOfficeID,
-                A0.State,
-                A0.YearPracticeEstablished,
-                A0.ZipCode,
-                ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode  
-            from CTE_ProviderPracticeOffice as A0
-            left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID and A0.OfficeID = A1.OfficeID
-            left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID and A0.OfficeID = A2.OfficeID
-            where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
-            $$;
+                select distinct
+                    A0.AddressCode,
+                    A0.AddressID,
+                    A0.AddressLine1,
+                    A0.AddressLine2,
+                    A0.AddressLine3,
+                    A0.AddressLine4,
+                    A0.AddressTypeCode,
+                    A0.AverageDailyPatientVolume,
+                    A0.City,
+                    A0.County,
+                    A0.FullFax,
+                    A0.FullPhone,
+                    A0.HasBillingStaff,
+                    A0.HasHandicapAccess,
+                    A0.HasLabServicesOnSite,
+                    A0.HasPharmacyOnSite,
+                    A0.HasSurgeryOnSite,
+                    A0.HasXrayOnSite,
+                    A0.IsDerived,
+                    A0.IsPrimaryOffice,
+                    A0.IsSurgeryCenter,
+                    A0.Latitude,
+                    A0.LegacyKeyOffice,
+                    A0.LegacyKeyPractice,
+                    A0.Longitude,
+                    A0.Nation,
+                    A0.OfficeCode,
+                    A0.OfficeCoordinatorName,
+                    A0.OfficeID,
+                    A0.OfficeName,
+                    A0.OfficeToAddressID,
+                    A0.ParkingInformation,
+                    A0.PaymentPolicy,
+                    A0.PhysicianCount,
+                    A0.PracticeCode,
+                    A0.PracticeDescription,
+                    A0.PracticeEmail,
+                    A0.PracticeID,
+                    A0.PracticeLogo,
+                    A0.PracticeMedicalDirector,
+                    A0.PracticeName,
+                    A0.PracticeNPI,
+                    A0.PracticeSoftware,
+                    A0.PracticeTIN,
+                    A0.PracticeWebsite,
+                    A0.ProviderID,
+                    A0.ProviderOfficeRank,
+                    A0.ProviderToOfficeID,
+                    A0.State,
+                    A0.YearPracticeEstablished,
+                    A0.ZipCode,
+                    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode  
+                from CTE_ProviderPracticeOffice as A0
+                left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID and A0.OfficeID = A1.OfficeID
+                left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID and A0.OfficeID = A2.OfficeID
+                where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
+                $$;
                         
 
 
@@ -465,7 +486,7 @@ insert_statement :=   $$
                                 source.yearpracticeestablished,
                                 source.zipcode
                                )
-                       $$;
+                    $$;
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -474,7 +495,7 @@ insert_statement :=   $$
 merge_statement :=  $$
                     merge into mid.providerpracticeoffice as target using ($$|| select_statement ||$$) as source 
                     on source.providerid = target.providerid
-                    WHEN MATCHED and source.actioncode = 2 then $$|| update_statement ||$$
+                    when matched and source.actioncode = 2 then $$|| update_statement ||$$
                     when not matched and source.actioncode = 1 then $$ || insert_statement;
 
                 
