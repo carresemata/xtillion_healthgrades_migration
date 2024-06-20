@@ -88,7 +88,7 @@ declare
                           SearchBoostSatisfaction,
                           SearchBoostAccessibility
                       )
-                      select
+                      select distinct
                         p.providerid,
                         p.providercode,
                         p.providertypeid,
@@ -307,7 +307,7 @@ declare
       merge_statement := $$
                         merge into mid.provider as target 
                         using $$|| select_statement ||$$ as source	
-                        on source.providerid = target.providerid
+                        on source.providerid = target.providerid and source.providercode = target.providercode
                         WHEN MATCHED and MD5(ifnull(CAST(target.acceptsnewpatients as varchar), '')) <> MD5(ifnull(CAST(source.acceptsnewpatients as varchar), '')) or 
                                         MD5(ifnull(CAST(target.amaid as varchar), '')) <> MD5(ifnull(CAST(source.amaid as varchar), '')) or 
                                         MD5(ifnull(CAST(target.carephilosophy as varchar), '')) <> MD5(ifnull(CAST(source.carephilosophy as varchar), '')) or 
@@ -358,7 +358,7 @@ declare
      execute immediate update_temp_5;
      execute immediate update_temp_6;
      
-     -- merge to final mid.prover table
+     -- merge to final mid.provider table
      execute immediate merge_statement;
 
      ---------------------------------------------------------
