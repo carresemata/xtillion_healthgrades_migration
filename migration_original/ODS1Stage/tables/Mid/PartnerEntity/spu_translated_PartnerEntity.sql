@@ -243,7 +243,7 @@ insert_statement := ' insert (
 merge_statement := ' merge into mid.partnerentity as target using 
                    ('||select_statement||') as source 
                    on source.partnertoentityid = target.partnertoentityid
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
+                   when matched and source.actioncode = 2 then '||update_statement|| '
                    when not matched and source.actioncode = 1 then '||insert_statement;
                    
 ---------------------------------------------------------
