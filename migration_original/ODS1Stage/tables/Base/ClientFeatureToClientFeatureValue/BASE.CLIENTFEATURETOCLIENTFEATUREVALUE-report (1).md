@@ -19,8 +19,8 @@ The example below shows a sample row where values are not identical. Important t
 
 ### 2.2 Total Rows
 - SQL Server: 5451
-- Snowflake: 5126
-- Rows Margin (%): 5.9622087690332055
+- Snowflake: 41
+- Rows Margin (%): 99.24784443221426
 
 ### 2.3 Nulls per Column
 |    | Column_Name                         |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -34,8 +34,8 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name                         |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:------------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ClientFeatureToClientFeatureValueID |                        5451 |                        5126 |          6   |
+|  0 | ClientFeatureToClientFeatureValueID |                        5451 |                          41 |         99.2 |
 |  1 | ClientFeatureID                     |                          48 |                          19 |         60.4 |
 |  2 | ClientFeatureValueID                |                          47 |                          20 |         57.4 |
-|  3 | SourceCode                          |                           3 |                         400 |      13233.3 |
-|  4 | LastUpdateDate                      |                         129 |                          58 |         55   |
+|  3 | SourceCode                          |                           3 |                          20 |        566.7 |
+|  4 | LastUpdateDate                      |                         129 |                          11 |         91.5 |
