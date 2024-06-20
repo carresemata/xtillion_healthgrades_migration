@@ -1,15 +1,14 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER(is_full BOOLEAN)
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE as CALLER
-    as  
-declare 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDER(is_full BOOLEAN)
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS declare 
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- base.provider depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.source
 
 ---------------------------------------------------------
@@ -26,8 +25,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_provider');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
@@ -40,44 +38,40 @@ begin
 --- select Statement
 select_statement_1 := $$ select
                             -- ReltioEntityId
-                            uuid_string() as ProviderId,
                             -- EDWBaseRecordID
-                            json.providercode,
-                            json.demographics_FIRSTNAME as FirstName,
-                            json.demographics_MIDDLENAME as MiddleName,
-                            json.demographics_LASTNAME as LastName,
-                            json.demographics_SUFFIXCODE as Suffix,
-                            json.demographics_GENDERCODE as Gender,
+                            json.ref_provider_code as providercode,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:FIRST_NAME) as FirstName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:MIDDLE_NAME) as MiddleName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:LAST_NAME) as LastName,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:SUFFIX_CODE) as Suffix,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:GENDER_CODE) as Gender,
                             CASE
-                                WHEN json.demographics_NPI = json.providercode then null
-                                else json.demographics_NPI
+                                WHEN to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:NPI) = json.ref_provider_code then null
+                                else to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:NPI)
                             END as NPI,
-                            TO_DATE(json.demographics_DATEOFBIRTH) as DateOfBirth,
-                            json.demographics_ACCEPTSNEWPATIENTS as AcceptsNewPatients,
+                            TO_DATE(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATE_OF_BIRTH) as DateOfBirth,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:ACCEPTS_NEW_PATIENTS) as AcceptsNewPatients,
                             -- HasElectronicMedicalRecords,
                             -- HasElectronicPrescription,
-                            ifnull(json.demographics_SOURCECODE, 'Profisee') as SourceCode,
+                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATA_SOURCE_CODE, 'Profisee') as SourceCode,
                             s.sourceid,
-                            ifnull(json.demographics_LASTUPDATEDATE, sysdate()) as LastUpdateDate,
+                            ifnull(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:LAST_UPDATE_DATE, sysdate()) as LastUpdateDate,
                             -- PatientVolume
                             -- IsInClinicalPractice
                             -- PatientCountIsFew
                             -- IsPCPCalculated
                             -- ProfessionalInterest
-                            json.demographics_SURVIVERESIDENTIALADDRESSES as SurviveResidentialAddresses,
-                            json.demographics_ISPATIENTFAVORITE as IsPatientFavorite
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:SURVIVE_RESIDENTIAL_ADDRESSES) as SurviveResidentialAddresses,
+                            to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:IS_PATIENT_FAVORITE) as IsPatientFavorite
                         from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.source as S on s.sourcecode = json.demographics_SOURCECODE
-                        where
-                            PROVIDER_PROFILE is not null
-                        qualify row_number() over(partition by ProviderID order by json.providercode, CREATE_DATE desc, NPI) = 1 $$;
+                            $$ || mdm_db || $$.mst.provider_profile_processing as JSON
+                            left join ((select distinct(sourcecode), sourceid from base.source where lastupdatedate != 'NaT')) as S on s.sourcecode = to_varchar(json.PROVIDER_PROFILE:DEMOGRAPHICS[0]:DATA_SOURCE_CODE) $$;
 
 
 
 --- update Statement
 update_statement_1 := ' update 
-                     SET  target.providercode = source.providercode,
+                            SET
                             target.firstname = source.firstname,
                             target.middlename = source.middlename,
                             target.lastname = source.lastname,
@@ -91,6 +85,7 @@ update_statement_1 := ' update
                             target.lastupdatedate = source.lastupdatedate,
                             target.surviveresidentialaddresses = source.surviveresidentialaddresses,
                             target.ispatientfavorite = source.ispatientfavorite';
+                            
 -- update Clause
 update_clause_1 := $$ ifnull(target.providercode, '') != ifnull(source.providercode, '')
         or ifnull(target.firstname, '') != ifnull(source.firstname, '')
@@ -125,7 +120,7 @@ insert_statement_1 := ' insert
                             SurviveResidentialAddresses,
                             IsPatientFavorite)
                       values 
-                          ( source.providerid,
+                          ( uuid_string(),
                             source.providercode,
                             source.firstname,
                             source.middlename,
@@ -143,13 +138,14 @@ insert_statement_1 := ' insert
 
 -- update Statement
 
-update_statement_2 := $$update base.provider as target
+update_statement_2 := $$ update base.provider as target
        SET target.carephilosophy = source.provideraboutmetext
          from (select 
-                    json.providercode,
-                    json.aboutme_ABOUTMECODE as AboutMeCode,
-                    json.aboutme_ABOUTMETEXT as ProviderAboutMeText
-                from raw.vw_PROVIDER_PROFILE as JSON
+                    json.ref_provider_code as providercode,
+                    to_varchar(aboutme.VALUE:ABOUT_ME_CODE) as AboutMeCode,
+                    to_varchar(aboutme.VALUE:ABOUT_ME_TEXT) as ProviderAboutMeText
+                from $$ || mdm_db || $$.mst.provider_profile_processing as JSON
+                    , lateral flatten (input => json.PROVIDER_PROFILE:ABOUT_ME) ABOUTME
                     where AboutMeCode = 'CarePhilosophy') as source
          where target.providercode = source.providercode
     $$;
@@ -160,7 +156,7 @@ update_statement_2 := $$update base.provider as target
 
 merge_statement_1 := ' merge into base.provider as target using 
                    ('||select_statement_1||') as source 
-                   on source.providerid = target.providerid
+                   on source.providercode = target.providercode
                    WHEN MATCHED and' || update_clause_1 || 'then '||update_statement_1|| '
                    when not matched then '||insert_statement_1;
                    
