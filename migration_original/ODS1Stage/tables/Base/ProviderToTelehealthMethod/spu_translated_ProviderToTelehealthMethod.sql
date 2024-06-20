@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertotelehealthmethod depends on: 
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.telehealthmethod
 --- base.telehealthmethodtype
@@ -20,15 +20,15 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertotelehealthmethod');
     execution_start datetime default getdate();
-
+    mdm_db string default('mdm_team');
    
    
 begin
-    
 
 
 ---------------------------------------------------------
@@ -36,24 +36,38 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$ select distinct
+select_statement := $$ with Cte_telehealth as (
+                            SELECT distinct
+                                p.ref_provider_code as providercode,
+                                to_boolean(json.value:HAS_TELEHEALTH) as Telehealth_HasTelehealth,
+                                ifnull(to_varchar(json.value:TELEHEALTH_METHOD_CODE), 'NA') as Telehealth_TelehealthMethodCode,
+                                ifnull(ifnull(to_varchar(json.value:TELEHEALTH_URL), to_varchar(json.value:TELEHEALTH_PHONE)), to_varchar(json.value:TELEHEALTH_VENDOR_NAME)) as Telehealth_Telehealthmethod,
+                                to_varchar(json.value:DATA_SOURCE_CODE) as Telehealth_SourceCode,
+                                to_timestamp_ntz(json.value:UPDATED_DATETIME) as Telehealth_LastUpdateDate
+                            FROM $$ || mdm_db || $$ .mst.provider_profile_processing as p
+                            , lateral flatten(input => p.PROVIDER_PROFILE:TELEHEALTH) as json
+                            where to_varchar(json.value:HAS_TELEHEALTH) = TRUE
+                        )
+                        select distinct
                             p.providerid,
                             tm.telehealthmethodid, 
+                            tmt.methodtypecode,
                             ifnull(json.telehealth_SourceCode, 'Profisee') as SourceCode,
-                            CASE WHEN ifnull(json.telehealth_HasTelehealth, 'N') IN ('yes', 'true', '1', 'Y', 'T') then 'TRUE' else 'FALSE' END as HasTeleHealth,
-                            json.telehealth_LastUpdateDate as LastUpdatedDate
+                            json.Telehealth_HasTelehealth as HasTeleHealth,
+                            ifnull(json.telehealth_LastUpdateDate, current_timestamp()) as LastUpdatedDate
                         from
-                            raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.telehealthmethodtype as TMT on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
-                            left join base.telehealthmethod as TM on tm.telehealthmethodtypeid = tmt.telehealthmethodtypeid
-                        where
-                            PROVIDER_PROFILE is not null and
-                            HasTeleHealth = 'TRUE' and
-                            TelehealthMethodId is not null$$;
+                            cte_telehealth as JSON
+                            join base.provider as P on p.providercode = json.providercode
+                            join base.telehealthmethodtype as TMT on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
+                            join base.telehealthmethod as TM on tm.telehealthmethodtypeid = tmt.telehealthmethodtypeid or json.telehealth_telehealthmethod = tm.telehealthmethod 
+                        qualify row_number() over(partition by providerid order by telehealth_LastUpdateDate desc) = 1$$;
 
 
-
+--- update statement
+update_statement := ' update
+                        set
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdateddate = source.lastupdateddate';
 
 --- insert Statement
 insert_statement := ' insert  
@@ -76,8 +90,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertotelehealthmethod as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid and source.telehealthmethodid = target.telehealthmethodid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
