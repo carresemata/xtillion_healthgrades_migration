@@ -60,7 +60,8 @@ select
 
 from cte_media as JSON
     join base.provider as P on p.providercode = json.providercode
-    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE $$;
+    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE 
+qualify row_number() over(partition by ProviderID, media_mediatypecode, media_mediadate, media_MediaLink, media_MediaPublisher, media_MediaSynopsis, media_MediaTitle order by json.media_lastupdatedate desc) = 1 $$;
 
 --- insert Statement
 insert_statement := '       insert  
