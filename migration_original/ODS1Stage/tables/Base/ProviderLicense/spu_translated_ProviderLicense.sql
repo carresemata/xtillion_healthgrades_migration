@@ -63,7 +63,8 @@ select_statement := $$  With Cte_license as (
                         where   
                             ifnull(LicenseTerminationDate, current_timestamp()) >= DATEADD('DAY', -90, current_timestamp())
                         	or not (cte.license_LicenseStatusCode != 'A' and LicenseTerminationDate is null) and
-                            LicenseNumber is not null $$;
+                            LicenseNumber is not null 
+                         qualify  row_number() over(partition by providerid, State, license_LicenseNumber, license_LicenseTypeCode order by cte.license_LastUpdateDate desc) = 1 $$;
 
 
 --- insert Statement
