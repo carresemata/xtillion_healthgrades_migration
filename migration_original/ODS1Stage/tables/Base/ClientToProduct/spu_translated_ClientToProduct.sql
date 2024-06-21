@@ -18,11 +18,11 @@ declare
 
 select_statement string;
 insert_statement string; 
+update_statement string;
 merge_statement string;
 status string; -- status monitoring
 procedure_name varchar(50) default('sp_load_clienttoproduct');
 execution_start datetime default getdate();
-
 
 begin
 
@@ -44,6 +44,7 @@ select_statement := $$
                     inner join base.product p on p.productcode = s.productcode
                     where
                         s.customerproductcode is not null
+                    qualify row_number() over(partition by customerproductcode order by s.lastupdatedate desc) = 1
                     $$;
 
 
@@ -70,6 +71,14 @@ insert_statement := $$
                         )
                     $$;
 
+update_statement := $$ update
+                        set
+                            target.ActiveFlag = source.activeflag,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate,
+                            target.QueueSize = source.queuesize
+                    $$;
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -77,6 +86,7 @@ insert_statement := $$
 merge_statement := $$ merge into base.clienttoproduct as target using 
                    ($$||select_statement||$$) as source 
                    on source.clienttoproductcode = target.clienttoproductcode
+                   when matched then $$ || update_statement || $$
                    when not matched then $$||insert_statement;
 
     
