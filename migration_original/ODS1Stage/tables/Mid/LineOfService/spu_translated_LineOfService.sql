@@ -37,7 +37,6 @@ begin
 
 --- select Statement
 select_statement := $$ 
-                    with CTE_LineofService as (
                     select
                         baseline.lineofserviceid,
                         baseline.lineofservicecode,
@@ -45,78 +44,10 @@ select_statement := $$
                         baseline.lineofservicedescription,
                         basespec.legacykey,
                         basespec.specialtygroupdescription as LegacyKeyName,
-                        0 as ActionCode
                     from
                         base.lineofservice BaseLine
                         join base.lineofservicetype BaseType on baseline.lineofservicetypeid = basetype.lineofservicetypeid
                         join base.specialtygroup BaseSpec on baseline.lineofservicecode = basespec.specialtygroupcode
-                ),
-                --- insert Action
-                CTE_Action_1 as (
-                    select
-                        CTE_lineofservice.lineofserviceid,
-                        1 as ActionCode
-                    from
-                        CTE_LineOfService
-                        left join mid.lineofservice MidLine on midline.lineofserviceid = CTE_lineofservice.lineofserviceid
-                        and midline.lineofservicecode = CTE_lineofservice.lineofservicecode
-                        and midline.lineofservicetypecode = CTE_lineofservice.lineofservicetypecode
-                    where
-                        CTE_lineofservice.lineofserviceid is null
-                ),
-                -- update Action
-                CTE_Action_2 as (
-                    select
-                        CTE_lineofservice.lineofserviceid,
-                        2 as ActionCode
-                    from
-                        CTE_LineOfService
-                        join mid.lineofservice MidLine on midline.lineofserviceid = CTE_lineofservice.lineofserviceid
-                        and midline.lineofservicecode = CTE_lineofservice.lineofservicecode
-                        and midline.lineofservicetypecode = CTE_lineofservice.lineofservicetypecode
-                    where
-                        MD5(
-                            ifnull(
-                                CTE_lineofservice.lineofservicedescription::varchar,
-                                ''''''''
-                            )
-                        ) <> MD5(
-                            ifnull(
-                                CTE_lineofservice.lineofservicedescription::varchar,
-                                ''''''''
-                            )
-                        )
-                        or MD5(
-                            ifnull(CTE_lineofservice.legacykey::varchar, '''''''')
-                        ) <> MD5(
-                            ifnull(CTE_lineofservice.legacykey::varchar, '''''''')
-                        )
-                        or MD5(
-                            ifnull(
-                                CTE_lineofservice.legacykeyname::varchar,
-                                ''''''''
-                            )
-                        ) <> MD5(
-                            ifnull(
-                                CTE_lineofservice.legacykeyname::varchar,
-                                ''''''''
-                            )
-                        )
-                )
-                select
-                    A0.LineOfServiceID,
-                    A0.LineOfServiceCode,
-                    A0.LineOfServiceTypeCode,
-                    A0.LineOfServiceDescription,
-                    A0.LegacyKey,
-                    A0.LegacyKeyName,
-                    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
-                from
-                    CTE_LineOfService A0
-                    left join CTE_ACTION_1 A1 on A0.LineOfServiceID = A1.LineOfServiceID
-                    left join CTE_ACTION_2 A2 on A0.LineOfServiceID = A2.LineOfServiceID
-                where
-                    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
                     $$;
 
 
@@ -154,8 +85,8 @@ insert_statement := ' insert
 merge_statement := ' merge into mid.lineofservice as target using 
                    ('||select_statement||') as source 
                    on source.lineofserviceid = target.lineofserviceid
-                   WHEN MATCHED and ActionCode = 2 then '||update_statement|| '
-                   when not matched and ActionCode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
