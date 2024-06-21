@@ -19,6 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilitytofacilitytype');
@@ -51,7 +52,8 @@ select_statement := $$ with Cte_facility_type as (
                         from
                             cte_facility_type as JSON
                             join base.facility as Facility on json.facilitycode = facility.facilitycode
-                            join base.facilitytype as Type on type.facilitytypecode = json.facility_Type_Code $$;
+                            join base.facilitytype as Type on type.facilitytypecode = json.facility_Type_Code 
+                        qualify row_number() over(partition by facilityid, facilitytypeid order by facility_Type_LastUpdateDate desc) = 1 $$;
 
 
 
@@ -69,6 +71,13 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.lastupdatedate)';
 
+--- update statement 
+update_statement := $$ update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate
+                    $$;
+                    
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -77,7 +86,7 @@ insert_statement := ' insert
 merge_statement := ' merge into base.facilitytofacilitytype as target using 
                    ('||select_statement||') as source 
                    on source.facilityid = target.facilityid and source.facilitytypeid = target.facilitytypeid
-                   WHEN MATCHED then delete
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
