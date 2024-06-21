@@ -22,8 +22,6 @@ AS declare
     procedure_name varchar(50) default('sp_load_client');
     execution_start datetime default getdate();
 
-   
-
 begin
 
 ---------------------------------------------------------
@@ -31,31 +29,23 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$     
-    select
-        distinct
-        swimlane.clientcode,
-        case
-            when swimlane.customername is null
-            and c.clientname is null then swimlane.clientcode
-            when swimlane.customername is null
-            and c.clientname is not null then c.clientname
-            else swimlane.customername
-        end as ClientName,
-        ifnull(swimlane.lastupdatedate, current_timestamp()) as LastUpdateDate,
-        ifnull(swimlane.sourcecode, 'Profisee') as SourceCode
-    from
-        base.vw_swimlane_base_client as swimlane
-        left join base.client as c on c.clientcode = swimlane.clientcode  
-    qualify row_number() over (partition by swimlane.clientcode order by swimlane.lastupdatedate desc) =1
-    $$;
+select_statement := $$ select
+                            distinct
+                            swimlane.clientcode,
+                            case when swimlane.customername is null then swimlane.clientcode else swimlane.customername end as ClientName,
+                            ifnull(swimlane.lastupdatedate, current_timestamp()) as LastUpdateDate,
+                            ifnull(swimlane.sourcecode, 'Profisee') as SourceCode
+                        from
+                            base.vw_swimlane_base_client as swimlane
+                        qualify row_number() over (partition by swimlane.clientcode order by swimlane.lastupdatedate desc) = 1
+                        $$;
 
 --- update Statement
-update_statement := '
-update
-SET
-    ClientName = source.clientname,
-    LastUpdateDate = source.lastupdatedate';
+update_statement := 'update
+                        SET
+                            ClientName = source.clientname,
+                            sourcecode = source.sourcecode,
+                            LastUpdateDate = source.lastupdatedate';
 
 --- insert Statement
 insert_statement := ' insert
@@ -83,7 +73,7 @@ values
 merge_statement := ' merge into base.client as target using 
                    ('||select_statement||') as source 
                    on source.clientcode = target.clientcode
-                   WHEN MATCHED then '||update_statement||'
+                   when matched then '||update_statement||'
                    when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
@@ -92,8 +82,7 @@ merge_statement := ' merge into base.client as target using
 
 if (is_full) then
     truncate table base.client;
-end if; 
--- execute immediate update_statement;                    
+end if;                     
 execute immediate merge_statement;
 
 ---------------------------------------------------------
