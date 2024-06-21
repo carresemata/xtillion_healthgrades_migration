@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTTOCALLCENTER(is_full BOOLEAN) -- Parameters
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_CLIENTPRODUCTTOCALLCENTER(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -24,8 +24,6 @@ declare
     procedure_name varchar(50) default('sp_load_clientproducttocallcenter');
     execution_start datetime default getdate();
 
-   
-
 begin
 
 ---------------------------------------------------------
@@ -48,8 +46,20 @@ select_statement := $$
                     $$;
 
 --- insert Statement
-insert_statement := ' insert (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
-    values (uuid_string(),source.clienttoproductid, source.callcenterid, source.activeflag, source.sourcecode, source.lastupdatedate)';
+insert_statement := ' insert 
+                        (ClientProductToCallCenterID,
+                         ClientToProductID, 
+                         CallCenterID, 
+                         ActiveFlag, 
+                         SourceCode, 
+                         LastUpdateDate)
+                     values 
+                        (uuid_string(),
+                        source.clienttoproductid, 
+                        source.callcenterid, 
+                        source.activeflag, 
+                        source.sourcecode, 
+                        source.lastupdatedate)';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -58,8 +68,7 @@ insert_statement := ' insert (ClientProductToCallCenterID,ClientToProductID, Cal
 
 merge_statement := ' merge into base.clientproducttocallcenter as target using 
                    ('||select_statement||') as source 
-                   on source.clienttoproductid = target.clienttoproductid
-                   and source.callcenterid = target.callcenterid
+                   on source.clienttoproductid = target.clienttoproductid and source.callcenterid = target.callcenterid
                    when not matched then'||insert_statement;
                    
 ---------------------------------------------------------
