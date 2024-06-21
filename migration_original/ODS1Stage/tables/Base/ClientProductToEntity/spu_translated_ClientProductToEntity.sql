@@ -231,9 +231,6 @@ where rowrank = 1
      --- update statement
      update_statement := ' update
                             set
-                                target.ClientToProductID = source.clienttoproductid,
-                                target.EntityTypeID = source.entitytypeid,
-                                target.EntityID = source.entityid,
                                 target.SourceCode = source.SourceCode,
                                 target.LastUpdateDate = source.lastupdatedate';
 
