@@ -23,16 +23,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerimage');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-
-   
    
 begin
-    
 
 
 ---------------------------------------------------------
@@ -45,7 +43,7 @@ with Cte_image as (
     SELECT
         p.ref_provider_code as providercode,
         to_varchar(json.value:IDENTIFIER) as Image_Identifier,
-        to_varchar(json.value:IMAGE_FILE_NAME) as Image_ImageFileName,
+        to_varchar(json.value:PROVIDER_IMAGE_FILE_NAME) as Image_ImageFileName,
         to_varchar(json.value:MEDIA_IMAGE_TYPE_CODE) as Image_MediaImageTypeCode,
         to_varchar(json.value:MEDIA_REVIEW_LEVEL_CODE) as Image_MediaReviewLevelCode,
         to_varchar(json.value:MEDIA_SIZE_CODE) as Image_MediaSizeCode,
@@ -54,7 +52,7 @@ with Cte_image as (
         to_varchar(json.value:IMAGE_PATH) as Image_ImagePath,
         to_varchar(json.value:DATA_SOURCE_CODE) as Image_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as Image_LastUpdateDate
-    FROM mdm_team.mst.provider_profile_processing as p
+    FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:IMAGE) as json
 )
 select distinct
@@ -72,7 +70,7 @@ select distinct
 from
     Cte_image as JSON
     join base.provider as P on p.providercode = json.providercode
-    left join base.mediaimagehost as M on json.image_MediaImageHostCode = m.mediaimagehostcode
+    left join base.mediaimagehost as M on json.image_MediaImageHostCode = upper(m.mediaimagehostcode)
     left join base.mediaimagetype as MT on mt.mediaimagetypecode = json.image_MediaImageTypeCode
     left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
     left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
@@ -109,6 +107,16 @@ insert_statement := ' insert
                         source.externalidentifier,
                         source.imagepath)';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.FileName = source.filename,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate,
+                            target.ExternalIdentifier = source.externalidentifier,
+                            target.ImagePath = source.imagepath ';
+                        
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -116,8 +124,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providerimage as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid and target.MediaImageTypeID = source.mediaimagetypeid and target.MediaSizeID = source.mediasizeid and target.MediaReviewLevelID = source.mediareviewlevelid and target.MediaContextTypeID = source.mediacontexttypeid and target.MediaImageHostID = source.mediaimagehostid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
