@@ -18,28 +18,28 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 11987
-- Snowflake: 12138
-- Rows Margin (%): 1.2596980061733545
+- SQL Server: 12137
+- Snowflake: 12761
+- Rows Margin (%): 5.14130345225344
 
 ### 2.3 Nulls per Column
 |    | Column_Name     |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
 |---:|:----------------|------------------------:|------------------------:|-------------:|
-|  0 | ProviderEmailID |                       0 |                       0 |          0   |
-|  1 | ProviderID      |                       0 |                       0 |          0   |
-|  2 | EmailAddress    |                       0 |                       0 |          0   |
-|  3 | EmailRank       |                       0 |                       0 |          0   |
-|  4 | SourceCode      |                       0 |                       0 |          0   |
-|  5 | EmailTypeID     |                   11987 |                   12138 |          1.3 |
-|  6 | LastUpdateDate  |                       0 |                       0 |          0   |
+|  0 | ProviderEmailID |                       0 |                       0 |            0 |
+|  1 | ProviderID      |                       0 |                       0 |            0 |
+|  2 | EmailAddress    |                       0 |                       0 |            0 |
+|  3 | EmailRank       |                       0 |                       0 |            0 |
+|  4 | SourceCode      |                       0 |                       0 |            0 |
+|  5 | EmailTypeID     |                   12137 |                       0 |          100 |
+|  6 | LastUpdateDate  |                       0 |                       0 |            0 |
 
 ### 2.4 Distincts per Column
 |    | Column_Name     |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:----------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderEmailID |                       11987 |                       12138 |          1.3 |
-|  1 | ProviderID      |                       11987 |                       12138 |          1.3 |
-|  2 | EmailAddress    |                       10778 |                       10930 |          1.4 |
+|  0 | ProviderEmailID |                       12137 |                       12761 |          5.1 |
+|  1 | ProviderID      |                       12137 |                       12761 |          5.1 |
+|  2 | EmailAddress    |                       10925 |                       10930 |          0   |
 |  3 | EmailRank       |                           1 |                           1 |          0   |
-|  4 | SourceCode      |                          81 |                          82 |          1.2 |
-|  5 | EmailTypeID     |                           0 |                           0 |          0   |
+|  4 | SourceCode      |                          82 |                          82 |          0   |
+|  5 | EmailTypeID     |                           0 |                           1 |        inf   |
 |  6 | LastUpdateDate  |                          22 |                          22 |          0   |
