@@ -91,7 +91,9 @@ insert_statement := ' insert (
 
 merge_statement := ' merge into mid.providerlicense as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid and source.licensenumber = target.licensenumber and source.licensetype = target.licensetype
+                   on source.providerid = target.providerid 
+                        and source.licensenumber = target.licensenumber 
+                        and source.licensetype = target.licensetype
                    when matched then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
