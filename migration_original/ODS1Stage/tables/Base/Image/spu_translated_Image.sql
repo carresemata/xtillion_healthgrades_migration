@@ -63,7 +63,7 @@ select_statement := $$ WITH CTE_CustomerProduct AS (
                                     TO_VARCHAR(json.value: MEDIA_IMAGE_TYPE_CODE) AS Image_TypeCode,
                                     TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Image_SourceCode,
                                     TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Image_LastUpdateDate
-                                FROM mdm_Team.mst.facility_profile AS p,
+                                FROM $$ || mdm_db || $$.mst.facility_profile AS p,
                                      LATERAL FLATTEN(input => p.FACILITY_PROFILE:IMAGE) AS json
                                 where TO_VARCHAR(json.value: S3_PREFIX) is not null
                                     and TO_VARCHAR(json.value: FACILITY_IMAGE_FILE_NAME) is not null
