@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.office depends on: 
---- mdm_team.mst.office_profile_processing (raw.vw_office_profile)
+--- mdm_team.mst.office_profile_processing 
 --- base.practice
 
 ---------------------------------------------------------
@@ -18,27 +18,41 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     update_statement string; -- update statement for the merge
-    update_clause string; -- where condition for update
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_office');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$  select 
+select_statement := $$  WITH CTE_Demographics AS (
+                                SELECT
+                                    p.ref_office_code AS officecode,
+                                    TO_VARCHAR(json.value: OFFICE_NAME) AS Demographics_OfficeName,
+                                    TO_VARCHAR(json.value: OFFICE_CODE) AS Demographics_OfficeCode,
+                                    TO_VARCHAR(json.value: PARKING_INFORMATION) AS Demographics_ParkingInformation,
+                                    TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Demographics_SourceCode,
+                                    TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Demographics_LastUpdateDate
+                                FROM $$ || mdm_db || $$.mst.office_profile_processing AS p,
+                                     LATERAL FLATTEN(input => p.OFFICE_PROFILE:DEMOGRAPHICS) AS json
+                            ),
+                            
+                            CTE_Practice AS (
+                                SELECT
+                                    p.ref_office_code AS officecode,
+                                    TO_VARCHAR(json.value: PRACTICE_CODE) AS Practice_PracticeCode
+                                FROM $$ || mdm_db || $$.mst.office_profile_processing AS p,
+                                     LATERAL FLATTEN(input => p.OFFICE_PROFILE:PRACTICE) AS json
+                            )
+                            select 
                                 -- ReltioEntityID,
-                                uuid_string() as OfficeID,
                                 CASE WHEN LENGTH(json.officecode)>10 then null else json.officecode END as OfficeCode, 
                                 p.practiceid, 
                                 -- HasBillingStaff
@@ -63,30 +77,21 @@ select_statement := $$  select
                                 -- HasChildPlayground
                                 -- OfficeWebsite
                                 -- OfficeEmail
-                            from raw.vw_OFFICE_PROFILE as JSON
-                                left join base.practice as P on p.practicecode = json.practice_PRACTICECODE
-                            where
-                                OFFICE_PROFILE is not null
-                                and OFFICECODE is not null
-                            qualify row_number() over(partition by OfficeID order by CREATE_DATE desc) = 1 $$;
-
+                            from cte_demographics as JSON
+                                left join cte_practice as cte on cte.officecode = json.officecode
+                                left join base.practice as P on p.practicecode = cte.practice_PRACTICECODE
+                            qualify row_number() over(partition by json.Officecode order by json.demographics_LASTUPDATEDATE desc) = 1 $$;
 
 
 --- update Statement
 update_statement := ' update 
-                     SET  target.officecode = source.officecode, 
+                        SET 
                             target.practiceid = source.practiceid, 
                             target.parkinginformation = source.parkinginformation, 
                             target.officename = source.officename, 
                             target.sourcecode = source.sourcecode, 
                             target.lastupdatedate = source.lastupdatedate';
-                            
--- update Clause
-update_clause := $$  ifnull(target.officecode, '') != ifnull(source.officecode, '') 
-                    or ifnull(target.officename, '') != ifnull(source.officename, '') 
-                    or ifnull(target.sourcecode, '') != ifnull(source.sourcecode, '') 
-                    or ifnull(target.parkinginformation, '') != ifnull(source.parkinginformation, '') 
-                    $$;                        
+                                                   
         
 --- insert Statement
 insert_statement := ' insert  
@@ -98,14 +103,13 @@ insert_statement := ' insert
                             SourceCode,
                             LastUpdateDate)
                       values 
-                            (source.officeid,
+                            (uuid_string(),
                             source.officecode,
                             source.practiceid,
                             source.parkinginformation,
                             source.officename,
                             source.sourcecode,
                             source.lastupdatedate )';
-
 
     
 ---------------------------------------------------------
@@ -114,8 +118,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.office as target using 
                    ('||select_statement||') as source 
-                   on source.officeid = target.officeid
-                   WHEN MATCHED and' || update_clause || 'then '||update_statement|| '
+                   on source.officecode = target.officecode
+                   when matched then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
