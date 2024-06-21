@@ -66,7 +66,7 @@ select
         json.address_LASTUPDATEDATE as LastUpdateDate
 from
     cte_address as JSON 
-    inner join base.office as O on o.officecode = json.officecode
+    join base.office as O on o.officecode = json.officecode
     left join base.addresstype as AT on at.addresstypecode = json.address_ADDRESSTYPECODE
     left join base.citystatepostalcode as cspc on 
         ifnull(cspc.state,'') = ifnull(json.address_state,'') and 
@@ -101,18 +101,15 @@ update_statement := ' update set
                         target.SourceCode = source.sourcecode,
                         target.LastUpdateDate = source.lastupdatedate';
 
-
-
-
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
 merge_statement := ' merge into base.officetoaddress as target 
-using ('||select_statement||') as source
-on source.officeid = target.officeid and source.addresstypeid = target.addresstypeid
-WHEN MATCHED then'|| update_statement ||' 
-when not matched then'||insert_statement;
+                    using ('||select_statement||') as source
+                    on source.officeid = target.officeid and source.addresstypeid = target.addresstypeid and source.addressid = target.addressid
+                    when matched then'|| update_statement ||' 
+                    when not matched then'||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
