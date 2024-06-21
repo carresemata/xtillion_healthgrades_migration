@@ -19,21 +19,18 @@ declare
 ---------------------------------------------------------
 
     select_statement_1 string; -- cte and select statement for the merge
-    insert_statement_1 string; -- insert statement for the merge
-    update_statement_1 string; -- update statement for the merge
+    insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement_1 string; -- merge statement to final table
     select_statement_2 string; -- cte and select statement for the merge
-    insert_statement_2 string; -- insert statement for the merge
-    update_statement_2 string; -- update statement for the merge
     merge_statement_2 string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_address');
     execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
-   
+    mdm_db string default('mdm_team');   
    
 begin
-
+    
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -44,6 +41,7 @@ select_statement_1 := $$ with cte_address as (
                             select
                                 p.ref_facility_code as facilitycode,
                                 to_varchar(json.value:ADDRESS_LINE_1) AS Address_AddressLine1,
+                                to_varchar(json.value:ADDRESS_LINE_2) AS Address_AddressLine2,
                                 to_varchar(json.value:LATITUDE) AS Address_Latitude,
                                 to_varchar(json.value:LONGITUDE) AS Address_Longitude,
                                 to_varchar(json.value:CITY) AS Address_City,
@@ -51,8 +49,7 @@ select_statement_1 := $$ with cte_address as (
                                 to_varchar(json.value:ZIP) AS Address_PostalCode ,
                                 to_varchar(json.value:UPDATED_DATETIME) as address_LastUpdateDate,
                                 ifnull(to_varchar(json.value:TIME_ZONE), 'None') as address_Timezone,
-                                to_varchar(json.value:SUITE) as address_Suite,
-                                to_varchar(json.value:DATA_SOURCE_CODE) as address_sourcecode
+                                to_varchar(json.value:SUITE) as address_Suite
                             from  
                                 $$ || mdm_db || $$.mst.facility_profile_processing as p
                                 , lateral flatten(input => p.FACILITY_PROFILE:ADDRESS) as json
@@ -65,6 +62,7 @@ select_statement_1 := $$ with cte_address as (
 
                             select distinct
                                 json.address_AddressLine1 as AddressLine1,
+                                json.address_addressline2 as addressline2,
                                 json.address_Latitude as Latitude,
                                 json.address_Longitude as Longitude,
                                 cspc.citystatepostalcodeid,
@@ -80,38 +78,6 @@ select_statement_1 := $$ with cte_address as (
 
 
 
---- insert Statement
-insert_statement_1 := $$ insert (
-                                AddressId, 
-                                NationId, 
-                                AddressLine1, 
-                                Latitude, 
-                                Longitude, 
-                                TimeZone, 
-                                CityStatePostalCodeId,
-                                suite,
-                                lastupdatedate
-                        )
-                        values (
-                                uuid_string(),
-                                source.nationid,
-                                source.addressline1, 
-                                source.latitude, 
-                                source.longitude, 
-                                source.timezone, 
-                                source.citystatepostalcodeid,
-                                source.suite,
-                                source.lastupdatedate
-                        )$$;
-
---- update statement 
-update_statement_1 := $$ update set 
-                            target.Latitude = source.Latitude,
-                            target.Longitude = source.Longitude,
-                            target.TimeZone = source.TimeZone,
-                            target.LastUpdateDate = source.LastUpdateDate
-                        $$;
-
 select_statement_2 := $$  with cte_address as (
                             select
                                 p.ref_office_code as officecode,
@@ -125,8 +91,7 @@ select_statement_2 := $$  with cte_address as (
                                 to_varchar(json.value:ZIP) AS Address_PostalCode,
                                 ifnull(to_varchar(json.value:TIME_ZONE), 'None') AS Address_TimeZone,
                                 to_varchar(json.value:SUITE) AS Address_Suite,
-                                to_varchar(json.value:UPDATED_DATETIME) as address_LastUpdateDate,
-                                to_varchar(json.value:DATA_SOURCE_CODE) as address_sourcecode
+                                to_varchar(json.value:UPDATED_DATETIME) as address_LastUpdateDate
                             from  
                                 $$ || mdm_db || $$.mst.office_profile_processing as p
                                 , lateral flatten(input => p.OFFICE_PROFILE:ADDRESS) as json
@@ -153,37 +118,47 @@ select_statement_2 := $$  with cte_address as (
                                 join base.citystatepostalcode as CSPC on json.address_PostalCode = cspc.postalcode and json.address_City = cspc.city and json.address_State = cspc.state 
                             qualify row_number() over(partition by json.address_AddressLine1, json.address_AddressLine2, json.address_Suite, json.address_State, cspc.city, json.address_PostalCode order by address_lastupdatedate desc) = 1 $$;
 
-insert_statement_2 := $$ insert (
-                           AddressID, 
-                           CityStatePostalCodeID, 
-                           NationID, 
-                           AddressLine1, 
-                           AddressLine2, 
-                           Latitude, 
-                           Longitude, 
-                           TimeZone, 
-                           Suite, 
-                           LastUpdateDate
-                        )
-                        values 
-                        (   uuid_string(),
-                            source.citystatepostalcodeid, 
-                            source.nationid, 
-                            source.addressline1, 
-                            source.addressline2, 
-                            source.latitude, 
-                            source.longitude, 
-                            source.timezone, 
-                            source.suite, 
-                            source.lastupdatedate
-                        );$$;
 
-update_statement_2 := $$ update set 
-                            target.Latitude = source.Latitude,
-                            target.Longitude = source.Longitude,
-                            target.TimeZone = source.TimeZone,
-                            target.LastUpdateDate = source.LastUpdateDate
-                        $$;
+--- insert Statement
+insert_statement := $$ insert (
+                                AddressId, 
+                                NationId, 
+                                AddressLine1, 
+                                AddressLine2,
+                                Latitude, 
+                                Longitude, 
+                                TimeZone, 
+                                CityStatePostalCodeId,
+                                suite,
+                                lastupdatedate
+                        )
+                        values (
+                                uuid_string(),
+                                source.nationid,
+                                source.addressline1, 
+                                source.addressline2,
+                                source.latitude, 
+                                source.longitude, 
+                                source.timezone, 
+                                source.citystatepostalcodeid,
+                                source.suite,
+                                source.lastupdatedate
+                        )$$;
+
+--- update statement
+update_statement := $$ 
+    update
+    set
+        target.NationId = source.nationid,
+        target.AddressLine1 = source.addressline1,
+        target.AddressLine2 = source.addressline2,
+        target.Latitude = source.latitude,
+        target.Longitude = source.longitude,
+        target.TimeZone = source.timezone,
+        target.suite = source.suite,
+        target.lastupdatedate = source.lastupdatedate
+$$;
+
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -192,18 +167,15 @@ update_statement_2 := $$ update set
 
 merge_statement_1 := ' merge into base.address as target using 
                    ('||select_statement_1||') as source 
-                   on source.addressline1 = target.addressline1 and source.citystatepostalcodeid = target.citystatepostalcodeid and source.suite = target.suite 
-                   when matched then '||update_statement_1 || '
-                   when not matched then '||insert_statement_1;
+                   on source.addressline1 = target.addressline1 and source.addressline2 = target.addressline2 and source.suite = target.suite and source.citystatepostalcodeid = target.citystatepostalcodeid
+                   when matched then ' || update_statement || '
+                   when not matched then '||insert_statement;
 
 merge_statement_2 := $$ merge into base.address as target using 
                    ($$||select_statement_2||$$) as source 
-                   on iff(trim(upper(source.addressline1)) is null, '', trim(upper(source.addressline1))) = iff(trim(upper(target.addressline1)) is null, '', trim(upper(target.addressline1)))
-                   and iff(trim(upper(source.addressline2)) is null, '', trim(upper(source.addressline2))) = iff(trim(upper(target.addressline2)) is null, '', trim(upper(target.addressline2)))
-                   and iff(trim(upper(source.suite)) is null, '', trim(upper(source.suite))) = iff(trim(upper(target.suite)) is null, '', trim(upper(target.suite)))
-                   and source.citystatepostalcodeid = target.citystatepostalcodeid
-                   when matched then $$||update_statement_2 || $$
-                   when not matched then $$||insert_statement_2;
+                   on source.addressline1 = target.addressline1 and source.addressline2 = target.addressline2 and source.suite = target.suite and source.citystatepostalcodeid = target.citystatepostalcodeid
+                   when matched then $$ || update_statement || $$
+                   when not matched then $$||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
