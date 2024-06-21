@@ -21,6 +21,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilitytoaddress');
@@ -64,7 +65,7 @@ select_statement := $$  with Cte_address as (
                                 join base.citystatepostalcode as CSPC on json.address_City = cspc.city and json.address_State = cspc.state and json.address_PostalCode = cspc.postalcode 
                                 join base.address as Address on address.addressline1 = json.address_AddressLine1 and cspc.citystatepostalcodeid = address.citystatepostalcodeid 
                                 join base.addresstype as type on type.addresstypecode = json.address_addresstypecode
-                            qualify row_number() over(partition by facility.facilityid order by address.addressid desc ) = 1 $$;
+                            qualify row_number() over(partition by facility.facilityid order by json.address_lastupdatedate desc ) = 1 $$;
 
 
 --- insert Statement
@@ -84,6 +85,13 @@ insert_statement := $$ insert (
                             source.lastupdatedate)
                     $$;
 
+--- update statement 
+update_statement := $$ update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate
+                    $$;
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -91,7 +99,8 @@ insert_statement := $$ insert (
 
 merge_statement := ' merge into base.facilitytoaddress as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid and source.addressid = target.addressid
+                   on source.facilityid = target.facilityid and source.addressid = target.addressid and source.addresstypeid = target.addresstypeid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
