@@ -13,22 +13,21 @@ declare
 --- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.malpracticeclaimtype
+--- base.providerlicense
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string;
 merge_statement string;
 status string;
 procedure_name varchar(50) default('sp_load_providermalpractice');
 execution_start datetime default getdate();
 mdm_db string default('mdm_team');
 
-
-
 begin
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -58,7 +57,7 @@ select_statement := $$  with Cte_malpractice as (
 ),
 CTE_Swimlane as (select
     p.providerid,
-    -- pl.providerlicenseid,
+    pl.providerlicenseid,
     m.malpracticeclaimtypeid,
     json.providercode,
     json.malpractice_MALPRACTICECLAIMTYPECODE as MalpracticeClaimTypeCode,
@@ -80,7 +79,7 @@ CTE_Swimlane as (select
 from
     Cte_malpractice as JSON
     left join base.provider as P on json.providercode = p.providercode
-    -- left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
+    left join base.providerlicense as PL on pl.providerid = p.providerid and pl.licensenumber = json.malpractice_LICENSENUMBER
     left join base.malpracticeclaimtype as M on m.malpracticeclaimtypecode = json.malpractice_MALPRACTICECLAIMTYPECODE
 where json.malpractice_CLAIMAMOUNT is not null
     ),
@@ -191,7 +190,7 @@ CTE_KEEP as (
 CTE_Delete1 as (
     select 
         ProviderId,
-        --ProviderLicenseId,
+        ProviderLicenseId,
         MalpracticeClaimTypeID,
         ProviderCode,
         MalpracticeClaimTypeCode,
@@ -214,7 +213,7 @@ CTE_Delete1 as (
     where RN1 IN (select RN1 from CTE_KEEP))
 select 
     ProviderId,
-    --ProviderLicenseId,
+    ProviderLicenseId,
     MalpracticeClaimTypeID,
     ProviderCode,
     MalpracticeClaimTypeCode,
@@ -237,11 +236,11 @@ from CTE_Delete1 as D
  $$;
 
 
-    -- insert Statement
+-- insert Statement
 insert_statement := ' insert  
                             (ProviderMalpracticeID,
                             ProviderID,
-                            --ProviderLicenseID,
+                            ProviderLicenseID,
                             MalpracticeClaimTypeID,
                             ClaimNumber,
                             ClaimDate,
@@ -259,7 +258,7 @@ insert_statement := ' insert
                     values 
                           ( uuid_string(),
                             source.providerid,
-                            --source.providerlicenseid,
+                            source.providerlicenseid,
                             source.malpracticeclaimtypeid,
                             source.claimnumber,
                             source.claimdate,
@@ -274,18 +273,34 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.licensenumber,
                             source.lastupdatedate)';
-
-
-
+                            
+--- update statement
+update_statement := ' update
+                        set
+                            target.ClaimNumber = source.claimnumber,
+                            target.ClaimDate = source.claimdate,
+                            target.ClaimYear = source.claimyear,
+                            target.ClaimAmount = source.claimamount,
+                            target.ClaimState = source.claimstate,
+                            target.MalpracticeClaimRange = source.malpracticeclaimrange,
+                            target.Complaint = source.complaint,
+                            target.IncidentDate = source.incidentdate,
+                            target.ClosedDate = source.closeddate,
+                            target.ReportDate = source.reportdate,
+                            target.SourceCode = source.sourcecode,
+                            target.LicenseNumber = source.licensenumber,
+                            target.LastUpdateDate = source.lastupdatedate
+                    ';
+                            
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
 merge_statement := ' merge into base.providermalpractice as target 
-using ('||select_statement||') as source
-on source.providerid = target.providerid and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid --and source.providerlicenseid = target.providerlicenseid
-WHEN MATCHED then delete 
-when not matched then'||insert_statement;
+                    using ('||select_statement||') as source
+                    on source.providerid = target.providerid and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid and source.providerlicenseid = target.providerlicenseid and source.licensenumber = target.licensenumber
+                    when matched then ' || update_statement || '
+                    when not matched then'||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
