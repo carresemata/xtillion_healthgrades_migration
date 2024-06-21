@@ -21,6 +21,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facilityimage');
@@ -65,8 +66,9 @@ select_statement := $$ with Cte_image as (
                             join base.facility as Facility on json.facilitycode = facility.facilitycode 
                             left join base.mediaimagetype as MIT on mit.mediaimagetypecode = json.image_TypeCode
                             left join base.mediasize as MS on ms.mediasizecode = json.image_SizeCode
-                            left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_ReviewLevel $$;
-
+                            left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_ReviewLevel 
+                        qualify row_number() over(partition by facilityid, mediaimagetypeid, mediasizeid, mediareviewlevelid order by json.Image_LastUpdateDate desc) = 1 $$;
+                    
 
 
 --- insert Statement
@@ -91,6 +93,15 @@ insert_statement := ' insert
                         source.sourcecode, 
                         source.lastupdatedate)';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.FileName = source.filename,
+                            target.ImagePath = source.imagepath,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate
+                    ';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -98,7 +109,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.facilityimage as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid 
+                   on source.facilityid = target.facilityid and source.mediaimagetypeid = target.mediaimagetypeid and source.mediasizeid = target.mediasizeid and source.mediareviewlevelid = target.mediareviewlevelid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
