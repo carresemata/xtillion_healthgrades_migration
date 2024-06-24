@@ -53,7 +53,7 @@ select_statement_1 := $$ with CTE_Address AS (
                                      LATERAL FLATTEN(input => p.OFFICE_PROFILE:ADDRESS) AS json
                             )
                             
-                            select distinct
+                            select 
                                 address_city as City,
                                 address_state as State,
                                 address_postalcode as PostalCode,
@@ -84,7 +84,7 @@ select_statement_2 := $$ with CTE_Address AS (
                                      LATERAL FLATTEN(input => p.FACILITY_PROFILE:ADDRESS) AS json
                             )
                             select 
-                                distinct
+                                
                                     address_city as City,
                                     address_state as State,
                                     address_postalcode as PostalCode,
