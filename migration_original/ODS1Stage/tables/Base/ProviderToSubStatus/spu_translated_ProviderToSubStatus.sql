@@ -19,17 +19,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertosubstatus');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-
-   
    
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -55,9 +52,9 @@ select_statement := $$
                         json.providerstatus_SourceCode as SourceCode,
                         json.providerstatus_LastUpdateDate as LastUpdateDate
                     from cte_providerstatus as json
-                    join base.provider as p on p.providercode = json.providercode
-                    join base.substatus as s on s.substatuscode = json.providerstatus_ProviderStatusCode
-                    where providerstatus_ProviderStatusCode is not null$$;
+                        join base.provider as p on p.providercode = json.providercode
+                        join base.substatus as s on s.substatuscode = json.providerstatus_ProviderStatusCode
+                    qualify row_number() over(partition by p.providerid, s.substatusid order by providerstatus_LastUpdateDate desc ) = 1 $$;
 
 
 --- insert Statement
@@ -75,6 +72,15 @@ insert_statement := ' insert
                         source.hierarchyrank,
                         source.sourcecode,
                         source.lastupdatedate)';
+
+
+ update_statement := ' update
+                        set
+                            target.HierarchyRank = source.hierarchyrank,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate
+                    ';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -83,7 +89,7 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providertosubstatus as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid and source.substatusid = target.substatusid
-                   WHEN MATCHED then delete
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
