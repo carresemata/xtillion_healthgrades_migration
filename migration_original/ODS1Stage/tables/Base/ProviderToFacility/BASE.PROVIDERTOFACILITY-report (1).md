@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 1461798
-- Snowflake: 1486099
-- Rows Margin (%): 1.662404791906953
+- SQL Server: 1493192
+- Snowflake: 116694
+- Rows Margin (%): 92.18493000230379
 
 ### 2.3 Nulls per Column
 |    | Column_Name          |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,24 +28,24 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | ProviderToFacilityID |                       0 |                       0 |          0   |
 |  1 | ProviderID           |                       0 |                       0 |          0   |
 |  2 | FacilityID           |                       0 |                       0 |          0   |
-|  3 | ProviderRoleID       |                 1461798 |                 1486099 |          1.7 |
-|  4 | LegacyKey            |                 1461798 |                 1486099 |          1.7 |
-|  5 | LegacyKeyName        |                 1461798 |                 1486099 |          1.7 |
-|  6 | HonorRollTypeID      |                 1461798 |                 1486099 |          1.7 |
+|  3 | ProviderRoleID       |                 1493192 |                  116694 |         92.2 |
+|  4 | LegacyKey            |                 1493192 |                  116694 |         92.2 |
+|  5 | LegacyKeyName        |                 1493192 |                  116694 |         92.2 |
+|  6 | HonorRollTypeID      |                 1493192 |                  116694 |         92.2 |
 |  7 | SourceCode           |                       0 |                       0 |          0   |
 |  8 | LastUpdateDate       |                       0 |                       0 |          0   |
-|  9 | CampaignCode         |                 1461798 |                 1486099 |          1.7 |
+|  9 | CampaignCode         |                 1493192 |                  116694 |         92.2 |
 
 ### 2.4 Distincts per Column
 |    | Column_Name          |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:---------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToFacilityID |                     1461798 |                     1486099 |          1.7 |
-|  1 | ProviderID           |                      842990 |                      852698 |          1.2 |
-|  2 | FacilityID           |                        5748 |                        5784 |          0.6 |
+|  0 | ProviderToFacilityID |                     1493192 |                      116694 |         92.2 |
+|  1 | ProviderID           |                      853884 |                       61262 |         92.8 |
+|  2 | FacilityID           |                        5641 |                        4221 |         25.2 |
 |  3 | ProviderRoleID       |                           0 |                           0 |          0   |
 |  4 | LegacyKey            |                           0 |                           0 |          0   |
 |  5 | LegacyKeyName        |                           0 |                           0 |          0   |
 |  6 | HonorRollTypeID      |                           0 |                           0 |          0   |
-|  7 | SourceCode           |                         193 |                         190 |          1.6 |
-|  8 | LastUpdateDate       |                        3112 |                        3376 |          8.5 |
+|  7 | SourceCode           |                         192 |                         140 |         27.1 |
+|  8 | LastUpdateDate       |                        3481 |                         701 |         79.9 |
 |  9 | CampaignCode         |                           0 |                           0 |          0   |

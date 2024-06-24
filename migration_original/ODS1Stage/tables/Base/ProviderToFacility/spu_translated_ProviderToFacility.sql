@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.providertofacility depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.facility
 
@@ -19,16 +19,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertofacility');
     execution_start datetime default getdate();
     mdm_db string default ('mdm_team');
-
-   
    
 begin
-    
 
 
 ---------------------------------------------------------
@@ -55,6 +53,7 @@ select distinct
 from cte_facility as cte
     inner join base.provider as P on cte.providercode = p.providercode
     inner join base.facility as F on cte.Facility_FacilityCode = f.facilitycode
+qualify row_number() over(partition by providerid, facilityid order by Facility_LastUpdateDate desc ) = 1
 $$;
 
 --- insert Statement
@@ -75,6 +74,13 @@ insert_statement := ' insert
                         source.sourcecode, 
                         source.lastupdatedate)';
 
+--- update statement                       
+update_statement := ' update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate';
+                            
+                        
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -82,8 +88,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertofacility as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
+                   on source.providerid = target.providerid and source.facilityid = target.facilityid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
