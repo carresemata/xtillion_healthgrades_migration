@@ -39,7 +39,6 @@ begin
     select_statement := $$   with CTE_Phone AS (
                             SELECT
                                 p.ref_office_code AS officecode,
-                                created_datetime as create_date,
                                 TO_VARCHAR(json.value: PHONE_NUMBER) AS Phone_PhoneNumber,
                                 TO_VARCHAR(json.value: PHONE_TYPE_CODE) AS Phone_PhoneTypeCode,
                                 TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Phone_SourceCode,
@@ -47,7 +46,7 @@ begin
                             FROM $$ || mdm_db || $$.mst.office_profile_processing AS p,
                                  LATERAL FLATTEN(input => p.OFFICE_PROFILE:PHONE) AS json
                         )
-                        select distinct
+                        select 
                             pt.phonetypeid,
                             p.PhoneId,
                             o.officeid,
@@ -58,7 +57,7 @@ begin
                             join base.office as O on o.officecode = json.officecode
                             join base.phonetype as PT on pt.phonetypecode = json.phone_PHONETYPECODE
                             join base.phone as p on p.phonenumber = json.phone_phonenumber and p.sourcecode = json.phone_sourcecode
-                        qualify row_number() over(partition by OfficeID, json.phone_PHONENUMBER, PhoneTypeID order by CREATE_DATE desc) = 1 $$;
+                        qualify row_number() over(partition by OfficeID, json.phone_PHONENUMBER, PhoneTypeID order by json.phone_LASTUPDATEDATE desc) = 1 $$;
 
 
     -- insert Statement
