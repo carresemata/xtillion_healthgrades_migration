@@ -13,17 +13,16 @@ declare
 --- base.clienttoproduct
 --- base.syndicationpartner
 
-
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string;
 merge_statement string;
 status string;
     procedure_name varchar(50) default('sp_load_providertoclientproducttodisplaypartner');
     execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
 
 begin
 
@@ -40,9 +39,10 @@ select_statement := $$
                             to_varchar(partner.value:DISPLAY_PARTNER_CODE) as customerproduct_DisplayPartner,
                             to_varchar(json.value:DATA_SOURCE_CODE) as customerproduct_SourceCode,
                             to_timestamp_ntz(json.value:UPDATED_DATETIME) as customerproduct_LastUpdateDate
-                        from $$|| mdm_db ||$$.mst.provider_profile_processing as p,
+                        from mdm_team.mst.provider_profile_processing as p,
                         lateral flatten(input => p.PROVIDER_PROFILE:CUSTOMER_PRODUCT) as json,
                         lateral flatten(input => json.value:DISPLAY_PARTNER) as partner
+                        
                     )
                     
                     select distinct
@@ -55,6 +55,7 @@ select_statement := $$
                     inner join base.provider as p on p.providercode = json.providercode
                     inner join base.clienttoproduct as cp on cp.clienttoproductcode = json.customerproduct_CustomerProductCode
                     inner join base.syndicationpartner as sp on sp.syndicationpartnercode = json.customerproduct_DisplayPartner
+                    qualify dense_rank() over (partition by ProviderId order by json.customerproduct_LastUpdateDate desc) = 1
                     $$;
 
 -- insert Statement
@@ -73,6 +74,13 @@ insert_statement := ' insert (
                         source.sourcecode,
                         source.lastupdatedate)';
 
+--- update statement
+update_statement := ' update
+                      set
+                        target.sourceCode = source.sourcecode,
+                        target.lastupdatedate = source.lastupdatedate';                        
+
+
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -83,7 +91,8 @@ merge_statement := 'merge into base.providertoclientproducttodisplaypartner as t
                     on source.providerid = target.providerid
                         and source.clienttoproductid = target.clienttoproductid
                         and source.syndicationpartnerid = target.syndicationpartnerid
-                    when not matched then' || insert_statement;
+                    when matched then '||update_statement||'
+                    when not matched then '|| insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
