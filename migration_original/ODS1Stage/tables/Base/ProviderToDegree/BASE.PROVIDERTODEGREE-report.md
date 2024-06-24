@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 4630703
-- Snowflake: 4680728
-- Rows Margin (%): 1.0802895370314183
+- SQL Server: 4680669
+- Snowflake: 4772705
+- Rows Margin (%): 1.9663001165004406
 
 ### 2.3 Nulls per Column
 |    | Column_Name        |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,20 +28,20 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | ProviderToDegreeID |                       0 |                       0 |          0   |
 |  1 | ProviderID         |                       0 |                       0 |          0   |
 |  2 | DegreeID           |                       0 |                       0 |          0   |
-|  3 | DegreePriority     |                 4279760 |                 4329486 |          1.2 |
-|  4 | LegacyKey          |                 4630703 |                 4680728 |          1.1 |
-|  5 | LegacyKeyName      |                 4630703 |                 4680728 |          1.1 |
+|  3 | DegreePriority     |                 4329598 |                 4410502 |          1.9 |
+|  4 | LegacyKey          |                 4680669 |                 4772705 |          2   |
+|  5 | LegacyKeyName      |                 4680669 |                 4772705 |          2   |
 |  6 | SourceCode         |                       0 |                       0 |          0   |
 |  7 | LastUpdateDate     |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name        |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToDegreeID |                     4630703 |                     4680728 |          1.1 |
-|  1 | ProviderID         |                     4305997 |                     4356625 |          1.2 |
-|  2 | DegreeID           |                         683 |                         675 |          1.2 |
-|  3 | DegreePriority     |                         564 |                         558 |          1.1 |
+|  0 | ProviderToDegreeID |                     4680669 |                     4772705 |          2   |
+|  1 | ProviderID         |                     4356817 |                     4445071 |          2   |
+|  2 | DegreeID           |                         683 |                         683 |          0   |
+|  3 | DegreePriority     |                         560 |                         560 |          0   |
 |  4 | LegacyKey          |                           0 |                           0 |          0   |
 |  5 | LegacyKeyName      |                           0 |                           0 |          0   |
-|  6 | SourceCode         |                         210 |                         211 |          0.5 |
-|  7 | LastUpdateDate     |                      224563 |                      225655 |          0.5 |
+|  6 | SourceCode         |                         213 |                         211 |          0.9 |
+|  7 | LastUpdateDate     |                      225779 |                      225657 |          0.1 |
