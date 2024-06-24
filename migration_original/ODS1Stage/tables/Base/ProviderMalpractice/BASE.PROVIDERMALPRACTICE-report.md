@@ -18,44 +18,44 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 5980
-- Snowflake: 5972
-- Rows Margin (%): 0.13377926421404682
+- SQL Server: 5872
+- Snowflake: 6745
+- Rows Margin (%): 14.86716621253406
 
 ### 2.3 Nulls per Column
 |    | Column_Name            |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
 |---:|:-----------------------|------------------------:|------------------------:|-------------:|
 |  0 | ProviderMalpracticeID  |                       0 |                       0 |          0   |
 |  1 | ProviderID             |                       0 |                       0 |          0   |
-|  2 | ProviderLicenseID      |                    5980 |                    5972 |          0.1 |
+|  2 | ProviderLicenseID      |                    5872 |                    6745 |         14.9 |
 |  3 | MalpracticeClaimTypeID |                       0 |                       0 |          0   |
-|  4 | ClaimNumber            |                    5980 |                    5972 |          0.1 |
-|  5 | ClaimDate              |                     442 |                     442 |          0   |
-|  6 | ClaimYear              |                    5538 |                    5530 |          0.1 |
+|  4 | ClaimNumber            |                    5872 |                    6745 |         14.9 |
+|  5 | ClaimDate              |                     442 |                     652 |         47.5 |
+|  6 | ClaimYear              |                    5430 |                    6093 |         12.2 |
 |  7 | ClaimAmount            |                       0 |                       0 |          0   |
 |  8 | ClaimState             |                       0 |                       0 |          0   |
-|  9 | MalpracticeClaimRange  |                    3877 |                    3874 |          0.1 |
-| 10 | Complaint              |                    5980 |                    5972 |          0.1 |
-| 11 | IncidentDate           |                    5980 |                    5972 |          0.1 |
-| 12 | ClosedDate             |                    5980 |                    5972 |          0.1 |
-| 13 | ReportDate             |                    5980 |                    5972 |          0.1 |
-| 14 | LegacyKey              |                    5980 |                    5972 |          0.1 |
-| 15 | LegacyKeyName          |                    5980 |                    5972 |          0.1 |
+|  9 | MalpracticeClaimRange  |                    3807 |                    4393 |         15.4 |
+| 10 | Complaint              |                    5872 |                    6745 |         14.9 |
+| 11 | IncidentDate           |                    5872 |                    6745 |         14.9 |
+| 12 | ClosedDate             |                    5872 |                    6745 |         14.9 |
+| 13 | ReportDate             |                    5872 |                    6745 |         14.9 |
+| 14 | LegacyKey              |                    5872 |                    6745 |         14.9 |
+| 15 | LegacyKeyName          |                    5872 |                    6745 |         14.9 |
 | 16 | SourceCode             |                       0 |                       0 |          0   |
-| 17 | LicenseNumber          |                       3 |                       3 |          0   |
+| 17 | LicenseNumber          |                       2 |                       2 |          0   |
 | 18 | LastUpdateDate         |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name            |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-----------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderMalpracticeID  |                        5980 |                        5972 |          0.1 |
-|  1 | ProviderID             |                        5399 |                        5394 |          0.1 |
+|  0 | ProviderMalpracticeID  |                        5872 |                        6745 |         14.9 |
+|  1 | ProviderID             |                        5309 |                        5564 |          4.8 |
 |  2 | ProviderLicenseID      |                           0 |                           0 |          0   |
 |  3 | MalpracticeClaimTypeID |                           1 |                           1 |          0   |
 |  4 | ClaimNumber            |                           0 |                           0 |          0   |
-|  5 | ClaimDate              |                        1138 |                        1137 |          0.1 |
+|  5 | ClaimDate              |                        1125 |                        1127 |          0.2 |
 |  6 | ClaimYear              |                           4 |                           4 |          0   |
-|  7 | ClaimAmount            |                         446 |                         445 |          0.2 |
+|  7 | ClaimAmount            |                         444 |                         443 |          0.2 |
 |  8 | ClaimState             |                          16 |                          16 |          0   |
 |  9 | MalpracticeClaimRange  |                           4 |                           4 |          0   |
 | 10 | Complaint              |                           0 |                           0 |          0   |
@@ -65,5 +65,5 @@ The example below shows a sample row where values are not identical. Important t
 | 14 | LegacyKey              |                           0 |                           0 |          0   |
 | 15 | LegacyKeyName          |                           0 |                           0 |          0   |
 | 16 | SourceCode             |                           1 |                           1 |          0   |
-| 17 | LicenseNumber          |                        5499 |                        5494 |          0.1 |
+| 17 | LicenseNumber          |                        5405 |                        5421 |          0.3 |
 | 18 | LastUpdateDate         |                           1 |                           1 |          0   |
