@@ -1,4 +1,4 @@
-# Base.ProviderToClinicalFocus Report
+# BASE.PROVIDERTOCLINICALFOCUS Report
 
 ## 1. Sample Validation
 
@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 395823
-- Snowflake: 395827
-- Rows Margin (%): 0.0010105526965335516
+- SQL Server: 395828
+- Snowflake: 410962
+- Rows Margin (%): 3.823377830774983
 
 ### 2.3 Nulls per Column
 |    | Column_Name                        |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -43,17 +43,17 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name                        |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-----------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToClinicalFocusID          |                      395823 |                      395827 |            0 |
-|  1 | ProviderID                         |                      167959 |                      167960 |            0 |
-|  2 | ClinicalFocusID                    |                          94 |                          94 |            0 |
-|  3 | InsertedOn                         |                           7 |                           7 |            0 |
-|  4 | InsertedBy                         |                           1 |                           1 |            0 |
-|  5 | ClinicalFocusDCPCount              |                          40 |                          40 |            0 |
-|  6 | ClinicalFocusMinBucketsCalculated  |                          15 |                          15 |            0 |
-|  7 | ProviderDCPCount                   |                          73 |                          73 |            0 |
-|  8 | AverageBPercentile                 |                       18573 |                       18573 |            0 |
-|  9 | ProviderDCPFillPercent             |                         316 |                         316 |            0 |
-| 10 | IsProviderDCPCountOverLowThreshold |                           1 |                           1 |            0 |
-| 11 | ClinicalFocusScore                 |                        6642 |                        6642 |            0 |
-| 12 | ProviderClinicalFocusRank          |                          10 |                          10 |            0 |
-| 13 | SourceCode                         |                           1 |                           1 |            0 |
+|  0 | ProviderToClinicalFocusID          |                      395828 |                      410962 |          3.8 |
+|  1 | ProviderID                         |                      167961 |                      174292 |          3.8 |
+|  2 | ClinicalFocusID                    |                          94 |                          94 |          0   |
+|  3 | InsertedOn                         |                           7 |                           7 |          0   |
+|  4 | InsertedBy                         |                           1 |                           1 |          0   |
+|  5 | ClinicalFocusDCPCount              |                          40 |                          40 |          0   |
+|  6 | ClinicalFocusMinBucketsCalculated  |                          15 |                          15 |          0   |
+|  7 | ProviderDCPCount                   |                          73 |                          73 |          0   |
+|  8 | AverageBPercentile                 |                       18573 |                       18573 |          0   |
+|  9 | ProviderDCPFillPercent             |                         316 |                         316 |          0   |
+| 10 | IsProviderDCPCountOverLowThreshold |                           1 |                           1 |          0   |
+| 11 | ClinicalFocusScore                 |                        6642 |                        6642 |          0   |
+| 12 | ProviderClinicalFocusRank          |                          10 |                          10 |          0   |
+| 13 | SourceCode                         |                           1 |                           1 |          0   |
