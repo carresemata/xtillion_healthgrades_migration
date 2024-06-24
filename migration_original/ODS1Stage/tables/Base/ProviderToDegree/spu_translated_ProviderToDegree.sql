@@ -1,8 +1,8 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODEGREE("IS_FULL" BOOLEAN)
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTODEGREE(is_full BOOLEAN)
 RETURNS VARCHAR(16777216)
 LANGUAGE SQL
 EXECUTE AS CALLER
-AS 'declare 
+AS declare 
 
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
@@ -17,11 +17,12 @@ AS 'declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string;
 merge_statement string;
 status string;
-procedure_name varchar(50) default(''sp_load_providertodegree'');
+procedure_name varchar(50) default('sp_load_providertodegree');
 execution_start datetime default getdate();
-mdm_db string default(''mdm_team'');
+mdm_db string default('mdm_team');
 
 
 begin
@@ -43,15 +44,15 @@ select_statement := $$
                     , lateral flatten(input => p.PROVIDER_PROFILE:DEGREE) as json)
                 
                     select 
-                        uuid_string() as ProviderToDegreeID,
                         p.providerid,
                         d.DegreeID,
                         cte.degree_DegreeRank as DegreePriority,
-                        ifnull(cte.degree_SourceCode, ''Profisee'') as SourceCode,
+                        ifnull(cte.degree_SourceCode, 'Profisee') as SourceCode,
                         ifnull(cte.degree_LastUpdateDate, sysdate()) as LastUpdateDate
                     from cte_degree as cte
                         inner join base.provider p on p.providercode = cte.providercode
                         inner join base.degree d on d.degreeabbreviation = cte.degree_DegreeCode
+                    qualify row_number() over(partition by providerid, degreeid order by degree_LastUpdateDate desc) = 1
                     $$;
 
 
@@ -67,7 +68,7 @@ insert_statement := $$
                         )
                       values 
                         (   
-                        source.providertodegreeid,
+                        uuid_string(),
                         source.providerid,
                         source.degreeid,
                         source.degreepriority,
@@ -76,13 +77,21 @@ insert_statement := $$
                         )
                      $$;
 
+
+update_statement := $$ update
+                        set
+                            target.DegreePriority = source.degreepriority,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate $$;    
+                            
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 merge_statement := $$ merge into base.providertodegree as target 
                     using ($$||select_statement||$$) as source 
-                   on source.providerid = target.providerid
+                   on source.providerid = target.providerid and source.degreeid = target.degreeid
+                   when matched then $$ || update_statement || $$
                    when not matched then $$ ||insert_statement;
 
 ---------------------------------------------------------
@@ -98,7 +107,7 @@ execute immediate merge_statement;
 --------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := ''completed successfully'';
+status := 'completed successfully';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
@@ -106,10 +115,10 @@ status := ''completed successfully'';
 
         exception
         when other then
-            status := ''failed during execution. '' || ''sql error: '' || sqlerrm || '' error code: '' || sqlcode || ''. sql state: '' || sqlstate;
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, ''error code: ([0-9]+)''), '':'', 2)::integer, trim(split_part(split_part(:status, ''sql error:'', 2), ''error code:'', 1)), split_part(regexp_substr(:status, ''sql state: ([0-9]+)''), '':'', 2)::integer; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
             return status;
-end';
+end;
