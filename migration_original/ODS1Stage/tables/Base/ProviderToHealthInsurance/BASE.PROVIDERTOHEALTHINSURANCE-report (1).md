@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 37554463
-- Snowflake: 38565202
-- Rows Margin (%): 2.6913951612089355
+- SQL Server: 39566891
+- Snowflake: 39655897
+- Rows Margin (%): 0.2249507043654251
 
 ### 2.3 Nulls per Column
 |    | Column_Name                     |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,18 +28,18 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | ProviderToHealthInsuranceID     |                       0 |                       0 |          0   |
 |  1 | ProviderID                      |                       0 |                       0 |          0   |
 |  2 | HealthInsurancePlanToPlanTypeID |                       0 |                       0 |          0   |
-|  3 | LegacyKey                       |                37554463 |                38565202 |          2.7 |
-|  4 | LegacyKeyName                   |                37554463 |                38565202 |          2.7 |
+|  3 | LegacyKey                       |                39566891 |                39655897 |          0.2 |
+|  4 | LegacyKeyName                   |                39566891 |                39655897 |          0.2 |
 |  5 | SourceCode                      |                       0 |                       0 |          0   |
 |  6 | LastUpdateDate                  |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name                     |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:--------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToHealthInsuranceID     |                    37554463 |                    38565202 |          2.7 |
-|  1 | ProviderID                      |                     2793320 |                     2850495 |          2   |
-|  2 | HealthInsurancePlanToPlanTypeID |                        6809 |                        6845 |          0.5 |
+|  0 | ProviderToHealthInsuranceID     |                    39566891 |                    39655897 |          0.2 |
+|  1 | ProviderID                      |                     2853142 |                     2914989 |          2.2 |
+|  2 | HealthInsurancePlanToPlanTypeID |                        6579 |                        6845 |          4   |
 |  3 | LegacyKey                       |                           0 |                           0 |          0   |
 |  4 | LegacyKeyName                   |                           0 |                           0 |          0   |
-|  5 | SourceCode                      |                         214 |                         213 |          0.5 |
-|  6 | LastUpdateDate                  |                        3578 |                        3868 |          8.1 |
+|  5 | SourceCode                      |                         212 |                         213 |          0.5 |
+|  6 | LastUpdateDate                  |                        3959 |                        3868 |          2.3 |

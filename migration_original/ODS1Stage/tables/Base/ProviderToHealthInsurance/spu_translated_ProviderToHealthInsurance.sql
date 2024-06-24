@@ -17,16 +17,13 @@ AS declare
 ---------------------------------------------------------
 
 select_statement string; -- cte and select statement for the merge
+update_statement string; -- update
 insert_statement string; -- insert statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
 procedure_name varchar(50) default('sp_load_providertohealthinsurance');
 execution_start datetime default getdate();
-
 mdm_db string default('mdm_team');
-
-
-
 
 begin
     
@@ -54,7 +51,7 @@ select
  from cte_health_insurance as ft
     inner join base.provider P on p.providercode = ft.providercode
     inner join base.healthinsuranceplantoplantype as PTP on ptp.insuranceproductcode = ft.HealthInsurance_HealthInsuranceProductCode
-where ft.HealthInsurance_HealthInsuranceProductCode is not null
+qualify row_number() over(partition by providerid, healthinsuranceplantoplantypeid order by HealthInsurance_LastUpdateDate desc ) = 1
 $$;
 
 --- insert Statement
@@ -71,14 +68,20 @@ insert_statement := ' insert
                         source.sourcecode, 
                         source.lastupdatedate)';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate ';
+                        
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
 merge_statement := 'merge into base.providertohealthinsurance as target
                     using ('||select_statement||') as source
-                    on source.providerid = target.providerid
-                    WHEN MATCHED then delete
+                    on source.providerid = target.providerid and target.HealthInsurancePlanToPlanTypeId = source.healthinsuranceplantoplantypeid
+                    when matched then ' || update_statement || '
                     when not matched then '||insert_statement;
 
 ---------------------------------------------------------
