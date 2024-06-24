@@ -1,5 +1,3 @@
-
--- 1. spuSOLRTreatmentEntryLevel (validated in snowflake)
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRTREATMENTENTRYLEVEL(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
@@ -26,6 +24,7 @@ declare
 
     select_statement string; -- cte statement
     insert_statement string; -- insert statement to final table
+    update_statement string; -- update statement
     merge_statement string; -- merge statement
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrtreatmententrylevel');
@@ -62,19 +61,19 @@ select_statement:= 'with cte_treatment_spec as (
                             join base.treatmentlevel as TreatLev on treatlev.treatmentlevelid = specproc.treatmentlevelid
                     )
                     
-                        select distinct
-                            med.refmedicaltermcode as DCPCode,
-                            ctetreat.treatmentleveldescription,
-                            spec.specialtycode,
-                            spec.specialtydescription,
-                            ctetreat.ismarketview as ForMarketViewLoad
-                        from
-                            cte_treatment_spec cteTreat
-                            join base.specialty Spec on spec.specialtyid = ctetreat.specialtyid
-                            join base.medicalterm Med on med.medicaltermid = ctetreat.medicaltermid';
+                    select distinct
+                        med.refmedicaltermcode as DCPCode,
+                        ctetreat.treatmentleveldescription,
+                        spec.specialtycode,
+                        spec.specialtydescription,
+                        ctetreat.ismarketview as ForMarketViewLoad
+                    from
+                        cte_treatment_spec cteTreat
+                        join base.specialty Spec on spec.specialtyid = ctetreat.specialtyid
+                        join base.medicalterm Med on med.medicaltermid = ctetreat.medicaltermid';
 
 --- insert Statement
-insert_statement := ' insert  (
+insert_statement := ' insert (
                         DCPCode,
                         TreatmentLevelDescription,
                         SpecialtyCode,
@@ -85,18 +84,26 @@ insert_statement := ' insert  (
                         source.treatmentleveldescription,
                         source.specialtycode,
                         source.specialtydescription,
-                        source.formarketviewload);';
+                        source.formarketviewload
+                        );';
 
+
+update_statement := 'update
+                     set
+                        target.TreatmentLevelDescription = source.TreatmentLevelDescription,
+                        target.SpecialtyDescription = source.SpecialtyDescription,
+                        target.ForMarketViewLoad = source.ForMarketViewLoad';      
                      
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := ' merge into show.solrtreatmententrylevel as target 
-                        using (' ||select_statement|| ') as source 
-                        on target.dcpcode = source.dcpcode and target.specialtycode = source.specialtycode
-                        when not matched then '
-                            || insert_statement ;
+merge_statement := 'merge into show.solrtreatmententrylevel as target 
+                    using ('||select_statement||') as source 
+                    on target.dcpcode = source.dcpcode 
+                        and target.specialtycode = source.specialtycode
+                    when matched then '||update_statement||'
+                    when not matched then '|| insert_statement ;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
