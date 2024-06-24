@@ -158,7 +158,7 @@ select_statement_1 := cte_sl || $$
 
 
 select_statement_2 := cte_sl || $$
-                                select distinct
+                                select 
                                    ctp.clienttoproductid, 
                                    (select PartnerId from base.partner where PartnerCode = 'MHD') as PartnerID,
                                    cte.sourcecode as SourceCode, 
