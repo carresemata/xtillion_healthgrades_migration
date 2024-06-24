@@ -1,4 +1,4 @@
-# Base.ProviderIdentification Report
+# BASE.PROVIDERIDENTIFICATION Report
 
 ## 1. Sample Validation
 
@@ -9,8 +9,8 @@ The example below shows a sample row where values are not identical. Important t
 
 |    | Column Name              | Match ID   | SQL Server Value                     | Snowflake Value                      |
 |---:|:-------------------------|:-----------|:-------------------------------------|:-------------------------------------|
-|  0 | PROVIDERIDENTIFICATIONID | AS7030125  | aa499084-e13d-4242-b8ee-aa5426a58228 | 717ce292-2a05-400c-a055-5dc99bf34f42 |
-|  1 | PROVIDERID               | AS7030125  | 5a433272-426f-006e-0000-000000000000 | 3fc0a654-7dbf-4621-8683-7e487f4491e4 |
+|  0 | PROVIDERIDENTIFICATIONID | MA0129379  | 5f115e35-e700-493e-ab21-b39a6433921c | d1341640-0377-4ca4-b5e0-c25c4b0d5e19 |
+|  1 | PROVIDERID               | MA0129379  | 6e6d6671-6542-004e-0000-000000000000 | 61e996bf-ffd8-4263-beff-0c86af1e3a6e |
 
 ## 2. Aggregate Validation
 
@@ -21,29 +21,29 @@ The example below shows a sample row where values are not identical. Important t
 
 ### 2.2 Total Rows
 - SQL Server: 2129047
-- Snowflake: 2129180
-- Rows Margin (%): 0.006246926441736608
+- Snowflake: 2225270
+- Rows Margin (%): 4.5195338571670804
 
 ### 2.3 Nulls per Column
 |    | Column_Name              |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
 |---:|:-------------------------|------------------------:|------------------------:|-------------:|
-|  0 | ProviderIdentificationID |                       0 |                       0 |            0 |
-|  1 | ProviderID               |                       0 |                       0 |            0 |
-|  2 | IdentificationTypeID     |                       0 |                       0 |            0 |
-|  3 | IdentificationValue      |                       0 |                       0 |            0 |
-|  4 | EffectiveDate            |                 2129047 |                 2129180 |            0 |
-|  5 | ExpirationDate           |                       1 |                       1 |            0 |
-|  6 | SourceCode               |                       0 |                       0 |            0 |
-|  7 | LastUpdateDate           |                       0 |                       0 |            0 |
+|  0 | ProviderIdentificationID |                       0 |                       0 |          0   |
+|  1 | ProviderID               |                       0 |                       0 |          0   |
+|  2 | IdentificationTypeID     |                       0 |                       0 |          0   |
+|  3 | IdentificationValue      |                       0 |                       0 |          0   |
+|  4 | EffectiveDate            |                 2129047 |                 2225270 |          4.5 |
+|  5 | ExpirationDate           |                       1 |                       1 |          0   |
+|  6 | SourceCode               |                       0 |                       0 |          0   |
+|  7 | LastUpdateDate           |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name              |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderIdentificationID |                     2129047 |                     2129180 |            0 |
-|  1 | ProviderID               |                     1544703 |                     1544826 |            0 |
-|  2 | IdentificationTypeID     |                           1 |                           1 |            0 |
-|  3 | IdentificationValue      |                     2128986 |                     2129119 |            0 |
-|  4 | EffectiveDate            |                           0 |                           0 |            0 |
-|  5 | ExpirationDate           |                         445 |                         445 |            0 |
-|  6 | SourceCode               |                           1 |                           1 |            0 |
-|  7 | LastUpdateDate           |                          26 |                          26 |            0 |
+|  0 | ProviderIdentificationID |                     2129047 |                     2225270 |          4.5 |
+|  1 | ProviderID               |                     1544703 |                     1599717 |          3.6 |
+|  2 | IdentificationTypeID     |                           1 |                           1 |          0   |
+|  3 | IdentificationValue      |                     2128986 |                     2129119 |          0   |
+|  4 | EffectiveDate            |                           0 |                           0 |          0   |
+|  5 | ExpirationDate           |                         445 |                         445 |          0   |
+|  6 | SourceCode               |                           1 |                           1 |          0   |
+|  7 | LastUpdateDate           |                          26 |                          26 |          0   |

@@ -19,17 +19,15 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_provideridentification');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
 
-   
-   
 begin
     
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -49,7 +47,7 @@ select_statement := $$
                         lateral flatten(input => p.PROVIDER_PROFILE:IDENTIFICATION) as json
                     )
                     
-                    select distinct
+                    select 
                         p.providerid,
                         i.identificationtypeid,
                         json.identification_Identifier as IdentificationValue,
@@ -59,7 +57,7 @@ select_statement := $$
                     from cte_identification as json
                     join base.provider as p on p.providercode = json.providercode
                     join base.identificationtype as i on i.identificationtypecode = json.identification_IdentificationTypeCode
-                    $$;
+                    qualify row_number() over(partition by providerid, identificationtypeid, identificationvalue order by json.identification_LastUpdateDate desc ) = 1 $$;
 
 --- insert Statement
 insert_statement := ' insert  
@@ -79,6 +77,13 @@ insert_statement := ' insert
                         source.sourcecode,
                         source.lastupdatedate)';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.ExpirationDate = source.expirationdate,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate';
+        
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -86,7 +91,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.provideridentification as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid and source.identificationtypeid = target.identificationtypeid
+                   on source.providerid = target.providerid and source.identificationtypeid = target.identificationtypeid and target.identificationvalue = source.identificationvalue
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
