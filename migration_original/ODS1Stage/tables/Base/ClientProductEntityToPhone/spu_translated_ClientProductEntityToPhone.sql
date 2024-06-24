@@ -430,7 +430,7 @@ CTE_Swimlane_Phones as (
             PhonePTFDPPNP is not null
             and RowRank = 1
     )
-    select distinct
+    select 
         cpe.clientproducttoentityid,
         pt.phonetypeid as PhoneTypeID,
         p.phoneid as PhoneID,
@@ -734,8 +734,7 @@ select_statement_2 := $$  with cte_swimlane_phones as (
             where
                 PhonePTDPPNP is not null
         )
-        select
-            distinct 
+        select 
             cpte.clientproducttoentityid,
             pt.phonetypeid,
             ph.phoneid,
@@ -793,8 +792,7 @@ select_statement_3 := $$  with Cte_office as (
 
         )
         
-        select
-                distinct 
+        select 
                 cpe.clientproducttoentityid,
                 op.phoneid,
                 op.phonetypeid,
