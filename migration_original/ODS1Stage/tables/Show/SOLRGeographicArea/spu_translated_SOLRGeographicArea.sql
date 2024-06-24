@@ -1,4 +1,3 @@
--- spuSOLRGeographicAreaGenerateFromMid
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRGEOGRAPHICAREA(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
@@ -38,71 +37,68 @@ begin
 ---------------------------------------------------------     
 
 -- select Statement
-select_statement := 'with CTE_geoId as (select
-    distinct GeographicAreaID
-from
-    show.solrgeographicareadelta
-where
-    StartDeltaProcessDate is null
-    and EndDeltaProcessDate is null
-    and SolrDeltaTypeCode = 1 --insert/updates
-    and MidDeltaProcessComplete = 1 ) --this will indicate the Mid TABLEs have been refreshed with the updated data
-
-select
-            midgeo.geographicareaid,
-            midgeo.geographicareacode,
-            midgeo.geographicareatypecode,
-            midgeo.geographicareavalue,
-            current_timestamp as UpdatedDate,
-            CURRENT_USER as UpdatedSource
-        from
-            mid.geographicarea midGeo
-            join CTE_geoId as geoId on geoid.geographicareaid = midgeo.geographicareaid';
+select_statement := 'with CTE_geoId as (
+                        select
+                            distinct GeographicAreaID
+                        from
+                            show.solrgeographicareadelta
+                        where
+                            StartDeltaProcessDate is null
+                            and EndDeltaProcessDate is null
+                            and SolrDeltaTypeCode = 1 --insert/updates
+                            and MidDeltaProcessComplete = 1 
+                    ) 
+                    
+                    select
+                        midgeo.geographicareaid,
+                        midgeo.geographicareacode,
+                        midgeo.geographicareatypecode,
+                        midgeo.geographicareavalue,
+                        current_timestamp as UpdatedDate,
+                        CURRENT_USER as UpdatedSource
+                    from
+                        mid.geographicarea midGeo
+                        join CTE_geoId as geoId on geoid.geographicareaid = midgeo.geographicareaid';
 
 -- update Statement
-update_statement := 
-'update
-SET
-    solrgeo.geographicareaid = geoarea.geographicareaid,
-    solrgeo.geographicareacode = geoarea.geographicareacode,
-    solrgeo.geographicareatypecode = geoarea.geographicareatypecode,
-    solrgeo.geographicareavalue = geoarea.geographicareavalue,
-    solrgeo.updateddate = geoarea.updateddate,
-    solrgeo.updatedsource = geoarea.updatedsource';
+update_statement := 'update
+                     set
+                        target.geographicareaid = source.geographicareaid,
+                        target.geographicareacode = source.geographicareacode,
+                        target.geographicareatypecode = source.geographicareatypecode,
+                        target.geographicareavalue = source.geographicareavalue,
+                        target.updateddate = source.updateddate,
+                        target.updatedsource = source.updatedsource';
 
 -- insert Statement 
-insert_statement := 
-'insert
-    (
-        GeographicAreaID,
-        GeographicAreaCode,
-        GeographicAreaTypeCode,
-        GeographicAreaValue,
-        UpdatedDate,
-        UpdatedSource
-    )
-values
-    (
-        geoarea.geographicareaid,
-        geoarea.geographicareacode,
-        geoarea.geographicareatypecode,
-        geoarea.geographicareavalue,
-        geoarea.updateddate,
-        geoarea.updatedsource
-    );';
+insert_statement := 'insert
+                        (
+                            GeographicAreaID,
+                            GeographicAreaCode,
+                            GeographicAreaTypeCode,
+                            GeographicAreaValue,
+                            UpdatedDate,
+                            UpdatedSource
+                        )
+                    values
+                        (
+                            source.geographicareaid,
+                            source.geographicareacode,
+                            source.geographicareatypecode,
+                            source.geographicareavalue,
+                            source.updateddate,
+                            source.updatedsource
+                        );';
                      
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement := 
-'merge into show.solrgeographicarea as solrGeo using 
-    (' || select_statement || ') as GeoArea 
-    on geoarea.geographicareaid = solrgeo.geographicareaid
-    WHEN MATCHED then '
-        || update_statement ||
-    ' when not matched then ' 
-        || insert_statement ;
+merge_statement :=  'merge into show.solrgeographicarea as target using 
+                    ('||select_statement||') as source
+                    on source.geographicareaid = target.geographicareaid
+                    when matched then '|| update_statement ||' 
+                    when not matched then ' || insert_statement ;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
