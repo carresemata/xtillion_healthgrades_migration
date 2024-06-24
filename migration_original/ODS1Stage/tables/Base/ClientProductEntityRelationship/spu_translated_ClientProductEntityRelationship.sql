@@ -81,7 +81,7 @@ select_statement_facility := $$ with Cte_customer_product as (
                                 inner join base.clienttoproduct cp on cp.clienttoproductcode = json_cp.customerproduct_CUSTOMERPRODUCTCODE
                                 
                             )
-                            select distinct
+                            select 
                                 s.relationshiptypeid,
                                 cptep.clientproducttoentityid as ParentID,
                                 cpteo.clientproducttoentityid as ChildID,
@@ -134,7 +134,7 @@ select_statement_office := $$ with Cte_customer_product as (
                                 inner join base.clienttoproduct cp on cp.clienttoproductcode = json_cp.customerproduct_CUSTOMERPRODUCTCODE
                                 
                             )
-                            select distinct
+                            select 
                                 s.relationshiptypeid,
                                 cptep.clientproducttoentityid as ParentID,
                                 cpteo.clientproducttoentityid as ChildID,
