@@ -22,6 +22,7 @@ declare
 
 select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
+update_statement string; -- update
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
 procedure_name varchar(50) default('sp_load_providersanction');
@@ -39,7 +40,6 @@ begin
 select_statement := $$ with Cte_sanction as (
                         SELECT
                             p.ref_provider_code as providercode,
-                            CREATED_DATETIME AS CREATE_DATE,
                             to_varchar(json.value:SANCTION_LICENSE) as Sanction_SanctionLicense,
                             to_varchar(json.value:SANCTION_TYPE_CODE) as Sanction_SanctionTypeCode,
                             to_varchar(json.value:SANCTION_CATEGORY_CODE) as Sanction_SanctionCategoryCode,
@@ -75,7 +75,7 @@ select_statement := $$ with Cte_sanction as (
                         left join base.sanctiontype as ST on st.sanctiontypecode = json.sanction_SANCTIONTYPECODE
                         join base.sanctioncategory as SC on sc.sanctioncategorycode = json.sanction_SANCTIONCATEGORYCODE
                         left join base.sanctionaction as SA on sa.sanctionactioncode = json.sanction_SANCTIONACTIONCODE
-                    qualify row_number() over(partition by ProviderId, json.sanction_SANCTIONDATE, json.sanction_SANCTIONACTIONCODE, json.sanction_SANCTIONCATEGORYCODE, json.sanction_SANCTIONTYPECODE, json.sanction_STATEREPORTINGAGENCYCODE order by CREATE_DATE desc) = 1  $$;
+                    qualify row_number() over(partition by ProviderId, json.sanction_SANCTIONDATE, json.sanction_SANCTIONACTIONCODE, json.sanction_SANCTIONCATEGORYCODE, json.sanction_SANCTIONTYPECODE, json.sanction_STATEREPORTINGAGENCYCODE order by json.sanction_LASTUPDATEDATE desc) = 1  $$;
 
 -- insert Statement
 insert_statement := ' insert (
@@ -107,7 +107,21 @@ insert_statement := ' insert (
                             source.lastupdatedate
                         )';
 
-                        
+--- update statement                        
+update_statement := ' 
+    update
+    set
+        target.SanctionLicense = source.sanctionlicense,
+        target.SanctionDescription = source.sanctiondescription,
+        target.SanctionDate = source.sanctiondate,
+        target.SanctionReinstatementDate = source.sanctionreinstatementdate,
+        target.SourceCode = source.sourcecode,
+        target.LastUpdateDate = source.lastupdatedate
+';     
+
+---------------------------------------------------------
+--------- 4. actions (inserts and updates) --------------
+---------------------------------------------------------  
 
 -- Merge Statement
 merge_statement := ' merge into base.providersanction as TARGET
@@ -117,10 +131,11 @@ on target.providerid = source.providerid
     and target.sanctiontypeid = source.sanctiontypeid
     and target.sanctioncategoryid = source.sanctioncategoryid
     and target.sanctionactionid = source.sanctionactionid
+when matched then ' || update_statement || '
 when not matched then' || insert_statement;
 
 ---------------------------------------------------------
-------------------- 4. Execution ------------------------
+------------------- 5. Execution ------------------------
 ---------------------------------------------------------
 
 if (is_full) then
@@ -129,7 +144,7 @@ end if;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
---------------- 5. status monitoring --------------------
+--------------- 6. status monitoring --------------------
 ---------------------------------------------------------
 
 status := 'completed successfully';
