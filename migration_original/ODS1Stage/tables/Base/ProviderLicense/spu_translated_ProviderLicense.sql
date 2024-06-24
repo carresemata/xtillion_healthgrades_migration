@@ -48,7 +48,7 @@ select_statement := $$  With Cte_license as (
                             , lateral flatten(input => p.PROVIDER_PROFILE:LICENSE) as json
                         )
 
-                        select distinct
+                        select
                             p.providerid,
                             s.stateid, 
                             cte.license_LicenseNumber as LicenseNumber,
