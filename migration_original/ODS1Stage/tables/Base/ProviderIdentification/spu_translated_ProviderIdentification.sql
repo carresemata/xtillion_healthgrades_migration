@@ -47,7 +47,7 @@ select_statement := $$
                         lateral flatten(input => p.PROVIDER_PROFILE:IDENTIFICATION) as json
                     )
                     
-                    select distinct
+                    select 
                         p.providerid,
                         i.identificationtypeid,
                         json.identification_Identifier as IdentificationValue,
