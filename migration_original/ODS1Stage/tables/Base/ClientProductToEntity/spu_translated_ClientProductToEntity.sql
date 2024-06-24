@@ -88,8 +88,7 @@ cte_swimlane as (
         join base.facility as f on fpp.facilitycode = f.facilitycode
         join base.clienttoproduct as cp on cp.clienttoproductcode = fpp.clienttoproductcode
 )
-select
-    distinct 
+select 
     s.clienttoproductid,
     b.entitytypeid,
     s.facilityid as EntityID,
