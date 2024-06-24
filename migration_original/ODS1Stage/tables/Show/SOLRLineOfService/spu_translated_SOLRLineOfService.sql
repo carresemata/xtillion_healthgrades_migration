@@ -1,4 +1,3 @@
--- Show_spuSOLRLineOfServiceGenerateFromMid
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRLINEOFSERVICE(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
@@ -38,82 +37,76 @@ begin
 ---------------------------------------------------------     
 
 -- select Statement
-select_statement :=
-'with cte_id as (
-            select
-                distinct LineOfServiceID
-            from
-                show.solrlineofservicedelta
-            where
-                StartDeltaProcessDate is null
-                and EndDeltaProcessDate is null
-                and SolrDeltaTypeCode = 1 --insert/updates
-                and MidDeltaProcessComplete = 1
-)
-select
-        midline.lineofserviceid,
-        midline.lineofservicecode,
-        midline.lineofservicetypecode,
-        midline.lineofservicedescription,
-        midline.legacykey,
-        midline.legacykeyname,
-        current_timestamp as UpdatedDate,
-        CURRENT_USER as UpdatedSource
-    from
-        mid.lineofservice midLine
-    join
-        cte_id on midline.lineofserviceid = cte_id.lineofserviceid'; --this will indicate the Mid tables have been refreshed with the updated data
+select_statement :='with cte_line as (
+                        select
+                            distinct LineOfServiceID
+                        from
+                            show.solrlineofservicedelta
+                        where
+                            StartDeltaProcessDate is null
+                            and EndDeltaProcessDate is null
+                            and SolrDeltaTypeCode = 1 --insert/updates
+                            and MidDeltaProcessComplete = 1
+                    )
+                    select
+                        midline.lineofserviceid,
+                        midline.lineofservicecode,
+                        midline.lineofservicetypecode,
+                        midline.lineofservicedescription,
+                        midline.legacykey,
+                        midline.legacykeyname,
+                        current_timestamp as UpdatedDate,
+                        CURRENT_USER as UpdatedSource
+                    from
+                        mid.lineofservice midLine
+                    join
+                        cte_line on midline.lineofserviceid = cte_line.lineofserviceid'; 
 
 -- update statement
-update_statement :=
-'update
-SET
-    solrline.lineofserviceid = lineservice.lineofserviceid,
-    solrline.lineofservicecode = lineservice.lineofservicecode,
-    solrline.lineofservicetypecode = lineservice.lineofservicetypecode,
-    solrline.lineofservicedescription = lineservice.lineofservicedescription,
-    solrline.legacykey = lineservice.legacykey,
-    solrline.legacykeyname = lineservice.legacykeyname,
-    solrline.updateddate = lineservice.updateddate,
-    solrline.updatedsource = lineservice.updatedsource ';
+update_statement := 'update
+                    set
+                        target.lineofservicetypecode = source.lineofservicetypecode,
+                        target.lineofservicedescription = source.lineofservicedescription,
+                        target.legacykey = source.legacykey,
+                        target.legacykeyname = source.legacykeyname,
+                        target.updateddate = source.updateddate,
+                        target.updatedsource = source.updatedsource';
  
 -- insert Statement
-insert_statement :=
-'insert
-    (
-        LineOfServiceID,
-        LineOfServiceCode,
-        LineOfServiceTypeCode,
-        LineOfServiceDescription,
-        LegacyKey,
-        LegacyKeyName,
-        UpdatedDate,
-        UpdatedSource
-    )
-values
-    (
-        lineservice.lineofserviceid,
-        lineservice.lineofservicecode,
-        lineservice.lineofservicetypecode,
-        lineservice.lineofservicedescription,
-        lineservice.legacykey,
-        lineservice.legacykeyname,
-        lineservice.updateddate,
-        lineservice.updatedsource
-    );';
+insert_statement := 'insert
+                        (
+                            LineOfServiceID,
+                            LineOfServiceCode,
+                            LineOfServiceTypeCode,
+                            LineOfServiceDescription,
+                            LegacyKey,
+                            LegacyKeyName,
+                            UpdatedDate,
+                            UpdatedSource
+                        )
+                    values
+                        (
+                            source.lineofserviceid,
+                            source.lineofservicecode,
+                            source.lineofservicetypecode,
+                            source.lineofservicedescription,
+                            source.legacykey,
+                            source.legacykeyname,
+                            source.updateddate,
+                            source.updatedsource
+                        );';
                      
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
  
 -- Merge Statement
-merge_statement := 'merge into show.solrlineofservice as solrLine using 
-                        (' || select_statement || ') as LineService 
-                        on lineservice.lineofserviceid = solrline.lineofserviceid and solrline.lineofservicecode = lineservice.lineofservicecode
-                        WHEN MATCHED then '
-                            || update_statement ||
-                        'when not matched then '
-                            || insert_statement ;
+merge_statement := 'merge into show.solrlineofservice as target using 
+                    ('||select_statement||') as source 
+                    on source.lineofserviceid = target.lineofserviceid 
+                        and target.lineofservicecode = source.lineofservicecode
+                    when matched then '||update_statement||'
+                    when not matched then '||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
