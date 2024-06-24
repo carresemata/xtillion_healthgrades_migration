@@ -38,14 +38,9 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     --- select Statement
     -- if no conditionals:
     select_statement_1:= $$  with cte_swimlane as (
-        select
-            *
-        from
-            base.vw_swimlane_base_client qualify dense_rank() over(
-                partition by customerproductcode
-                order by
-                    LastUpdateDate
-            ) = 1
+        select *
+        from base.vw_swimlane_base_client 
+        qualify dense_rank() over(partition by customerproductcodeorder by LastUpdateDate) = 1
     ),
     
     CTE_Display_Partner AS (
@@ -429,7 +424,7 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
             PhonePTDPPNP is not null
     )
     select
-        distinct cpte.clientproducttoentityid,
+        cpte.clientproducttoentityid,
         s.displaypartnercode,
         pt.phonetypeid,
         s.phonenumber,
@@ -824,7 +819,7 @@ cte_swimlane as (
             PhonePTFDPPNP is not null
             
     )    
-    select distinct 
+    select  
         cpe.clientproducttoentityid, 
         s.displaypartnercode, 
         pt.phonetypeid, 
