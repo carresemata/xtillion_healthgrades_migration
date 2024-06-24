@@ -34,81 +34,30 @@ declare
 begin
 --- select Statement
 
-select_statement := select_statement || 
-                    $$ with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                    
-                CTE_ProviderLicense as (
-                        select
-                            pl.providerid,
-                            pl.licensenumber,
-                            pl.licenseeffectivedate,
-                            pl.licenseterminationdate,
-                            st.state,
-                            st.statename,
-                            pl.licensetype,
-                            0 as ActionCode
-                        from
-                            CTE_ProviderBatch as pb
-                            join base.providerlicense as pl on pl.providerid = pb.providerid
-                            join base.state as st on st.stateid = pl.stateid
-                    ),
-                    -- insert Action
-                    CTE_Action_1 as (
-                        select
-                            cte.providerid,
-                            1 as ActionCode
-                        from
-                            CTE_ProviderLicense as cte
-                            left join mid.providerlicense as mid on cte.providerid = mid.providerid
-                        where
-                            mid.providerid is null
-                    ),
-                    -- update Action
-                    CTE_Action_2 as (
-                        select
-                            cte.providerid,
-                            2 as ActionCode
-                        from
-                            CTE_ProviderLicense as cte
-                            join mid.providerlicense as mid on cte.providerid = mid.providerid
-                        where
-                            MD5(ifnull(cte.licensenumber::varchar, '')) <> MD5(ifnull(mid.licensenumber::varchar, ''))
-                            or MD5(ifnull(cte.licenseeffectivedate::varchar, '')) <> MD5(ifnull(mid.licenseeffectivedate::varchar, ''))
-                            or MD5(ifnull(cte.licenseterminationdate::varchar, '')) <> MD5(ifnull(mid.licenseterminationdate::varchar, ''))
-                            or MD5(ifnull(cte.state::varchar, '')) <> MD5(ifnull(mid.state::varchar, ''))
-                            or MD5(ifnull(cte.statename::varchar, '')) <> MD5(ifnull(mid.statename::varchar, ''))
-                            or MD5(ifnull(cte.licensetype::varchar, '')) <> MD5(ifnull(mid.licensetype::varchar, ''))
+select_statement := 
+                    $$ 
+                    with CTE_ProviderBatch as (
+                        select p.providerid
+                        from $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
+                        join base.provider as P on p.providercode = ppp.ref_provider_code
                     )
+        
                     select distinct
-                        A0.ProviderID,
-                        A0.LicenseNumber,
-                        A0.LicenseEffectiveDate,
-                        A0.LicenseTerminationDate,
-                        A0.State,
-                        A0.StateName,
-                        A0.LicenseType,
-                        ifnull(
-                            A1.ActionCode,
-                            ifnull(A2.ActionCode, A0.ActionCode)
-                        ) as ActionCode
-                    from
-                        CTE_ProviderLicense as A0
-                        left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID
-                        left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID
-                    where
-                        ifnull(
-                            A1.ActionCode,
-                            ifnull(A2.ActionCode, A0.ActionCode)
-                        ) <> 0 $$;
+                        pl.providerid,
+                        pl.licensenumber,
+                        pl.licenseeffectivedate,
+                        pl.licenseterminationdate,
+                        st.state,
+                        st.statename,
+                        pl.licensetype
+                    from CTE_ProviderBatch as pb
+                    join base.providerlicense as pl on pl.providerid = pb.providerid
+                    join base.state as st on st.stateid = pl.stateid
+                    $$;
 
 --- update Statement
 update_statement := ' update 
-                     SET 
+                      set 
                         ProviderID = source.providerid,
                         LicenseNumber = source.licensenumber,
                         LicenseEffectiveDate = source.licenseeffectivedate,
@@ -118,7 +67,7 @@ update_statement := ' update
                         LicenseType = source.licensetype';
 
 --- insert Statement
-insert_statement := ' insert  (
+insert_statement := ' insert (
                             ProviderID,
                             LicenseNumber,
                             LicenseEffectiveDate,
@@ -142,9 +91,11 @@ insert_statement := ' insert  (
 
 merge_statement := ' merge into mid.providerlicense as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid and source.licensenumber = target.licensenumber and source.licensetype = target.licensetype
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   on source.providerid = target.providerid 
+                        and source.licensenumber = target.licensenumber 
+                        and source.licensetype = target.licensetype
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------

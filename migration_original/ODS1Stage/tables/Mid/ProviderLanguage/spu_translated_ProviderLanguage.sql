@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Mid.SP_LOAD_PROVIDERLANGUAGE(is_full BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERLANGUAGE(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -34,25 +34,25 @@ declare
 
 begin
 
-    select_statement := $$ with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                       CTE_ProviderLanguage as (
-                        select ptl.providerid, l.languagename,
-                               CASE WHEN mpl.providerid is null then 1 else 0 END as ActionCode
+    select_statement := $$ 
+                        with CTE_ProviderBatch as (
+                            select p.providerid
+                            from $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
+                            join base.provider as P on p.providercode = ppp.ref_provider_code
+                        ),
+                        
+                        CTE_ProviderLanguage as (
+                        select 
+                            ptl.providerid, 
+                            l.languagename,
                         from CTE_ProviderBatch pb
                         join base.providertolanguage as ptl on ptl.providerid = pb.providerid
                         join base.language as l on l.languageid = ptl.languageid
-                        left join mid.providerlanguage mpl on ptl.providerid = mpl.providerid and l.languagename = mpl.languagename
                         )
                         
                         select 
                             pl.providerid,
-                            pl.languagename,
-                            pl.actioncode
+                            pl.languagename
                         from CTE_ProviderLanguage pl
                         $$;
       
@@ -73,16 +73,14 @@ begin
                           )
                           $$;
 
-
+                          
      merge_statement := $$
                         merge into mid.providerlanguage as target
-                        using $$ || select_statement || $$ as source
-                        on source.providerid = target.providerid
-                        WHEN MATCHED and source.providerid = target.providerid 
-                                     and source.languagename = target.languagename
-                                     and source.providerid is null then delete
-                        when not matched and source.actioncode = 1 then $$ || insert_statement;
-        
+                        using ($$||select_statement||$$) as source
+                        on source.providerid = target.providerid 
+                            and source.languagename = target.languagename
+                        when not matched then $$ || insert_statement;
+     
 
     ---------------------------------------------------------
     ------------------- 5. execution ------------------------

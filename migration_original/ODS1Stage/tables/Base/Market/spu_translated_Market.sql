@@ -11,7 +11,7 @@ as declare
 -- base.geographicarea
 -- base.marketmaster (empty in sql server?)
 -- base.source
--- dbo.requestedmarketlocationsmissingfromods2 (external schema)
+-- base.requestedmarketlocationsmissingfromods2 (original from dbo)
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -44,7 +44,7 @@ select_statement := $$
                         mkm.lastupdatedate
                     from base.marketmaster as mkm
                         inner join base.geographicarea ga on mkm.geographicareaguid = ga.geographicareaid
-                        inner join dbo.requestedmarketlocationsmissingfromods2 missing on ga.geographicareavalue1 = missing.geographicareavalue1
+                        inner join base.requestedmarketlocationsmissingfromods2 missing on ga.geographicareavalue1 = missing.geographicareavalue1
                             and ifnull(ga.geographicareavalue2,'') = ifnull(missing.geographicareavalue2, '')
                         left join base.market bm on mkm.marketguid = bm.marketid
                         left join base.source s on mkm.system_SRC_GUID = s.sourceid

@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 27803
-- Snowflake: 27710
-- Rows Margin (%): 0.3344962773801388
+- SQL Server: 27798
+- Snowflake: 28667
+- Rows Margin (%): 3.1261241815957983
 
 ### 2.3 Nulls per Column
 |    | Column_Name         |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -30,8 +30,8 @@ The example below shows a sample row where values are not identical. Important t
 |  2 | ExternalIdentifier  |                       0 |                       0 |          0   |
 |  3 | MediaVideoHostID    |                       0 |                       0 |          0   |
 |  4 | MediaReviewLevelID  |                       0 |                       0 |          0   |
-|  5 | VideoXML            |                   27803 |                   27710 |          0.3 |
-|  6 | VideoThumbnailImage |                   27803 |                   27710 |          0.3 |
+|  5 | VideoXML            |                   27798 |                   28667 |          3.1 |
+|  6 | VideoThumbnailImage |                   27798 |                   28667 |          3.1 |
 |  7 | SourceCode          |                       0 |                       0 |          0   |
 |  8 | LastUpdateDate      |                       0 |                       0 |          0   |
 |  9 | MediaContextTypeID  |                       0 |                       0 |          0   |
@@ -39,11 +39,11 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name        |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderVideoID    |                       27803 |                       27710 |          0.3 |
-|  1 | ProviderID         |                       27803 |                       27710 |          0.3 |
-|  2 | ExternalIdentifier |                       24277 |                       24184 |          0.4 |
+|  0 | ProviderVideoID    |                       27798 |                       28667 |          3.1 |
+|  1 | ProviderID         |                       27798 |                       28667 |          3.1 |
+|  2 | ExternalIdentifier |                       24275 |                       24184 |          0.4 |
 |  3 | MediaVideoHostID   |                           2 |                           2 |          0   |
 |  4 | MediaReviewLevelID |                           1 |                           1 |          0   |
-|  5 | SourceCode         |                          60 |                          60 |          0   |
-|  6 | LastUpdateDate     |                         819 |                         804 |          1.8 |
+|  5 | SourceCode         |                          64 |                          60 |          6.2 |
+|  6 | LastUpdateDate     |                         822 |                         804 |          2.2 |
 |  7 | MediaContextTypeID |                           5 |                           5 |          0   |

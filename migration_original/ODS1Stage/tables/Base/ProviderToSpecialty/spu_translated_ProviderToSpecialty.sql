@@ -19,6 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertospecialty');
@@ -27,8 +28,6 @@ declare
    
 begin
     
-
-
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
@@ -75,9 +74,27 @@ select distinct
 from Cte_specialty as JSON
     join base.provider as P on p.providercode = json.providercode
     join base.specialty as S on s.specialtycode = json.specialty_SpecialtyCode 
+qualify row_number() over(partition by providerid, specialtyid order by specialty_LastUpdatedate desc) = 1
  $$;
 
 
+--- update statement
+update_statement := ' update
+    set
+        target.SourceCode = source.SourceCode,
+        target.LastUpdateDate = source.LastUpdateDate,
+        target.SpecialtyRank = source.SpecialtyRank,
+        target.SpecialtyRankCalculated = source.SpecialtyRankCalculated,
+        target.IsSearchable = source.IsSearchable,
+        target.IsSearchableCalculated = source.IsSearchableCalculated,
+        target.SpecialtyIsRedundant = source.SpecialtyIsRedundant,
+        target.SpecialtyDCPCount = source.SpecialtyDCPCount,
+        target.SpecialtyDCPMinFillThreshold = source.SpecialtyDCPMinFillThreshold,
+        target.ProviderSpecialtyDCPCount = source.ProviderSpecialtyDCPCount,
+        target.ProviderSpecialtyAveragePercentile = source.ProviderSpecialtyAveragePercentile,
+        target.MeetsLowThreshold = source.MeetsLowThreshold,
+        target.ProviderRawSpecialtyScore = source.ProviderRawSpecialtyScore,
+        target.ScaledSpecialtyBoost = source.ScaledSpecialtyBoost';
 
 --- insert Statement
 insert_statement := ' insert  
@@ -124,9 +141,8 @@ insert_statement := ' insert
 
 merge_statement := ' merge into base.providertospecialty as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid
-                   and source.specialtyid = target.specialtyid
-                   when matched then delete
+                   on source.providerid = target.providerid and source.specialtyid = target.specialtyid
+                   when matched then '|| update_statement ||'
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------

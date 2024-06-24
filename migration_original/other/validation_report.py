@@ -222,6 +222,7 @@ if __name__ == "__main__":
     sql_server_password = "mysqlpassword"
     sql_server_db = "ODS1Stage"
 
+
     snowflake_account = "OPA66287.us-east-1"  # HG-01 account
     snowflake_username = "ASANCHEZ@RVOHEALTH.COM"
     snowflake_warehouse = "MDM_XSMALL"

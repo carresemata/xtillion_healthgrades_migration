@@ -9,10 +9,10 @@ The example below shows a sample row where values are not identical. Important t
 
 |    | Column Name    | Match ID   | SQL Server Value                     | Snowflake Value                      |
 |---:|:---------------|:-----------|:-------------------------------------|:-------------------------------------|
-|  0 | CLIENTID       | ABGTON     | 54474241-4e4f-0000-0000-000000000000 | 7c1c53cc-50b8-4b61-8e73-293ab991a7ce |
-|  1 | LEGACYKEY      | INOVA      | 39343                                | None                                 |
-|  2 | SOURCECODE     | ABGTON     | HG Reference                         | ABGTON                               |
-|  3 | LASTUPDATEDATE | ABGTON     | 2023-10-11 18:07:36.023              | 2023-10-11 18:07:36.023 -0700        |
+|  0 | CLIENTID       | ELS09      | 875901a4-00a1-ed11-8381-1205831baf5d | a52d7bc2-f342-438e-a8ee-4d1becfb936b |
+|  1 | LEGACYKEY      | THSSTA     | 60734                                | None                                 |
+|  2 | SOURCECODE     | ELS09      | HGREFERENCE                          | ELS09                                |
+|  3 | LASTUPDATEDATE | ELS09      | 2023-10-11 18:07:36.023              | 2023-10-11 18:07:36.023 -0700        |
 
 ## 2. Aggregate Validation
 
@@ -22,9 +22,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 697
+- SQL Server: 698
 - Snowflake: 400
-- Rows Margin (%): 42.61119081779053
+- Rows Margin (%): 42.693409742120345
 
 ### 2.3 Nulls per Column
 |    | Column_Name    |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -32,18 +32,18 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | ClientID       |                       0 |                       0 |          0   |
 |  1 | ClientCode     |                       0 |                       0 |          0   |
 |  2 | ClientName     |                       0 |                       0 |          0   |
-|  3 | LegacyKey      |                     492 |                     400 |         18.7 |
-|  4 | LegacyKeyName  |                     697 |                     400 |         42.6 |
+|  3 | LegacyKey      |                     493 |                     400 |         18.9 |
+|  4 | LegacyKeyName  |                     698 |                     400 |         42.7 |
 |  5 | SourceCode     |                       2 |                       0 |        100   |
 |  6 | LastUpdateDate |                       1 |                       0 |        100   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name    |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:---------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ClientID       |                         697 |                         400 |         42.6 |
-|  1 | ClientCode     |                         695 |                         400 |         42.4 |
-|  2 | ClientName     |                         639 |                         378 |         40.8 |
+|  0 | ClientID       |                         698 |                         400 |         42.7 |
+|  1 | ClientCode     |                         696 |                         400 |         42.5 |
+|  2 | ClientName     |                         640 |                         378 |         40.9 |
 |  3 | LegacyKey      |                         205 |                           0 |        100   |
 |  4 | LegacyKeyName  |                           0 |                           0 |          0   |
 |  5 | SourceCode     |                          13 |                         400 |       2976.9 |
-|  6 | LastUpdateDate |                         155 |                          57 |         63.2 |
+|  6 | LastUpdateDate |                         156 |                          57 |         63.5 |
