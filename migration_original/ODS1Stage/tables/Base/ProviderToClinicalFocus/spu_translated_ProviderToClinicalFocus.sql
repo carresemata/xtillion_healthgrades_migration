@@ -53,7 +53,7 @@ with cte_clinicalfocus as (
     where to_varchar(json.value:CLINICAL_FOCUS_CODE) is not null
 )
 
-select distinct
+select 
     p.providerid,
     cf.clinicalfocusid,
     json.clinicalfocus_ClinicalFocusDCPCount as ClinicalFocusDCPCount,
