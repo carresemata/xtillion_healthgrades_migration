@@ -24,17 +24,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update statement
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertocertificationspecialty');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
 
-   
-   
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -75,14 +72,14 @@ select distinct
     mp.mocpathwayid, 
     ml.moclevelid
     from Cte_certification_specialty as JSON
-    inner join base.provider as P on p.providercode = json.providercode
-    inner join base.certificationspecialty as CS on cs.certificationspecialtycode = json.certificationspecialty_CERTIFICATIONSPECIALTYCODE
-    inner join base.certificationboard as CB on cb.certificationboardcode = json.certificationspecialty_CERTIFICATIONBOARDCODE
-    inner join base.certificationagency as CA on ca.certificationagencycode = json.certificationspecialty_CERTIFICATIONAGENCYCODE
-    inner join base.certificationstatus as CST on cst.certificationstatuscode = json.certificationspecialty_CERTIFICATIONSTATUSCODE
-    left join base.mocpathway as MP on mp.mocpathwaycode = json.certificationspecialty_MOCPATHWAYCODE
-    left join base.moclevel as ML on ml.moclevelcode = json.certificationspecialty_MOCLEVELCODE
-                        $$;
+        inner join base.provider as P on p.providercode = json.providercode
+        inner join base.certificationspecialty as CS on cs.certificationspecialtycode = json.certificationspecialty_CERTIFICATIONSPECIALTYCODE
+        inner join base.certificationboard as CB on cb.certificationboardcode = json.certificationspecialty_CERTIFICATIONBOARDCODE
+        inner join base.certificationagency as CA on ca.certificationagencycode = json.certificationspecialty_CERTIFICATIONAGENCYCODE
+        inner join base.certificationstatus as CST on cst.certificationstatuscode = json.certificationspecialty_CERTIFICATIONSTATUSCODE
+        left join base.mocpathway as MP on mp.mocpathwaycode = json.certificationspecialty_MOCPATHWAYCODE
+        left join base.moclevel as ML on ml.moclevelcode = json.certificationspecialty_MOCLEVELCODE
+    qualify row_number() over(partition by providerid, certificationspecialtyid, certificationboardid, certificationagencyid, certificationstatusid, mocpathwayid, moclevelid order by  certificationspecialty_LASTUPDATEDATE desc ) = 1  $$;
 
 -- insert Statement
 insert_statement := ' insert (
@@ -120,6 +117,14 @@ insert_statement := ' insert (
                        source.mocpathwayid, 
                        source.moclevelid )';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate,
+                            target.CertificationEffectiveDate = source.certificationeffectivedate,
+                            target.CertificationExpirationDate = source.certificationexpirationdate ';
+
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -132,7 +137,7 @@ on  source.providerid = target.providerid and
     source.certificationboardid = target.certificationboardid and
     source.certificationagencyid = target.certificationagencyid and
     source.certificationstatusid = target.certificationstatusid
-WHEN MATCHED then delete
+when matched then ' || update_statement || '
 when not matched then' || insert_statement;
 
 ---------------------------------------------------------
