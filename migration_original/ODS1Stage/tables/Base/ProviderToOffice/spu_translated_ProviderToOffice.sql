@@ -1,4 +1,3 @@
-
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERTOOFFICE(is_full BOOLEAN)
 RETURNS STRING
 LANGUAGE SQL
@@ -20,16 +19,14 @@ declare
 
 select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
+update_statement string; -- update
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
 procedure_name varchar(50) default('sp_load_providertooffice');
 execution_start datetime default getdate();
 mdm_db string default('mdm_team');
 
-
-
 begin
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -65,6 +62,7 @@ select distinct
 from Cte_office as JSON
     join base.provider as P on p.providercode = json.providercode
     join base.office as O on o.officecode = json.office_OfficeCode
+qualify row_number() over(partition by providerid, officeid order by office_LastUpdateDate desc) = 1 
  $$;
 
 -- insert Statement
@@ -95,6 +93,15 @@ insert_statement := $$
         --source.sourceaddresscount,
         source.lastupdatedate) $$;
 
+-- update statement
+update_statement := $$ update
+                        set
+                            target.OfficeName = source.officename,
+                            target.PracticeName = source.practicename,
+                            target.ProviderOfficeRank = source.providerofficerank,
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate $$;
+        
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
@@ -102,7 +109,7 @@ insert_statement := $$
 merge_statement := ' merge into base.providertooffice as TARGET
                     using (' || select_statement || ') as SOURCE
                     on target.providerid = source.providerid and target.officeid = source.officeid
-                    WHEN MATCHED then delete
+                    when matched then ' || update_statement || '
                     when not matched then' || insert_statement;
 
 ---------------------------------------------------------
