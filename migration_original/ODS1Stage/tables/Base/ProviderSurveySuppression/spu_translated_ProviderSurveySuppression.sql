@@ -9,7 +9,7 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
 -- base.providersurveysuppression depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.surveysuppressionreason
 
@@ -18,12 +18,12 @@ declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
+update_statement string; 
 merge_statement string;
 status string;
-    procedure_name varchar(50) default('sp_load_providersurveysuppression');
-    execution_start datetime default getdate();
-
-
+procedure_name varchar(50) default('sp_load_providersurveysuppression');
+execution_start datetime default getdate();
+mdm_db string default('mdm_team');
 
 begin
 
@@ -33,19 +33,24 @@ begin
 ---------------------------------------------------------
 
 --- select Statement
-select_statement := $$ select
+select_statement := $$ with cte_surveysupression as (
+                        select
+                            TO_VARCHAR(Process.PROVIDER_PROFILE:DEMOGRAPHICS[0].PROVIDER_CODE) AS ProviderCode,
+                            TO_VARCHAR(Process.PROVIDER_PROFILE:DEMOGRAPHICS[0].SURVEY_SUPPRESSION_REASON_CODE) AS Demographics_SurveySuppressionReasonCode,
+                            TO_VARCHAR(Process.PROVIDER_PROFILE:DEMOGRAPHICS[0].DATA_SOURCE_CODE) AS Demographics_SourceCode,
+                            TO_TIMESTAMP_NTZ(Process.PROVIDER_PROFILE:DEMOGRAPHICS[0].UPDATED_DATETIME) AS Demographics_LastUpdateDate,
+                        from $$ || mdm_db || $$.mst.provider_profile_processing as process
+                        where TO_VARCHAR(Process.PROVIDER_PROFILE:DEMOGRAPHICS[0].SURVEY_SUPPRESSION_REASON_CODE) is not null
+                        )
+
+                        select
                             p.providerid,
                             ssr.surveysuppressionreasonid,
                             ifnull(json.demographics_SOURCECODE, 'Profisee') as SourceCode
-                        from raw.vw_PROVIDER_PROFILE as JSON
-                            left join base.provider as P on p.providercode = json.providercode
-                            left join base.surveysuppressionreason as SSR on ssr.suppressioncode = json.demographics_SURVEYSUPPRESSIONREASONCODE
-                        where
-                            json.provider_PROFILE is not null and
-                            p.providerid is not null and
-                            SurveySuppressionReasonID is not null and
-                            json.demographics_SURVEYSUPPRESSIONREASONCODE is not null
-                        qualify dense_rank() over (partition by ProviderId order by CREATE_DATE desc)= 1 $$;
+                        from cte_surveysupression as JSON
+                            join base.provider as P on p.providercode = json.providercode
+                            join base.surveysuppressionreason as SSR on ssr.suppressioncode = json.demographics_SURVEYSUPPRESSIONREASONCODE
+                        qualify dense_rank() over (partition by ProviderId order by json.Demographics_LastUpdateDate desc)= 1 $$;
 
 --- insert Statement
 insert_statement := ' insert 
@@ -59,6 +64,11 @@ insert_statement := ' insert
                         source.surveysuppressionreasonid, 
                         source.sourcecode)';
 
+--- update statement
+update_statement := ' update
+                        set
+                            target.SourceCode = source.sourcecode ';                        
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
@@ -66,7 +76,7 @@ insert_statement := ' insert
 merge_statement := ' merge into base.providersurveysuppression as target 
 using ('||select_statement||') as source
 on source.providerid = target.providerid and source.surveysuppressionreasonid = target.surveysuppressionreasonid
-WHEN MATCHED then delete 
+when matched then ' || update_statement || '
 when not matched then'||insert_statement;
 
 ---------------------------------------------------------
