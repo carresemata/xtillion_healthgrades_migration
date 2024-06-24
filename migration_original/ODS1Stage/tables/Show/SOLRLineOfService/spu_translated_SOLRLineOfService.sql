@@ -65,8 +65,6 @@ select_statement :='with cte_line as (
 -- update statement
 update_statement := 'update
                     set
-                        target.lineofserviceid = source.lineofserviceid,
-                        target.lineofservicecode = source.lineofservicecode,
                         target.lineofservicetypecode = source.lineofservicetypecode,
                         target.lineofservicedescription = source.lineofservicedescription,
                         target.legacykey = source.legacykey,
