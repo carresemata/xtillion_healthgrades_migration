@@ -24,6 +24,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(i
     ---------------------------------------------------------
     --------------- 2. declaring variables ------------------
     ---------------------------------------------------------
+    
     select_statement_1 string;
     select_statement_2 string;
     select_statement_3 string;
@@ -42,11 +43,12 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(i
     mdm_db string default('mdm_team');
 
     begin 
+    
     ---------------------------------------------------------
     ----------------- 3. SQL Statements ---------------------
     ---------------------------------------------------------
     --- select Statement
-    -- if no conditionals
+
     --------------------------------–------spuMergeCustomerProduct--------------------------------–------
     select_statement_1 := $$  
     select 
@@ -54,16 +56,12 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(i
         b.entitytypeid,
         cp.clienttoproductid as EntityID,
         s.SourceCode,
-        ifnull(max(s.lastupdatedate), sysdate()) as LastUpdateDate
+        ifnull(s.lastupdatedate, sysdate()) as LastUpdateDate
     from
         base.vw_swimlane_base_client s
         join base.clienttoproduct as cp on s.customerproductcode = cp.clienttoproductcode
         join base.entitytype b on b.entitytypecode = 'CLPROD'
-        group by 
-            cp.clienttoproductid,
-            b.entitytypeid,
-            EntityID,
-            s.SourceCode
+    qualify row_number() over(partition by clienttoproductid, entitytypeid, EntityID order by s.lastupdatedate desc ) = 1
  $$;
     --------------------------------–------spuMergeFacilityCustomerProduct--------------------------------–------
     select_statement_2 := $$ 
@@ -90,8 +88,7 @@ cte_swimlane as (
         join base.facility as f on fpp.facilitycode = f.facilitycode
         join base.clienttoproduct as cp on cp.clienttoproductcode = fpp.clienttoproductcode
 )
-select
-    distinct 
+select 
     s.clienttoproductid,
     b.entitytypeid,
     s.facilityid as EntityID,
@@ -99,7 +96,8 @@ select
     s.lastupdatedate
 from
     cte_swimlane s
-    inner join base.entitytype b on b.entitytypecode = 'FAC'
+    join base.entitytype b on b.entitytypecode = 'FAC'
+qualify row_number() over(partition by clienttoproductid, entitytypeid, EntityID order by s.lastupdatedate desc ) = 1
     $$;
     --------------------------------–------spuMergeProviderCustomerProduct--------------------------------–------
             select_statement_3 := $$        
@@ -228,14 +226,22 @@ where rowrank = 1
                 source.SourceCode,
                 source.lastupdatedate
             )';
+
+     --- update statement
+     update_statement := ' update
+                            set
+                                target.SourceCode = source.SourceCode,
+                                target.LastUpdateDate = source.lastupdatedate';
+
     ---------------------------------------------------------
     --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------
+    
     prefix := 'merge into base.clientproducttoentity as target using (';
-    suffix := ') as source on source.clienttoproductid = target.clienttoproductid
-                    and source.entitytypeid = target.entitytypeid
-                    and source.entityid = target.entityid
-                    when not matched then' || insert_statement;
+    
+    suffix := ') as source on source.clienttoproductid = target.clienttoproductid and source.entitytypeid = target.entitytypeid and source.entityid = target.entityid
+                when matched then ' || update_statement || '
+                when not matched then' || insert_statement;
                     
     merge_statement_1 := prefix || select_statement_1 || suffix;
     merge_statement_2:= prefix || select_statement_2 || suffix;
@@ -249,11 +255,11 @@ where rowrank = 1
     if (is_full) then
         truncate table base.clientproducttoentity;
     end if; 
-    -- return merge_statement_1;
     execute immediate merge_statement_1;
     execute immediate merge_statement_2;
     execute immediate merge_statement_3;
     execute immediate merge_statement_4;
+    
     ---------------------------------------------------------
     --------------- 6. status monitoring --------------------
     ---------------------------------------------------------
