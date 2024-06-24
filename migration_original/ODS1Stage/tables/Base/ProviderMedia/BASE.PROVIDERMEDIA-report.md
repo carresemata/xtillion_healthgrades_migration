@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 239238
-- Snowflake: 55028
-- Rows Margin (%): 76.99863734022188
+- SQL Server: 239234
+- Snowflake: 56984
+- Rows Margin (%): 76.18064321960925
 
 ### 2.3 Nulls per Column
 |    | Column_Name     |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,27 +28,27 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | ProviderMediaID |                       0 |                       0 |          0   |
 |  1 | ProviderID      |                       0 |                       0 |          0   |
 |  2 | MediaTypeID     |                       0 |                       0 |          0   |
-|  3 | MediaDate       |                    8450 |                    8814 |          4.3 |
-|  4 | MediaTitle      |                     434 |                     444 |          2.3 |
-|  5 | MediaPublisher  |                   38377 |                   40423 |          5.3 |
-|  6 | MediaSynopsis   |                  232238 |                   47687 |         79.5 |
-|  7 | MediaLink       |                   55551 |                   47437 |         14.6 |
-|  8 | LegacyKey       |                  239238 |                   55028 |         77   |
-|  9 | LegacyKeyName   |                  239238 |                   55028 |         77   |
+|  3 | MediaDate       |                    8450 |                    9115 |          7.9 |
+|  4 | MediaTitle      |                     434 |                     454 |          4.6 |
+|  5 | MediaPublisher  |                   38377 |                   41909 |          9.2 |
+|  6 | MediaSynopsis   |                  232234 |                   49427 |         78.7 |
+|  7 | MediaLink       |                   55550 |                   49169 |         11.5 |
+|  8 | LegacyKey       |                  239234 |                   56984 |         76.2 |
+|  9 | LegacyKeyName   |                  239234 |                   56984 |         76.2 |
 | 10 | SourceCode      |                       0 |                       0 |          0   |
 | 11 | LastUpdateDate  |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
 |    | Column_Name     |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:----------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderMediaID |                      239238 |                       55028 |         77   |
-|  1 | ProviderID      |                       43155 |                       15773 |         63.5 |
+|  0 | ProviderMediaID |                      239234 |                       56984 |         76.2 |
+|  1 | ProviderID      |                       43154 |                       16273 |         62.3 |
 |  2 | MediaTypeID     |                           7 |                           7 |          0   |
 |  3 | MediaDate       |                       11729 |                        5862 |         50   |
-|  4 | MediaTitle      |                      170862 |                       46354 |         72.9 |
+|  4 | MediaTitle      |                      170858 |                       46354 |         72.9 |
 |  5 | MediaPublisher  |                       14637 |                       10057 |         31.3 |
 |  6 | MediaSynopsis   |                        6786 |                        7117 |          4.9 |
-|  7 | MediaLink       |                      126298 |                        6872 |         94.6 |
+|  7 | MediaLink       |                      126295 |                        6872 |         94.6 |
 |  8 | LegacyKey       |                           0 |                           0 |          0   |
 |  9 | LegacyKeyName   |                           0 |                           0 |          0   |
 | 10 | SourceCode      |                         124 |                         123 |          0.8 |

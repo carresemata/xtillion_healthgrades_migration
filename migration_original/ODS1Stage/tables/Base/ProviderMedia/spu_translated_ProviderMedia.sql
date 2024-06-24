@@ -19,17 +19,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providermedia');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
 
-
-   
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -63,7 +60,8 @@ select
 
 from cte_media as JSON
     join base.provider as P on p.providercode = json.providercode
-    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE $$;
+    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE 
+qualify row_number() over(partition by ProviderID, media_mediatypecode, media_mediadate, media_MediaLink, media_MediaPublisher, media_MediaSynopsis, media_MediaTitle order by json.media_lastupdatedate desc) = 1 $$;
 
 --- insert Statement
 insert_statement := '       insert  
@@ -88,7 +86,18 @@ insert_statement := '       insert
                                     source.medialink,
                                     source.sourcecode,
                                     source.lastupdatedate)';
-
+--- update statement
+update_statement := ' 
+    update
+    set
+        target.MediaDate = source.mediadate,
+        target.MediaTitle = source.mediatitle,
+        target.MediaPublisher = source.mediapublisher,
+        target.MediaSynopsis = source.mediasynopsis,
+        target.MediaLink = source.medialink,
+        target.SourceCode = source.sourcecode,
+        target.LastUpdateDate = source.lastupdatedate';
+        
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -96,7 +105,7 @@ insert_statement := '       insert
 merge_statement := ' merge into base.providermedia as target 
                     using (' || select_statement || ') as source
                    on source.providerid = target.providerid and source.mediatypeid = target.mediatypeid
-                   WHEN MATCHED then delete
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
 
 ---------------------------------------------------------
