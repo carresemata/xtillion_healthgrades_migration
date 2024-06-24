@@ -19,16 +19,14 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providertoclinicalfocus');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-
    
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -52,9 +50,10 @@ with cte_clinicalfocus as (
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as clinicalfocus_LastUpdateDate
     from $$||mdm_db||$$.mst.provider_profile_processing as p,
     lateral flatten(input => p.PROVIDER_PROFILE:CLINICAL_FOCUS) as json
+    where to_varchar(json.value:CLINICAL_FOCUS_CODE) is not null
 )
 
-select distinct
+select 
     p.providerid,
     cf.clinicalfocusid,
     json.clinicalfocus_ClinicalFocusDCPCount as ClinicalFocusDCPCount,
@@ -68,48 +67,60 @@ select distinct
     ifnull(json.clinicalfocus_SourceCode, 'Profisee') as SourceCode,
     ifnull(json.clinicalfocus_LastUpdateDate, current_timestamp()) as LastUpdateDate
 from cte_clinicalfocus as json
-join base.provider as p on json.providercode = p.providercode
-join base.clinicalfocus as cf on json.clinicalfocus_ClinicalFocusCode = cf.clinicalfocuscode
-where json.clinicalfocus_ClinicalFocusCode is not null
-qualify row_number() over(partition by p.providercode, clinicalfocus_ClinicalFocusCode order by providerid desc) = 1
+    join base.provider as p on json.providercode = p.providercode
+    join base.clinicalfocus as cf on json.clinicalfocus_ClinicalFocusCode = cf.clinicalfocuscode
+qualify row_number() over(partition by p.providerid, clinicalfocusid order by clinicalfocus_LastUpdateDate desc) = 1
 $$
 ;
 
 --- insert Statement
-insert_statement := $$ 
-insert 
-(
-    ProviderToClinicalFocusId,
-    ProviderId,
-    ClinicalFocusId,
-    ClinicalFocusDCPCount,
-    ClinicalFocusMinBucketsCalculated,
-    ProviderDCPCount,
-    AverageBPercentile,
-    ProviderDCPFillPercent,
-    IsProviderDCPCountOverLowThreshold,
-    ClinicalFocusScore,
-    ProviderClinicalFocusRank,
-    SourceCode,
-    InsertedOn
-)
-values (
-    uuid_string(),
-    source.providerid,
-    source.clinicalfocusid,
-    source.clinicalfocusdcpcount,
-    source.clinicalfocusminbucketscalculated,
-    source.providerdcpcount,
-    source.averagebpercentile,
-    source.providerdcpfillpercent,
-    source.isproviderdcpcountoverlowthreshold,
-    source.clinicalfocusscore,
-    source.providerclinicalfocusrank,
-    source.sourcecode,
-    source.lastupdatedate
-)
-$$
-;
+insert_statement := $$ insert 
+                        (
+                            ProviderToClinicalFocusId,
+                            ProviderId,
+                            ClinicalFocusId,
+                            ClinicalFocusDCPCount,
+                            ClinicalFocusMinBucketsCalculated,
+                            ProviderDCPCount,
+                            AverageBPercentile,
+                            ProviderDCPFillPercent,
+                            IsProviderDCPCountOverLowThreshold,
+                            ClinicalFocusScore,
+                            ProviderClinicalFocusRank,
+                            SourceCode,
+                            InsertedOn
+                        )
+                        values (
+                            uuid_string(),
+                            source.providerid,
+                            source.clinicalfocusid,
+                            source.clinicalfocusdcpcount,
+                            source.clinicalfocusminbucketscalculated,
+                            source.providerdcpcount,
+                            source.averagebpercentile,
+                            source.providerdcpfillpercent,
+                            source.isproviderdcpcountoverlowthreshold,
+                            source.clinicalfocusscore,
+                            source.providerclinicalfocusrank,
+                            source.sourcecode,
+                            source.lastupdatedate
+                        )
+                        $$;
+
+
+--- update statement
+update_statement := $$ update
+                        set
+                            target.ClinicalFocusDCPCount = source.clinicalfocusdcpcount,
+                            target.ClinicalFocusMinBucketsCalculated = source.clinicalfocusminbucketscalculated,
+                            target.ProviderDCPCount = source.providerdcpcount,
+                            target.AverageBPercentile = source.averagebpercentile,
+                            target.ProviderDCPFillPercent = source.providerdcpfillpercent,
+                            target.IsProviderDCPCountOverLowThreshold = source.isproviderdcpcountoverlowthreshold,
+                            target.ClinicalFocusScore = source.clinicalfocusscore,
+                            target.ProviderClinicalFocusRank = source.providerclinicalfocusrank,
+                            target.SourceCode = source.sourcecode,
+                            target.InsertedOn = source.lastupdatedate $$;
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -119,7 +130,7 @@ merge_statement := $$
                 merge into base.providertoclinicalfocus as target
                 using ($$||select_statement||$$) as source
                 on source.providerid = target.providerid and source.clinicalfocusid = target.clinicalfocusid
-                WHEN MATCHED then delete
+                when matched then $$ || update_statement || $$
                 when not matched  then $$||insert_statement
                 ;
 
