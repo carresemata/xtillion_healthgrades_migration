@@ -9,7 +9,7 @@ declare
 --------------------------------------------------------
 
 -- base.providertolanguage depends on:
---- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
+--- mdm_team.mst.provider_profile_processing 
 --- base.provider
 --- base.language
 
@@ -19,14 +19,12 @@ declare
 
 select_statement string; -- cte and select statement for the merge
 insert_statement string; -- insert statement for the merge
+update_statement string; -- update
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providertolanguage');
-    execution_start datetime default getdate();
-
+procedure_name varchar(50) default('sp_load_providertolanguage');
+execution_start datetime default getdate();
 mdm_db string default ('mdm_team');
-
-
 
 begin
     
@@ -45,6 +43,7 @@ with Cte_language as (
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as Language_LastUpdateDate
     FROM $$||mdm_db||$$.mst.provider_profile_processing as p, 
         lateral flatten(input => p.PROVIDER_PROFILE:LANGUAGE) as json
+    where to_varchar(json.value:LANGUAGE_CODE) != 'LN0000C3A1' -- Discard English
 )
 select distinct
     p.providerid,
@@ -52,9 +51,9 @@ select distinct
     ifnull(cte.language_SourceCode, 'Profisee') as SourceCode,
     ifnull(cte.language_LastUpdateDate, current_timestamp()) as LastUpdateDate 
 from cte_language as cte
-    left join base.provider P on cte.providercode = p.providercode
-    left join base.language L on cte.language_LanguageCode = l.languagecode
-where cte.language_LanguageCode != 'LN0000C3A1' -- Discard English
+    join base.provider P on cte.providercode = p.providercode
+    join base.language L on cte.language_LanguageCode = l.languagecode
+qualify row_number() over(partition by providerid, languageid order by language_LastUpdateDate desc) = 1
 $$;
 
 --- insert Statement
@@ -72,14 +71,21 @@ insert_statement := $$  insert
                             source.lastupdatedate)
                         $$;
 
+--- update statement
+update_statement := $$ update
+                        set
+                            target.SourceCode = source.sourcecode,
+                            target.LastUpdateDate = source.lastupdatedate
+                    $$;
+                        
 --------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 --------------------------------------------------------
 
 merge_statement := $$ merge into base.providertolanguage as target
                         using ($$||select_statement||$$) as source
-                        on source.providerid = target.providerid 
-                        WHEN MATCHED then delete
+                        on source.providerid = target.providerid and target.LanguageId = source.languageid
+                        when matched then $$ || update_statement || $$
                         when not matched then $$||insert_statement;
 
 --------------------------------------------------------
