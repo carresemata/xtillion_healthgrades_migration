@@ -45,7 +45,7 @@ with cte_facility as (
     FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:FACILITY) as json
 )
-select distinct 
+select  
     p.providerid,
     f.facilityid,
     ifnull(cte.Facility_SourceCode, 'Profisee') as SourceCode,
