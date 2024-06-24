@@ -1,4 +1,4 @@
-# BASE.providertoappointmentavailability Report
+# BASE.PROVIDERTOAPPOINTMENTAVAILABILITY Report
 
 ## 1. Sample Validation
 
@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 249409
-- Snowflake: 250888
-- Rows Margin (%): 0.5930018563885024
+- SQL Server: 250888
+- Snowflake: 259227
+- Rows Margin (%): 3.323793884123593
 
 ### 2.3 Nulls per Column
 |    | Column_Name                         |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -36,10 +36,10 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name                         |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:------------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToAppointmentAvailabilityID |                      249409 |                      250888 |          0.6 |
-|  1 | ProviderID                          |                      113494 |                      114149 |          0.6 |
+|  0 | ProviderToAppointmentAvailabilityID |                      250888 |                      259227 |          3.3 |
+|  1 | ProviderID                          |                      114149 |                      118041 |          3.4 |
 |  2 | AppointmentAvailabilityID           |                           4 |                           4 |          0   |
-|  3 | SourceCode                          |                         153 |                         152 |          0.7 |
+|  3 | SourceCode                          |                         152 |                         152 |          0   |
 |  4 | InsertedBy                          |                           1 |                           1 |          0   |
-|  5 | InsertedOn                          |                          34 |                           1 |         97.1 |
-|  6 | LastUpdatedDate                     |                          45 |                          35 |         22.2 |
+|  5 | InsertedOn                          |                           2 |                           1 |         50   |
+|  6 | LastUpdatedDate                     |                          35 |                          35 |          0   |
