@@ -40,9 +40,8 @@ begin
                                 select
                                     p.providerid
                                 from
-                                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                                    join base.provider as P on p.providercode = ppp.ref_provider_code
-                                order by pdp.providerid
+                                    $$||mdm_db||$$.mst.Provider_Profile_Processing as ppp
+                                join base.provider as P on p.providercode = ppp.ref_provider_code
                             ),
                             
                             CTE_ProviderCondition as (
@@ -59,7 +58,7 @@ begin
                                 inner join base.entitytype as et on et.entitytypeid = etmt.entitytypeid
                                 inner join base.medicaltermset as mts on mts.medicaltermsetid = mt.medicaltermsetid
                                 inner join base.medicaltermtype as mtt on mtt.medicaltermtypeid = mt.medicaltermtypeid
-                                inner join mid.providercondition as mpc on etmt.entitytomedicaltermid = mpc.providertoconditionid
+                                left join mid.providercondition as mpc on etmt.entitytomedicaltermid = mpc.providertoconditionid
                                 where mts.medicaltermsetcode = 'HGProvider' and mtt.medicaltermtypecode = 'Condition'
                                  and (MD5(ifnull(CAST(mt.medicaltermcode as varchar), '')) <> MD5(ifnull(CAST(mpc.conditioncode as varchar), '')) or 
                                       MD5(ifnull(CAST(mt.medicaltermdescription1 as varchar), '')) <> MD5(ifnull(CAST(mpc.conditiondescription as varchar), '')) or 
