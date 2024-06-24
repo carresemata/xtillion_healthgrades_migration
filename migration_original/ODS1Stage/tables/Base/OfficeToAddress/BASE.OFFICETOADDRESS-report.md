@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 15704512
-- Snowflake: 3688859
-- Rows Margin (%): 76.51083331974912
+- SQL Server: 15704525
+- Snowflake: 3350296
+- Rows Margin (%): 78.66668364691068
 
 ### 2.3 Nulls per Column
 |    | Column_Name       |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -29,8 +29,8 @@ The example below shows a sample row where values are not identical. Important t
 |  1 | AddressTypeID     |                   75850 |                       0 |        100   |
 |  2 | OfficeID          |                       0 |                       0 |          0   |
 |  3 | AddressID         |                       0 |                       1 |        inf   |
-|  4 | LegacyKey         |                15704512 |                 3688859 |         76.5 |
-|  5 | LegacyKeyName     |                15704512 |                 3688859 |         76.5 |
+|  4 | LegacyKey         |                15704525 |                 3350296 |         78.7 |
+|  5 | LegacyKeyName     |                15704525 |                 3350296 |         78.7 |
 |  6 | SourceCode        |                       0 |                       0 |          0   |
 |  7 | IsDerived         |                       0 |                       0 |          0   |
 |  8 | LastUpdateDate    |                       0 |                       0 |          0   |
@@ -38,12 +38,12 @@ The example below shows a sample row where values are not identical. Important t
 ### 2.4 Distincts per Column
 |    | Column_Name       |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | OfficeToAddressID |                    15704512 |                     3688859 |         76.5 |
+|  0 | OfficeToAddressID |                    15704525 |                     3350296 |         78.7 |
 |  1 | AddressTypeID     |                           1 |                           1 |          0   |
-|  2 | OfficeID          |                    15699370 |                     3006675 |         80.8 |
-|  3 | AddressID         |                     4100855 |                     1587811 |         61.3 |
+|  2 | OfficeID          |                    15699383 |                     3006573 |         80.8 |
+|  3 | AddressID         |                     4100856 |                     1532628 |         62.6 |
 |  4 | LegacyKey         |                           0 |                           0 |          0   |
 |  5 | LegacyKeyName     |                           0 |                           0 |          0   |
 |  6 | SourceCode        |                         163 |                         216 |         32.5 |
 |  7 | IsDerived         |                           1 |                           1 |          0   |
-|  8 | LastUpdateDate    |                        4313 |                       90032 |       1987.5 |
+|  8 | LastUpdateDate    |                        4323 |                       90032 |       1982.6 |
