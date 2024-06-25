@@ -54,21 +54,22 @@ declare
 begin
 --- select Statement
 select_statement := $$ with CTE_PracticeBatch as (
-                select distinct 
-                o.practiceid
-                from $$ || mdm_db || $$.mst.Provider_Profile_Processing as PDP 
-                    join base.provider as P on p.providercode = pdp.ref_PROVIDER_CODE
-                    join base.providertooffice as PTO on pto.providerid = p.providerid
-                    join base.office as O on o.officeid = pto.officeid
-                order by o.practiceid),
-                    CTE_Service as (
+                        select distinct 
+                        o.practiceid
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as PDP 
+                            join base.provider as P on p.providercode = pdp.ref_PROVIDER_CODE
+                            join base.providertooffice as PTO on pto.providerid = p.providerid
+                            join base.office as O on o.officeid = pto.officeid
+                        order by o.practiceid
+                    ),
+                        
+                    CTE_Service as ( 
                         select 
                             p.phonenumber, 
                             otp.officeid
                         from  base.officetophone OTP
                             join base.phone P on otp.phoneid = p.phoneid
                             join base.phonetype PT on otp.phonetypeid = pt.phonetypeid 
-                            and PhoneTypeCode = 'Service'
                     ),
                     
                     CTE_Fax as (
@@ -81,10 +82,11 @@ select_statement := $$ with CTE_PracticeBatch as (
                             and PhoneTypeCode = 'FAX'
                     ), 
                     CTE_ProviderToPractice as (
-                        select  distinct 
+                        select  
+                            distinct 
                             pto.providerid, 
                             p.practiceid
-                        from    base.providertooffice as PTO
+                        from base.providertooffice as PTO
                             join base.office as O on o.officeid = pto.officeid
                             join base.practice as P on p.practiceid = o.practiceid
                     ),
@@ -108,7 +110,7 @@ select_statement := $$ with CTE_PracticeBatch as (
                         where pt.providertypecode = 'DENT'
                         group by 
                             pb.practiceid
-                    )
+                    ) 
                     ,
                     CTE_PROVTOOFF as (
                         select 
@@ -126,10 +128,11 @@ select_statement := $$ with CTE_PracticeBatch as (
                             join base.office O on cpte.entityid = o.officeid 
                             join base.practice P on o.practiceid = p.practiceid
                         where  rt.relationshiptypecode = 'PROVTOOFF'   
-                    )
+                    ) 
                     ,
-                    CTE_OfficeCode_1 as (
-                            select o.officecode 
+                    CTE_OfficeCode_1 as ( -- no rows
+                            select 
+                                o.officecode 
                             from base.office as O 
                             where o.officecode IN ( 'OOO5XB5',
                                                     'OOO82BH',
@@ -148,9 +151,9 @@ select_statement := $$ with CTE_PracticeBatch as (
                                                     'OOJTJTQ',
                                                     'YBV5LG',
                                                     'OOO8HQ3')
-                    )
+                    ) 
                     ,
-                    CTE_OfficeCode_2 as (
+                    CTE_OfficeCode_2 as ( -- no rows
                             select 
                                 cte.officecode
                             from   base.clienttoproduct as CTP
@@ -164,7 +167,7 @@ select_statement := $$ with CTE_PracticeBatch as (
                                 join base.provider as BP on cpte.entityid = bp.providerid
                                 join CTE_PROVTOOFF as CTE on cpte.clientproducttoentityid = cte.parentid
                             where  ctp.activeflag = 1
-                    )
+                    ) 
                     ,
                     CTE_OfficeCode_3 as (
                             select 
@@ -184,7 +187,20 @@ select_statement := $$ with CTE_PracticeBatch as (
                             where  ctp.activeflag = 1
                             group by
                                 o.officecode 
-                    )
+                    ),
+                    cte_union as (
+                    select 
+                        officecode
+                    from CTE_OfficeCode_1   
+                        union all
+                    select 
+                        officecode
+                    from CTE_OfficeCode_2
+                        union all
+                    select 
+                        officecode
+                    from CTE_OfficeCode_3
+                    ) 
                     ,
                     CTE_Practice as (select  
                     distinct 
@@ -267,13 +283,12 @@ select_statement := $$ with CTE_PracticeBatch as (
                             left join base.addresstype as BAT  on bat.addresstypeid = ota.addresstypeid
                             join base.address as A on a.addressid = ota.addressid
                             join base.citystatepostalcode as CSPC on a.citystatepostalcodeid = cspc.citystatepostalcodeid
-                            join base.nation N on ifnull(cspc.nationid,'00415355-0000-0000-0000-000000000000') = n.nationid
+                            join base.nation N on cspc.nationid = n.nationid
                             join base.state S on s.state = cspc.state
                             left join CTE_Service as  CTE_S on CTE_s.officeid = o.officeid
                             left join CTE_Fax as CTE_F  on CTE_f.officeid = o.officeid
                             left join CTE_PhysicianCount as CTE_PC on CTE_pc.practiceid = p.practiceid
-                    ),
-                    CTE_FinalPractice as (
+                    )
                     select distinct
                             p.practiceid,
                             p.practicecode,
@@ -321,143 +336,9 @@ select_statement := $$ with CTE_PracticeBatch as (
                             p.citystatepostalcodeid,
                             p.hasdentist, 
                     '''{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"' || p.officeurl || '","name":"' || p.practicename || '","address": {"@@type": "PostalAddress","streetAddress":"' || p.addressline1 || '","addressLocality":"' || p.city || '","addressRegion":"' || p.state || '","postalCode":"' || p.zipcode || '","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"' || to_varchar(p.latitude) || '","longitude":"' || to_varchar(p.longitude) || '"},"telephone":"' || ifnull(p.fullphone,'') || '","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/' || p.officecode || '","url":"/groupgoogleform"}}''' as GoogleScriptBlock,
-                            p.officeurl,
-                            0 as ActionCode -- Action code 0, no changes
+                            p.officeurl
                     from cte_practice as P
-                    join (
-                            select * from CTE_OfficeCode_1
-                            union
-                            select * from CTE_OfficeCode_2
-                            union
-                            select * from CTE_OfficeCode_3
-                        ) offices on offices.officecode = p.officecode),
-                        
-                    -- insert Action    
-                    CTE_Action_1 as 
-                            (select 
-                                cte.practiceid,
-                                1 as ActionCode
-                            from CTE_FinalPractice as cte
-                            left join mid.practice as mp on
-                                cte.practiceid = mp.practiceid and 
-                                cte.practicecode = mp.practicecode
-                            where mp.practiceid is null
-                            group by cte.practiceid
-                            )
-                            
-                    -- update Action
-                    ,
-                    CTE_Action_2 as 
-                            (select
-                                cte.practiceid,
-                                2 as ActionCode
-                            from CTE_FinalPractice as cte
-                            join mid.practice as mp on
-                                cte.practiceid = mp.practiceid and 
-                                cte.practicecode = mp.practicecode
-                            where
-                                MD5(ifnull(cte.practicename::varchar,''))<>           MD5(ifnull(mp.practicename::varchar,'')) or
-                                MD5(ifnull(cte.yearpracticeestablished::varchar,''))<>MD5(ifnull(mp.yearpracticeestablished::varchar,'')) or
-                                MD5(ifnull(cte.npi::varchar,''))<>                    MD5(ifnull(mp.npi::varchar,'')) or
-                                MD5(ifnull(cte.practicewebsite::varchar,''))<>        MD5(ifnull(mp.practicewebsite::varchar,'')) or
-                                MD5(ifnull(cte.practicedescription::varchar,''))<>    MD5(ifnull(mp.practicedescription::varchar,'')) or
-                                MD5(ifnull(cte.practicelogo::varchar,''))<>           MD5(ifnull(mp.practicelogo::varchar,'')) or
-                                MD5(ifnull(cte.practicemedicaldirector::varchar,''))<>MD5(ifnull(mp.practicemedicaldirector::varchar,'')) or
-                                MD5(ifnull(cte.practicesoftware::varchar,''))<>       MD5(ifnull(mp.practicesoftware::varchar,'')) or
-                                MD5(ifnull(cte.practicetin::varchar,''))<>            MD5(ifnull(mp.practicetin::varchar,'')) or
-                                MD5(ifnull(cte.officeid::varchar,''))<>               MD5(ifnull(mp.officeid::varchar,'')) or
-                                MD5(ifnull(cte.officecode::varchar,''))<>             MD5(ifnull(mp.officecode::varchar,'')) or
-                                MD5(ifnull(cte.officename::varchar,''))<>             MD5(ifnull(mp.officename::varchar,'')) or
-                                MD5(ifnull(cte.addresstypecode::varchar,''))<>        MD5(ifnull(mp.addresstypecode::varchar,'')) or
-                                MD5(ifnull(cte.addressline1::varchar,''))<>           MD5(ifnull(mp.addressline1::varchar,'')) or
-                                MD5(ifnull(cte.addressline2::varchar,''))<>           MD5(ifnull(mp.addressline2::varchar,'')) or
-                                MD5(ifnull(cte.addressline3::varchar,''))<>           MD5(ifnull(mp.addressline3::varchar,'')) or
-                                MD5(ifnull(cte.addressline4::varchar,''))<>           MD5(ifnull(mp.addressline4::varchar,'')) or
-                                MD5(ifnull(cte.city::varchar,''))<>                   MD5(ifnull(mp.city::varchar,'')) or
-                                MD5(ifnull(cte.state::varchar,''))<>                  MD5(ifnull(mp.state::varchar,'')) or
-                                MD5(ifnull(cte.zipcode::varchar,''))<>                MD5(ifnull(mp.zipcode::varchar,'')) or
-                                MD5(ifnull(cte.county::varchar,''))<>                 MD5(ifnull(mp.county::varchar,'')) or
-                                MD5(ifnull(cte.nation::varchar,''))<>                 MD5(ifnull(mp.nation::varchar,'')) or
-                                MD5(ifnull(cte.latitude::varchar,''))<>               MD5(ifnull(mp.latitude::varchar,'')) or
-                                MD5(ifnull(cte.longitude::varchar,''))<>              MD5(ifnull(mp.longitude::varchar,'')) or
-                                MD5(ifnull(cte.fullphone::varchar,''))<>              MD5(ifnull(mp.fullphone::varchar,'')) or
-                                MD5(ifnull(cte.fullfax::varchar,''))<>                MD5(ifnull(mp.fullfax::varchar,'')) or
-                                MD5(ifnull(cte.hasbillingstaff::varchar,''))<>        MD5(ifnull(mp.hasbillingstaff::varchar,'')) or
-                                MD5(ifnull(cte.hashandicapaccess::varchar,''))<>      MD5(ifnull(mp.hashandicapaccess::varchar,'')) or
-                                MD5(ifnull(cte.haslabservicesonsite::varchar,''))<>   MD5(ifnull(mp.haslabservicesonsite::varchar,'')) or
-                                MD5(ifnull(cte.haspharmacyonsite::varchar,''))<>      MD5(ifnull(mp.haspharmacyonsite::varchar,'')) or
-                                MD5(ifnull(cte.hasxrayonsite::varchar,''))<>          MD5(ifnull(mp.hasxrayonsite::varchar,'')) or
-                                MD5(ifnull(cte.issurgerycenter::varchar,''))<>        MD5(ifnull(mp.issurgerycenter::varchar,'')) or
-                                MD5(ifnull(cte.hassurgeryonsite::varchar,''))<>       MD5(ifnull(mp.hassurgeryonsite::varchar,'')) or
-                                MD5(ifnull(cte.averagedailypatientvolume::varchar,''))<>MD5(ifnull(mp.averagedailypatientvolume::varchar,'')) or
-                                MD5(ifnull(cte.physiciancount::varchar,''))<>         MD5(ifnull(mp.physiciancount::varchar,'')) or
-                                MD5(ifnull(cte.officecoordinatorname::varchar,''))<>  MD5(ifnull(mp.officecoordinatorname::varchar,'')) or
-                                MD5(ifnull(cte.parkinginformation::varchar,''))<>     MD5(ifnull(mp.parkinginformation::varchar,'')) or
-                                MD5(ifnull(cte.paymentpolicy::varchar,''))<>          MD5(ifnull(mp.paymentpolicy::varchar,'')) or
-                                MD5(ifnull(cte.legacykeyoffice::varchar,''))<>        MD5(ifnull(mp.legacykeyoffice::varchar,'')) or
-                                MD5(ifnull(cte.legacykeypractice::varchar,''))<>      MD5(ifnull(mp.legacykeypractice::varchar,'')) or
-                                MD5(ifnull(cte.officerank::varchar,''))<>             MD5(ifnull(mp.officerank::varchar,'')) or
-                                MD5(ifnull(cte.citystatepostalcodeid::varchar,''))<>  MD5(ifnull(mp.citystatepostalcodeid::varchar,'')) or
-                                MD5(ifnull(cte.hasdentist::varchar,''))<>             MD5(ifnull(mp.hasdentist::varchar,'')) or
-                                MD5(ifnull(cte.googlescriptblock::varchar,''))<>      MD5(ifnull(mp.googlescriptblock::varchar,'')) or
-                                MD5(ifnull(cte.officeurl::varchar,''))<>              MD5(ifnull(mp.officeurl::varchar,''))
-                            group by
-                                cte.practiceid
-                            )
-                    select
-                        A0.PracticeId,
-                        A0.PracticeCode,
-                        A0.PracticeName,
-                        A0.YearPracticeEstablished,
-                        A0.NPI,
-                        A0.PracticeWebsite,
-                        A0.PracticeDescription,
-                        A0.PracticeLogo,
-                        A0.PracticeMedicalDirector,
-                        A0.PracticeSoftware,
-                        A0.PracticeTIN,
-                        A0.OfficeID,
-                        A0.OfficeCode,
-                        A0.officename,
-                        A0.AddressTypeCode,
-                        A0.AddressLine1,
-                        A0.AddressLine2,
-                        A0.AddressLine3,
-                        A0.AddressLine4,
-                        A0.City,
-                        A0.State,
-                        A0.ZipCode,
-                        A0.County,
-                        A0.Nation,
-                        A0.Latitude,
-                        A0.Longitude,
-                        A0.FullPhone,
-                        A0.FullFax,
-                        A0.HasBillingStaff,
-                        A0.HasHandicapAccess,
-                        A0.HasLabServicesOnSite,
-                        A0.HasPharmacyOnSite,
-                        A0.HasXrayOnSite,
-                        A0.IsSurgeryCenter,
-                        A0.HasSurgeryOnSite,
-                        A0.AverageDailyPatientVolume,
-                        A0.PhysicianCount,
-                        A0.OfficeCoordinatorName,
-                        A0.ParkingInformation,
-                        A0.PaymentPolicy,
-                        A0.LegacyKeyOffice,
-                        A0.LegacyKeyPractice,
-                        A0.OfficeRank,
-                        A0.CityStatePostalCodeID,
-                        A0.HasDentist,
-                        A0.GoogleScriptBlock,
-                        A0.OfficeURL,
-                        ifnull(A1.ActionCode, ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
-                    from CTE_FinalPractice as A0
-                        left join CTE_Action_1 as A1 on A0.PracticeID = A1.PracticeID
-                        left join CTE_Action_2 as A2 on A0.PracticeID = A2.PracticeID
-                    where
-                        ifnull(A1.ActionCode, ifnull(A2.ActionCode, A0.ActionCode)) <> 0
+                        join cte_union as offices on offices.officecode = p.officecode
                     $$;
 
 --- update Statement
@@ -472,7 +353,6 @@ update_statement := ' update
                             PracticeMedicalDirector = source.practicemedicaldirector,
                             PracticeSoftware = source.practicesoftware,
                             PracticeTIN = source.practicetin,
-                            OfficeID = source.officeid,
                             OfficeCode = source.officecode,
                             officename = source.officename,
                             AddressTypeCode = source.addresstypecode,
@@ -615,8 +495,8 @@ insert_statement := ' insert
 merge_statement := ' merge into mid.practice as target using 
                    ('||select_statement||') as source 
                    on source.practiceid = target.practiceid and source.officeid = target.officeid
-                   WHEN MATCHED and ActionCode = 2 then '||update_statement|| '
-                   when not matched and ActionCode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
