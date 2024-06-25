@@ -24,12 +24,8 @@ declare
     procedure_name varchar(50) default('sp_load_telehealthmethod');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-
-   
    
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -54,8 +50,9 @@ select_statement := $$
                             to_varchar(json.value:DATA_SOURCE_CODE) as telehealth_SourceCode,
                             to_timestamp_ntz(json.value:UPDATED_DATETIME) as telehealth_LastUpdateDate
                         from $$||mdm_db||$$.mst.provider_profile_processing,
-                        lateral flatten(input => PROVIDER_PROFILE:TELEHEALTH) as json
+                            lateral flatten(input => PROVIDER_PROFILE:TELEHEALTH) as json
                         where telehealth_TelehealthMethodCode is not null
+                              and to_boolean(json.value:HAS_TELEHEALTH) = 'TRUE'
                     )
                     
                     select distinct
@@ -63,15 +60,11 @@ select_statement := $$
                         json.telehealth_TelehealthMethod as TeleHealthMethod,
                         json.telehealth_TelehealthVendorName as ServiceName,
                         ifnull(json.telehealth_SourceCode, 'Profisee') as SourceCode,
-                        case
-                            when ifnull(json.telehealth_HasTelehealth, 'N') in ('yes', 'true', '1', 'Y', 'T') then 'TRUE'
-                            else 'FALSE'
-                        end as HasTeleHealth,
+                        json.telehealth_HasTelehealth as HasTeleHealth,
                         json.telehealth_LastUpdateDate as LastUpdatedDate
                     from cte_telehealth as json
-                    left join base.telehealthmethodtype as tmt on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
-                    where HasTeleHealth = 'TRUE' 
-                    qualify row_number() over(partition by telehealthmethodtypeid, lastupdateddate, telehealthmethod, servicename, sourcecode order by LastUpdatedDate desc) = 1
+                        join base.telehealthmethodtype as tmt on tmt.methodtypecode = json.telehealth_TelehealthMethodCode
+                    qualify row_number() over(partition by telehealthmethodtypeid, telehealth_TelehealthMethod order by telehealth_LastUpdateDate desc) = 1
                     $$;
 
 
@@ -103,8 +96,7 @@ update_statement := 'update set
 
 merge_statement := ' merge into base.telehealthmethod as target using 
                    ('||select_statement||') as source 
-                   on source.telehealthmethodtypeid = target.telehealthmethodtypeid 
-                      and source.telehealthmethod = target.telehealthmethod
+                   on source.telehealthmethodtypeid = target.telehealthmethodtypeid and source.telehealthmethod = target.telehealthmethod
                    when matched then '||update_statement||'
                    when not matched then '||insert_statement;
                    
