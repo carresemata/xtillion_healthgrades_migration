@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRAutosuggestRefData()
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRAUTOSUGGESTREFDATA(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -54,9 +54,6 @@ select_statement_payor string;
 select_statement_product string;
 select_statement_certspec string;
 select_statement_dispstatus string;
-    procedure_name varchar(50) default('sp_load_solrautosuggestrefdata');
-    execution_start datetime default getdate();
-
 
 insert_statement_union string; 
 -- these are the xml inserts
@@ -71,6 +68,9 @@ insert_statement string; -- insert statement for the merge
 update_statement string; -- update statement for the merge
 merge_statement string; -- merge statement to final table
 status string; -- status monitoring
+
+procedure_name varchar(50) default('sp_load_solrautosuggestrefdata');
+execution_start datetime default getdate();
 begin
 
 
@@ -399,58 +399,62 @@ select_statement_union :=   $$
 
                             $$;
 
-select_statement_payor := $$
-
-                          with cte_base as (
-                            select distinct d.insurancepayorcode, e.healthinsuranceplanid, c.productname
-                            from base.healthinsuranceplantoplantype c 
-                            join base.healthinsuranceplan e on e.healthinsuranceplanid=c.healthinsuranceplanid
-                            join base.healthinsuranceplantype f on f.healthinsuranceplantypeid=c.healthinsuranceplantypeid
-                            join base.healthinsurancepayor d on d.healthinsurancepayorid=e.healthinsurancepayorid
-                          ),
-                        
-                         cte_rel as (
-                            select
-                              pay.insurancepayorcode as InsurancePayorCode,
-                              ipr.insuranceproductcode as productCd,
-                              ipr.healthinsuranceplantoplantypeid as productId,
-                              ipl.plancode as planCd,
-                              ipl.planname as planNm,
-                              ipt.plantypecode as planTpCd,
-                              ipt.plantypedescription as planTpNm,
-                              b.productname  as pktdokPlNm
-                            from base.healthinsuranceplantoplantype ipr 
-                              join base.healthinsuranceplan ipl on ipr.healthinsuranceplanid = ipl.healthinsuranceplanid
-                              join base.healthinsuranceplantype ipt on ipr.healthinsuranceplantypeid = ipt.healthinsuranceplantypeid
-                              join base.healthinsurancepayor pay on pay.healthinsurancepayorid = ipl.healthinsurancepayorid
-                              left join cte_base b on b.insurancepayorcode = pay.insurancepayorcode and b.healthinsuranceplanid = ipr.healthinsuranceplanid 
-                          ),
-                        
-                          cte_rel_xml as (
+select_statement_payor :=   $$
+                            with cte_base as (
+                                select distinct 
+                                    d.insurancepayorcode, e.healthinsuranceplanid, c.productname
+                                from base.healthinsuranceplantoplantype c 
+                                join base.healthinsuranceplan e on e.healthinsuranceplanid=c.healthinsuranceplanid
+                                join base.healthinsuranceplantype f on f.healthinsuranceplantypeid=c.healthinsuranceplantypeid
+                                join base.healthinsurancepayor d on d.healthinsurancepayorid=e.healthinsurancepayorid
+                            ),
+                            
+                            cte_rel as (
+                                select
+                                  pay.insurancepayorcode as InsurancePayorCode,
+                                  ipr.insuranceproductcode as productCd,
+                                  ipr.healthinsuranceplantoplantypeid as productId,
+                                  ipl.plancode as planCd,
+                                  ipl.planname as planNm,
+                                  ipt.plantypecode as planTpCd,
+                                  ipt.plantypedescription as planTpNm,
+                                  b.productname  as pktdokPlNm
+                                from base.healthinsuranceplantoplantype ipr 
+                                  join base.healthinsuranceplan ipl on ipr.healthinsuranceplanid = ipl.healthinsuranceplanid
+                                  join base.healthinsuranceplantype ipt on ipr.healthinsuranceplantypeid = ipt.healthinsuranceplantypeid
+                                  join base.healthinsurancepayor pay on pay.healthinsurancepayorid = ipl.healthinsurancepayorid
+                                  left join cte_base b on b.insurancepayorcode = pay.insurancepayorcode and b.healthinsuranceplanid = ipr.healthinsuranceplanid 
+                            ),
+                            
+                            cte_rel_xml as (
                               select 
                                 InsurancePayorCode,
-                                TO_VARIANT('<insuranceL>' || listagg( '<insurance>' || iff(cte_rel.productcd is not null,'<productCd>' || cte_rel.productcd || '</productCd>','') ||
-iff(cte_rel.productid is not null,'<productId>' || cte_rel.productid || '</productId>','') ||
-iff(cte_rel.plancd is not null,'<planCd>' || cte_rel.plancd || '</planCd>','') ||
-iff(cte_rel.plannm is not null,'<planNm>' || cte_rel.plannm || '</planNm>','') ||
-iff(cte_rel.plantpcd is not null,'<planTpCd>' || cte_rel.plantpcd || '</planTpCd>','') ||
-iff(cte_rel.plantpnm is not null,'<planTpNm>' || cte_rel.plantpnm || '</planTpNm>','') ||
-iff(cte_rel.pktdokplnm is not null,'<pktdokPlNm>' || cte_rel.pktdokplnm || '</pktdokPlNm>','')  || '</insurance>','') || '</insuranceL') as RelationshipXML
-                                from cte_rel
-                                group by InsurancePayorCode
+                                to_variant('<insuranceL>' || listagg(
+                                  '<insurance>' || 
+                                  iff(cte_rel.productcd is not null, '<productCd>' || replace(cte_rel.productcd, '&', '/amp') || '</productCd>', '') ||
+                                  iff(cte_rel.productid is not null, '<productId>' || replace(cte_rel.productid, '&', '/amp') || '</productId>', '') ||
+                                  iff(cte_rel.plancd is not null, '<planCd>' || replace(cte_rel.plancd, '&', '/amp') || '</planCd>', '') ||
+                                  iff(cte_rel.plannm is not null, '<planNm>' || replace(cte_rel.plannm, '&', '/amp') || '</planNm>', '') ||
+                                  iff(cte_rel.plantpcd is not null, '<planTpCd>' || replace(cte_rel.plantpcd, '&', '/amp') || '</planTpCd>', '') ||
+                                  iff(cte_rel.plantpnm is not null, '<planTpNm>' || replace(cte_rel.plantpnm, '&', '/amp') || '</planTpNm>', '') ||
+                                  iff(cte_rel.pktdokplnm is not null, '<pktdokPlNm>' || replace(cte_rel.pktdokplnm, '&', '/amp') || '</pktdokPlNm>', '') ||
+                                  '</insurance>', '') || '</insuranceL>') as RelationshipXML
+                              from cte_rel
+                              group by InsurancePayorCode
                             )
-                        
+                            
+                            
                             select 
-                                ip.insurancepayorcode as Code, -- col 1
-                                ip.payorname as Description, -- col 2
-                                null as Definition, -- col 3
-                                null as Rank, -- col 4
-                                ip.healthinsurancepayorid as TermID, -- col 5
-                                'INSURANCEPAYOR' as AutoType, -- col 6 
-                                r.relationshipxml as RelationshipXML
+                                ip.insurancepayorcode as Code, 
+                                ip.payorname as Description, 
+                                null as Definition,
+                                null as Rank, 
+                                ip.healthinsurancepayorid as TermID,
+                                'INSURANCEPAYOR' as AutoType, 
+                                to_variant(parse_xml(r.relationshipxml)) as RelationshipXML
                             from base.healthinsurancepayor ip
                             left join cte_rel_xml r on r.insurancepayorcode = ip.insurancepayorcode;
-                          $$;
+                            $$;
 
 select_statement_product := $$
                             with cte_rel as (
@@ -471,31 +475,33 @@ select_statement_product := $$
                             cte_rel_xml as (
                               select 
                                 HealthInsurancePlanToPlanTypeID,
-                                TO_VARIANT('<insuranceL>' || listagg( '<insurance>' || iff(cte_rel.payorcd is not null,'<payorCd>' || cte_rel.payorcd || '</payorCd>','') ||
-iff(cte_rel.payornm is not null,'<payorNm>' || cte_rel.payornm || '</payorNm>','') ||
-iff(cte_rel.plancd is not null,'<planCd>' || cte_rel.plancd || '</planCd>','') ||
-iff(cte_rel.plannm is not null,'<planNm>' || cte_rel.plannm || '</planNm>','') ||
-iff(cte_rel.plantpcd is not null,'<planTpCd>' || cte_rel.plantpcd || '</planTpCd>','') ||
-iff(cte_rel.plantpnm is not null,'<planTpNm>' || cte_rel.plantpnm || '</planTpNm>','')  || '</insurance>','') || '</insuranceL') as RelationshipXML
-                                from cte_rel
-                                group by HealthInsurancePlanToPlanTypeID
-                             )
-                        
+                                to_variant('<insuranceL>' || listagg(
+                                  '<insurance>' || 
+                                  iff(cte_rel.payorcd is not null, '<payorCd>' || replace(cte_rel.payorcd, '&', '/amp') || '</payorCd>', '') ||
+                                  iff(cte_rel.payornm is not null, '<payorNm>' || replace(cte_rel.payornm, '&', '/amp') || '</payorNm>', '') ||
+                                  iff(cte_rel.plancd is not null, '<planCd>' || replace(cte_rel.plancd, '&', '/amp') || '</planCd>', '') ||
+                                  iff(cte_rel.plannm is not null, '<planNm>' || replace(cte_rel.plannm, '&', '/amp') || '</planNm>', '') ||
+                                  iff(cte_rel.plantpcd is not null, '<planTpCd>' || replace(cte_rel.plantpcd, '&', '/amp') || '</planTpCd>', '') ||
+                                  iff(cte_rel.plantpnm is not null, '<planTpNm>' || replace(cte_rel.plantpnm, '&', '/amp') || '</planTpNm>', '') ||
+                                  '</insurance>', '') || '</insuranceL>') as RelationshipXML
+                              from cte_rel
+                              group by HealthInsurancePlanToPlanTypeID
+                            )
+
                             select 
-                                ipr.insuranceproductcode as Code, -- col 1
-                                null as Description, -- col 2
-                                null as Definition, -- col 3
-                                null as Rank, -- col 4
-                                ipr.healthinsuranceplantoplantypeid as TermID, -- col 5
-                                'INSURANCEPRODUCT' as AutoType, -- col 6 
-                                r.relationshipxml as RelationshipXML
+                                ipr.insuranceproductcode as Code, 
+                                null as Description, 
+                                null as Definition,
+                                null as Rank, 
+                                ipr.healthinsuranceplantoplantypeid as TermID, 
+                                'INSURANCEPRODUCT' as AutoType, 
+                                to_variant(parse_xml(r.relationshipxml)) as RelationshipXML
                             from base.healthinsuranceplantoplantype ipr 
                             left join cte_rel_xml r on r.healthinsuranceplantoplantypeid = ipr.healthinsuranceplantoplantypeid;
     
                             $$;
 
 select_statement_certspec := $$
-
                             with cte_rel as (
                                 select
                                 distinct RTRIM(b.certificationagencycode) as caCd, 
@@ -511,28 +517,30 @@ select_statement_certspec := $$
                             cte_rel_xml as (
                               select 
                                 CertificationSpecialtyID,
-                                TO_VARIANT('<certL>' || listagg( '<cert>' || iff(cte_rel.cacd is not null,'<caD>' || cte_rel.cacd || '</caD>','') ||
-iff(cte_rel.cad is not null,'<caD>' || cte_rel.cad || '</caD>','') ||
-iff(cte_rel.cbcd is not null,'<cbCd>' || cte_rel.cbcd || '</cbCd>','') ||
-iff(cte_rel.cbd is not null,'<cbD>' || cte_rel.cbd || '</cbD>','')  || '</cert>','') || '</certL') as RelationshipXML
-                                from cte_rel
-                                group by CertificationSpecialtyID
-                             )
-                        
+                                to_variant('<certL>' || listagg(
+                                  '<cert>' || 
+                                  iff(cte_rel.cacd is not null, '<caD>' || replace(cte_rel.cacd, '&', '/amp') || '</caD>', '') ||
+                                  iff(cte_rel.cad is not null, '<caD>' || replace(cte_rel.cad, '&', '/amp') || '</caD>', '') ||
+                                  iff(cte_rel.cbcd is not null, '<cbCd>' || replace(cte_rel.cbcd, '&', '/amp') || '</cbCd>', '') ||
+                                  iff(cte_rel.cbd is not null, '<cbD>' || replace(cte_rel.cbd, '&', '/amp') || '</cbD>', '') ||
+                                  '</cert>', '') || '</certL>') as RelationshipXML
+                              from cte_rel
+                              group by CertificationSpecialtyID
+                            )
+
                             select 
-                                CertificationSpecialtyCode as Code, -- col 1
-                                CertificationSpecialtyDescription as Description, -- col 2
-                                null as Definition, -- col 3
-                                null as Rank, -- col 4
-                                s.certificationspecialtyid as TermID, -- col 5
-                                'CERTIFICATIONSPEC' as AutoType, -- col 6 
-                                r.relationshipxml as RelationshipXML
+                                CertificationSpecialtyCode as Code, 
+                                CertificationSpecialtyDescription as Description, 
+                                null as Definition, 
+                                null as Rank, 
+                                s.certificationspecialtyid as TermID,
+                                'CERTIFICATIONSPEC' as AutoType, 
+                                to_variant(parse_xml(r.relationshipxml)) as RelationshipXML
                             from base.certificationspecialty s 
                             left join cte_rel_xml r on r.certificationspecialtyid = s.certificationspecialtyid;
                             $$;
 
 select_statement_dispstatus := $$
-                    
                             with cte_rel as (
                                 select SubStatusCode as SubStatusCode, 
                                        SubStatusDescription as SubStatusDesc,
@@ -544,50 +552,47 @@ select_statement_dispstatus := $$
                             cte_rel_xml as (
                               select 
                                 DisplayStatusCode,
-                                TO_VARIANT('<subStatusL>' || listagg( '<subStatus>' || iff(cte_rel.substatuscode is not null,'<SubStatusCode>' || cte_rel.substatuscode || '</SubStatusCode>','') ||
-iff(cte_rel.substatusdesc is not null,'<SubStatusDesc>' || cte_rel.substatusdesc || '</SubStatusDesc>','')  || '</subStatus>','') || '</subStatusL') as RelationshipXML
-                                from cte_rel
-                                group by DisplayStatusCode
-                             )
-                        
+                                to_variant('<subStatusL>' || listagg(
+                                  '<subStatus>' || 
+                                  iff(cte_rel.substatuscode is not null, '<SubStatusCode>' || replace(cte_rel.substatuscode, '&', '/amp') || '</SubStatusCode>', '') ||
+                                  iff(cte_rel.substatusdesc is not null, '<SubStatusDesc>' || replace(cte_rel.substatusdesc, '&', '/amp') || '</SubStatusDesc>', '') ||
+                                  '</subStatus>', '') || '</subStatusL>') as RelationshipXML
+                              from cte_rel
+                              group by DisplayStatusCode
+                            )
+
                             select 
-                                ds.displaystatuscode as Code, -- col 1
-                                DisplayStatusDescription as Description, -- col 2
-                                null as Definition, -- col 3
-                                DisplayStatusRank as Rank, -- col 4
-                                DisplayStatusID as TermID, -- col 5
-                                'DISPLAYSTATUS' as AutoType, -- col 6 
-                                r.relationshipxml as RelationshipXML
+                                ds.displaystatuscode as Code, 
+                                DisplayStatusDescription as Description, 
+                                null as Definition, 
+                                DisplayStatusRank as Rank, 
+                                DisplayStatusID as TermID, 
+                                'DISPLAYSTATUS' as AutoType, 
+                                to_variant(parse_xml(r.relationshipxml)) as RelationshipXML
                             from base.displaystatus ds 
                             left join cte_rel_xml r on r.displaystatuscode = ds.displaystatuscode;
-    
                             $$;
         
                         
 insert_statement_union := $$
                           insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType) 
-                          $$
-                          || select_statement_union;
+                          $$ || select_statement_union;
 
 insert_statement_payor := $$
                           insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
-                          $$
-                          || select_statement_payor;
+                          $$ || select_statement_payor;
 
 insert_statement_product := $$
                           insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
-                          $$
-                          || select_statement_product;
+                          $$ || select_statement_product;
 
 insert_statement_certspec := $$
                           insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
-                          $$
-                          || select_statement_certspec;
+                          $$ || select_statement_certspec;
 
 insert_statement_dispstatus := $$
                           insert INTO show.tempautosuggestrefdata (Code, Description, Definition, Rank, TermID, AutoType, RelationshipXML) 
-                          $$
-                          || select_statement_dispstatus;
+                          $$ || select_statement_dispstatus;
 
 
 insert_statement :=     $$
@@ -634,10 +639,10 @@ merge_statement :=      $$
                               from show.tempautosuggestrefdata
                               ) as source
                         on source.termid = target.termid
-                        WHEN MATCHED and source.code = target.code and source.description = target.description
+                        when matched and source.code = target.code and source.description = target.description
                             and source.definition = target.definition and source.rank = target.rank 
-                            and source.autotype = target.autotype then $$ || update_statement || $$ 
-                        when not matched then $$ || insert_statement;
+                            and source.autotype = target.autotype then $$||update_statement||$$ 
+                        when not matched then $$||insert_statement;
 
 
 ---------------------------------------------------------
