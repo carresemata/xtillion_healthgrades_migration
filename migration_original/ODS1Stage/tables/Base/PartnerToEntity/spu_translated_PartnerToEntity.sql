@@ -85,6 +85,7 @@ $$;
 update_statement := ' update 
                         set
                             target.oasurl = source.oasurl,
+                            target.sourcecode = source.sourcecode,
                             target.lastupdatedate = source.lastupdatedate';
 
 -- insert statement
@@ -96,6 +97,7 @@ insert_statement := ' insert (PartnerToEntityId,
                             SecondaryEntityTypeID, 
                             PartnerSecondaryEntityId,
                             OASURL, 
+                            sourcecode,
                             LastUpdateDate)
                     values (uuid_string(),
                             source.partnerid, 
@@ -105,6 +107,7 @@ insert_statement := ' insert (PartnerToEntityId,
                             source.secondaryentitytypeid, 
                             source.partnersecondaryentityid,
                             source.oasurl, 
+                            source.sourcecode,
                             source.lastupdatedate)';
 
 
