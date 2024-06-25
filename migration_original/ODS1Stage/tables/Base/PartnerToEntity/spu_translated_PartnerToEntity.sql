@@ -12,7 +12,6 @@ declare
 --- mdm_team.mst.provider_profile_processing (raw.vw_provider_profile)
 --- base.provider
 --- base.partner
---- base.office
 --- base.providertooffice
 --- base.entitytype
 
@@ -20,15 +19,14 @@ declare
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    select_statement_1 string; -- cte and select statement for the insert
-    select_statement_2 string;
-    insert_statement_1 string; -- insert statement 
-    insert_statement_2 string;
+    select_statement string; -- cte and select statement for the insert
+    update_statement string; -- update statement
+    insert_statement string; -- insert statement
+    merge_statement string; 
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_partnertoentity');
     execution_start datetime default getdate();
-
-   
+    mdm_db string default('mdm_team');
    
 begin
     
@@ -39,43 +37,33 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement_1 := $$
-with CTE_SwimlaneURL as (
+select_statement := $$
+with Cte_oas as (
+    SELECT
+        p.ref_provider_code as providercode,
+        p.created_datetime as create_date,
+        to_varchar(json.value:CUSTOMER_PRODUCT_CODE) as OAS_CustomerProductCode,
+        to_varchar(json.value:DATA_SOURCE_CODE) as OAS_SourceCode,
+        to_varchar(json.value:URL) as OAS_URL
+    FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+    , lateral flatten(input => p.PROVIDER_PROFILE:OAS) as json
+    where to_varchar(json.value:CUSTOMER_PRODUCT_CODE) is not null
+),
+
+CTE_SwimlaneURL as (
     select distinct
         p.providerid,
         json.providercode,
         LEFT(json.oas_CUSTOMERPRODUCTCODE, POSITION('-' IN json.oas_CUSTOMERPRODUCTCODE) - 1) as PartnerCode,
         json.oas_CUSTOMERPRODUCTCODE as OASCustomerProductCode,
         json.oas_URL as OasURL,
+        json.oas_sourcecode as sourcecode,
         row_number() over(partition by json.providercode, json.oas_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) as RowRank
-    from raw.vw_PROVIDER_PROFILE as JSON
-    inner join base.provider as P on p.providercode = json.providercode
-    where PROVIDER_PROFILE is not null and
-        OAS_CUSTOMERPRODUCTCODE is not null
-),
-CTE_SwimlaneAPI as (
+    from cte_oas as JSON
+        inner join base.provider as P on p.providercode = json.providercode
+)
     select 
-        json.providercode,
-        p.providerid,
-        o.officeid,
-        json.office_OFFICECODE as OfficeCode,
-        SUBSTRING(
-        json.oas_CUSTOMERPRODUCTCODE, 
-        1, POSITION('-' IN json.oas_CUSTOMERPRODUCTCODE) - 1) as PartnerCode ,
-        json.oas_CUSTOMERPRODUCTCODE as OasCustomerProductCode,
-        row_number() over(partition by json.providercode, json.office_OFFICECODE order by CREATE_DATE desc) as RowRank
-    from raw.vw_PROVIDER_PROFILE as JSON
-    inner join base.provider as P on p.providercode = json.providercode
-    inner join base.office as O on o.officecode = json.office_OFFICECODE
-),
-CTE_SwimlaneAPIUpdated as (
-    select * 
-    from cte_swimlaneapi as api1
-    where exists (select * from cte_swimlaneapi as api2 join cte_swimlaneapi as api1 on api1.Providercode = api2.ProviderCode and api2.OASCustomerProductCode is not null)
-), 
-CTE_SwimlaneURL2 as (
-    select
-        uuid_string() as PartnerToEntityId,
+        distinct
         par.partnerid,
         prov.providerid as PrimaryEntityId,
         (select entitytypeid from base.entitytype where entitytypecode = 'PROV') as PrimaryEntityTypeId,
@@ -83,46 +71,25 @@ CTE_SwimlaneURL2 as (
         (select entitytypeid from base.entitytype where entitytypecode = 'OFFICE') as SecondaryEntityTypeID,
         provoff.officeid as PartnerSecondaryEntityId,
         cte.oasurl,
-        sysdate() as LastUpdateDate
+        cte.sourcecode,
+        current_timestamp() as LastUpdateDate
     from CTE_swimlaneUrl as cte
     inner join base.partner as Par on par.partnercode = cte.partnercode
     inner join base.provider as Prov on prov.providercode = cte.providercode
     inner join base.providertooffice as ProvOff on provoff.providerid = cte.providerid
     where RowRank = 1 
-)$$;
+$$;
 
 
-select_statement_2 := select_statement_1 || 
-$$, CTE_SwimlaneAPI2 as (
-    select
-        uuid_string() as PartnerToEntityId,
-        par.partnerid,
-        prov.providerid as PrimaryEntityId,
-        (select entitytypeid from base.entitytype where entitytypecode = 'PROV') as PrimaryEntityTypeId,
-        cte.officeid as SecondaryEntityID,
-        (select entitytypeid from base.entitytype where entitytypecode = 'OFFICE') as SecondaryEntityTypeID,
-        off.practiceid as TertiaryEntityId,
-        (select entitytypeid from base.entitytype where entitytypecode = 'PRAC') as TertiaryEntityTypeID,
-        sysdate() as LastUpdateDate
-    from CTE_SwimlaneAPIUpdated as cte
-    inner join base.partner as Par on par.partnercode = cte.partnercode
-    inner join base.provider as Prov on prov.providercode = cte.providercode
-    inner join base.office as Off on off.officeid = cte.officeid
-    where RowRank = 1
-)
-select * from cte_swimlaneapi2$$;
+-- update statement
+update_statement := ' update 
+                        set
+                            target.oasurl = source.oasurl,
+                            target.sourcecode = source.sourcecode,
+                            target.lastupdatedate = source.lastupdatedate';
 
-
-
----------------------------------------------------------
---------- 4. actions (inserts and updates) --------------
----------------------------------------------------------  
-
-insert_statement_1 := ' merge into base.partnertoentity as target using 
-                   ('||select_statement_1 ||' select * from CTE_swimlaneURL2) as source 
-                   on target.partnertoentityid = source.partnertoentityid and target.partnerid = source.partnerid
-                   when not matched then 
-                    insert (PartnerToEntityId,
+-- insert statement
+insert_statement := ' insert (PartnerToEntityId,
                             PartnerID, 
                             PrimaryEntityID, 
                             PrimaryEntityTypeID, 
@@ -130,8 +97,9 @@ insert_statement_1 := ' merge into base.partnertoentity as target using
                             SecondaryEntityTypeID, 
                             PartnerSecondaryEntityId,
                             OASURL, 
+                            sourcecode,
                             LastUpdateDate)
-                    values (source.partnertoentityid,
+                    values (uuid_string(),
                             source.partnerid, 
                             source.primaryentityid, 
                             source.primaryentitytypeid, 
@@ -139,31 +107,19 @@ insert_statement_1 := ' merge into base.partnertoentity as target using
                             source.secondaryentitytypeid, 
                             source.partnersecondaryentityid,
                             source.oasurl, 
+                            source.sourcecode,
                             source.lastupdatedate)';
 
-                    
-insert_statement_2 := ' merge into base.partnertoentity as target using 
-                   ('||select_statement_2 ||') as source 
-                   on target.partnertoentityid = source.partnertoentityid and target.partnerid = source.partnerid
-                   when not matched then 
-                    insert (PartnerToEntityId,
-                            PartnerID, 
-                            PrimaryEntityID, 
-                            PrimaryEntityTypeID, 
-                            SecondaryEntityID, 
-                            SecondaryEntityTypeID,  
-                            TertiaryEntityID, 
-                            TertiaryEntityTypeID, 
-                            LastUpdateDate)
-                    values (source.partnertoentityid,
-                            source.partnerid, 
-                            source.primaryentityid, 
-                            source.primaryentitytypeid, 
-                            source.secondaryentityid, 
-                            source.secondaryentitytypeid, 
-                            source.tertiaryentityid,
-                            source.tertiaryentitytypeid, 
-                            source.lastupdatedate)';
+
+---------------------------------------------------------
+--------- 4. actions (inserts and updates) --------------
+---------------------------------------------------------  
+
+merge_statement := ' merge into base.partnertoentity as target using 
+                   ('||select_statement ||') as source 
+                   on target.partnerid = source.partnerid and target.primaryentityid = source.primaryentityid and target.primaryentitytypeid = source.primaryentitytypeid and target.secondaryentityid = source.secondaryentityid and target.secondaryentitytypeid = source.secondaryentitytypeid and target.partnersecondaryentityid = source.partnersecondaryentityid
+                   when matched then '|| update_statement || '
+                   when not matched then ' || insert_statement;
                     
  
 ---------------------------------------------------------
@@ -173,8 +129,7 @@ insert_statement_2 := ' merge into base.partnertoentity as target using
 if (is_full) then
     truncate table Base.PartnerToEntity;
 end if; 
-execute immediate insert_statement_1 ;
-execute immediate insert_statement_2 ;
+execute immediate merge_statement;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------
