@@ -33,8 +33,11 @@ def create_final_folder():
             table_path = os.path.join(schema_path, table)
             file_path1 = os.path.join(table_path, f'spu_check_{table}.txt')
             file_path2 = os.path.join(table_path, f'spu_original_{table}.txt')
-            shutil.copy(file_path1, os.path.join(os.getcwd(), f'{schema.lower()}.sp_check_{table.lower()}.txt'))
-            shutil.copy(file_path2, os.path.join(os.getcwd(), f'{schema.lower()}.sp_original_{table.lower()}.txt'))
+            file_path3 = os.path.join(table_path, f'{schema.upper()}.{table.upper()}-report.md') or os.path.join(table_path, f'{schema.upper()}.{table.upper()}-report (1).md')
+            shutil.copy(file_path1, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_sp_original.txt'))
+            shutil.copy(file_path2, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_sp_original_code.txt'))
+            if os.path.exists(file_path3):
+                shutil.copy(file_path3, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_report.md'))
         os.chdir('..')
     os.chdir('..')
 
