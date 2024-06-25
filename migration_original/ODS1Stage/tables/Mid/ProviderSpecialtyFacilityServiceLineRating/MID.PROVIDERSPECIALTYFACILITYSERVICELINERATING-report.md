@@ -9,13 +9,13 @@ The example below shows a sample row where values are not identical. Important t
 
 |    | Column Name            | Match ID   | SQL Server Value                     | Snowflake Value                      |
 |---:|:-----------------------|:-----------|:-------------------------------------|:-------------------------------------|
-|  0 | PROVIDERID             | SLORT      | 32575155-5232-0000-0000-000000000000 | 95f33244-b006-480c-bea0-b49bddd47d4d |
-|  1 | SERVICELINECODE        | SLORT      | SLORT                                | SLNSC                                |
-|  2 | SERVICELINESTAR        | SLORT      | 5                                    | 1                                    |
-|  3 | SERVICELINEDESCRIPTION | SLORT      | Orthopedic                           | Neurosciences                        |
-|  4 | LEGACYKEY              | SLORT      | 31                                   | HGST77346F56140191                   |
-|  5 | SPECIALTYID            | SLORT      | 5253524f-0000-0000-0000-000000000000 | 5255454e-0000-0000-0000-000000000000 |
-|  6 | SPECIALTYCODE          | SLORT      | ORSR                                 | NEUR                                 |
+|  0 | PROVIDERID             | SLPRS      | 424c4c55-5433-0000-0000-000000000000 | 764a5637-c9c2-4332-8090-ae6d9bcd9ed7 |
+|  1 | SERVICELINECODE        | SLPRS      | SLPRS                                | SLNSC                                |
+|  2 | SERVICELINESTAR        | SLPRS      | 1                                    | 5                                    |
+|  3 | SERVICELINEDESCRIPTION | SLPRS      | Prostate Surgery                     | Neurosciences                        |
+|  4 | LEGACYKEY              | SLPRS      | 64                                   | 28                                   |
+|  5 | SPECIALTYID            | SLPRS      | 4c4f5255-0000-0000-0000-000000000000 | 5255454e-0000-0000-0000-000000000000 |
+|  6 | SPECIALTYCODE          | SLPRS      | UROL                                 | NEUR                                 |
 
 ## 2. Aggregate Validation
 
@@ -26,8 +26,8 @@ The example below shows a sample row where values are not identical. Important t
 
 ### 2.2 Total Rows
 - SQL Server: 267934
-- Snowflake: 27984
-- Rows Margin (%): 89.55563683593721
+- Snowflake: 20418
+- Rows Margin (%): 92.37946658505453
 
 ### 2.3 Nulls per Column
 |    | Column_Name            |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -47,6 +47,6 @@ The example below shows a sample row where values are not identical. Important t
 |  1 | ServiceLineCode        |                          15 |                          14 |          6.7 |
 |  2 | ServiceLineStar        |                           3 |                           3 |          0   |
 |  3 | ServiceLineDescription |                          15 |                          14 |          6.7 |
-|  4 | LegacyKey              |                          24 |                        1820 |       7483.3 |
+|  4 | LegacyKey              |                          24 |                          23 |          4.2 |
 |  5 | SpecialtyID            |                          24 |                          23 |          4.2 |
 |  6 | SpecialtyCode          |                          24 |                          23 |          4.2 |

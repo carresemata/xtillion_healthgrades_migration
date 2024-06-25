@@ -77,17 +77,17 @@ select_statement := $$ with CTE_ProviderBatch as (
                     tstslg.servicelinecode, 
                     e.servicelinestar, 
                     e.servicelinedescription, 
-                    b.legacykey, 
+                    sg.legacykey, 
                     tstslg.specialtyid, 
                     tstslg.specialtycode
                 from cte_providerbatch as pb
-                inner join base.providertofacility as pf on pf.providerid = pb.providerid
-                join base.facility as b on pf.facilityid = b.facilityid
-                join base.providertospecialty as ps on pf.providerid = ps.providerid
-                join base.specialtygrouptospecialty as sgs on sgs.specialtyid = ps.specialtyid
-                join base.specialtygroup as sg on sg.specialtygroupid = sgs.specialtygroupid
-                join base.tempspecialtytoservicelineghetto as tstslg on sg.specialtygroupcode = tstslg.specialtycode
-                join cte_union as e on b.legacykey = e.facilityid and tstslg.servicelinecode = 'SL' || e.servicelineid
+                    inner join base.providertofacility as pf on pf.providerid = pb.providerid
+                    join base.facility as b on pf.facilityid = b.facilityid
+                    join base.providertospecialty as ps on pf.providerid = ps.providerid
+                    join base.specialtygrouptospecialty as sgs on sgs.specialtyid = ps.specialtyid
+                    join base.specialtygroup as sg on sg.specialtygroupid = sgs.specialtygroupid
+                    join base.tempspecialtytoservicelineghetto as tstslg on sg.specialtygroupcode = tstslg.specialtycode
+                    join cte_union as e on b.legacykey = e.facilityid and tstslg.servicelinecode = 'SL' || e.servicelineid
                 order by pb.providerid
                  $$;
 
