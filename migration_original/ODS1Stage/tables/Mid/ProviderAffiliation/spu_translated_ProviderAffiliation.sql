@@ -36,82 +36,26 @@ begin
 --- select Statement
 
 select_statement := $$ with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                    CTE_ProviderAffiliation as (
-                            select
-                                pta.providertoaffiliationid,
-                                pta.providerid,
-                                pta.affiliationbegindate,
-                                pta.affiliationenddate,
-                                pta.affiliationname,
-                                aff.affiliationtypecode,
-                                aff.affiliationtypedescription,
-                                pr.rolecode,
-                                pr.roledescription,
-                                0 as ActionCode
-                            from
-                                CTE_ProviderBatch as pb
-                                join base.providertoaffiliation as pta on pta.providerid = pb.providerid
-                                join base.affiliation as aff on pta.affiliationid = aff.affiliationid
-                                join base.providerrole as pr on pta.providerroleid = pr.providerroleid
-                        ),
-                        -- insert Action
-                        CTE_Action_1 as (
-                            select
-                                cte.providertoaffiliationid,
-                                1 as ActionCode
-                            from
-                                CTE_ProviderAffiliation as cte
-                                left join mid.provideraffiliation as mid on cte.providertoaffiliationid = mid.providertoaffiliationid
-                            where
-                                mid.providertoaffiliationid is null
-                        ),
-                        -- update Action
-                        CTE_Action_2 as (
-                            select
-                                cte.providertoaffiliationid,
-                                2 as ActionCode
-                            from
-                                CTE_ProviderAffiliation as cte
-                                left join mid.provideraffiliation as mid on cte.providertoaffiliationid = mid.providertoaffiliationid
-                            where
-                                MD5(ifnull(cte.providerid::varchar, '')) <> MD5(ifnull(mid.providerid::varchar, '')) or
-                                MD5(ifnull(cte.affiliationbegindate::varchar, '')) <> MD5(ifnull(mid.affiliationbegindate::varchar, ''))  or
-                                MD5(ifnull(cte.affiliationenddate::varchar, '')) <> MD5(ifnull(mid.affiliationenddate::varchar, ''))  or
-                                MD5(ifnull(cte.affiliationname::varchar, '')) <> MD5(ifnull(mid.affiliationname::varchar, '')) or
-                                MD5(ifnull(cte.affiliationtypecode::varchar, '')) <> MD5(ifnull(mid.affiliationtypecode::varchar, '')) or
-                                MD5(ifnull(cte.affiliationtypedescription::varchar, '')) <> MD5(ifnull(mid.affiliationtypedescription::varchar, '')) or
-                                MD5(ifnull(cte.rolecode::varchar, '')) <> MD5(ifnull(mid.rolecode::varchar, ''))or
-                                MD5(ifnull(cte.roledescription::varchar, '')) <> MD5(ifnull(mid.roledescription::varchar, '')) 
-                        
-                        )
                         select
-                            A0.ProviderToAffiliationID,
-                            A0.ProviderID,
-                            A0.AffiliationBeginDate,
-                            A0.AffiliationEndDate,
-                            A0.AffiliationName,
-                            A0.AffiliationTypeCode,
-                            A0.AffiliationTypeDescription,
-                            A0.RoleCode,
-                            A0.RoleDescription,
-                            ifnull(
-                                A1.ActionCode,
-                                ifnull(A2.ActionCode, A0.ActionCode)
-                            ) as ActionCode
+                            p.providerid
                         from
-                            CTE_ProviderAffiliation as A0
-                            left join CTE_Action_1 as A1 on A0.ProviderToAffiliationID = A1.ProviderToAffiliationID
-                            left join CTE_Action_2 as A2 on A0.ProviderToAffiliationID = A2.ProviderToAffiliationID
-                        where
-                            ifnull(
-                                A1.ActionCode,
-                                ifnull(A2.ActionCode, A0.ActionCode)
-                            ) <> 0 $$;
+                            $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                            join base.provider as P on p.providercode = ppp.ref_provider_code)
+                        select
+                            pta.providertoaffiliationid,
+                            pta.providerid,
+                            pta.affiliationbegindate,
+                            pta.affiliationenddate,
+                            pta.affiliationname,
+                            aff.affiliationtypecode,
+                            aff.affiliationtypedescription,
+                            pr.rolecode,
+                            pr.roledescription
+                        from
+                            CTE_ProviderBatch as pb
+                            join base.providertoaffiliation as pta on pta.providerid = pb.providerid
+                            join base.affiliation as aff on pta.affiliationid = aff.affiliationid
+                            join base.providerrole as pr on pta.providerroleid = pr.providerroleid $$;
 
 --- update Statement
 update_statement := ' update 
@@ -156,8 +100,8 @@ insert_statement := ' insert  (
 merge_statement := ' merge into mid.provideraffiliation as target using 
                    ('||select_statement||') as source 
                    on source.providertoaffiliationid = target.providertoaffiliationid
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------

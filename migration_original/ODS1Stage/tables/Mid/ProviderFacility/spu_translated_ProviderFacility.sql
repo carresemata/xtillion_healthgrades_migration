@@ -189,7 +189,7 @@ select
     vw.providerid,
     vw.specialtycode,
     cte.servicelinecode
-from base.vwuproviderspecialty as vw
+from base.vwuproviderspecialty as vw -- this is empty in sql server, remove
 inner join cte_servicelinespecialty as cte on cte.medicaltermcode = vw.specialtycode
 where specialtyrank = 1
 ),

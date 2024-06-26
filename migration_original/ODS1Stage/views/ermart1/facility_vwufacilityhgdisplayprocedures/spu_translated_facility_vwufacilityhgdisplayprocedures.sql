@@ -1,9 +1,9 @@
-CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.ERMART1.FACILITY_VWUFACILITYHGDDISPLAYPROCEDURES AS 
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.ERMART1.FACILITY_VWUFACILITYHGDISPLAYPROCEDURES AS 
 
 ---------------------------------------------------------
 --------------- 0. table dependencies -------------------
 ---------------------------------------------------------
--- ermart1.facility_vwufacilityhgddisplayprocedures depends on:
+-- ermart1.facility_vwufacilityhgdisplayprocedures depends on:
 -- hosp_directory.hosp_cohort
 
 ---------------------------------------------------------

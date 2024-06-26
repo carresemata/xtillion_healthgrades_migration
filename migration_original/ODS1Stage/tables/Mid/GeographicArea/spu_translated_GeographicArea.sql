@@ -37,71 +37,21 @@ begin
 ---------------------------------------------------------     
 
 --- select Statement
-select_statement := $$with CTE_geoArea as (
-                    select
-                        GEOGRAPHICAREAID,
-                        GEOGRAPHICAREACODE,
-                        GEOGRAPHICAREATYPECODE,
-                        CASE
-                            WHEN geoareatype.geographicareatypecode = 'CITYST' then CONCAT(
-                                geoarea.geographicareavalue1,
-                                ',',
-                                geoarea.geographicareavalue2
-                            )
-                            else geoarea.geographicareavalue1
-                        END as GeographicAreaValue,
-                        0 as ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
-                    from
-                        base.geographicarea GeoArea
-                        join base.geographicareatype GeoAreaType on geoarea.geographicareatypeid = geoareatype.geographicareatypeid
-                    ),
-                    -- insert Action
-                    CTE_Action_1 as (
-                        select
-                            CTE_geoarea.geographicareaid,
-                            1 as ActionCode
+select_statement := $$ select
+                            GEOGRAPHICAREAID,
+                            GEOGRAPHICAREACODE,
+                            GEOGRAPHICAREATYPECODE,
+                            CASE
+                                WHEN geoareatype.geographicareatypecode = 'CITYST' then CONCAT(
+                                    geoarea.geographicareavalue1,
+                                    ',',
+                                    geoarea.geographicareavalue2
+                                )
+                                else geoarea.geographicareavalue1
+                            END as GeographicAreaValue
                         from
-                            CTE_geoArea
-                            left join mid.geographicarea GeoArea on CTE_geoarea.geographicareaid = geoarea.geographicareaid
-                            and CTE_geoarea.geographicareacode = geoarea.geographicareacode
-                            and CTE_geoarea.geographicareatypecode = geoarea.geographicareatypecode
-                            and CTE_geoarea.geographicareavalue = geoarea.geographicareavalue
-                        where
-                            geoarea.geographicareaid is null
-                    ),
-                    -- update Action
-                    CTE_Action_2 as (
-                        select
-                            CTE_geoarea.geographicareaid,
-                            2 as ActionCode
-                        from
-                            CTE_geoArea
-                            join mid.geographicarea GeoArea on CTE_geoarea.geographicareaid = geoarea.geographicareaid
-                            and CTE_geoarea.geographicareacode = geoarea.geographicareacode
-                        where
-                            MD5(
-                                ifnull(CTE_geoarea.geographicareacode::varchar, '''')
-                            ) <> MD5(
-                                ifnull(CTE_geoarea.geographicareacode::varchar, '''')
-                            )
-                            or MD5(
-                                ifnull(CTE_geoarea.geographicareavalue::varchar, '''')
-                            ) <> MD5(
-                                ifnull(CTE_geoarea.geographicareavalue::varchar, '''')
-                            )
-                    )
-                    select
-                        A0.GEOGRAPHICAREAID,
-                        A0.GEOGRAPHICAREACODE,
-                        A0.GEOGRAPHICAREATYPECODE,
-                        A0.GeographicAreaValue,
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
-                    from
-                        CTE_geoArea A0
-                        left join CTE_ACTION_1 A1 on A0.GeographicAreaID = A1.GeographicAreaID
-                        left join CTE_ACTION_2 A2 on A0.GeographicAreaID = A2.GeographicAreaID
-                    where 
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
+                            base.geographicarea GeoArea
+                            join base.geographicareatype GeoAreaType on geoarea.geographicareatypeid = geoareatype.geographicareatypeid
                     $$;
 
 --- update Statement
@@ -132,8 +82,8 @@ insert_statement := ' insert
 merge_statement := ' merge into mid.geographicarea as target using 
                    ('||select_statement||') as source 
                    on source.geographicareaid = target.geographicareaid and source.geographicareacode = target.geographicareacode
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------

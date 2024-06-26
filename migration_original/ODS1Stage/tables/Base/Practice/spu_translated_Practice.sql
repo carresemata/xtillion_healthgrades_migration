@@ -9,7 +9,7 @@ declare
 ---------------------------------------------------------
     
 -- base.practice depends on: 
---- mdmm_team.mst.practice_profile_processing 
+--- mdm_team.mst.practice_profile_processing 
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------

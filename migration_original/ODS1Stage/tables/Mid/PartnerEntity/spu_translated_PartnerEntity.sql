@@ -41,126 +41,48 @@ begin
 --- select Statement
 
 select_statement := $$ with CTE_ProviderBatch as (
-                select distinct p.providerid, p.providercode
-                from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp
-                join base.provider as p on p.providercode = pdp.ref_provider_code),
-                    CTE_PartnerEntity as (
-                                select distinct
-                                			pte.partnertoentityid, 
-                                			pa.partnerid, 
-                                			pa.partnercode, 
-                                            pa.partnerdescription, 
-                                			pt.partnertypecode, 
-                                			pt.partnertypedescription, 
-                                			pa.partnerproductcode,
-                                			pa.partnerproductdescription,
-                                			pa.urlpath, 
-                                            CASE WHEN OASURL is not null then OASURL
-                                				else 'https://' || pa.urlpath || pte.partnerprimaryentityid || '/availability' END as FullURL,
-                                			pte.primaryentityid, 
-                                			pte.partnerprimaryentityid, 
-                                			pte.secondaryentityid, 
-                                			pte.partnersecondaryentityid, 
-                                			pte.tertiaryentityid, 
-                                			pte.partnertertiaryentityid, 
-                                			p.providercode, 
-                                			o.officecode, 
-                                			prac.practicecode,
-                                			eop.externaloaspartnercode,
-                                			eop.externaloaspartnerdescription,
-                                            0 as ActionCode -- ActionCode 0, for no changes
-                                		from base.partnertoentity pte
-                                		join base.partner pa on pte.partnerid = pa.partnerid
-                                		join base.provider p on p.providerid = pte.primaryentityid
-                                		join base.entitytype pet on pte.primaryentitytypeid = pet.entitytypeid
-                                		join base.office o on o.officeid = pte.secondaryentityid
-                                		join base.providertooffice po on p.providerid = po.providerid and o.officeid = po.officeid
-                                		join base.entitytype seet on pte.primaryentitytypeid = seet.entitytypeid
-                                		left join base.practice prac on prac.practiceid = pte.tertiaryentityid
-                                		left join base.entitytype tet on pte.tertiaryentitytypeid = tet.entitytypeid
-                                		join base.partnertype pt on pa.partnertypeid = pt.partnertypeid
-                                		join CTE_ProviderBatch pb on pte.primaryentityid = pb.providerid
-                                		left join base.externaloaspartner eop on pte.externaloaspartnerid = eop.externaloaspartnerid
-                                		where pt.partnertypecode='API' or pt.partnertypecode='URL'),
-                    
-                    -- ActionCode 1: insert data to final table
-                    CTE_Action_1 as (
-                                select 
-                                    cte.partnertoentityid,
-                                    1 as ActionCode
-                                from CTE_PartnerEntity as cte
-                                left join mid.partnerentity as mid 
-                                    on cte.providercode = mid.providercode and 
-                                    cte.partnerproductcode = mid.partnerproductcode and 
-                                    cte.partnercode = mid.partnercode and 
-                                    ifnull(cte.practicecode, 'ZZZ') =  ifnull(mid.practicecode, 'ZZZ') and 
-                                    ifnull(cte.officecode, 'ZZZ') =  ifnull(mid.officecode, 'ZZZ')
-                                where mid.providercode is null
-                    ),
-                    
-                    -- ActionCode 2: update existing data to final table
-                    CTE_Action_2 as (
-                                select 
-                                    cte.partnertoentityid,
-                                    2 as ActionCode
-                                from CTE_PartnerEntity as cte
-                                join mid.partnerentity as mid 
-                                    on cte.providercode = mid.providercode and 
-                                    cte.partnerproductcode = mid.partnerproductcode and 
-                                    cte.partnercode = mid.partnercode and 
-                                    ifnull(cte.practicecode, 'ZZZ') =  ifnull(mid.practicecode, 'ZZZ') and 
-                                    ifnull(cte.officecode, 'ZZZ') =  ifnull(mid.officecode, 'ZZZ')
-                                where
-                                    MD5(ifnull(cte.partnerid::varchar,'''')) <> MD5(ifnull(mid.partnerid::varchar,'''')) or
-                                    MD5(ifnull(cte.partnercode::varchar,'''')) <> MD5(ifnull(mid.partnercode::varchar,'''')) or
-                                    MD5(ifnull(cte.partnerdescription::varchar,'''')) <> MD5(ifnull(mid.partnerdescription::varchar,'''')) or
-                                    MD5(ifnull(cte.partnertypecode::varchar,'''')) <> MD5(ifnull(mid.partnertypecode::varchar,'''')) or
-                                    MD5(ifnull(cte.partnertypedescription::varchar,'''')) <> MD5(ifnull(mid.partnertypedescription::varchar,'''')) or
-                                    MD5(ifnull(cte.partnerproductcode::varchar,'''')) <> MD5(ifnull(mid.partnerproductcode::varchar,'''')) or
-                                    MD5(ifnull(cte.partnerproductdescription::varchar,'''')) <> MD5(ifnull(mid.partnerproductdescription::varchar,'''')) or
-                                    MD5(ifnull(cte.urlpath::varchar,'''')) <> MD5(ifnull(mid.urlpath::varchar,'''')) or
-                                    MD5(ifnull(cte.fullurl::varchar,'''')) <> MD5(ifnull(mid.fullurl::varchar,'''')) or
-                                    MD5(ifnull(cte.primaryentityid::varchar,'''')) <> MD5(ifnull(mid.primaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.partnerprimaryentityid::varchar,'''')) <> MD5(ifnull(mid.partnerprimaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.secondaryentityid::varchar,'''')) <> MD5(ifnull(mid.secondaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.partnersecondaryentityid::varchar,'''')) <> MD5(ifnull(mid.partnersecondaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.tertiaryentityid::varchar,'''')) <> MD5(ifnull(mid.tertiaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.partnertertiaryentityid::varchar,'''')) <> MD5(ifnull(mid.partnertertiaryentityid::varchar,'''')) or
-                                    MD5(ifnull(cte.providercode::varchar,'''')) <> MD5(ifnull(mid.providercode::varchar,'''')) or
-                                    MD5(ifnull(cte.officecode::varchar,'''')) <> MD5(ifnull(mid.officecode::varchar,'''')) or
-                                    MD5(ifnull(cte.practicecode::varchar,'''')) <> MD5(ifnull(mid.practicecode::varchar,'''')) or
-                                    MD5(ifnull(cte.externaloaspartnercode::varchar,'''')) <> MD5(ifnull(mid.externaloaspartnercode::varchar,'''')) or
-                                    MD5(ifnull(cte.externaloaspartnerdescription::varchar,'''')) <> MD5(ifnull(mid.externaloaspartnerdescription::varchar,''''))            
-                    )
-                    
-                    select distinct
-                        A0.PartnerToEntityID, 
-                        A0.PartnerID, 
-                        A0.PartnerCode, 
-                        A0.PartnerDescription, 
-                        A0.PartnerTypeCode, 
-                        A0.PartnerTypeDescription, 
-                        A0.PartnerProductCode,
-                        A0.PartnerProductDescription,
-                        A0.URLPath, 
-                        A0.FullURL, 
-                        A0.PrimaryEntityID, 
-                        A0.PartnerPrimaryEntityID, 
-                        A0.SecondaryEntityID, 
-                        A0.PartnerSecondaryEntityID, 
-                        A0.TertiaryEntityID, 
-                        A0.PartnerTertiaryEntityID, 
-                        A0.ProviderCode, 
-                        A0.OfficeCode, 
-                        A0.PracticeCode,
-                        A0.ExternalOASPartnerCode,
-                        A0.ExternalOASPartnerDescription,
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode 
-                    from CTE_PartnerEntity as A0 
-                                        left join CTE_Action_1 as A1 on A0.PartnerToEntityID = A1.PartnerToEntityID
-                                        left join CTE_Action_2 as A2 on A0.PartnerToEntityID = A2.PartnerToEntityID
-                                        where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0 
-                                        $$;
+                        select 
+                            distinct 
+                            p.providerid, 
+                            p.providercode
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp
+                            join base.provider as p on p.providercode = pdp.ref_provider_code)
+                        select distinct
+                                pte.partnertoentityid, 
+                                pa.partnerid, 
+                                pa.partnercode, 
+                                pa.partnerdescription, 
+                                pt.partnertypecode, 
+                                pt.partnertypedescription, 
+                                pa.partnerproductcode,
+                                pa.partnerproductdescription,
+                                pa.urlpath, 
+                                CASE WHEN OASURL is not null then OASURL
+                                    else 'https://' || pa.urlpath || pte.partnerprimaryentityid || '/availability' END as FullURL,
+                                pte.primaryentityid, 
+                                pte.partnerprimaryentityid, 
+                                pte.secondaryentityid, 
+                                pte.partnersecondaryentityid, 
+                                pte.tertiaryentityid, 
+                                pte.partnertertiaryentityid, 
+                                p.providercode, 
+                                o.officecode, 
+                                prac.practicecode,
+                                eop.externaloaspartnercode,
+                                eop.externaloaspartnerdescription
+                            from base.partnertoentity pte
+                                join base.partner pa on pte.partnerid = pa.partnerid
+                                join base.provider p on p.providerid = pte.primaryentityid
+                                join base.entitytype pet on pte.primaryentitytypeid = pet.entitytypeid
+                                join base.office o on o.officeid = pte.secondaryentityid
+                                join base.providertooffice po on p.providerid = po.providerid and o.officeid = po.officeid
+                                join base.entitytype seet on pte.primaryentitytypeid = seet.entitytypeid
+                                left join base.practice prac on prac.practiceid = pte.tertiaryentityid
+                                left join base.entitytype tet on pte.tertiaryentitytypeid = tet.entitytypeid
+                                join base.partnertype pt on pa.partnertypeid = pt.partnertypeid
+                                join CTE_ProviderBatch pb on pte.primaryentityid = pb.providerid
+                                left join base.externaloaspartner eop on pte.externaloaspartnerid = eop.externaloaspartnerid
+                            where pt.partnertypecode='API' or pt.partnertypecode='URL' $$;
 
 --- update Statement
 update_statement := ' update 
@@ -243,8 +165,8 @@ insert_statement := ' insert (
 merge_statement := ' merge into mid.partnerentity as target using 
                    ('||select_statement||') as source 
                    on source.partnertoentityid = target.partnertoentityid
-                   when matched and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
