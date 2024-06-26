@@ -36,70 +36,32 @@ declare
 
 begin
 --- select Statement
-select_statement := $$ with CTE_OfficeBatch as (select distinct pto.officeid
-            from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp 
-            join base.provider as P on p.providercode = pdp.ref_provider_code
-            join base.providertooffice as pto on pto.providerid = p.providerid
-            order by pto.officeid),
-                    CTE_OfficeSpecialty as (
-                        select 
-                            etmt.entitytomedicaltermid as OfficeToSpecialtyID, 
-                            etmt.entityid as OfficeID, 
-                            mt.medicaltermcode as SpecialtyCode, 
-                            mt.medicaltermdescription1 as Specialty, 
-                            mt.medicaltermdescription2 as Specialist, 
-                            mt.medicaltermdescription3 as Specialists, 
-                            mt.legacykey as LegacyKey,
-                            0 as ActionCode
-                    		
-                        from CTE_OfficeBatch as cte
-                            join base.entitytomedicalterm etmt on etmt.entityid = cte.officeid
-                            join base.medicalterm mt on etmt.medicaltermid = mt.medicaltermid
-                    		join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid and mtt.medicaltermtypecode = 'Specialty'
-                    
-                    ),
-                    -- insert Action
-                    CTE_Action_1 as (
-                        select 
-                            cte.officetospecialtyid,
-                            1 as ActionCode
-                        from CTE_OfficeSpecialty as cte
-                        join mid.officespecialty as mid on cte.officetospecialtyid = mid.officetospecialtyid 
-                        where cte.officetospecialtyid is null
-                    ),
-                    -- update Action
-                    CTE_Action_2 as (
-                        select
-                            cte.officetospecialtyid,
-                            2 as ActionCode
-                        from CTE_OfficeSpecialty as cte
-                        join mid.officespecialty as mid on cte.officetospecialtyid = mid.officetospecialtyid 
-                        where
-                            MD5(ifnull(cte.officeid::varchar,''))<>           MD5(ifnull(mid.officeid::varchar,'')) or
-                            MD5(ifnull(cte.specialtycode::varchar,''))<>      MD5(ifnull(mid.specialtycode::varchar,'')) or
-                            MD5(ifnull(cte.specialty::varchar,''))<>          MD5(ifnull(mid.specialty::varchar,'')) or
-                            MD5(ifnull(cte.specialist::varchar,''))<>         MD5(ifnull(mid.specialist::varchar,'')) or
-                            MD5(ifnull(cte.specialists::varchar,''))<>        MD5(ifnull(mid.specialists::varchar,'')) or
-                            MD5(ifnull(cte.legacykey::varchar,''))<>          MD5(ifnull(mid.legacykey::varchar,'')) 
+select_statement := $$ 
+                    with CTE_OfficeBatch as (
+                        select distinct pto.officeid
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as pdp 
+                        join base.provider as P on p.providercode = pdp.ref_provider_code
+                        join base.providertooffice as pto on pto.providerid = p.providerid
+                        order by pto.officeid
                     )
-                    select distinct
-                        A0.OfficeToSpecialtyId,
-                        A0.OfficeId,
-                        A0.SpecialtyCode,
-                        A0.Specialty,
-                        A0.Specialist,
-                        A0.Specialists,
-                        A0.LegacyKey,
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
-                    from CTE_OfficeSpecialty as A0
-                    left join CTE_Action_1 as A1 on A0.OfficeToSpecialtyId = A1.OfficeToSpecialtyId
-                    left join CTE_Action_2 as A2 on A0.OfficeToSpecialtyId = A2.OfficeToSpecialtyId
-                    where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
+                    
+                    select 
+                        etmt.entitytomedicaltermid as OfficeToSpecialtyID, 
+                        etmt.entityid as OfficeID, 
+                        mt.medicaltermcode as SpecialtyCode, 
+                        mt.medicaltermdescription1 as Specialty, 
+                        mt.medicaltermdescription2 as Specialist, 
+                        mt.medicaltermdescription3 as Specialists, 
+                        mt.legacykey as LegacyKey
+                    from CTE_OfficeBatch as cte
+                        join base.entitytomedicalterm etmt on etmt.entityid = cte.officeid
+                        join base.medicalterm mt on etmt.medicaltermid = mt.medicaltermid
+                        join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid and mtt.medicaltermtypecode = 'Specialty'
                     $$;
 
 --- update Statement
 update_statement := ' update 
-                     SET 
+                      SET 
                         OfficeToSpecialtyId = source.officetospecialtyid,
                         OfficeId = source.officeid,
                         SpecialtyCode = source.specialtycode,
@@ -134,8 +96,8 @@ insert_statement := ' insert
 merge_statement := ' merge into mid.officespecialty as target using 
                    ('||select_statement||') as source 
                    on target.officetospecialtyid = source.officetospecialtyid 
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
