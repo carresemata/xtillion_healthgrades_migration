@@ -33,6 +33,7 @@ def table_dependencies():
                         # Exclude the table itself from its dependencies
                         table_key = f'{schema}.{table}'.upper()
                         dependencies = [dep for dep in dependencies if dep != table_key]
+                        dependencies = [dep for dep in dependencies if 'TEMP' not in dep]
 
                         # Substitute view dependencies with actual tables
                         expanded_dependencies = []
@@ -51,7 +52,7 @@ def table_dependencies():
         os.chdir('..')
 
     # Save to audit_dependencies.json
-    audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'audit_table_dependencies.json')
+    audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_table_dependencies.json')
     with open(audit_dependencies_path, 'w') as audit_file:
         json.dump(table_dependencies, audit_file, indent=4)
 
