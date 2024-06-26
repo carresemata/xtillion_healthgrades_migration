@@ -91,9 +91,7 @@ select_statement :=
                     select PracticeID, EmailAddress, row_number() over (partition by PracticeID order by LEN(EmailAddress)) as EmailRank
                     from base.practiceemail
                     where EmailAddress is not null
-                ),
-                
-                CTE_ProviderPracticeOffice as (
+                )
                     select distinct
                         pto.providertoofficeid, 
                         pto.providerid,  
@@ -154,8 +152,7 @@ select_statement :=
                         o.parkinginformation, 
                         o.paymentpolicy,
                         o.legacykey as LegacyKeyOffice, 
-                        p.legacykey as LegacyKeyPractice,
-                        0 as ActionCode
+                        p.legacykey as LegacyKeyPractice
                     from CTE_ProviderBatch pb 
                     inner join base.providertooffice as pto on pb.providerid = pto.providerid
                     inner join base.office as o on o.officeid = pto.officeid
@@ -169,148 +166,6 @@ select_statement :=
                     left join base.practice as p on o.practiceid = p.practiceid
                     left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
                     left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
-                ),
-            
-            -- insert Action
-            CTE_Action_1 as (
-                    select 
-                        cte.providerid,
-                        cte.officeid,
-                        cte.fullphone,
-                        cte.fullfax,
-                        1 as ActionCode
-                    from CTE_ProviderPracticeOffice as cte
-                    left join mid.providerpracticeoffice as mid 
-                        on (cte.providerid = mid.providerid and cte.officeid = mid.officeid
-                        and ifnull(cte.fullphone, '') = ifnull(mid.fullphone, '')
-                        and ifnull(cte.fullfax, '') = ifnull(mid.fullfax, ''))
-                    where mid.providertoofficeid is null
-            ),
-            
-            -- update Action
-            CTE_Action_2 as (
-                    select 
-                        cte.providerid,
-                        cte.officeid,
-                        cte.fullphone,
-                        cte.fullfax,
-                        2 as ActionCode
-                    from CTE_ProviderPracticeOffice as cte
-                    inner join mid.providerpracticeoffice as mid 
-                        on (cte.providerid = mid.providerid and cte.officeid = mid.officeid
-                        and ifnull(cte.fullphone, '') = ifnull(mid.fullphone, '')
-                        and ifnull(cte.fullfax, '') = ifnull(mid.fullfax, ''))
-                    where 
-                        MD5(ifnull(cte.addresscode::varchar,'''')) <> MD5(ifnull(mid.addresscode::varchar,'''')) or 
-                        MD5(ifnull(cte.addressid::varchar,'''')) <> MD5(ifnull(mid.addressid::varchar,'''')) or
-                        MD5(ifnull(cte.addressline1::varchar,'''')) <> MD5(ifnull(mid.addressline1::varchar,'''')) or
-                        MD5(ifnull(cte.addressline2::varchar,'''')) <> MD5(ifnull(mid.addressline2::varchar,'''')) or
-                        MD5(ifnull(cte.addressline3::varchar,'''')) <> MD5(ifnull(mid.addressline3::varchar,'''')) or
-                        MD5(ifnull(cte.addressline4::varchar,'''')) <> MD5(ifnull(mid.addressline4::varchar,'''')) or
-                        MD5(ifnull(cte.addresstypecode::varchar,'''')) <> MD5(ifnull(mid.addresstypecode::varchar,'''')) or
-                        MD5(ifnull(cte.averagedailypatientvolume::varchar,'''')) <> MD5(ifnull(mid.averagedailypatientvolume::varchar,'''')) or
-                        MD5(ifnull(cte.city::varchar,'''')) <> MD5(ifnull(mid.city::varchar,'''')) or
-                        MD5(ifnull(cte.county::varchar,'''')) <> MD5(ifnull(mid.county::varchar,'''')) or
-                        MD5(ifnull(cte.fullfax::varchar,'''')) <> MD5(ifnull(mid.fullfax::varchar,'''')) or
-                        MD5(ifnull(cte.fullphone::varchar,'''')) <> MD5(ifnull(mid.fullphone::varchar,'''')) or
-                        MD5(ifnull(cte.hasbillingstaff::varchar,'''')) <> MD5(ifnull(mid.hasbillingstaff::varchar,'''')) or
-                        MD5(ifnull(cte.hashandicapaccess::varchar,'''')) <> MD5(ifnull(mid.hashandicapaccess::varchar,'''')) or
-                        MD5(ifnull(cte.haslabservicesonsite::varchar,'''')) <> MD5(ifnull(mid.haslabservicesonsite::varchar,'''')) or
-                        MD5(ifnull(cte.haspharmacyonsite::varchar,'''')) <> MD5(ifnull(mid.haspharmacyonsite::varchar,'''')) or
-                        MD5(ifnull(cte.hassurgeryonsite::varchar,'''')) <> MD5(ifnull(mid.hassurgeryonsite::varchar,'''')) or
-                        MD5(ifnull(cte.hasxrayonsite::varchar,'''')) <> MD5(ifnull(mid.hasxrayonsite::varchar,'''')) or
-                        MD5(ifnull(cte.isderived::varchar,'''')) <> MD5(ifnull(mid.isderived::varchar,'''')) or
-                        MD5(ifnull(cte.isprimaryoffice::varchar,'''')) <> MD5(ifnull(mid.isprimaryoffice::varchar,'''')) or
-                        MD5(ifnull(cte.issurgerycenter::varchar,'''')) <> MD5(ifnull(mid.issurgerycenter::varchar,'''')) or
-                        MD5(ifnull(cte.latitude::varchar,'''')) <> MD5(ifnull(mid.latitude::varchar,'''')) or
-                        MD5(ifnull(cte.legacykeyoffice::varchar,'''')) <> MD5(ifnull(mid.legacykeyoffice::varchar,'''')) or
-                        MD5(ifnull(cte.legacykeypractice::varchar,'''')) <> MD5(ifnull(mid.legacykeypractice::varchar,'''')) or
-                        MD5(ifnull(cte.longitude::varchar,'''')) <> MD5(ifnull(mid.longitude::varchar,'''')) or
-                        MD5(ifnull(cte.nation::varchar,'''')) <> MD5(ifnull(mid.nation::varchar,'''')) or
-                        MD5(ifnull(cte.officecode::varchar,'''')) <> MD5(ifnull(mid.officecode::varchar,'''')) or
-                        MD5(ifnull(cte.officecoordinatorname::varchar,'''')) <> MD5(ifnull(mid.officecoordinatorname::varchar,'''')) or
-                        MD5(ifnull(cte.officeid::varchar,'''')) <> MD5(ifnull(mid.officeid::varchar,'''')) or
-                        MD5(ifnull(cte.officename::varchar,'''')) <> MD5(ifnull(mid.officename::varchar,'''')) or
-                        MD5(ifnull(cte.officetoaddressid::varchar,'''')) <> MD5(ifnull(mid.officetoaddressid::varchar,'''')) or
-                        MD5(ifnull(cte.parkinginformation::varchar,'''')) <> MD5(ifnull(mid.parkinginformation::varchar,'''')) or
-                        MD5(ifnull(cte.paymentpolicy::varchar,'''')) <> MD5(ifnull(mid.paymentpolicy::varchar,'''')) or
-                        MD5(ifnull(cte.physiciancount::varchar,'''')) <> MD5(ifnull(mid.physiciancount::varchar,'''')) or
-                        MD5(ifnull(cte.practicecode::varchar,'''')) <> MD5(ifnull(mid.practicecode::varchar,'''')) or
-                        MD5(ifnull(cte.practicedescription::varchar,'''')) <> MD5(ifnull(mid.practicedescription::varchar,'''')) or
-                        MD5(ifnull(cte.practiceemail::varchar,'''')) <> MD5(ifnull(mid.practiceemail::varchar,'''')) or
-                        MD5(ifnull(cte.practiceid::varchar,'''')) <> MD5(ifnull(mid.practiceid::varchar,'''')) or
-                        MD5(ifnull(cte.practicelogo::varchar,'''')) <> MD5(ifnull(mid.practicelogo::varchar,'''')) or
-                        MD5(ifnull(cte.practicemedicaldirector::varchar,'''')) <> MD5(ifnull(mid.practicemedicaldirector::varchar,'''')) or
-                        MD5(ifnull(cte.practicename::varchar,'''')) <> MD5(ifnull(mid.practicename::varchar,'''')) or
-                        MD5(ifnull(cte.practicenpi::varchar,'''')) <> MD5(ifnull(mid.practicenpi::varchar,'''')) or
-                        MD5(ifnull(cte.practicesoftware::varchar,'''')) <> MD5(ifnull(mid.practicesoftware::varchar,'''')) or
-                        MD5(ifnull(cte.practicetin::varchar,'''')) <> MD5(ifnull(mid.practicetin::varchar,'''')) or
-                        MD5(ifnull(cte.practicewebsite::varchar,'''')) <> MD5(ifnull(mid.practicewebsite::varchar,'''')) or
-                        MD5(ifnull(cte.providerid::varchar,'''')) <> MD5(ifnull(mid.providerid::varchar,'''')) or
-                        MD5(ifnull(cte.providerofficerank::varchar,'''')) <> MD5(ifnull(mid.providerofficerank::varchar,'''')) or
-                        MD5(ifnull(cte.providertoofficeid::varchar,'''')) <> MD5(ifnull(mid.providertoofficeid::varchar,'''')) or
-                        MD5(ifnull(cte.state::varchar,'''')) <> MD5(ifnull(mid.state::varchar,'''')) or
-                        MD5(ifnull(cte.yearpracticeestablished::varchar,'''')) <> MD5(ifnull(mid.yearpracticeestablished::varchar,'''')) or
-                        MD5(ifnull(cte.zipcode::varchar,'''')) <> MD5(ifnull(mid.zipcode::varchar,''''))
-                )
-            
-                select distinct
-                    A0.AddressCode,
-                    A0.AddressID,
-                    A0.AddressLine1,
-                    A0.AddressLine2,
-                    A0.AddressLine3,
-                    A0.AddressLine4,
-                    A0.AddressTypeCode,
-                    A0.AverageDailyPatientVolume,
-                    A0.City,
-                    A0.County,
-                    A0.FullFax,
-                    A0.FullPhone,
-                    A0.HasBillingStaff,
-                    A0.HasHandicapAccess,
-                    A0.HasLabServicesOnSite,
-                    A0.HasPharmacyOnSite,
-                    A0.HasSurgeryOnSite,
-                    A0.HasXrayOnSite,
-                    A0.IsDerived,
-                    A0.IsPrimaryOffice,
-                    A0.IsSurgeryCenter,
-                    A0.Latitude,
-                    A0.LegacyKeyOffice,
-                    A0.LegacyKeyPractice,
-                    A0.Longitude,
-                    A0.Nation,
-                    A0.OfficeCode,
-                    A0.OfficeCoordinatorName,
-                    A0.OfficeID,
-                    A0.OfficeName,
-                    A0.OfficeToAddressID,
-                    A0.ParkingInformation,
-                    A0.PaymentPolicy,
-                    A0.PhysicianCount,
-                    A0.PracticeCode,
-                    A0.PracticeDescription,
-                    A0.PracticeEmail,
-                    A0.PracticeID,
-                    A0.PracticeLogo,
-                    A0.PracticeMedicalDirector,
-                    A0.PracticeName,
-                    A0.PracticeNPI,
-                    A0.PracticeSoftware,
-                    A0.PracticeTIN,
-                    A0.PracticeWebsite,
-                    A0.ProviderID,
-                    A0.ProviderOfficeRank,
-                    A0.ProviderToOfficeID,
-                    A0.State,
-                    A0.YearPracticeEstablished,
-                    A0.ZipCode,
-                    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode  
-                from CTE_ProviderPracticeOffice as A0
-                left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID and A0.OfficeID = A1.OfficeID
-                left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID and A0.OfficeID = A2.OfficeID
-                where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
                 $$;
                         
 
@@ -495,8 +350,8 @@ insert_statement :=   $$
 merge_statement :=  $$
                     merge into mid.providerpracticeoffice as target using ($$|| select_statement ||$$) as source 
                     on source.providerid = target.providerid
-                    when matched and source.actioncode = 2 then $$|| update_statement ||$$
-                    when not matched and source.actioncode = 1 then $$ || insert_statement;
+                    when matched then $$|| update_statement ||$$
+                    when not matched then $$ || insert_statement;
 
                 
 ---------------------------------------------------------

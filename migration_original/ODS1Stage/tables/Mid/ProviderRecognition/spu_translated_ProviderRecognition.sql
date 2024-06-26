@@ -38,69 +38,21 @@ declare
 begin
 
 select_statement := $$ with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                    CTE_ProviderRecognition as (
+                        select
+                            p.providerid
+                        from
+                            $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                            join base.provider as P on p.providercode = ppp.ref_provider_code)
                         select distinct
-                        vwpr.providerid, 
-                        a.awardcode as RecognitionCode, 
-                        a.awarddisplayname as RecognitionDisplayName, 
-                        null as ServiceLine, 
-                        null as FacilityCode, 
-                        null as FacilityName,
-                        0 as ActionCode
-                    from CTE_ProviderBatch as pb  
-                    inner join base.vwuproviderrecognition vwpr on vwpr.providerid = pb.providerid
-                    inner join base.award a on (vwpr.awardid = a.awardid)
-                    ),
-
-                    -- insert Action
-                    CTE_Action_1 as (
-                        select 
-                            cte.providerid,
-                            cte.recognitioncode,
-                            cte.serviceline,
-                            cte.facilitycode,
-                            1 as ActionCode
-                    from CTE_ProviderRecognition as cte
-                    left join mid.providerrecognition as mid 
-                    on (cte.providerid = mid.providerid and cte.recognitioncode = mid.recognitioncode 
-                        and cte.serviceline = mid.serviceline and cte.facilitycode = mid.facilitycode)
-                    where mid.providerid is null),
-
-                    
-                    -- update Action
-                    CTE_Action_2 as (
-                        select 
-                            cte.providerid,
-                            2 as ActionCode
-                        from CTE_ProviderRecognition as cte
-                        join mid.providerrecognition as mid 
-                        on (cte.providerid = mid.providerid and cte.recognitioncode = mid.recognitioncode 
-                            and cte.serviceline = mid.serviceline and cte.facilitycode = mid.facilitycode)
-                        where 
-                            MD5(ifnull(cte.providerid::varchar,'''')) <> MD5(ifnull(mid.providerid::varchar,'''')) or 
-                            MD5(ifnull(cte.recognitioncode::varchar,'''')) <> MD5(ifnull(mid.recognitioncode::varchar,'''')) or 
-                            MD5(ifnull(cte.serviceline::varchar,'''')) <> MD5(ifnull(mid.serviceline::varchar,'''')) or 
-                            MD5(ifnull(cte.facilitycode::varchar,'''')) <> MD5(ifnull(mid.facilitycode::varchar,'''')) or
-                            MD5(ifnull(cte.facilityname::varchar,'''')) <> MD5(ifnull(mid.facilityname::varchar,''''))
-                     )
-                     
-                    select distinct
-                        A0.ProviderID, 
-                        A0.RecognitionCode, 
-                        A0.RecognitionDisplayName, 
-                        A0.ServiceLine,
-                        A0.FacilityCode, 
-                        A0.FacilityName, 
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode 
-                    from CTE_ProviderRecognition as A0 
-                    left join CTE_Action_1 as A1 on A0.ProviderID = A1.ProviderID
-                    left join CTE_Action_2 as A2 on A0.ProviderID = A2.ProviderID
-                    where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0 
+                            vwpr.providerid, 
+                            a.awardcode as RecognitionCode, 
+                            a.awarddisplayname as RecognitionDisplayName, 
+                            null as ServiceLine, 
+                            null as FacilityCode, 
+                            null as FacilityName
+                        from CTE_ProviderBatch as pb  
+                            inner join base.vwuproviderrecognition vwpr on vwpr.providerid = pb.providerid
+                            inner join base.award a on vwpr.awardid = a.awardid
                     $$;
                         
 
@@ -145,15 +97,10 @@ insert_statement :=   $$
 ---------------------------------------------------------  
 
 merge_statement := $$
-                   merge into mid.providerrecognition as target using ($$|| select_statement ||$$) as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED and source.actioncode = 2 then $$|| update_statement ||$$
-                   WHEN MATCHED and target.providerid = source.providerid 
-                        and target.recognitioncode = source.recognitioncode 
-                        and ifnull(target.serviceline, '''') = ifnull(source.serviceline, '''') 
-                        and ifnull(target.facilitycode, '''') = ifnull(source.facilitycode, '''') 
-                        and source.providerid is null then delete
-                   when not matched and source.actioncode = 1 then $$ || insert_statement;
+                   merge into mid.providerrecognition as target using 
+                   ($$|| select_statement ||$$) as source on source.providerid = target.providerid
+                   when matched then $$|| update_statement ||$$
+                   when not matched then $$ || insert_statement;
 
                 
 ---------------------------------------------------------

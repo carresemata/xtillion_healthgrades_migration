@@ -1,4 +1,4 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDEREDUCATION(is_full BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERAFFILIATION(is_full BOOLEAN)
     RETURNS STRING
     LANGUAGE SQL
     EXECUTE as CALLER
@@ -8,16 +8,12 @@ declare
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
--- mid.providereducation depends on:
+-- mid.provideraffiliation depends on: 
 --- mdm_team.mst.provider_profile_processing
---- base.providertoeducationinstitution
---- base.educationinstitution
---- base.educationinstitutiontype
---- base.address
---- base.citystatepostalcode
---- base.nation
---- base.degree
 --- base.provider
+--- base.providertoaffiliation
+--- base.affiliation
+--- base.providerrole
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -28,7 +24,7 @@ declare
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providereducation');
+    procedure_name varchar(50) default('sp_load_provideraffiliation');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
 
@@ -36,147 +32,83 @@ declare
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- select Statement
 begin
-select_statement := $$
-                    with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                    CTE_ProviderEducation as (
-                        select distinct 
-                        ptei.providertoeducationinstitutionid, 
-                        ptei.providerid, 
-                        ei.educationinstitutionname, 
-                        eit.educationinstitutiontypecode, 
-                        eit.educationinstitutiontypedescription,
-                        ptei.graduationyear, 
-                        ptei.positionheld, 
-                        d.degreeabbreviation, 
-                        csp.city, 
-                        csp.state, 
-                        n.nationname,
-                        0 as ActionCode
-                    from CTE_ProviderBatch as pb 
-                    join base.providertoeducationinstitution ptei on ptei.providerid = pb.providerid
-                    join base.educationinstitution ei on ei.educationinstitutionid = ptei.educationinstitutionid
-                    join base.educationinstitutiontype eit on eit.educationinstitutiontypeid = ptei.educationinstitutiontypeid
-                    left join base.address a on a.addressid = ei.addressid
-                    left join base.citystatepostalcode csp on a.citystatepostalcodeid = csp.citystatepostalcodeid
-                    left join base.nation n on csp.nationid = n.nationid
-                    left join base.degree d on d.degreeid = ptei.degreeid
-                    ),
-                    -- insert Action
-                    CTE_Action_1 as (
-                            select 
-                                cte.providertoeducationinstitutionid,
-                                1 as ActionCode
-                            from CTE_ProviderEducation as cte
-                            left join mid.providereducation as mid 
-                                on cte.providertoeducationinstitutionid = mid.providertoeducationinstitutionid 
-                            where mid.providertoeducationinstitutionid is null),
-                            
-                     -- update Action
-                     CTE_Action_2 as (
-                            select 
-                                cte.providertoeducationinstitutionid,
-                                2 as ActionCode
-                            from CTE_ProviderEducation as cte
-                            join mid.providereducation as mid 
-                                on cte.providertoeducationinstitutionid = mid.providertoeducationinstitutionid 
-                            where 
-                                
-                                MD5(ifnull(cte.providerid::varchar,'''')) <> MD5(ifnull(mid.providerid::varchar,'''')) or 
-                                MD5(ifnull(cte.educationinstitutionname::varchar,'''')) <> MD5(ifnull(mid.educationinstitutionname::varchar,'''')) or 
-                                MD5(ifnull(cte.educationinstitutiontypecode::varchar,'''')) <> MD5(ifnull(mid.educationinstitutiontypecode::varchar,'''')) or 
-                                MD5(ifnull(cte.educationinstitutiontypedescription::varchar,'''')) <> MD5(ifnull(mid.educationinstitutiontypedescription::varchar,'''')) or 
-                                MD5(ifnull(cte.graduationyear::varchar,'''')) <> MD5(ifnull(mid.graduationyear::varchar,'''')) or 
-                                MD5(ifnull(cte.positionheld::varchar,'''')) <> MD5(ifnull(mid.positionheld::varchar,'''')) or 
-                                MD5(ifnull(cte.degreeabbreviation::varchar,'''')) <> MD5(ifnull(mid.degreeabbreviation::varchar,'''')) or 
-                                MD5(ifnull(cte.city::varchar,'''')) <> MD5(ifnull(mid.city::varchar,'''')) or 
-                                MD5(ifnull(cte.state::varchar,'''')) <> MD5(ifnull(mid.state::varchar,'''')) or 
-                                MD5(ifnull(cte.nationname::varchar,'''')) <> MD5(ifnull(mid.nationname::varchar,'''')) 
-                     )
-        
-                    select distinct
-                        A0.ProviderToEducationInstitutionID, 
-                        A0.ProviderID, 
-                        A0.EducationInstitutionName, 
-                        A0.EducationInstitutionTypeCode, 
-                        A0.EducationInstitutionTypeDescription,
-                        A0.GraduationYear, 
-                        A0.PositionHeld, 
-                        A0.DegreeAbbreviation, 
-                        A0.City, 
-                        A0.State, 
-                        A0.NationName,
-                        ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode 
-                    from CTE_ProviderEducation as A0 
-                                        left join CTE_Action_1 as A1 on A0.ProviderToEducationInstitutionID = A1.ProviderToEducationInstitutionID
-                                        left join CTE_Action_2 as A2 on A0.ProviderToEducationInstitutionID = A2.ProviderToEducationInstitutionID
-                                        where ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0 
-                                        $$;
+--- select Statement
+
+select_statement := $$ with CTE_ProviderBatch as (
+                        select
+                            p.providerid
+                        from
+                            $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                            join base.provider as P on p.providercode = ppp.ref_provider_code)
+                        select
+                            pta.providertoaffiliationid,
+                            pta.providerid,
+                            pta.affiliationbegindate,
+                            pta.affiliationenddate,
+                            pta.affiliationname,
+                            aff.affiliationtypecode,
+                            aff.affiliationtypedescription,
+                            pr.rolecode,
+                            pr.roledescription
+                        from
+                            CTE_ProviderBatch as pb
+                            join base.providertoaffiliation as pta on pta.providerid = pb.providerid
+                            join base.affiliation as aff on pta.affiliationid = aff.affiliationid
+                            join base.providerrole as pr on pta.providerroleid = pr.providerroleid $$;
 
 --- update Statement
 update_statement := ' update 
                      SET 
-                        ProviderToEducationInstitutionID = source.providertoeducationinstitutionid, 
-                        ProviderID = source.providerid, 
-                        EducationInstitutionName = source.educationinstitutionname, 
-                        EducationInstitutionTypeCode = source.educationinstitutiontypecode, 
-                        EducationInstitutionTypeDescription = source.educationinstitutiontypedescription,
-                        GraduationYear = source.graduationyear, 
-                        PositionHeld = source.positionheld, 
-                        DegreeAbbreviation = source.degreeabbreviation, 
-                        City = source.city, 
-                        State = source.state, 
-                        NationName = source.nationname';
+                        ProviderToAffiliationID = source.providertoaffiliationid,
+                        ProviderID = source.providerid,
+                        AffiliationBeginDate = source.affiliationbegindate,
+                        AffiliationEndDate = source.affiliationenddate,
+                        AffiliationName = source.affiliationname,
+                        AffiliationTypeCode = source.affiliationtypecode,
+                        AffiliationTypeDescription = source.affiliationtypedescription,
+                        RoleCode = source.rolecode,
+                        RoleDescription = source.roledescription';
 
 --- insert Statement
-insert_statement := ' insert  
-                        (ProviderToEducationInstitutionID,
-                        ProviderID,
-                        EducationInstitutionName,
-                        EducationInstitutionTypeCode,
-                        EducationInstitutionTypeDescription,
-                        GraduationYear,
-                        PositionHeld,
-                        DegreeAbbreviation,
-                        City,
-                        State,
-                        NationName)
-                      values 
-                        (source.providertoeducationinstitutionid,
-                        source.providerid,
-                        source.educationinstitutionname,
-                        source.educationinstitutiontypecode,
-                        source.educationinstitutiontypedescription,
-                        source.graduationyear,
-                        source.positionheld,
-                        source.degreeabbreviation,
-                        source.city,
-                        source.state,
-                        source.nationname)';
+insert_statement := ' insert  (
+                            ProviderToAffiliationID,
+                            ProviderID,
+                            AffiliationBeginDate,
+                            AffiliationEndDate,
+                            AffiliationName,
+                            AffiliationTypeCode,
+                            AffiliationTypeDescription,
+                            RoleCode,
+                            RoleDescription)
+                      values (
+                            source.providertoaffiliationid,
+                            source.providerid,
+                            source.affiliationbegindate,
+                            source.affiliationenddate,
+                            source.affiliationname,
+                            source.affiliationtypecode,
+                            source.affiliationtypedescription,
+                            source.rolecode,
+                            source.roledescription)';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement := ' merge into mid.providereducation as target using 
+merge_statement := ' merge into mid.provideraffiliation as target using 
                    ('||select_statement||') as source 
-                   on source.providertoeducationinstitutionid = target.providertoeducationinstitutionid
-                   WHEN MATCHED and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   on source.providertoaffiliationid = target.providertoaffiliationid
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
 ---------------------------------------------------------
 
 if (is_full) then
-    truncate table Mid.ProviderEducation;
+    truncate table Mid.ProviderAffiliation;
 end if; 
 execute immediate merge_statement ;
 
