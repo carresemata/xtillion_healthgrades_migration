@@ -69,7 +69,7 @@ declare
 -- ermart1.patientexperience_opeaaveragesbycohortrange
 -- ermart1.patientexperience_opeaprovidertocohortrange
 -- ermart1.ref_processmeasure
--- hosp_directory.hosp_cohort (ermart1.facility_vwufacilityhgdisplayprocedures)
+-- hosp_directory.dbo_hosp_cohort (ermart1.facility_vwufacilityhgdisplayprocedures)
 
 
 ---------------------------------------------------------

@@ -50,7 +50,7 @@ declare
 --- base.facilityimage (base.vwupdcfacilitydetail)
 -- ermart1.facility_facility
 -- ermart1.facility_hospitaldetail
--- hosp_directory.master_directory
+-- hosp_directory.dbo_master_directory
 
 
 ---------------------------------------------------------
@@ -118,7 +118,7 @@ cte_facility_phones as (
         base.providertofacility pf
         inner join cte_provider_batch x on x.providerid = pf.providerid
         inner join base.facility f on f.facilityid = pf.facilityid
-        inner join hosp_directory.master_directory m on m.hgid = f.legacykey
+        inner join hosp_directory.dbo_master_directory m on m.hgid = f.legacykey
     qualify row_number() over(partition by pf.providerid, f.facilityid order by m.phone_nbr)  <= 1
 ),
 cte_provider_office_phones as (
