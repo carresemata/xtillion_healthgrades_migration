@@ -5,7 +5,7 @@ import json
 def table_dependencies():
     table_dependencies = {}
     base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')]
-    prefixes = ['base.', 'mid.', 'show.', 'hosp.', 'ermart1.']
+    prefixes = ['base.', 'mid.', 'show.', 'hosp_directory.', 'ermart1.']
 
     # Load view dependencies
     view_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/views_dependencies.json')
@@ -20,9 +20,9 @@ def table_dependencies():
                 os.chdir(table)
                 with open(f'spu_translated_{table}.sql', 'r') as f:
                     content = f.read()
-                    match = re.search(r'declare(.*?)actions', content, re.DOTALL | re.IGNORECASE)
+                    match = re.search(r'statements(.*?)execution', content, re.DOTALL | re.IGNORECASE)
                     if match:
-                        dependencies_section = match.group(1)
+                        dependencies_section = match.group(1).lower()
                         dependencies = []
                         for prefix in prefixes:
                             dependencies.extend(re.findall(r'\b' + re.escape(prefix) + r'\w*\b', dependencies_section))
@@ -57,15 +57,30 @@ def table_dependencies():
         json.dump(table_dependencies, audit_file, indent=4)
 
     # Create sp_dependencies.json where the empty dependencies are removed
-    sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
+    sp_dependencies = {table: deps for table, deps in table_dependencies.items()}
     # remove all items that are not in keys
     sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
     # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
     sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
-    os.chdir('..')
+    os.chdir(os.path.join(os.path.dirname(os.getcwd()), 'other'))
     audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_sp_dependencies.json')
     with open('audit_sp_dependencies.json', 'w') as f:
         json.dump(sp_dependencies, f, indent=4)
+    
+    # Store all the dependencies that are not in the keys
+    # Iterate over all the dependencies and check if they are in the keys
+    # If they are not in the keys, store them in a list
+    static_tables = []
+    for table, deps in table_dependencies.items():
+        for dep in deps:
+            if dep not in table_dependencies.keys():
+                static_tables.append(dep)
+    # order the static tables
+    static_tables = sorted(set(static_tables))
+    # Store the static tables in a txt file in the other folder
+    with open('static_tables.txt', 'w') as f:
+        for table in static_tables:
+            f.write(table + '\n')
 
 table_dependencies()
 
@@ -82,4 +97,3 @@ table_dependencies()
     #                 if diff:
     #                     print(diff)
     #             print()
-
