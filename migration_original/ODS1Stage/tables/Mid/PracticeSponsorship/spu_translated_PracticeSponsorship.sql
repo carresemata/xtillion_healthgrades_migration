@@ -123,9 +123,7 @@ CTE_PractMultClientRank as (
             providercount.clientcode = rawpracdata.clientcode and 
             providercount.productcode = rawpracdata.productcode and 
             providercount.practicecode = rawpracdata.practicecode
-),
-
-CTE_InsertPracticeSponsorship as (
+)
             select 
                 rawpracdatainner.practiceid, 
                 rawpracdatainner.practicecode, 
@@ -136,9 +134,7 @@ CTE_InsertPracticeSponsorship as (
                 rawpracdatainner.clienttoproductid, 
                 rawpracdatainner.clientcode, 
                 rawpracdatainner.clientname, 
-                ifnull(practmultclientrank.clientpractrank, rawpracdatainner.recid) as ClientPractRank, -- Equivlaent to ISNULL in SQL Server
-                0 as ActionCode -- Create a new column ActionCode and set it to 0 (default value: no change)
-
+                ifnull(practmultclientrank.clientpractrank, rawpracdatainner.recid) as ClientPractRank
             from 
                 CTE_RawPracData as rawPracDataInner
                 left join CTE_PractMultClientRank as practMultClientRank on 
@@ -147,52 +143,6 @@ CTE_InsertPracticeSponsorship as (
                     practmultclientrank.productcode = rawpracdatainner.productcode
             where 
                 practmultclientrank.clientpractrank = 1
-),
--- insert Action
-CTE_Action_1 as (
-    select temppracspon.practiceid, 1 as ActionCode
-    from CTE_InsertPracticeSponsorship as tempPracSpon
-    left join mid.practicesponsorship as midPracSpon on 
-        temppracspon.practiceid = midpracspon.practiceid and 
-        temppracspon.practicecode = midpracspon.practicecode
-    where midpracspon.practiceid is null
-    group by temppracspon.practiceid
-),
--- update Action
-CTE_Action_2 as (
-    select temppracspon.practiceid, 2 as ActionCode
-    from CTE_InsertPracticeSponsorship as tempPracSpon
-    join mid.practicesponsorship PracSpon on 
-        temppracspon.practiceid = pracspon.practiceid and 
-        temppracspon.practicecode = pracspon.practicecode
-    where 
-        MD5(ifnull(temppracspon.productdescription::varchar, '''''''')) <> MD5(ifnull(pracspon.productdescription::varchar, ''''''''))
-        or MD5(ifnull(temppracspon.productgroupcode::varchar, '''''''')) <> MD5(ifnull(pracspon.productgroupcode::varchar, ''''''''))
-        or MD5(ifnull(temppracspon.productgroupdescription::varchar, '''''''')) <> MD5(ifnull(pracspon.productgroupdescription::varchar, ''''''''))
-        or MD5(ifnull(temppracspon.clienttoproductid::varchar, '''''''')) <> MD5(ifnull(pracspon.clienttoproductid::varchar, ''''''''))
-        or MD5(ifnull(temppracspon.clientcode::varchar, '''''''')) <> MD5(ifnull(pracspon.clientcode::varchar, ''''''''))
-        or MD5(ifnull(temppracspon.clientname::varchar, '''''''')) <> MD5(ifnull(pracspon.clientname::varchar, ''''''''))
-    group by temppracspon.practiceid
-)
-select 
-distinct
-    A0.PracticeID,
-    A0.PracticeCode,
-    A0.ProductCode,
-    A0.ProductDescription,
-    A0.ProductGroupCode ,
-    A0.ProductGroupDescription,
-    A0.ClientToProductId,
-    A0.ClientCode,
-    A0.ClientName,
-    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) as ActionCode
-from CTE_InsertPracticeSponsorship as A0
-left join
-    CTE_ACTION_1 as A1 on A0.PracticeID = A1.PracticeID
-left join
-    CTE_ACTION_2 as A2 on A0.PracticeID = A2.PracticeID
-where
-    ifnull(A1.ActionCode,ifnull(A2.ActionCode, A0.ActionCode)) <> 0
 
 
 $$;
@@ -212,15 +162,15 @@ update_statement := ' update
 
 --- insert Statement
 insert_statement := ' insert  
-                        (PRACTICEID, 
-                        PRACTICECODE, 
-                        PRODUCTCODE, 
-                        PRODUCTDESCRIPTION, 
-                        PRODUCTGROUPCODE, 
-                        PRODUCTGROUPDESCRIPTION, 
-                        CLIENTTOPRODUCTID, 
-                        CLIENTCODE, 
-                        CLIENTNAME)
+                        (practiceid, 
+                       practicecode, 
+                       productcode, 
+                       productdescription, 
+                       productgroupcode, 
+                       productgroupdescription, 
+                       clienttoproductid, 
+                       clientcode, 
+                       clientname )
                       values 
                         (source.practiceid, 
                         source.practicecode, 
@@ -240,8 +190,8 @@ insert_statement := ' insert
 merge_statement := ' merge into mid.practicesponsorship as target using 
                    ('||select_statement||') as source 
                    on source.practiceid = target.practiceid
-                   WHEN MATCHED and ActionCode = 2 then '||update_statement|| '
-                   when not matched and ActionCode = 1 then '||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
