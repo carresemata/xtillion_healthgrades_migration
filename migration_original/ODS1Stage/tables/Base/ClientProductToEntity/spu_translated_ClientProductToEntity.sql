@@ -29,12 +29,14 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_ClientProductToEntity(i
     select_statement_2 string;
     select_statement_3 string;
     select_statement_4 string;
+    select_statement_5 string;
     update_statement string;
     insert_statement string;
     merge_statement_1 string;
     merge_statement_2 string;
     merge_statement_3 string;
     merge_statement_4 string;
+    merge_statement_5 string;
     prefix string;
     suffix string;
     status string;
@@ -207,6 +209,49 @@ from
 where rowrank = 1
     $$;
 
+
+    --------------------------------–------spuMergePracticeCustomerProduct----------------------
+    
+    select_statement_5 := $$ with Cte_office as (
+            SELECT distinct
+                to_varchar(p.PROVIDER_PROFILE:CUSTOMER_PRODUCT[0]:CUSTOMER_PRODUCT_CODE) as CustomerProductCode, 
+                to_varchar(json.value:OFFICE_CODE) as OfficeCode
+            FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+            , lateral flatten(input => p.PROVIDER_PROFILE:OFFICE) as json
+            where to_varchar(p.PROVIDER_PROFILE:CUSTOMER_PRODUCT[0]:CUSTOMER_PRODUCT_CODE) is not null
+        ),
+        cte_practice as (
+            SELECT
+                p.ref_office_code as officecode,
+                to_varchar(json.value:PRACTICE_CODE) as PracticeCode,
+                to_varchar(json.value:DATA_SOURCE_CODE) as SourceCode,
+                to_timestamp_ntz(json.value:UPDATED_DATETIME) as LastUpdateDate
+            FROM $$||mdm_db||$$.mst.office_profile_processing as p
+            , lateral flatten(input => p.OFFICE_PROFILE:PRACTICE) as json
+        ),
+        cte_swimlane as (
+            select
+                p.practicecode,
+                o.customerproductcode,
+                p.lastupdatedate,
+                p.sourcecode
+            from cte_practice as p
+                join cte_office as o on o.officecode = p.officecode
+        ) 
+        select 
+            cp.clienttoproductid,
+            et.entitytypeid,
+            p.practiceid as EntityID,
+            t.SourceCode,
+            t.LastUpdateDate
+        from
+            cte_swimlane T
+            join base.entitytype et on et.entitytypecode = 'PRAC'
+            join base.clienttoproduct cp on t.customerproductcode = cp.clienttoproductcode
+            join base.practice p on p.practicecode = t.practicecode
+        qualify row_number() over(partition by practiceid order by t.lastupdatedate desc) = 1 $$;
+            
+
     --- insert Statement
     insert_statement := ' 
         insert
@@ -247,6 +292,7 @@ where rowrank = 1
     merge_statement_2:= prefix || select_statement_2 || suffix;
     merge_statement_3:= prefix || select_statement_3 || suffix;
     merge_statement_4:= prefix || select_statement_4 || suffix;
+    merge_statement_5:= prefix || select_statement_5 || suffix;
 
     ---------------------------------------------------------
     ------------------- 5. execution ------------------------
@@ -259,6 +305,7 @@ where rowrank = 1
     execute immediate merge_statement_2;
     execute immediate merge_statement_3;
     execute immediate merge_statement_4;
+    execute immediate merge_statement_5;
     
     ---------------------------------------------------------
     --------------- 6. status monitoring --------------------
