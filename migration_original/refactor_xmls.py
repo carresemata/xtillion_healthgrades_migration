@@ -69,27 +69,42 @@ def write_xml (matches):
 
 if __name__ == "__main__":
     # Get a list of all files in the directory that contain "translated" in their name
-    directory = 'ODS1Stage/tables/'
-    schemas = os.listdir(directory)
+    test = '''
+         utils.p_json_to_xml(
+             ARRAY_AGG(
+                 '{ ' ||
+                 IFF(SpecialtyCode IS NOT NULL, '"spc":' || '"' || SpecialtyCode || '"', '')
+                 || ' }'
+             )::VARCHAR,
+             '',
+             ''
+         )
 
-    # Loop over the files
-    for schema in schemas:
-        # Open the file
-        tabes_directory = os.path.join(directory, schema)
-        tables = os.listdir(tabes_directory)
-        for table in tables:
-            table_path = os.path.join(tabes_directory, table)
-            files = os.listdir(table_path)
-            for file in files:
-                if 'translated' in file:
-                    file_path = os.path.join(table_path, file)
-                    new_content = None
-                    with open(file_path, 'r') as f:
-                        sql_procedure = f.read()
-                        if "p_json_to_xml" in sql_procedure.lower():
-                            new_content = replace_json_calls_with_placeholder(sql_procedure)
-                    if new_content:
-                        with open(file_path, 'w') as f:
-                            f.write(new_content)
+'''
+
+
+    print(write_xml([test]))
+    # directory = 'ODS1Stage/tables/'
+    # schemas = os.listdir(directory)
+
+    # # Loop over the files
+    # for schema in schemas:
+    #     # Open the file
+    #     tabes_directory = os.path.join(directory, schema)
+    #     tables = os.listdir(tabes_directory)
+    #     for table in tables:
+    #         table_path = os.path.join(tabes_directory, table)
+    #         files = os.listdir(table_path)
+    #         for file in files:
+    #             if 'translated' in file:
+    #                 file_path = os.path.join(table_path, file)
+    #                 new_content = None
+    #                 with open(file_path, 'r') as f:
+    #                     sql_procedure = f.read()
+    #                     if "p_json_to_xml" in sql_procedure.lower():
+    #                         new_content = replace_json_calls_with_placeholder(sql_procedure)
+    #                 if new_content:
+    #                     with open(file_path, 'w') as f:
+    #                         f.write(new_content)
 
     # replace_json_calls_with_placeholder(sql_procedure)
