@@ -175,7 +175,6 @@ declare
     update_statement_20 string;
     temp_table_statement_1 string;
     update_statement_temp_1 string;
-    update_statement_temp_2 string;
     update_statement_21 string;
     update_statement_22 string;
     if_condition string;
@@ -191,333 +190,19 @@ declare
 ---------------------------------------------------------     
 begin
 
----------------- Step 1: Freeze Providers ------------------
---- select Statement
-select_statement_1 := $$ select
-                            *
-                        from
-                            show.solrprovider_FREEZE
-                        where
-                            SponsorCode IN (
-                                select
-                                    ClientCode
-                                from
-                                    show.webfreeze
-                                where
-                                    current_timestamp BETWEEN FreezeStartDate
-                                    and ifnull(FreezeEndDate, '9999-09-09')) $$;
-
-
-
---- insert Statement
-insert_statement_1 := ' insert
-                            (
-                                ProviderID,
-                                ProviderCode,
-                                ProviderTypeID,
-                                ProviderTypeGroup,
-                                FirstName,
-                                MiddleName,
-                                LastName,
-                                Suffix,
-                                Degree,
-                                Gender,
-                                NPI,
-                                AMAID,
-                                UPIN,
-                                MedicareID,
-                                DEANumber,
-                                TaxIDNumber,
-                                DateOfBirth,
-                                PlaceOfBirth,
-                                CarePhilosophy,
-                                ProfessionalInterest,
-                                PrimaryEmailAddress,
-                                MedicalSchoolNation,
-                                YearsSinceMedicalSchoolGraduation,
-                                HasDisplayImage,
-                                HasElectronicMedicalRecords,
-                                HasElectronicPrescription,
-                                AcceptsNewPatients,
-                                YearlySearchVolume,
-                                PatientExperienceSurveyOverallScore,
-                                PatientExperienceSurveyOverallCount,
-                                PracticeOfficeXML,
-                                FacilityXML,
-                                SpecialtyXML,
-                                EducationXML,
-                                LicenseXML,
-                                LanguageXML,
-                                MalpracticeXML,
-                                SanctionXML,
-                                SponsorshipXML,
-                                AffiliationXML,
-                                ProcedureXML,
-                                ConditionXML,
-                                HealthInsuranceXML,
-                                MediaXML,
-                                HasAddressXML,
-                                HasSpecialtyXML,
-                                Active,
-                                UpdateDate,
-                                InsertDate,
-                                ProviderLegacyKey,
-                                DisplayImage,
-                                AddressXML,
-                                BoardActionXML,
-                                SurveyXML,
-                                RecognitionXML,
-                                SurveyResponse,
-                                UpdatedDate,
-                                UpdatedSource,
-                                HasPhilosophy,
-                                HasMediaXML,
-                                HasProcedureXML,
-                                HasConditionXML,
-                                HasMalpracticeXML,
-                                HasSanctionXML,
-                                HasBoardActionXML,
-                                IsActive,
-                                ExpireCode,
-                                Title,
-                                CityStateAll,
-                                SurveyResponseDate,
-                                ProviderSpecialtyFacility5StarXML,
-                                HasProviderSpecialtyFacility5StarXML,
-                                DisplayPatientExperienceSurveyOverallScore,
-                                ProductGroupCode,
-                                SponsorCode,
-                                FacilityCode,
-                                SearchSponsorshipXML,
-                                ProductCode,
-                                VideoXML,
-                                OASXML,
-                                SuppressSurvey,
-                                ProviderURL,
-                                ImageXML,
-                                AdXML,
-                                HasProfessionalOrganizationXML,
-                                ProfessionalOrganizationXML,
-                                ProviderProfileViewOneYear,
-                                PracticingSpecialtyXML,
-                                CertificationXML,
-                                HasPracticingSpecialtyXML,
-                                HasCertificationXML,
-                                PatientExperienceSurveyOverallStarValue,
-                                ProviderBiography,
-                                DisplayStatusCode,
-                                HealthInsuranceXML_v2,
-                                ProviderDEAXML,
-                                ProviderTypeXML,
-                                SubStatusCode,
-                                DuplicateProviderCode,
-                                DeactivationReason,
-                                ProcedureHierarchyXML,
-                                ConditionHierarchyXML,
-                                ProcMappedXML,
-                                CondMappedXML,
-                                PracSpecHeirXML,
-                                AboutMeXML,
-                                HasAboutMeXML,
-                                PatientVolume,
-                                HasMalpracticeState,
-                                ProcedureCount,
-                                ConditionCount,
-                                AvailabilityXML,
-                                VideoXML2,
-                                --AvailabilityStatement,
-                                IsInClientMarket,
-                                HasOAR,
-                                IsMMPUser,
-                                NatlAdvertisingXML,
-                                APIXML,
-                                DIHGroupNumber,
-                                SubStatusDescription,
-                                DEAXML,
-                                EmailAddressXML,
-                                DegreeXML,
-                                HasSurveyXML,
-                                HasDEAXML,
-                                HasEmailAddressXML,
-                                ClientCertificationXML,
-                                HasGoogleOAS,
-                                HasVideoXML2,
-                                HasAboutMe,
-                                ConversionPathXML,
-                                SearchBoostSatisfaction,
-                                SearchBoostAccessibility,
-                                IsPCPCalculated,
-                                FAFBoostSatisfaction,
-                                FAFBoostSancMalp,
-                                FFDisplaySpecialty,
-                                FFPESBoost,
-                                FFMalMultiHQ,
-                                FFMalMulti,
-                                CLinicalFocusXML,
-                                ClinicalFocusDCPXML,
-                                SyndicationXML,
-                                TeleHealthXML
-                            )
-                        values
-                        (
-                            source.providerid,
-                            source.providercode,
-                            source.providertypeid,
-                            source.providertypegroup,
-                            source.firstname,
-                            source.middlename,
-                            source.lastname,
-                            source.suffix,
-                            source.degree,
-                            source.gender,
-                            source.npi,
-                            source.amaid,
-                            source.upin,
-                            source.medicareid,
-                            source.deanumber,
-                            source.taxidnumber,
-                            source.dateofbirth,
-                            source.placeofbirth,
-                            source.carephilosophy,
-                            source.professionalinterest,
-                            source.primaryemailaddress,
-                            source.medicalschoolnation,
-                            source.yearssincemedicalschoolgraduation,
-                            source.hasdisplayimage,
-                            source.haselectronicmedicalrecords,
-                            source.haselectronicprescription,
-                            source.acceptsnewpatients,
-                            source.yearlysearchvolume,
-                            source.patientexperiencesurveyoverallscore,
-                            source.patientexperiencesurveyoverallcount,
-                            source.practiceofficexml,
-                            source.facilityxml,
-                            source.specialtyxml,
-                            source.educationxml,
-                            source.licensexml,
-                            source.languagexml,
-                            source.malpracticexml,
-                            source.sanctionxml,
-                            source.sponsorshipxml,
-                            source.affiliationxml,
-                            source.procedurexml,
-                            source.conditionxml,
-                            source.healthinsurancexml,
-                            source.mediaxml,
-                            source.hasaddressxml,
-                            source.hasspecialtyxml,
-                            source.active,
-                            source.updatedate,
-                            source.insertdate,
-                            source.providerlegacykey,
-                            source.displayimage,
-                            source.addressxml,
-                            source.boardactionxml,
-                            source.surveyxml,
-                            source.recognitionxml,
-                            source.surveyresponse,
-                            source.updateddate,
-                            source.updatedsource,
-                            source.hasphilosophy,
-                            source.hasmediaxml,
-                            source.hasprocedurexml,
-                            source.hasconditionxml,
-                            source.hasmalpracticexml,
-                            source.hassanctionxml,
-                            source.hasboardactionxml,
-                            source.isactive,
-                            source.expirecode,
-                            source.title,
-                            source.citystateall,
-                            source.surveyresponsedate,
-                            source.providerspecialtyfacility5StarXML,
-                            source.hasproviderspecialtyfacility5StarXML,
-                            source.displaypatientexperiencesurveyoverallscore,
-                            source.productgroupcode,
-                            source.sponsorcode,
-                            source.facilitycode,
-                            source.searchsponsorshipxml,
-                            source.productcode,
-                            source.videoxml,
-                            source.oasxml,
-                            source.suppresssurvey,
-                            source.providerurl,
-                            source.imagexml,
-                            source.adxml,
-                            source.hasprofessionalorganizationxml,
-                            source.professionalorganizationxml,
-                            source.providerprofileviewoneyear,
-                            source.practicingspecialtyxml,
-                            source.certificationxml,
-                            source.haspracticingspecialtyxml,
-                            source.hascertificationxml,
-                            source.patientexperiencesurveyoverallstarvalue,
-                            source.providerbiography,
-                            source.displaystatuscode,
-                            source.healthinsurancexml_v2,
-                            source.providerdeaxml,
-                            source.providertypexml,
-                            source.substatuscode,
-                            source.duplicateprovidercode,
-                            source.deactivationreason,
-                            source.procedurehierarchyxml,
-                            source.conditionhierarchyxml,
-                            source.procmappedxml,
-                            source.condmappedxml,
-                            source.pracspecheirxml,
-                            source.aboutmexml,
-                            source.hasaboutmexml,
-                            source.patientvolume,
-                            source.hasmalpracticestate,
-                            source.procedurecount,
-                            source.conditioncount,
-                            source.availabilityxml,
-                            source.videoxml2,
-                            --source.availabilitystatement,
-                            source.isinclientmarket,
-                            source.hasoar,
-                            source.ismmpuser,
-                            source.natladvertisingxml,
-                            source.apixml,
-                            source.dihgroupnumber,
-                            source.substatusdescription,
-                            source.deaxml,
-                            source.emailaddressxml,
-                            source.degreexml,
-                            source.hassurveyxml,
-                            source.hasdeaxml,
-                            source.hasemailaddressxml,
-                            source.clientcertificationxml,
-                            source.hasgoogleoas,
-                            source.hasvideoxml2,
-                            source.hasaboutme,
-                            source.conversionpathxml,
-                            source.searchboostsatisfaction,
-                            source.searchboostaccessibility,
-                            source.ispcpcalculated,
-                            source.fafboostsatisfaction,
-                            source.fafboostsancmalp,
-                            source.ffdisplayspecialty,
-                            source.ffpesboost,
-                            source.ffmalmultihq,
-                            source.ffmalmulti,
-                            source.clinicalfocusxml,
-                            source.clinicalfocusdcpxml,
-                            source.syndicationxml,
-                            source.telehealthxml
-                        );';
-
 
 ------------ Step 2: Generate from Mid --------------
 
 --- select Statement 
 select_statement_2 :=  $$ with cte_batch_process as (
                             	select distinct
+                                -- select top 1000
                     					p.providerid
                     			from base.provider as p 
                     			where 	p.npi is not null
                     			union 
                     			select distinct
+                                -- select top 1000
                     					p.providerid
                     			from    $$ || mdm_db || $$.mst.provider_profile_processing as ppp 
                     			inner join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
@@ -1720,11 +1405,14 @@ insert_statement_2 := ' insert
                                 source.providersubtypecode
                             );';
 
+-- fast
 update_statement_3 := $$ update show.solrprovider target
                             SET target.providerlegacykey = src.legacykey
-                            from base.providerlegacykeys as src where target.providerid = src.providerid; 
+                            from base.providerlegacykeys as src 
+                            where target.providerid = src.providerid; 
                         $$;
 
+-- this delete doesn't seem to be doing anything
 update_statement_4 := $$ delete from show.solrprovider
                         where SOLRPRoviderID IN (
                             select SOLRPRoviderID
@@ -1740,12 +1428,15 @@ update_statement_4 := $$ delete from show.solrprovider
                         ); 
                         $$;
 
+
+-- fast + we can merge this with update_statement 3 on providerid instead of code. does update rows
 update_statement_5 := $$ update show.solrprovider target
                             SET DateOfFirstLoad = src.lastupdatedate
                             from  base.provider src 
                             where src.providercode = target.providercode; 
                         $$;
 
+-- fast 
 update_statement_6 := $$ update show.solrprovider target
                             SET 
                                 target.sourceupdate = src.sourcename, 
@@ -1754,6 +1445,8 @@ update_statement_6 := $$ update show.solrprovider target
                             where src.providerid = target.providerid; 
                         $$;
 
+
+-- ~3 seconds
 update_statement_7 := $$ update show.solrprovider target
                             SET AcceptsNewPatients = 1
                             from mid.provider src 
@@ -1770,7 +1463,9 @@ update_statement_8 := $$ update show.solrprovider target
                             where src.providerid = target.providerid; 
                         $$;
 
-update_statement_9 := $$update show.solrprovider target
+
+-- ~4s but does update rows even in full
+update_statement_9 := $$  update show.solrprovider target
                             SET IsBoardActionEligible = CASE WHEN x.providerid is not null then 1 else 0 END
                             from (
                                 select ps.providerid
@@ -1803,7 +1498,8 @@ update_statement_9 := $$update show.solrprovider target
 --------- Step 3: Client Certification XML ------------
 
 
-update_statement_10 := $$ update
+-- the CTE for the XML generation returns 0 rows so this updates 0 rows
+update_statement_10 := $$   update
                                 show.solrprovider target
                             SET
                                 ClientCertificationXML = parse_xml(CTE_ccx.certs)
@@ -1823,45 +1519,14 @@ update_statement_10 := $$ update
                                     cte_cSpcL as (
                                         select
                                             pc.providercode,
-                                            utils.p_JSON_TO_XML(
-                                                array_agg(
-                                                    '{ ' || iff(
-                                                        pc.cspcd is not null,
-                                                        '"cSpCd":' || '"' || pc.cspcd || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cspy is not null,
-                                                        '"cSpY":' || '"' || pc.cspy || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cacd is not null,
-                                                        '"caCd":' || '"' || pc.cacd || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cad is not null,
-                                                        '"caD":' || '"' || pc.cad || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cbcd is not null,
-                                                        '"cbCd":' || '"' || pc.cbcd || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cbd is not null,
-                                                        '"cbD":' || '"' || pc.cbd || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.cscd is not null,
-                                                        '"csCd":' || '"' || pc.cscd || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        pc.csd is not null,
-                                                        '"csD":' || '"' || pc.csd || '"',
-                                                        ''
-                                                    ) || ' }'
-                                                )::varchar,
-                                                '',
-                                                'cSpC'
-                                            ) as cSpcL
+                                            listagg( '<cspc>' || iff(pc.cspcd is not null,'<cspcd>' || pc.cspcd || '</cspcd>','') ||
+iff(pc.cspy is not null,'<cspy>' || pc.cspy || '</cspy>','') ||
+iff(pc.cacd is not null,'<cacd>' || pc.cacd || '</cacd>','') ||
+iff(pc.cad is not null,'<cad>' || pc.cad || '</cad>','') ||
+iff(pc.cbcd is not null,'<cbcd>' || pc.cbcd || '</cbcd>','') ||
+iff(pc.cbd is not null,'<cbd>' || pc.cbd || '</cbd>','') ||
+iff(pc.cscd is not null,'<cscd>' || pc.cscd || '</cscd>','') ||
+iff(pc.csd is not null,'<csd>' || pc.csd || '</csd>','')  || '</cspc>','') as cSpcL
                                         from
                                             base.providercertification as pc
                                         where
@@ -1882,21 +1547,8 @@ update_statement_10 := $$ update
                                         select
                                             cp.solrproviderid,
                                             cp.providercode,
-                                            utils.p_JSON_TO_XML(
-                                                array_agg(
-                                                    '{ ' || iff(
-                                                        SUBSTRING(cp.sourcecode, 3, 50) is not null,
-                                                        '"spnCd":' || '"' || SUBSTRING(cp.sourcecode, 3, 50) || '"' || ',',
-                                                        ''
-                                                    ) || iff(
-                                                        CTE_cspcl.cspcl is not null,
-                                                        '"cSpcL":' || '"' || CTE_cspcl.cspcl || '"',
-                                                        ''
-                                                    ) || ' }'
-                                                )::varchar,
-                                                'cSpnL',
-                                                'cSpn'
-                                            ) as certs
+                                            '<cspnl>' || listagg( '<cspn>' || iff(SUBSTRING(cp.sourcecode, 3, 50) is not null,'<spncd>' || SUBSTRING(cp.sourcecode, 3, 50) || '</spncd>','') ||
+iff(cte_cspcl.cspcl is not null,'<cspcl>' || cte_cspcl.cspcl || '</cspcl>','')  || '</cspn>','') || '</cspnl>' as certs
                                         from
                                             cte_client_providers as cp
                                             left join CTE_cSpcL on CTE_cspcl.providercode = cp.providercode -- where cp.solrproviderid=prv.solrproviderid
@@ -1937,13 +1589,16 @@ update_statement_10 := $$ update
                             and
                                 CTE_ccx.deduperank = 1; $$;
 
+
+-- this updates 0 rows 
 update_statement_11 := $$ update show.solrprovider
                             SET DateOfBirth = null
                             where EXTRACT(YEAR from DateOfBirth) = 1900;$$;
 
 --------- Step 4: spuSuppressSurveyFlag
 
-update_statement_12 := $$ update
+-- fast but 0 rows
+update_statement_12 := $$   update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
@@ -1956,8 +1611,9 @@ update_statement_12 := $$ update
                             and
                                 d.specialtygroupcode IN ('NPHR', 'PNPH')
                                 and ifnull(target.suppresssurvey, 0) = 0;$$;
-    
-update_statement_13 := $$ update
+
+-- fast but 0 rows
+update_statement_13 := $$   update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 0
@@ -1966,16 +1622,18 @@ update_statement_13 := $$ update
                             where src.providerid = target.providerid
                             and
                                 target.suppresssurvey = 1;$$;
-    
-update_statement_14 := $$ update
+                                
+-- fast but 0 rows
+update_statement_14 := $$   update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
                             from show.solrproviderdelta b , base.providersurveysuppression ps 
                             where
                             b.providerid = target.providerid and target.providerid = ps.providerid;$$;
-    
-update_statement_15 := $$ update
+
+-- fast but 0 rows
+update_statement_15 := $$   update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 1
@@ -1996,7 +1654,8 @@ update_statement_15 := $$ update
                                 where x.providerid = target.providerid
                                 and b.providerid = target.providerid;$$;
 
-update_statement_16 := $$ update
+-- updates 0 rows
+update_statement_16 := $$   update
                                 show.solrprovider target
                             SET
                                 SuppressSurvey = 0 --select SuppressSurvey, *
@@ -2014,68 +1673,103 @@ update_statement_16 := $$ update
                                 and target.suppresssurvey = 1; $$;
 --------------------- 
 
+-- deletes 0 rows
 update_statement_17 := $$ 
-delete from show.solrprovider
-where ProviderCode IN (
-    select pr.providercode
-    from base.providerremoval pr
-    where show.solrprovider.ProviderCode = pr.providercode
-); 
-$$;
+                        delete from show.solrprovider
+                        where ProviderCode IN (
+                            select pr.providercode
+                            from base.providerremoval pr
+                            where show.solrprovider.ProviderCode = pr.providercode
+                        ); 
+                        $$;
 
-update_statement_18 := $$ 
-update show.solrprovider
-SET AcceptsNewPatients = 0
-where ProviderID IN (
-    select b.providerid
-    from show.solrproviderdelta b
-    where show.solrprovider.ProviderID = b.providerid
-    and SubStatusCode IN ('C', 'Y', 'A')
-    and AcceptsNewPatients != 0
-);
-$$;
+-- updates 0 rows but only because we have 0 rows in delta for now
+update_statement_18 :=  $$ 
+                        update show.solrprovider
+                        SET AcceptsNewPatients = 0
+                        where ProviderID IN (
+                            select b.providerid
+                            from show.solrproviderdelta b
+                            where show.solrprovider.ProviderID = b.providerid
+                            and SubStatusCode IN ('C', 'Y', 'A')
+                            and AcceptsNewPatients != 0
+                        );
+                        $$;
 
 update_statement_19 := $$ 
-merge into show.solrprovider as P using (
-    select ss.substatuscode, ds.displaystatuscode
-    from base.substatus as SS
-    join base.displaystatus as DS on ds.displaystatusid = ss.displaystatusid
-) as sub on p.substatuscode = sub.substatuscode
-WHEN MATCHED and p.displaystatuscode != sub.displaystatuscode and p.displaystatuscode = 'H' then
-update SET p.displaystatuscode = sub.displaystatuscode; 
-$$;
+                        merge into show.solrprovider as P using (
+                            select ss.substatuscode, ds.displaystatuscode
+                            from base.substatus as SS
+                            join base.displaystatus as DS on ds.displaystatusid = ss.displaystatusid
+                        ) as sub on p.substatuscode = sub.substatuscode
+                        when matched and p.displaystatuscode != sub.displaystatuscode and p.displaystatuscode = 'H' then
+                        update SET p.displaystatuscode = sub.displaystatuscode; 
+                        $$;
 
+-- We have somehow lost these Providers in the pipeline (they are in Base.Provider but not Show.SOLRProvider) 
 update_statement_20 := $$ 
-update show.solrprovider 
-SET APIXML = TO_VARIANT(REPLACE(CAST(APIXML as varchar(16777216)), '</apiL>', '
-<api>
-<clientCd>OASTEST</clientCd>
-<camCd>OASTEST_005</camCd>
-</api>
-</apiL>'))
-where ProviderCode IN ('G92WN', 'yj754', 'XYLGDMH', '2p2v2', '2CJGY', 'XCWYN', 'E5B5Z', 'YJLPH')
-and CAST(APIXML as varchar(16777216)) not LIKE '%OASTEST_005%'; 
-$$;
+                        update show.solrprovider 
+                        SET APIXML = TO_VARIANT(REPLACE(CAST(APIXML as varchar(16777216)), '</apiL>', '
+                        <api>
+                        <clientCd>OASTEST</clientCd>
+                        <camCd>OASTEST_005</camCd>
+                        </api>
+                        </apiL>'))
+                        where ProviderCode IN ('G92WN', 'yj754', 'XYLGDMH', '2p2v2', '2CJGY', 'XCWYN', 'E5B5Z', 'YJLPH')
+                        and CAST(APIXML as varchar(16777216)) not LIKE '%OASTEST_005%'; 
+                        $$;
 
 ------ Client Market Refresh
 
-temp_table_statement_1 := 'CREATE or REPLACE TEMPORARY TABLE temp_provider as (
-    select
-        p.providerid,
-        p.providerid as EDWBaseRecordID,
-        0 as IsInClientMarket
-    from
-        $$ || mdm_db || $$.mst.provider_profile_processing as ppp
-        join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
-);';
-
-
-update_statement_temp_1 := 'update
-                                    temp_provider target
-                                SET
-                                    IsInClientMarket = 1
+temp_table_statement_1 := $$ 
+                          CREATE or REPLACE TEMPORARY TABLE temp_provider as (
+                                select
+                                    p.providerid,
+                                    p.providerid as EDWBaseRecordID,
+                                    0 as IsInClientMarket
                                 from
-                                    base.providertooffice pto 
+                                    $$ || mdm_db || $$.mst.provider_profile_processing as ppp
+                                    join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
+                          );
+                          $$;
+
+
+
+-- this thing is painfully slow, this is where it starts to break (possibly syntax errors)
+update_statement_temp_1 := 'update
+                                temp_provider target
+                            set
+                                IsInClientMarket = 1
+                            from
+                                base.providertooffice pto 
+                                join base.officetoaddress ota on pto.officeid = ota.officeid
+                                join base.address a on ota.addressid = a.addressid
+                                join base.citystatepostalcode csz on a.citystatepostalcodeid = csz.citystatepostalcodeid
+                                join base.geographicarea geo on (
+                                    csz.city = geo.geographicareavalue1
+                                    and csz.state = geo.geographicareavalue2
+                                )
+                                join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode,
+                                base.providertospecialty pts  
+                                join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid,
+                                base.specialtygroup sg
+                            where
+                                pts.issearchable = 1
+                                and target.providerid = pto.providerid
+                                and target.providerid = pts.providerid
+                                and sgs.specialtygroupid = sg.specialtygroupid
+                                and cm.lineofservicecode = sg.specialtygroupcode;';
+
+                                
+----------- update_statement_temp_1 (changed a few things). This is painfully slow,
+--- for a full refresh in a medium wh the select takes ~6 min to run and 
+--- for a sample delta of 10k providers it takes *40-50* seconds
+update_statement_temp_1 := '
+                            update temp_provider target
+                            set IsInClientMarket = 1
+                            from (
+                                select pto.providerid
+                                from base.providertooffice pto 
                                     join base.officetoaddress ota on pto.officeid = ota.officeid
                                     join base.address a on ota.addressid = a.addressid
                                     join base.citystatepostalcode csz on a.citystatepostalcodeid = csz.citystatepostalcodeid
@@ -2083,322 +1777,299 @@ update_statement_temp_1 := 'update
                                         csz.city = geo.geographicareavalue1
                                         and csz.state = geo.geographicareavalue2
                                     )
-                                    join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode,
-                                    base.providertospecialty pts  
-                                    join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid,
-                                    base.specialtygroup sg
+                                    join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode
+                                    join show.solrprovider p on pto.providerid = p.providerid
+                                    join base.providertospecialty pts on pts.providerid = p.providerid
+                                    join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid
+                                    join base.specialtygroup sg on sg.specialtygroupid = sgs.specialtygroupid
                                 where
                                     pts.issearchable = 1
-                                    and target.providerid = pto.providerid
-                                    and target.providerid = pts.providerid
+                                    and p.providerid = pto.providerid
+                                    and p.providerid = pts.providerid
                                     and sgs.specialtygroupid = sg.specialtygroupid
-                                    and cm.lineofservicecode = sg.specialtygroupcode;';
+                                    and cm.lineofservicecode = sg.specialtygroupcode
+                            ) as source
+                            where target.providerid = source.providerid;';
 
-update_statement_temp_2 := 'update
-                                    temp_provider target
-                                SET
-                                    IsInClientMarket = 1
-                                from
-                                    base.providertooffice pto 
-                                    join base.officetoaddress ota on pto.officeid = ota.officeid
-                                    join base.address a on ota.addressid = a.addressid
-                                    join base.citystatepostalcode csz on a.citystatepostalcodeid = csz.citystatepostalcodeid
-                                    join base.geographicarea geo on (
-                                        csz.postalcode = geo.geographicareavalue1
-                                        and geo.geographicareavalue2 is null
-                                    )
-                                    join mid.clientmarket cm on geo.geographicareacode = cm.geographicareacode,
-                                    base.providertospecialty pts 
-                                    join base.specialtygrouptospecialty sgs on pts.specialtyid = sgs.specialtyid,
-                                    base.specialtygroup sg 
-                                where
-                                    pts.issearchable = 1
-                                    and target.isinclientmarket = 0
-                                    and target.providerid = pto.providerid
-                                    and target.providerid = pts.providerid
-                                    and sgs.specialtygroupid = sg.specialtygroupid
-                                    and cm.lineofservicecode = sg.specialtygroupcode;;';                                
+-- I deleted a duplicate update statement here that was a copy of update_statement_temp_1                              
 
-update_statement_21 := 'update
-                                show.solrprovider target
-                            SET
-                                IsInClientMarket = p1.IsInClientMarket
-                            from
-                                TEMP_PROVIDER p1
-                            where
-                                p1.IsInClientMarket <> target.isinclientmarket
-                                and p1.ProviderID = target.providerid;';
+-- one of the were conditions was causing the update to not do anything, changed it
+update_statement_21 := 'update show.solrprovider target
+                        set IsInClientMarket = temp.IsInClientMarket
+                        from temp_provider temp
+                        where temp.ProviderID = target.providerid;';
 
 
-update_statement_22 := 'update		show.solrprovider target
-SET			AcceptsNewPatients =  1
-from		base.provider P 
-where		ifnull(target.acceptsnewpatients,0) != p.acceptsnewpatients
-and p.providerid = target.providerid';
+-- this updates 0 rows but this col comes straight from base.provider, don't worry for now
+update_statement_22 := 'update show.solrprovider target
+                        set AcceptsNewPatients =  1
+                        from base.provider P 
+                        where ifnull(target.acceptsnewpatients,0) != p.acceptsnewpatients
+                            and p.providerid = target.providerid';
 
 
 if_condition := $$ select
-    COUNT(1)
-from
-    show.solrprovider P
-    left join (
-        select
-            distinct *
-        from(
-                select
-                    ProviderId,
-                    ProviderCode,
-                    SponsorCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
-                                ),
-                                'disp'
-                            ),
-                            'Type'
-                        ),
-                        '$'
-                    ) as DisplayType,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
-                                ),
-                                'disp'
-                            ),
-                            'cd'
-                        ),
-                        '$'
-                    ) as PracticeCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
-                                            xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                            'dispL'
-                                        ),
-                                        'disp'
-                                    ),
-                                    'offL'
-                                ),
-                                'off'
-                            ),
-                            'cd'
-                        ),
-                        '$'
-                    ) as OfficeCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
+                        COUNT(1)
+                    from
+                        show.solrprovider P
+                        left join (
+                            select
+                                distinct *
+                            from(
+                                    select
+                                        ProviderId,
+                                        ProviderCode,
+                                        SponsorCode,
+                                        get(
                                             xmlget(
                                                 xmlget(
-                                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
+                                                    xmlget(
+                                                        xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                        'dispL'
+                                                    ),
+                                                    'disp'
                                                 ),
-                                                'disp'
+                                                'Type'
                                             ),
-                                            'offL'
-                                        ),
-                                        'off'
-                                    ),
-                                    'phoneL'
-                                ),
-                                'phone'
-                            ),
-                            'ph'
-                        ),
-                        '$'
-                    ) as PhoneNumber,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
+                                            '$'
+                                        ) as DisplayType,
+                                        get(
                                             xmlget(
                                                 xmlget(
-                                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
+                                                    xmlget(
+                                                        xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                        'dispL'
+                                                    ),
+                                                    'disp'
                                                 ),
-                                                'disp'
+                                                'cd'
                                             ),
-                                            'offL'
-                                        ),
-                                        'off'
-                                    ),
-                                    'phoneL'
-                                ),
-                                'phone'
-                            ),
-                            'phTyp'
-                        ),
-                        '$'
-                    ) as PhoneType,
-                from
-                    show.solrprovider,
-                where
-                    ProductCode = 'MAP'
-            )
-    ) X on x.providerid = p.providerid
-where
-    ProductCode = 'MAP'
-    and PracticeOfficeXML is not null
-    and(
-        x.providerid is null
-        or LEN(PhoneNumber) = 0
-    )
-    and p.displaystatuscode != 'H'
-    and SponsorshipXML is not null $$;
+                                            '$'
+                                        ) as PracticeCode,
+                                        get(
+                                            xmlget(
+                                                xmlget(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                'dispL'
+                                                            ),
+                                                            'disp'
+                                                        ),
+                                                        'offL'
+                                                    ),
+                                                    'off'
+                                                ),
+                                                'cd'
+                                            ),
+                                            '$'
+                                        ) as OfficeCode,
+                                        get(
+                                            xmlget(
+                                                xmlget(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(
+                                                                    xmlget(
+                                                                        xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                        'dispL'
+                                                                    ),
+                                                                    'disp'
+                                                                ),
+                                                                'offL'
+                                                            ),
+                                                            'off'
+                                                        ),
+                                                        'phoneL'
+                                                    ),
+                                                    'phone'
+                                                ),
+                                                'ph'
+                                            ),
+                                            '$'
+                                        ) as PhoneNumber,
+                                        get(
+                                            xmlget(
+                                                xmlget(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(
+                                                                    xmlget(
+                                                                        xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                        'dispL'
+                                                                    ),
+                                                                    'disp'
+                                                                ),
+                                                                'offL'
+                                                            ),
+                                                            'off'
+                                                        ),
+                                                        'phoneL'
+                                                    ),
+                                                    'phone'
+                                                ),
+                                                'phTyp'
+                                            ),
+                                            '$'
+                                        ) as PhoneType,
+                                    from
+                                        show.solrprovider,
+                                    where
+                                        ProductCode = 'MAP'
+                                )
+                        ) X on x.providerid = p.providerid
+                    where
+                        ProductCode = 'MAP'
+                        and PracticeOfficeXML is not null
+                        and(
+                            x.providerid is null
+                            or LEN(PhoneNumber) = 0
+                        )
+                        and p.displaystatuscode != 'H'
+                        and SponsorshipXML is not null 
+                $$;
 
-update_statement_23 := $$ update
-    show.solrprovider
-SET
-    SponsorshipXML = null,
-    SearchSponsorshipXML = null
-from
-    show.solrprovider as P
-    left join (
-        select
-            distinct *
-        from(
-                select
-                    ProviderId,
-                    ProviderCode,
-                    SponsorCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
-                                ),
-                                'disp'
-                            ),
-                            'Type'
-                        ),
-                        '$'
-                    ) as DisplayType,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                    'dispL'
-                                ),
-                                'disp'
-                            ),
-                            'cd'
-                        ),
-                        '$'
-                    ) as PracticeCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
-                                            xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                            'dispL'
-                                        ),
-                                        'disp'
-                                    ),
-                                    'offL'
-                                ),
-                                'off'
-                            ),
-                            'cd'
-                        ),
-                        '$'
-                    ) as OfficeCode,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
-                                            xmlget(
-                                                xmlget(
-                                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
-                                                ),
-                                                'disp'
-                                            ),
-                                            'offL'
-                                        ),
-                                        'off'
-                                    ),
-                                    'phoneL'
-                                ),
-                                'phone'
-                            ),
-                            'ph'
-                        ),
-                        '$'
-                    ) as PhoneNumber,
-                    get(
-                        xmlget(
-                            xmlget(
-                                xmlget(
-                                    xmlget(
-                                        xmlget(
-                                            xmlget(
-                                                xmlget(
-                                                    xmlget(parse_xml(sponsorshipxml), 'sponsor'),
-                                                    'dispL'
-                                                ),
-                                                'disp'
-                                            ),
-                                            'offL'
-                                        ),
-                                        'off'
-                                    ),
-                                    'phoneL'
-                                ),
-                                'phone'
-                            ),
-                            'phTyp'
-                        ),
-                        '$'
-                    ) as PhoneType,
-                from
-                    show.solrprovider,
-                where
-                    ProductCode = 'MAP'
-            )
-    ) as x on x.providerid = p.providerid
-where
-    p.productcode = 'MAP'
-    and p.practiceofficexml is not null
-    and(
-        x.providerid is null
-        or LEN(PhoneNumber) = 0
-    )
-    and p.displaystatuscode != 'H'
-    and p.sponsorshipxml is not null; $$;
 
-update_statement_24 := $$update show.solrprovider 
-		SET DisplayStatusCode = 'A'
-		where DisplayStatusCode = 'H' and SubStatusCode = '1'$$;
+-- fast, but updates 0 rows in full
+update_statement_23 := $$   update
+                                show.solrprovider
+                            SET
+                                SponsorshipXML = null,
+                                SearchSponsorshipXML = null
+                            from
+                                show.solrprovider as P
+                                left join (
+                                    select
+                                        distinct *
+                                    from(
+                                            select
+                                                ProviderId,
+                                                ProviderCode,
+                                                SponsorCode,
+                                                get(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                'dispL'
+                                                            ),
+                                                            'disp'
+                                                        ),
+                                                        'Type'
+                                                    ),
+                                                    '$'
+                                                ) as DisplayType,
+                                                get(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                'dispL'
+                                                            ),
+                                                            'disp'
+                                                        ),
+                                                        'cd'
+                                                    ),
+                                                    '$'
+                                                ) as PracticeCode,
+                                                get(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(
+                                                                    xmlget(
+                                                                        xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                        'dispL'
+                                                                    ),
+                                                                    'disp'
+                                                                ),
+                                                                'offL'
+                                                            ),
+                                                            'off'
+                                                        ),
+                                                        'cd'
+                                                    ),
+                                                    '$'
+                                                ) as OfficeCode,
+                                                get(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(
+                                                                    xmlget(
+                                                                        xmlget(
+                                                                            xmlget(
+                                                                                xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                                'dispL'
+                                                                            ),
+                                                                            'disp'
+                                                                        ),
+                                                                        'offL'
+                                                                    ),
+                                                                    'off'
+                                                                ),
+                                                                'phoneL'
+                                                            ),
+                                                            'phone'
+                                                        ),
+                                                        'ph'
+                                                    ),
+                                                    '$'
+                                                ) as PhoneNumber,
+                                                get(
+                                                    xmlget(
+                                                        xmlget(
+                                                            xmlget(
+                                                                xmlget(
+                                                                    xmlget(
+                                                                        xmlget(
+                                                                            xmlget(
+                                                                                xmlget(parse_xml(sponsorshipxml), 'sponsor'),
+                                                                                'dispL'
+                                                                            ),
+                                                                            'disp'
+                                                                        ),
+                                                                        'offL'
+                                                                    ),
+                                                                    'off'
+                                                                ),
+                                                                'phoneL'
+                                                            ),
+                                                            'phone'
+                                                        ),
+                                                        'phTyp'
+                                                    ),
+                                                    '$'
+                                                ) as PhoneType,
+                                            from
+                                                show.solrprovider,
+                                            where
+                                                ProductCode = 'MAP'
+                                        )
+                                ) as x on x.providerid = p.providerid
+                            where
+                                p.productcode = 'MAP'
+                                and p.practiceofficexml is not null
+                                and(
+                                    x.providerid is null
+                                    or LEN(PhoneNumber) = 0
+                                )
+                                and p.displaystatuscode != 'H'
+                                and p.sponsorshipxml is not null; $$;
+                                
+-- fast, updates 0 rows
+update_statement_24 :=  $$
+                        update show.solrprovider 
+                		SET DisplayStatusCode = 'A'
+                		where DisplayStatusCode = 'H' and SubStatusCode = '1'
+                        $$;
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
-
-
-merge_statement_1 := ' merge into show.solrprovider as target using 
-                   ('||select_statement_1||') as source 
-                   on source.providerid = target.providerid
-                   WHEN MATCHED then delete
-                   when not matched then '||insert_statement_1;
 
 merge_statement_2 := ' merge into show.solrprovider as target using 
                    ('||select_statement_2 ||') as source 
@@ -2413,8 +2084,7 @@ merge_statement_2 := ' merge into show.solrprovider as target using
 if (is_full) then
     truncate table Show.SOLRProvider;
 end if; 
-execute immediate merge_statement_1 ;
-execute immediate merge_statement_2 ;
+execute immediate merge_statement_2;
 execute immediate update_statement_3;
 execute immediate update_statement_4;
 execute immediate update_statement_5;
@@ -2437,7 +2107,6 @@ execute immediate update_statement_19;
 execute immediate update_statement_20;
 execute immediate temp_table_statement_1;
 execute immediate update_statement_temp_1;
-execute immediate update_statement_temp_2;
 execute immediate update_statement_21;
 execute immediate update_statement_22;
 execute immediate if_condition;
@@ -2586,6 +2255,4 @@ status := 'completed successfully';
 
             return status;
 
-
-    
 end;
