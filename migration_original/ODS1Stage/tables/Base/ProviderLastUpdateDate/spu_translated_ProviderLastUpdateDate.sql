@@ -183,7 +183,7 @@ select_statement := $$ with CTE_Provider as (
                     CTE_HealthInsurance as (
                         select pthi.providerid, pthi.sourcecode, pthi.lastupdatedate
                         from CTE_Provider cte_p
-                        inner join ProviderToHealthInsurance pthi on pthi.providerid = cte_p.providerid
+                        inner join base.ProviderToHealthInsurance pthi on pthi.providerid = cte_p.providerid
                         qualify row_number() over (partition by pthi.providerid order by pthi.lastupdatedate desc) = 1
                     ),
                     
