@@ -74,11 +74,11 @@ begin
 
 --- Select Statement
 
-select_statement := $$ with CTE_ProviderBatch as (
+select_statement := $$with CTE_ProviderBatch as (
                 select
                     p.providerid
                 from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                    mdm_team.mst.Provider_Profile_Processing as ppp
                     join base.provider as P on p.providercode = ppp.ref_provider_code),
                     cte_servicelinespecialty as (
     select 
@@ -114,7 +114,9 @@ cte_parentchild as (
     where
         fpc.ismaxyear = 0
         and f.isclosed = 0
-),
+)
+-- select * from cte_parentchild;
+,
 cte_serviceline as (
 select 
     mt.medicaltermcode as servicelinecode, 
@@ -124,7 +126,11 @@ from
     base.medicalterm mt
     join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
 where 
-    mtt.medicaltermtypecode = 'SERVICELINE'),
+    mtt.medicaltermtypecode = 'SERVICELINE'
+    )
+    -- select * from cte_serviceline;
+    -- select * from base.medicaltermtype;
+    ,
 
 cte_ermartfacility as (
 select
@@ -144,7 +150,10 @@ from
     join cte_serviceline as sl on ('SL' + fsl.servicelineid = sl.legacykey)
 where
     fpr.ismaxyear = 1
-),
+)
+-- select * from cte_ermartfacility;
+-- select * from ermart1.facility_facilitytoprocedurerating;
+,
 cte_cohort as (
 select
             mt.medicaltermcode as procedurecode,
@@ -155,7 +164,9 @@ select
             join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
         where
             mtt.medicaltermtypecode = 'COHORT'
-),
+)
+-- select * from cte_cohort;
+,
 cte_ratingsortvalue as (
 select
     avg(
@@ -174,7 +185,9 @@ from
     and 'SL' || y.servicelineid = erfa.legacykey
     and fpr.ratingsourceid = erfa.ratingsourceid
     and (fpr.overallsurvivalstar is not null or fpr.overallrecovery30star is not null)
-),
+)
+
+,
 
 cte_tempqualityscoretable as (
 select distinct 
@@ -529,17 +542,17 @@ from cte_providerbatch as pb
     join ermart1.facility_facilityaddressdetail as fad on fad.facilityid = f.legacykey
     join mid.facility as mf on f.facilityid = mf.facilityid
     left join base.providerrole as pr on pr.providerroleid = ptf.providerroleid
-    join cte_hasaward as award on award.facilityid = f.legacykey
-    join cte_fivestarxml as fsxml on fsxml.facilityid = f.legacykey
-    join cte_servicelineawardxml as slaxml on slaxml.facilityid = f.legacykey
-    join cte_addressxml as addxml on addxml.facilityid = f.legacykey
-    join cte_awardxml as awxml on awxml.facilityid = f.legacykey
+    left join cte_hasaward as award on award.facilityid = f.legacykey
+    left join cte_fivestarxml as fsxml on fsxml.facilityid = f.legacykey
+    left join cte_servicelineawardxml as slaxml on slaxml.facilityid = f.legacykey
+    left join cte_addressxml as addxml on addxml.facilityid = f.legacykey
+    left join cte_awardxml as awxml on awxml.facilityid = f.legacykey
     left join cte_facility as ctefac on ctefac.facilityid = f.facilityid
     left join cte_client as ctecl on ctecl.facilityid = f.facilityid
     left join cte_entity as cteent on cteent.clienttoproductid = ctecl.clienttoproductid
     left join cte_provider as cteprov on cteprov.facilityid = f.legacykey and cteprov.providerid = ptf.providerid
-    join cte_phonehospitalxml as phxml on phxml.clientproducttoentityid = ctecl.clientproducttoentityid
-    join cte_phonepdcxml as ppxml on ppxml.clientproducttoentityid = ctecl.clientproducttoentityid
+    left join cte_phonehospitalxml as phxml on phxml.clientproducttoentityid = ctecl.clientproducttoentityid
+    left join cte_phonepdcxml as ppxml on ppxml.clientproducttoentityid = ctecl.clientproducttoentityid
 group by 
     ptf.ProviderToFacilityID,
     ptf.ProviderID, 
@@ -567,48 +580,6 @@ group by
     phxml.pdcphonexml,
     ppxml.pdcphonexml
     
-),
--- insert action
-cte_action_1 as (
-    select 
-        cte.providertofacilityid,
-        1 as actioncode
-    from cte_providerfacility as cte
-    left join mid.providerfacility as mid
-    on cte.providertofacilityid = mid.providertofacilityid 
-    where mid.providertofacilityid is null
-),
-
--- update action
-cte_action_2 as (
-   select 
-        cte.providertofacilityid,
-        1 as actioncode
-    from cte_providerfacility as cte
-    left join mid.providerfacility as mid
-    on cte.providertofacilityid = mid.providertofacilityid 
-    where
-        md5(ifnull(cte.providerid::varchar, '')) <> md5(ifnull(mid.providerid::varchar, '')) or
-        md5(ifnull(cte.facilityid::varchar, '')) <> md5(ifnull(mid.facilityid::varchar, '')) or
-        md5(ifnull(cte.facilitycode::varchar, '')) <> md5(ifnull(mid.facilitycode::varchar, '')) or
-        md5(ifnull(cte.facilityname::varchar, '')) <> md5(ifnull(mid.facilityname::varchar, '')) or
-        md5(ifnull(cte.isclosed::varchar, '')) <> md5(ifnull(mid.isclosed::varchar, '')) or
-        md5(ifnull(cte.imagefilepath::varchar, '')) <> md5(ifnull(mid.imagefilepath::varchar, '')) or
-        md5(ifnull(cte.rolecode::varchar, '')) <> md5(ifnull(mid.rolecode::varchar, '')) or
-        md5(ifnull(cte.roledescription::varchar, '')) <> md5(ifnull(mid.roledescription::varchar, '')) or
-        md5(ifnull(cte.legacykey::varchar, '')) <> md5(ifnull(mid.legacykey::varchar, '')) or
-        md5(ifnull(cte.fivestarxml::varchar, '')) <> md5(ifnull(mid.fivestarxml::varchar, '')) or
-        md5(ifnull(cte.hasaward::varchar, '')) <> md5(ifnull(mid.hasaward::varchar, '')) or
-        md5(ifnull(cte.servicelineaward::varchar, '')) <> md5(ifnull(mid.servicelineaward::varchar, '')) or
-        md5(ifnull(cte.addressxml::varchar, '')) <> md5(ifnull(mid.addressxml::varchar, '')) or
-        md5(ifnull(cte.awardxml::varchar, '')) <> md5(ifnull(mid.awardxml::varchar, '')) or
-        md5(ifnull(cte.pdcphonexml::varchar, '')) <> md5(ifnull(mid.pdcphonexml::varchar, '')) or
-        md5(ifnull(cte.facilityurl::varchar, '')) <> md5(ifnull(mid.facilityurl::varchar, '')) or
-        md5(ifnull(cte.facilitytype::varchar, '')) <> md5(ifnull(mid.facilitytype::varchar, '')) or
-        md5(ifnull(cte.facilitytypecode::varchar, '')) <> md5(ifnull(mid.facilitytypecode::varchar, '')) or
-        md5(ifnull(cte.facilitysearchtype::varchar, '')) <> md5(ifnull(mid.facilitysearchtype::varchar, '')) or
-        md5(ifnull(cte.fivestarprocedurecount::varchar, '')) <> md5(ifnull(mid.fivestarprocedurecount::varchar, '')) or
-        md5(ifnull(cte.qualityscore::varchar, '')) <> md5(ifnull(mid.qualityscore::varchar, ''))
 )
 select distinct
     a0.providertofacilityid,
@@ -633,11 +604,9 @@ select distinct
     a0.facilitysearchtype,
     a0.fivestarprocedurecount,
     a0.qualityscore,
-    ifnull(a1.actioncode, ifnull(a2.actioncode, a0.actioncode)) as ActionCode 
+    a0.actioncode as ActionCode 
 from cte_providerfacility as a0 
-left join cte_action_1 as a1 on a0.providertofacilityid = a1.providertofacilityid
-left join cte_action_2 as a2 on a0.providertofacilityid = a2.providertofacilityid
-where ifnull(a1.actioncode, ifnull(a2.actioncode, a0.actioncode)) <> 0 $$;
+ $$;
 
 --- Update Statement
 update_statement := ' update 
@@ -721,9 +690,9 @@ insert_statement := ' insert  (
 
 merge_statement := ' merge into mid.providerfacility as target using 
                    ('||select_statement||') as source 
-                   on source.providertofacilityid = target.providertofacilityid 
-                   when matched and source.actioncode = 2 then '||update_statement|| '
-                   when not matched and source.actioncode = 1 then '||insert_statement;
+                   on source.providertofacilityid = target.providertofacilityid
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
                    
         
 ---------------------------------------------------------
