@@ -20,11 +20,9 @@ declare
 -- base.citystatepostalcode
 -- base.facility
 -- base.facilitycheckinurl
--- base.facilityimage
 -- base.facilitytoaddress
 -- base.facilitytofacilitytype
 -- base.facilitytype
--- base.mediaimagetype
 -- base.product
 -- base.productgroup
 -- base.providertofacility
@@ -54,7 +52,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facility');
     execution_start datetime default getdate();
-   
+    mdm_db string default('mdm_team');
    
 begin
     
@@ -198,15 +196,13 @@ cte_description as (
         and cfv.clientfeaturevaluecode = 'FVFAC' -- Facility
 ),
 -- old nn
-cte_facility_image as (
-    select
-        d.facilityid,
-        coalesce(e.mediarelativepath, '') || case when right(coalesce(e.mediarelativepath, ''), 1) <> '/' then '/' else '' end || d.filename as facilityimagepath
-    from
-        base.facilityimage d
-        join base.mediaimagetype e on e.mediaimagetypeid = d.mediaimagetypeid
-    where
-        e.mediaimagetypecode = 'FACIMAGE'
+cte_facility_image AS (
+    SELECT
+        f.ref_facility_code AS facilitycode,
+        TO_VARCHAR(json.value: S3_PREFIX) || '/' || TO_VARCHAR(json.value: FACILITY_IMAGE_FILE_NAME) AS facilityimagepath
+    FROM $$ || mdm_db || $$.mst.facility_profile_processing AS f,
+         LATERAL FLATTEN(input => f.FACILITY_PROFILE:IMAGE) AS json
+    qualify row_number() over(partition by facilitycode order by TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) desc) = 1
 ),
 -- PhoneXML
 cte_facility_detail_phone as (
@@ -615,7 +611,7 @@ from
     left join cte_entity entity on entity.clienttoproductid = client_details.clienttoproductid -- jj
     left join cte_description des on des.clienttoproductid = client_details.clienttoproductid --kk
     left join ermart1.facility_hospitaldetail hos_details on f.facilityid = hos_details.facilityid
-    left join cte_facility_image fac_details on fac_details.facilityid = fac.facilityid --nn
+    left join cte_facility_image fac_details on fac_details.facilitycode = fac.facilitycode --nn
     left join cte_facility_detail_phone_xml pfxml on pfxml.clientproducttoentityid = client_details.clientproducttoentityid
     left join cte_client_detail_phone_xml pcxml on pcxml.clientproducttoentityid = client_details.clientproducttoentityid
     left join cte_facility_mobile_xml mfxml on mfxml.clientproducttoentityid = client_details.clientproducttoentityid
