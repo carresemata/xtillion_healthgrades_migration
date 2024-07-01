@@ -631,7 +631,7 @@ select distinct
     ifnull(s.lastupdatedate, current_timestamp()) as LastUpdateDate
 from
     cte_tmp_features s
-    join base.entitytype b on b.entitytypecode = 'CLPROD'
+    join base.entitytype b on b.entitytypecode = 'CLPROD'  or b.entitytypecode = 'CLCTR'
     join base.clientfeature as CF on s.clientfeaturecode = cf.clientfeaturecode 
     join base.clientfeaturevalue as CFV on s.clientfeaturevaluecode = cfv.clientfeaturevaluecode 
     join base.clientfeaturetoclientfeaturevalue as CFTCFV on cf.clientfeatureid = cftcfv.clientfeatureid and cfv.clientfeaturevalueid = cftcfv.clientfeaturevalueid and cftcfv.sourcecode = s.sourcecode
