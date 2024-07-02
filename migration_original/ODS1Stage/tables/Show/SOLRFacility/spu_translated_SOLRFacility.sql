@@ -81,6 +81,7 @@ declare
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
+    mdm_db string default('mdm_team');
     procedure_name varchar(50) default('sp_load_solrfacility');
     execution_start datetime default getdate();
    
@@ -93,7 +94,7 @@ declare
 
 begin
 select_statement :=  $$ with cte_facility_address_detail as (
-    select
+    select distinct
         f.facilityid,
         case
             when a.suite is not null then concat(a.addressline1, ' ', a.suite)
@@ -127,7 +128,7 @@ cte_parent_child as (
         ermart1.facility_facilityparentchild fpc
         join ermart1.facility_facility f on fpc.facilityidchild = f.facilityid
 ),
-cte_facility_hours as (
+cte_facility_hours as ( -- this is empty because the json facility hours is empty from the mdm 
 select 
     f.facilityid,
     dow.daysofweekdescription as day,
@@ -147,15 +148,16 @@ cte_facility_hours_xml as (
 select 
     facilityid,
     '<hoursL>' || listagg( '<hours>' || iff(day is not null,'<day>' || day || '</day>','') ||
-iff(disporder is not null,'<disporder>' || disporder || '</disporder>','') ||
-iff(start is not null,'<start>' || start || '</start>','') ||
-iff(end is not null,'<end>' || end || '</end>','') ||
-iff(closed is not null,'<closed>' || closed || '</closed>','')  || '</hours>','') || '</hoursL' as facilityhoursxml
+    iff(disporder is not null,'<disporder>' || disporder || '</disporder>','') ||
+    iff("start" is not null,'<start>' || "start" || '</start>','') ||
+    iff("end" is not null,'<end>' || "end" || '</end>','') ||
+    iff(closed is not null,'<closed>' || closed || '</closed>','')  || '</hours>','') || '</hoursL>' as facilityhoursxml
 from cte_facility_hours 
 group by facilityid
 ),
+
 cte_address as (
-select distinct 
+select  
     fad.facilityid,
     fad.address as ad1,
     fad.city as city,
@@ -166,19 +168,21 @@ select distinct
     fad.timezone as tzn
 from 
     cte_facility_address_detail fad
-),
+) ,
 cte_address_xml as (
 select 
     facilityid,
-    '<addrL>' || listagg( '<addr>' || iff(city is not null,'<city>' || city || '</city>','') ||
-iff(st is not null,'<st>' || st || '</st>','') ||
-iff(zip is not null,'<zip>' || zip || '</zip>','') ||
-iff(lat is not null,'<lat>' || lat || '</lat>','') ||
-iff(lng is not null,'<lng>' || lng || '</lng>','') ||
-iff(tzn is not null,'<tzn>' || tzn || '</tzn>','')  || '</addr>','') || '</addrL' as addressxml
+    '<addrL>' || listagg( '<addr>' || 
+    iff(ad1 is not null,'<ad1>' || ad1 || '</ad1>','') ||
+    iff(city is not null,'<city>' || city || '</city>','') ||
+    iff(st is not null,'<st>' || st || '</st>','') ||
+    iff(zip is not null,'<zip>' || zip || '</zip>','') ||
+    iff(lat is not null,'<lat>' || lat || '</lat>','') ||
+    iff(lng is not null,'<lng>' || lng || '</lng>','') ||
+    iff(tzn is not null,'<tzn>' || tzn || '</tzn>','')  || '</addr>','') || '</addrL>' as addressxml
 from cte_address
 group by facilityid
-),
+) ,
 
 cte_related_spec as (
 select distinct
@@ -194,12 +198,12 @@ select
     awardname,
     awardid,
     '<relatedSpecL>' || listagg( '<relatedSpec>' || iff(speccd is not null,'<speccd>' || speccd || '</speccd>','') ||
-iff(awtospecsort is not null,'<awtospecsort>' || awtospecsort || '</awtospecsort>','')  || '</relatedSpec>','') || '</relatedSpecL' as relatedspecl
+    iff(awtospecsort is not null,'<awtospecsort>' || awtospecsort || '</awtospecsort>','')  || '</relatedSpec>','') || '</relatedSpecL>' as relatedspecl
 from cte_related_spec
 group by 
     awardname,
     awardid
-),
+) ,
 cte_facility_id_child as (
 select 
     facilityid
@@ -223,7 +227,7 @@ cte_child_xml as (
 select 
     facilityid,
     '<childL>' || listagg( '<child>' || iff(faccd is not null,'<faccd>' || faccd || '</faccd>','') ||
-iff(facnm is not null,'<facnm>' || facnm || '</facnm>','')  || '</child>','') || '</childL' as childl
+    iff(facnm is not null,'<facnm>' || facnm || '</facnm>','')  || '</child>','') || '</childL>' as childl
 from cte_child
 group by facilityid
 ),
@@ -258,22 +262,22 @@ cte_award_xml as (
 select 
     facilityid,
     '<awardL>' || listagg( '<award>' || iff(awcd is not null,'<awcd>' || awcd || '</awcd>','') ||
-iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
-iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
-iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
-iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
-iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
-iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
-iff(isbestnonsea is not null,'<isbestnonsea>' || isbestnonsea || '</isbestnonsea>','') ||
-iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
-iff(awrnk is not null,'<awrnk>' || awrnk || '</awrnk>','') ||
-iff(isstrnk is not null,'<isstrnk>' || isstrnk || '</isstrnk>','')  || '</award>','') || '</awardL' as awardxml
+    iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
+    iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
+    iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
+    iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
+    iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
+    iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
+    iff(isbestnonsea is not null,'<isbestnonsea>' || isbestnonsea || '</isbestnonsea>','') ||
+    iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+    iff(awrnk is not null,'<awrnk>' || awrnk || '</awrnk>','') ||
+    iff(isstrnk is not null,'<isstrnk>' || isstrnk || '</isstrnk>','')  || '</award>','') || '</awardL>' as awardxml
 from cte_award
 group by facilityid
 ),
 
 cte_medical_serviceline as (
-select 
+select distinct
     mt.medicaltermcode as servicelinecode,
     mt.legacykey,
     mt.medicaltermdescription1 as servicelinedescription
@@ -282,7 +286,7 @@ from
 join 
     base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
 where 
-    mtt.medicaltermtypecode = 'SERVICELINE'
+    mtt.medicaltermtypecode = 'ServiceLine'
 ),
 
 cte_from_service_line as (
@@ -313,7 +317,7 @@ where
 ),
 
 cte_medterm as (
-select 
+select distinct
             mt.medicaltermcode as procedurecode,
             mt.legacykey,
             mt.medicaltermdescription1 as proceduredescription
@@ -322,7 +326,7 @@ select
         join 
             base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
         where 
-            mtt.medicaltermtypecode = 'COHORT'
+            mtt.medicaltermtypecode = 'Cohort'
 ),
 
 cte_state_avg as (
@@ -352,9 +356,9 @@ select
     ratingsource,
     facilityid,
     '<stateAvgL>' || listagg( '<stateAvg>' || iff(state is not null,'<state>' || state || '</state>','') ||
-iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
-iff(statelos is not null,'<statelos>' || statelos || '</statelos>','') ||
-iff(statecost is not null,'<statecost>' || statecost || '</statecost>','')  || '</stateAvg>','') || '</stateAvgL' as stateavg
+    iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
+    iff(statelos is not null,'<statelos>' || statelos || '</statelos>','') ||
+    iff(statecost is not null,'<statecost>' || statecost || '</statecost>','')  || '</stateAvg>','') || '</stateAvgL>' as stateavg
 from cte_state_avg
 group by 
     datayear,
@@ -375,16 +379,16 @@ select distinct
     fpr.ismaxyear as ismaxyr,
     case 
         when proc.ratingmethod = 'M'
-            then cast((fpr.actualsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.actualsurvivalpercentage * 100) as varchar(25))
         when proc.ratingmethod = 'C'
             and fpr.procedureid <> 'OB1'
-            then cast((fpr.actualsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.actualsurvivalpercentage * 100) as varchar(25))
     end as actpct,
     case 
         when proc.ratingmethod = 'M'
-            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(25))
         when proc.ratingmethod = 'C'
-            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(25))
     end as actsurnatper
 from 
     ermart1.facility_facilitytoprocedurerating fpr -- z1
@@ -398,7 +402,7 @@ join
         and fpr.datayear = prna.datayear -- p1
 join cte_medterm mt on prna.procedureid = mt.legacykey  -- zz1
 
-),
+) ,
 
 cte_rate_trend_xml as (
 select 
@@ -407,8 +411,8 @@ select
     procedureid,
     ratingsourceid,
     '<rateTrendL>' || listagg( '<rateTrend>' || iff(ryr is not null,'<ryr>' || ryr || '</ryr>','') ||
-iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
-iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</rateTrend>','') || '</rateTrendL' as ratetrend
+    iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
+    iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</rateTrend>','') || '</rateTrendL>' as ratetrend
 from cte_rate_trend
 group by 
     facilityid,
@@ -444,18 +448,18 @@ select
     facilityid,
     procedureid,
     '<relatedAwardL>' || listagg( '<relatedAward>' || iff(awcd is not null,'<awcd>' || awcd || '</awcd>','') ||
-iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
-iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
-iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
-iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
-iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
-iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
-iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</relatedAward>','') || '</relatedAwardL' as relatedaward
+    iff(awtypcd is not null,'<awtypcd>' || awtypcd || '</awtypcd>','') ||
+    iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
+    iff(awyr is not null,'<awyr>' || awyr || '</awyr>','') ||
+    iff(dispawyr is not null,'<dispawyr>' || dispawyr || '</dispawyr>','') ||
+    iff(mrgd is not null,'<mrgd>' || mrgd || '</mrgd>','') ||
+    iff(isbest is not null,'<isbest>' || isbest || '</isbest>','') ||
+    iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','')  || '</relatedAward>','') || '</relatedAwardL>' as relatedaward
 from cte_related_award
 group by 
     facilityid,
     procedureid
-),
+) ,
 
 cte_procl as (
 select distinct
@@ -480,31 +484,31 @@ select distinct
     fpr.volume as vol,
     case 
         when proc.ratingmethod = 'M'
-            then cast((fpr.actualsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.actualsurvivalpercentage * 100) as varchar(25))
         when proc.ratingmethod = 'C'
             and fpr.procedureid <> 'OB1'
-            then cast((fpr.actualsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.actualsurvivalpercentage * 100) as varchar(25))
     end as actpct,
     case 
         when proc.ratingmethod = 'M'
-            then cast((fpr.actualrecovery30percentage * 100) as varchar(10))
+            then cast((fpr.actualrecovery30percentage * 100) as varchar(25))
         when proc.ratingmethod = 'C'
             and fpr.procedureid <> 'OB1'
-            then cast((fpr.actualrecovery30percentage * 100) as varchar(10))
+            then cast((fpr.actualrecovery30percentage * 100) as varchar(25))
     end as actpct30,
     case 
         when proc.ratingmethod = 'M'
-            then cast((fpr.predictedsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.predictedsurvivalpercentage * 100) as varchar(25))
         when proc.ratingmethod = 'C'
             and fpr.procedureid <> 'OB1'
-            then cast((fpr.predictedsurvivalpercentage * 100) as varchar(10))
+            then cast((fpr.predictedsurvivalpercentage * 100) as varchar(25))
     end as prdpct,
     case 
         when proc.ratingmethod = 'M'
-            then cast((fpr.predictedrecovery30percentage * 100) as varchar(10))
+            then cast((fpr.predictedrecovery30percentage * 100) as varchar(25))
         when proc.ratingmethod = 'C'
             and fpr.procedureid <> 'OB1'
-            then cast((fpr.predictedrecovery30percentage * 100) as varchar(10))
+            then cast((fpr.predictedrecovery30percentage * 100) as varchar(25))
     end as prdpct30,
     case 
         when fpr.procedureid = 'OB1' 
@@ -541,15 +545,15 @@ select distinct
     end as psort,
     case 
         when proc.ratingmethod = 'M'
-            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(25))
         when proc.ratingmethod = 'C'
-            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.actualsurvivalpercentagenatl * 100) as varchar(25))
     end as actsurnatper,
     case 
         when proc.ratingmethod = 'M'
-            then cast((prna.predictedsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.predictedsurvivalpercentagenatl * 100) as varchar(25))
         when proc.ratingmethod = 'C'
-            then cast((prna.predictedsurvivalpercentagenatl * 100) as varchar(10))
+            then cast((prna.predictedsurvivalpercentagenatl * 100) as varchar(25))
     end as predsurnatper,
     prna.overallsurvivalstarnatl as ovrallsurnatstr,
     prna.survival30starnatl as surnatstr30,
@@ -567,7 +571,7 @@ from ermart1.facility_facilitytoprocedurerating as fpr -- z
     join ermart1.facility_proceduretoserviceline as psl on psl.procedureid = fpr.procedureid -- y
     join ermart1.facility_procedureratingsnationalaverage as prna on prna.procedureid = fpr.procedureid and prna.datayear = fpr.datayear --p
     join cte_medterm as mt on prna.procedureid = mt.legacykey -- zz
-    join ermart1.facility_facilitytomaternitydetail as fmd on fmd.facilityid = fpr.facilityid and fmd.datayear = fpr.datayear
+    left join ermart1.facility_facilitytomaternitydetail as fmd on fmd.facilityid = fpr.facilityid and fmd.datayear = fpr.datayear -- this table is empty in sql server
     join cte_state_avg_xml as saxml on saxml.datayear = fpr.datayear and saxml.servicelineid = psl.servicelineid and saxml.procedureid = fpr.procedureid and saxml.ratingsource = fpr.ratingsourceid and saxml.facilityid = fpr.facilityid
     join cte_rate_trend_xml as rtxml on rtxml.facilityid = fpr.facilityid and rtxml.servicelineid = psl.servicelineid and rtxml.procedureid = fpr.procedureid and rtxml.ratingsourceid = fpr.ratingsourceid
     join cte_related_award_xml as raxml on raxml.facilityid = fpr.facilityid and raxml.procedureid = psl.procedureid
@@ -579,47 +583,46 @@ select
     servicelineid,
     ratingsourceid,
     '<procL>' || listagg( '<proc>' || iff(pcd is not null,'<pcd>' || pcd || '</pcd>','') ||
-iff(pnm is not null,'<pnm>' || pnm || '</pnm>','') ||
-iff(rmth is not null,'<rmth>' || rmth || '</rmth>','') ||
-iff(mcare is not null,'<mcare>' || mcare || '</mcare>','') ||
-iff(ryr is not null,'<ryr>' || ryr || '</ryr>','') ||
-iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
-iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
-iff(rstr is not null,'<rstr>' || rstr || '</rstr>','') ||
-iff(chgstr is not null,'<chgstr>' || chgstr || '</chgstr>','') ||
-iff(chgstrdisp is not null,'<chgstrdisp>' || chgstrdisp || '</chgstrdisp>','') ||
-iff(cost is not null,'<cost>' || cost || '</cost>','') ||
-iff(losstr is not null,'<losstr>' || losstr || '</losstr>','') ||
-iff(losstrdisp is not null,'<losstrdisp>' || losstrdisp || '</losstrdisp>','') ||
-iff(los is not null,'<los>' || los || '</los>','') ||
-iff(vol is not null,'<vol>' || vol || '</vol>','') ||
-iff(actpct is not null,'<actpct>' || actpct || '</actpct>','') ||
-iff(prdpct is not null,'<prdpct>' || prdpct || '</prdpct>','') ||
-iff(csectactpct is not null,'<csectactpct>' || csectactpct || '</csectactpct>','') ||
-iff(csectnatpct is not null,'<csectnatpct>' || csectnatpct || '</csectnatpct>','') ||
-iff(csectvol is not null,'<csectvol>' || csectvol || '</csectvol>','') ||
-iff(vagactpct is not null,'<vagactpct>' || vagactpct || '</vagactpct>','') ||
-iff(vagnatpct is not null,'<vagnatpct>' || vagnatpct || '</vagnatpct>','') ||
-iff(vagvol is not null,'<vagvol>' || vagvol || '</vagvol>','') ||
-iff(nwbrnstr is not null,'<nwbrnstr>' || nwbrnstr || '</nwbrnstr>','') ||
-iff(nwbrnstrdesc is not null,'<nwbrnstrdesc>' || nwbrnstrdesc || '</nwbrnstrdesc>','') ||
-iff(zscr is not null,'<zscr>' || zscr || '</zscr>','') ||
-iff(psort is not null,'<psort>' || psort || '</psort>','') ||
-iff(actsurnatper is not null,'<actsurnatper>' || actsurnatper || '</actsurnatper>','') ||
-iff(predsurnatper is not null,'<predsurnatper>' || predsurnatper || '</predsurnatper>','') ||
-iff(ovrallsurnatstr is not null,'<ovrallsurnatstr>' || ovrallsurnatstr || '</ovrallsurnatstr>','') ||
-iff(avgcasesnatl is not null,'<avgcasesnatl>' || avgcasesnatl || '</avgcasesnatl>','') ||
-iff(losnatl is not null,'<losnatl>' || losnatl || '</losnatl>','') ||
-iff(costnatl is not null,'<costnatl>' || costnatl || '</costnatl>','') ||
-iff(wstr is not null,'<wstr>' || wstr || '</wstr>','') ||
-iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','')  || '</proc>','') || '</procL' as procxml
+    iff(pnm is not null,'<pnm>' || pnm || '</pnm>','') ||
+    iff(rmth is not null,'<rmth>' || rmth || '</rmth>','') ||
+    iff(mcare is not null,'<mcare>' || mcare || '</mcare>','') ||
+    iff(ryr is not null,'<ryr>' || ryr || '</ryr>','') ||
+    iff(rdispyr is not null,'<rdispyr>' || rdispyr || '</rdispyr>','') ||
+    iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+    iff(rstr is not null,'<rstr>' || rstr || '</rstr>','') ||
+    iff(chgstr is not null,'<chgstr>' || chgstr || '</chgstr>','') ||
+    iff(chgstrdisp is not null,'<chgstrdisp>' || chgstrdisp || '</chgstrdisp>','') ||
+    iff(cost is not null,'<cost>' || cost || '</cost>','') ||
+    iff(losstr is not null,'<losstr>' || losstr || '</losstr>','') ||
+    iff(losstrdisp is not null,'<losstrdisp>' || losstrdisp || '</losstrdisp>','') ||
+    iff(los is not null,'<los>' || los || '</los>','') ||
+    iff(vol is not null,'<vol>' || vol || '</vol>','') ||
+    iff(actpct is not null,'<actpct>' || actpct || '</actpct>','') ||
+    iff(prdpct is not null,'<prdpct>' || prdpct || '</prdpct>','') ||
+    iff(csectactpct is not null,'<csectactpct>' || csectactpct || '</csectactpct>','') ||
+    iff(csectnatpct is not null,'<csectnatpct>' || csectnatpct || '</csectnatpct>','') ||
+    iff(csectvol is not null,'<csectvol>' || csectvol || '</csectvol>','') ||
+    iff(vagactpct is not null,'<vagactpct>' || vagactpct || '</vagactpct>','') ||
+    iff(vagnatpct is not null,'<vagnatpct>' || vagnatpct || '</vagnatpct>','') ||
+    iff(vagvol is not null,'<vagvol>' || vagvol || '</vagvol>','') ||
+    iff(nwbrnstr is not null,'<nwbrnstr>' || nwbrnstr || '</nwbrnstr>','') ||
+    iff(nwbrnstrdesc is not null,'<nwbrnstrdesc>' || nwbrnstrdesc || '</nwbrnstrdesc>','') ||
+    iff(zscr is not null,'<zscr>' || zscr || '</zscr>','') ||
+    iff(psort is not null,'<psort>' || psort || '</psort>','') ||
+    iff(actsurnatper is not null,'<actsurnatper>' || actsurnatper || '</actsurnatper>','') ||
+    iff(predsurnatper is not null,'<predsurnatper>' || predsurnatper || '</predsurnatper>','') ||
+    iff(ovrallsurnatstr is not null,'<ovrallsurnatstr>' || ovrallsurnatstr || '</ovrallsurnatstr>','') ||
+    iff(avgcasesnatl is not null,'<avgcasesnatl>' || avgcasesnatl || '</avgcasesnatl>','') ||
+    iff(losnatl is not null,'<losnatl>' || losnatl || '</losnatl>','') ||
+    iff(costnatl is not null,'<costnatl>' || costnatl || '</costnatl>','') ||
+    iff(wstr is not null,'<wstr>' || wstr || '</wstr>','') ||
+    iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','')  || '</proc>','') || '</procL>' as procxml
 from cte_procl
 group by 
     facilityid,
     servicelineid,
     ratingsourceid
-
-),
+) ,
 
 cte_rating_sort_value as (
 select
@@ -645,11 +648,11 @@ group by
     ismaxyear,
     servicelineid,
     ratingsourceid
-),
+) ,
 
     
 cte_service_line as (
-select
+select distinct
     sl.facilityid,
     sl.servicelinecode as svccd,
     sl.zscore as svczscore,
@@ -661,13 +664,12 @@ select
     sl.ratingscorepercent as qualpctscr,
     procl.procxml,
     rsv.ratingsortvalue
+    
 from cte_from_service_line as sl-- qq
 join cte_procl_xml as procl on procl.facilityid = sl.facilityid
-    and 'sl' || procl.servicelineid = sl.legacykey
     and procl.ratingsourceid = sl.ratingsourceid
 join cte_rating_sort_value as rsv on  rsv.facilityid = sl.facilityid
     and rsv.ismaxyear = sl.ismaxyear
-    and 'sl' || rsv.servicelineid = sl.legacykey
     and rsv.ratingsourceid = sl.ratingsourceid
 ),
 
@@ -675,21 +677,21 @@ cte_service_line_xml as (
 select 
     facilityid,
     '<svcLnL>' || listagg( '<svcLn>' || iff(svccd is not null,'<svccd>' || svccd || '</svccd>','') ||
-iff(svczscore is not null,'<svczscore>' || svczscore || '</svczscore>','') ||
-iff(svcnm is not null,'<svcnm>' || svcnm || '</svcnm>','') ||
-iff(svclnrtg is not null,'<svclnrtg>' || svclnrtg || '</svclnrtg>','') ||
-iff(scyr is not null,'<scyr>' || scyr || '</scyr>','') ||
-iff(svcdispyr is not null,'<svcdispyr>' || svcdispyr || '</svcdispyr>','') ||
-iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
-iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','') ||
-iff(ratingsortvalue is not null,'<ratingsortvalue>' || ratingsortvalue || '</ratingsortvalue>','')  || '</svcLn>','') || '</svcLnL' as servicelinexml
+    iff(svczscore is not null,'<svczscore>' || svczscore || '</svczscore>','') ||
+    iff(svcnm is not null,'<svcnm>' || svcnm || '</svcnm>','') ||
+    iff(svclnrtg is not null,'<svclnrtg>' || svclnrtg || '</svclnrtg>','') ||
+    iff(scyr is not null,'<scyr>' || scyr || '</scyr>','') ||
+    iff(svcdispyr is not null,'<svcdispyr>' || svcdispyr || '</svcdispyr>','') ||
+    iff(ismaxyr is not null,'<ismaxyr>' || ismaxyr || '</ismaxyr>','') ||
+    iff(qualpctscr is not null,'<qualpctscr>' || qualpctscr || '</qualpctscr>','') ||
+    iff(ratingsortvalue is not null,'<ratingsortvalue>' || ratingsortvalue || '</ratingsortvalue>','')  || '</svcLn>','') || '</svcLnL>' as servicelinexml
 from cte_service_line
 group by 
     facilityid
-),
+) ,
 
 cte_patient_satisfaction as (
-select 
+select distinct
     fs.facilityid,
     fs.questionid as queid,
     fs.questiontextdisplay as quetxt,
@@ -704,14 +706,9 @@ select
 from 
     ermart1.facility_facilitytosurvey fs
 left join 
-    ermart1.patientexperience_opeaprovidertocohortrange op 
-on 
-    fs.facilityid = op.hgid 
+    ermart1.patientexperience_opeaprovidertocohortrange op on fs.facilityid = op.hgid 
 left join 
-    ermart1.patientexperience_opeaaveragesbycohortrange oa
-on 
-    fs.questionid = oa.questionid 
-    and op.cohortrange = oa.cohortrange
+    ermart1.patientexperience_opeaaveragesbycohortrange oa on fs.questionid = oa.questionid and op.cohortrange = oa.cohortrange
 where 
     fs.surveyid = 1
 ),
@@ -720,22 +717,22 @@ cte_patient_satisfaction_xml as (
 select 
     facilityid,
     '<satisL>' || listagg( '<satis>' || iff(queid is not null,'<queid>' || queid || '</queid>','') ||
-iff(quetxt is not null,'<quetxt>' || quetxt || '</quetxt>','') ||
-iff(noofsurv is not null,'<noofsurv>' || noofsurv || '</noofsurv>','') ||
-iff(surresrateperc is not null,'<surresrateperc>' || surresrateperc || '</surresrateperc>','') ||
-iff(ansid is not null,'<ansid>' || ansid || '</ansid>','') ||
-iff(anstxt is not null,'<anstxt>' || anstxt || '</anstxt>','') ||
-iff(ansperc is not null,'<ansperc>' || ansperc || '</ansperc>','') ||
-iff(cat is not null,'<cat>' || cat || '</cat>','') ||
-iff(catsort is not null,'<catsort>' || catsort || '</catsort>','') ||
-iff(natavg is not null,'<natavg>' || natavg || '</natavg>','')  || '</satis>','') || '</satisL' as patientsatisfactionxml
+    iff(quetxt is not null,'<quetxt>' || quetxt || '</quetxt>','') ||
+    iff(noofsurv is not null,'<noofsurv>' || noofsurv || '</noofsurv>','') ||
+    iff(surresrateperc is not null,'<surresrateperc>' || surresrateperc || '</surresrateperc>','') ||
+    iff(ansid is not null,'<ansid>' || ansid || '</ansid>','') ||
+    iff(anstxt is not null,'<anstxt>' || anstxt || '</anstxt>','') ||
+    iff(ansperc is not null,'<ansperc>' || ansperc || '</ansperc>','') ||
+    iff(cat is not null,'<cat>' || cat || '</cat>','') ||
+    iff(catsort is not null,'<catsort>' || catsort || '</catsort>','') ||
+    iff(natavg is not null,'<natavg>' || natavg || '</natavg>','')  || '</satis>','') || '</satisL>' as patientsatisfactionxml
 from cte_patient_satisfaction
 group by 
     facilityid
-),
+) ,
 
 cte_distinction as (
-select 
+select distinct
        facilityid, 
        certificationdisplayname as certnm,
        certificationsourcedisplayname as certsrcnm,
@@ -748,14 +745,14 @@ cte_distinction_xml as (
 select 
     facilityid,
     '<distL>' || listagg( '<dist>' || iff(certnm is not null,'<certnm>' || certnm || '</certnm>','') ||
-iff(certsrcnm is not null,'<certsrcnm>' || certsrcnm || '</certsrcnm>','') ||
-iff(certsrclgnm is not null,'<certsrclgnm>' || certsrclgnm || '</certsrclgnm>','') ||
-iff(certstdt is not null,'<certstdt>' || certstdt || '</certstdt>','') ||
-iff(certenddt is not null,'<certenddt>' || certenddt || '</certenddt>','')  || '</dist>','') || '</distL' as distinctionxml
+    iff(certsrcnm is not null,'<certsrcnm>' || certsrcnm || '</certsrcnm>','') ||
+    iff(certsrclgnm is not null,'<certsrclgnm>' || certsrclgnm || '</certsrclgnm>','') ||
+    iff(certstdt is not null,'<certstdt>' || certstdt || '</certstdt>','') ||
+iff(certenddt is not null,'<certenddt>' || certenddt || '</certenddt>','')  || '</dist>','') || '</distL>' as distinctionxml
 from cte_distinction
 group by 
     facilityid
-),
+) ,
 
 cte_readmission_rate as (
     select distinct
@@ -780,26 +777,25 @@ cte_readmission_rate as (
         and pm.measuredisplayname = '30-Day Readmission Rate'
         and pm.iscurrent = 1
         and pm.isdisplayed = 1
-
 ),
 
 cte_readmission_rate_xml as (
 select 
     facilityid,
     '<reAdminL>' || listagg( '<reAdmin>' || iff(condc is not null,'<condc>' || condc || '</condc>','') ||
-iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
-iff(measc is not null,'<measc>' || measc || '</measc>','') ||
-iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
-iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
-iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
-iff(comprnat is not null,'<comprnat>' || comprnat || '</comprnat>','') ||
-iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
-iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
-iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</reAdmin>','') || '</reAdminL' as readmissionratexml
+    iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
+    iff(measc is not null,'<measc>' || measc || '</measc>','') ||
+    iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
+    iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
+    iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
+    iff(comprnat is not null,'<comprnat>' || comprnat || '</comprnat>','') ||
+    iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
+    iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
+    iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</reAdmin>','') || '</reAdminL>' as readmissionratexml
 from cte_readmission_rate
 group by 
     facilityid
-),
+) ,
 
 cte_effective_care as (
 select distinct
@@ -837,21 +833,21 @@ cte_effective_care_xml as (
 select 
     facilityid,
     '<effCareL>' || listagg( '<effCare>' || iff(condc is not null,'<condc>' || condc || '</condc>','') ||
-iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
-iff(measc is not null,'<measc>' || measc || '</measc>','') ||
-iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
-iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
-iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
-iff(state is not null,'<state>' || state || '</state>','') ||
-iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
-iff(statescperc is not null,'<statescperc>' || statescperc || '</statescperc>','') ||
-iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
-iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
-iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</effCare>','') || '</effCareL' as timelyandeffectivecarexml
+    iff(condnm is not null,'<condnm>' || condnm || '</condnm>','') ||
+    iff(measc is not null,'<measc>' || measc || '</measc>','') ||
+    iff(measnm is not null,'<measnm>' || measnm || '</measnm>','') ||
+    iff(scperc is not null,'<scperc>' || scperc || '</scperc>','') ||
+    iff(sampvol is not null,'<sampvol>' || sampvol || '</sampvol>','') ||
+    iff(state is not null,'<state>' || state || '</state>','') ||
+    iff(fullstate is not null,'<fullstate>' || fullstate || '</fullstate>','') ||
+    iff(statescperc is not null,'<statescperc>' || statescperc || '</statescperc>','') ||
+    iff(natscperc is not null,'<natscperc>' || natscperc || '</natscperc>','') ||
+    iff(condsort is not null,'<condsort>' || condsort || '</condsort>','') ||
+    iff(meassort is not null,'<meassort>' || meassort || '</meassort>','')  || '</effCare>','') || '</effCareL>' as timelyandeffectivecarexml
 from cte_effective_care
 group by 
     facilityid
-),
+) ,
 
 cte_patient_safety as (
 select 
@@ -872,12 +868,12 @@ cte_patient_safety_xml as (
 select 
     facilityid,
     '<pSafeL>' || listagg( '<pSafe>' || iff(ratedesc is not null,'<ratedesc>' || ratedesc || '</ratedesc>','') ||
-iff(ratestr is not null,'<ratestr>' || ratestr || '</ratestr>','') ||
-iff(evtcount is not null,'<evtcount>' || evtcount || '</evtcount>','')  || '</pSafe>','') || '</pSafeL' as patientsafetyxml
+    iff(ratestr is not null,'<ratestr>' || ratestr || '</ratestr>','') ||
+    iff(evtcount is not null,'<evtcount>' || evtcount || '</evtcount>','')  || '</pSafe>','') || '</pSafeL>' as patientsafetyxml
 from cte_patient_safety
 group by 
     facilityid
-),
+) ,
 
 cte_trauma_level as (
     select 
@@ -894,7 +890,7 @@ cte_trauma_level_xml as (
     select 
         facilitycode,
         '<traumaL>' || listagg( '<trauma>' || iff(adutralev is not null,'<adutralev>' || adutralev || '</adutralev>','') ||
-iff(pedtralev is not null,'<pedtralev>' || pedtralev || '</pedtralev>','')  || '</trauma>','') || '</traumaL' as traumalevelxml
+        iff(pedtralev is not null,'<pedtralev>' || pedtralev || '</pedtralev>','')  || '</trauma>','') || '</traumaL>' as traumalevelxml
     from cte_trauma_level
     group by 
         facilitycode
@@ -933,7 +929,7 @@ cte_affiliation as (
 cte_affiliation_xml as (
     select 
         facilityid,
-        '<affilL>' || listagg( '<affil>' || iff(nm is not null,'<nm>' || nm || '</nm>','')  || '</affil>','') || '</affilL' as affiliationxml
+        '<affilL>' || listagg( '<affil>' || iff(nm is not null,'<nm>' || nm || '</nm>','')  || '</affil>','') || '</affilL>' as affiliationxml
     from cte_affiliation
     group by 
         facilityid
@@ -941,7 +937,8 @@ cte_affiliation_xml as (
 
 cte_pdc_facilities as (
     select distinct 
-        f.legacykey as facilityid
+        f.legacykey, --as facilityid
+        f.facilityid
     from 
         base.clienttoproduct ctp
     join 
@@ -964,7 +961,8 @@ cte_pdc_facilities as (
 ),
 cte_leadership as (
     select 
-        flet.facilityid,
+        flet.facilityid as legacykey,
+        pf.facilityid,
         flet.execteamname as leadnm,
         flet.title,
         flet.bio,
@@ -973,24 +971,25 @@ cte_leadership as (
     from 
         ermart1.facility_facilitytoexeclevelteam flet
     join 
-        cte_pdc_facilities pf on flet.facilityid = pf.facilityid
+        cte_pdc_facilities pf on flet.facilityid = pf.legacykey
 ),
 cte_leadership_xml as (
     select 
         facilityid,
         '<leaderL>' || listagg( '<leader>' || iff(leadnm is not null,'<leadnm>' || leadnm || '</leadnm>','') ||
-iff(title is not null,'<title>' || title || '</title>','') ||
-iff(bio is not null,'<bio>' || bio || '</bio>','') ||
-iff(img is not null,'<img>' || img || '</img>','') ||
-iff(email is not null,'<email>' || email || '</email>','')  || '</leader>','') || '</leaderL' as leadershipxml
+        iff(title is not null,'<title>' || title || '</title>','') ||
+        iff(bio is not null,'<bio>' || replace(replace(bio, '<', ''), '>', '') || '</bio>','') ||
+        iff(img is not null,'<img>' || img || '</img>','') ||
+        iff(email is not null,'<email>' || email || '</email>','')  || '</leader>','') || '</leaderL>' as leadershipxml
     from cte_leadership
     group by 
         facilityid
-),
+) ,
 
 cte_pdc_facilities_award as (
     select distinct 
-        f.legacykey as facilityid
+        f.legacykey,
+        f.facilityid
     from 
         base.clienttoproduct ctp
     join 
@@ -1003,17 +1002,17 @@ cte_pdc_facilities_award as (
         base.clientproducttoentity cpte on ctp.clienttoproductid = cpte.clienttoproductid
     join 
         base.entitytype et on cpte.entitytypeid = et.entitytypeid
-        and et.entitytypecode = 'fac'
+        and et.entitytypecode = 'FAC'
     join 
         base.facility f on cpte.entityid = f.facilityid
     where 
         ctp.activeflag = 1
-        and pg.productgroupcode = 'pdc'
+        and pg.productgroupcode = 'PDC'
         and f.isclosed = 0
 ),
 cte_award_achievement as (
     select 
-        fam.facilityid,
+        pfa.facilityid,
         fam.awardname as awnm,
         fam.standardmessage as standmsg,
         fam.displaylabel as dispyr,
@@ -1022,20 +1021,20 @@ cte_award_achievement as (
     from 
         ermart1.facility_facilityawardmessage fam
     join 
-        cte_pdc_facilities_award pfa on fam.facilityid = pfa.facilityid
+        cte_pdc_facilities_award pfa on fam.facilityid = pfa.legacykey
 ),
 cte_award_achievement_xml as (
     select 
         facilityid,
         '<awardMsgL>' || listagg( '<awardMsg>' || iff(awnm is not null,'<awnm>' || awnm || '</awnm>','') ||
-iff(standmsg is not null,'<standmsg>' || standmsg || '</standmsg>','') ||
-iff(dispyr is not null,'<dispyr>' || dispyr || '</dispyr>','') ||
-iff(pri is not null,'<pri>' || pri || '</pri>','') ||
-iff(imgpath is not null,'<imgpath>' || imgpath || '</imgpath>','')  || '</awardMsg>','') || '</awardMsgL' as awardachievementxml
+        iff(standmsg is not null,'<standmsg>' || replace(replace(standmsg, '<', ''), '>', '') || '</standmsg>','') ||
+        iff(dispyr is not null,'<dispyr>' || dispyr || '</dispyr>','') ||
+        iff(pri is not null,'<pri>' || pri || '</pri>','') ||
+        iff(imgpath is not null,'<imgpath>' || imgpath || '</imgpath>','')  || '</awardMsg>','') || '</awardMsgL>' as awardachievementxml
     from cte_award_achievement
     group by 
         facilityid
-),
+) ,
 cte_survey as (
     select 
         facilityid, 
@@ -1047,51 +1046,62 @@ cte_survey as (
         and questionid = 10
 ),
 
+CTE_Language AS (
+    SELECT
+        f.ref_facility_code AS facilitycode,
+        TO_VARCHAR(json.value: LANGUAGE_CODE) AS LanguageCode
+    FROM $$ || mdm_db || $$.mst.facility_profile_processing AS f,
+         LATERAL FLATTEN(input => f.FACILITY_PROFILE:LANGUAGE) AS json
+),
 cte_facility_language as (
-    select 
-        fl.facilityid, 
+    select distinct
+        fl.facilitycode, 
         l.languagename as langnm,
         l.languagecode as langcd
-    from 
-        base.facilitytolanguage fl
-    inner join 
-        base.language l on fl.languageid = l.languageid
+    from cte_language fl
+    inner join base.language l on fl.languagecode = l.languagecode
 ),
 cte_language_xml as (
     select 
-        facilityid,
+        facilitycode,
         '<langL>' || listagg( '<lang>' || iff(langnm is not null,'<langnm>' || langnm || '</langnm>','') ||
-iff(langcd is not null,'<langcd>' || langcd || '</langcd>','')  || '</lang>','') || '</langL' as languagexml
+        iff(langcd is not null,'<langcd>' || langcd || '</langcd>','')  || '</lang>','') || '</langL>' as languagexml
     from cte_facility_language
     group by 
-        facilityid
+        facilitycode
+),
+CTE_Service AS (
+    SELECT
+        f.ref_facility_code AS facilitycode,
+        TO_VARCHAR(json.value: FACILITY_SERVICE_CODE) AS ServiceCode
+    FROM $$ || mdm_db || $$.mst.facility_profile_processing AS f,
+         LATERAL FLATTEN(input => f.FACILITY_PROFILE:FACILITY_SERVICE) AS json
 ),
 
 cte_facility_service as (
-    select 
-        fs.facilityid, 
+    select distinct
+        fs.facilitycode, 
         s.servicename as servnm,
         s.servicecode as servcd
-    from 
-        base.facilitytoservice fs
-    inner join 
-        base.service s on fs.serviceid = s.serviceid
+    from cte_service fs
+    inner join base.service s on fs.servicecode = s.servicecode
 ),
 cte_service_xml as (
     select 
-        facilityid,
+        facilitycode,
         '<servL>' || listagg( '<serv>' || iff(servnm is not null,'<servnm>' || servnm || '</servnm>','') ||
-iff(servcd is not null,'<servcd>' || servcd || '</servcd>','')  || '</serv>','') || '</servL' as servicexml
+        iff(servcd is not null,'<servcd>' || servcd || '</servcd>','')  || '</serv>','') || '</servL>' as servicexml
     from cte_facility_service
     group by 
-        facilityid
+        facilitycode
 ),
 
 -- sponsorshipxml
 
 cte_spnfeat as (
-    select distinct
+    select distinct 
         a.entityid as clienttoproductid,
+        a.sourcecode as clientcode,
         cf.clientfeaturecode as featcd,
         cf.clientfeaturedescription as featdesc,
         cfv.clientfeaturevaluecode as featvalcd,
@@ -1111,18 +1121,17 @@ cte_spnfeat as (
     where 
         et.entitytypecode = 'CLPROD'
 ),
-
+-- select distinct clientcode from mid.facility f join base.cliententitytoclientfeature c on f.clientcode = c.sourcecode
 cte_spnfeat_xml as (
     select 
-        clienttoproductid,
+        clientcode,
         listagg( '<spnFeat>' || iff(featcd is not null,'<featCd>' || featcd || '</featCd>','') ||
-iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
-iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
-iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</spnFeat>','') as spnfeatl
+        iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
+        iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
+        iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</spnFeat>','') as spnfeatl
     from cte_spnfeat
-    group by clienttoproductid
-),
-
+    group by clientcode
+) ,
 cte_spn as (
 select distinct
     f.facilitycode,
@@ -1130,27 +1139,29 @@ select distinct
     f.clientname as spnnm,
     spn.spnfeatl
 from mid.facility as f
-join cte_spnfeat_xml as spn on spn.clienttoproductid = f.clienttoproductid
-where f.clientcode is not null
-),
+    join cte_spnfeat_xml as spn on spn.clientcode = f.clientcode
+) ,
 
 cte_spn_xml as (
  select 
         facilitycode,
         listagg( '<spn>' || iff(spncd is not null,'<spncd>' || spncd || '</spncd>','') ||
-iff(spnnm is not null,'<spnnm>' || spnnm || '</spnnm>','') ||
-iff(spnfeatl is not null,'<spnfeatl>' || spnfeatl || '</spnfeatl>','')  || '</spn>','') as spn
+        iff(spnnm is not null,'<spnnm>' || spnnm || '</spnnm>','') ||
+        iff(spnfeatl is not null,'<spnfeatl>' || spnfeatl || '</spnfeatl>','')  || '</spn>','') as spn
     from cte_spn
     group by facilitycode
 ),
 
+-- In the table base.cliententitytoclientfeature there should be the entitytypeid for CLCTR 54434c43-0052-0000-0000-000000000000
+
 cte_clctr_featl as (
     select 
-        cecf.entityid as callcenterid,
+        '36334343-0000-0000-0000-000000000000' as callcenterid,
         cf.clientfeaturecode as featcd,
         cf.clientfeaturedescription as featdesc,
         cfv.clientfeaturevaluecode as featvalcd,
-        cfv.clientfeaturevaluedescription as featvaldesc
+        cfv.clientfeaturevaluedescription as featvaldesc,
+        et.entitytypecode
     from 
         base.cliententitytoclientfeature cecf
     join 
@@ -1166,18 +1177,19 @@ cte_clctr_featl as (
     where 
         cfg.clientfeaturegroupcode = 'FGOAR'
         and et.entitytypecode = 'CLCTR'
+   
 ),
 
 cte_clctr_featl_xml as (
     select 
         callcenterid,
         listagg( '<clCtrFeat>' || iff(featcd is not null,'<featCd>' || featcd || '</featCd>','') ||
-iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
-iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
-iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</clCtrFeat>','') as clctrfeatl
+        iff(featdesc is not null,'<featDesc>' || featdesc || '</featDesc>','') ||
+        iff(featvalcd is not null,'<featValCd>' || featvalcd || '</featValCd>','') ||
+        iff(featvaldesc is not null,'<featValDesc>' || featvaldesc || '</featValDesc>','')  || '</clCtrFeat>','') as clctrfeatl
     from cte_clctr_featl
     group by callcenterid
-),
+) ,
 
 cte_clctr as (
     select distinct
@@ -1193,22 +1205,22 @@ cte_clctr as (
         base.vwucallcenterdetails ccd
     join 
         cte_clctr_featl_xml clctr on clctr.callcenterid = ccd.callcenterid
-),
+) ,
 
 cte_clctr_xml as (
     select 
         clienttoproductid,
         listagg( '<clCtrL>' || iff(clctrcd is not null,'<clCtrCd>' || clctrcd || '</clCtrCd>','') ||
-iff(clctrnm is not null,'<clCtrNm>' || clctrnm || '</clCtrNm>','') ||
-iff(aptcoffday is not null,'<aptCoffDay>' || aptcoffday || '</aptCoffDay>','') ||
-iff(aptcoffhr is not null,'<aptCoffHr>' || aptcoffhr || '</aptCoffHr>','') ||
-iff(eml is not null,'<eml>' || eml || '</eml>','') ||
-iff(fxno is not null,'<fxNo>' || fxno || '</fxNo>','') ||
-iff(clctrfeatl is not null,'<clctrfeatl>' || clctrfeatl || '</clctrfeatl>','')  || '</clCtrL>','') as clctrl
+        iff(clctrnm is not null,'<clCtrNm>' || clctrnm || '</clCtrNm>','') ||
+        iff(aptcoffday is not null,'<aptCoffDay>' || aptcoffday || '</aptCoffDay>','') ||
+        iff(aptcoffhr is not null,'<aptCoffHr>' || aptcoffhr || '</aptCoffHr>','') ||
+        iff(eml is not null,'<eml>' || eml || '</eml>','') ||
+        iff(fxno is not null,'<fxNo>' || fxno || '</fxNo>','') ||
+        iff(clctrfeatl is not null,'<clctrfeatl>' || clctrfeatl || '</clctrfeatl>','')  || '</clCtrL>','') as clctrl
     from cte_clctr
     group by
         clienttoproductid
-),
+) ,
 
 cte_display as (
     select 
@@ -1233,11 +1245,11 @@ cte_displ_xml as (
     select 
         facilitycode,
         '<dispL>' || listagg( '<disp>' || iff(phonel is not null,'<phoneL>' || phonel || '</phoneL>','') ||
-iff(mobilephonel is not null,'<mobilePhoneL>' || mobilephonel || '</mobilePhoneL>','') ||
-iff(urll is not null,'<urlL>' || urll || '</urlL>','') ||
-iff(imagel is not null,'<imageL>' || imagel || '</imageL>','') ||
-iff(tabletphonel is not null,'<tabletPhoneL>' || tabletphonel || '</tabletPhoneL>','') ||
-iff(desktopphonel is not null,'<desktopPhoneL>' || desktopphonel || '</desktopPhoneL>','')  || '</disp>','') || '</dispL' as displ
+        iff(mobilephonel is not null,'<mobilePhoneL>' || mobilephonel || '</mobilePhoneL>','') ||
+        iff(urll is not null,'<urlL>' || urll || '</urlL>','') ||
+        iff(imagel is not null,'<imageL>' || imagel || '</imageL>','') ||
+        iff(tabletphonel is not null,'<tabletPhoneL>' || tabletphonel || '</tabletPhoneL>','') ||
+        iff(desktopphonel is not null,'<desktopPhoneL>' || desktopphonel || '</desktopPhoneL>','')  || '</disp>','') || '</dispL>' as displ
     from cte_display
     group by facilitycode
 ),
@@ -1253,15 +1265,20 @@ select distinct
     di.displ
 from mid.facility as f
     join cte_spn_xml as spn on spn.facilitycode = f.facilitycode
-    join cte_clctr_xml as cl on cl.clienttoproductid = f.clienttoproductid
+    left join cte_clctr_xml as cl on cl.clienttoproductid = f.clienttoproductid
     join cte_displ_xml as di on di.facilitycode = f.facilitycode
-where f.clienttoproductid is not null
-),
+) ,
 
 cte_sponsorship_xml as (
     select 
         facilitycode,
-        '<sponsorL>' || listagg( '<sponsor>' || iff(prgrcd is not null,'<prgrcd>' || prgrcd || '</prgrcd>','')  || '</sponsor>','') || '</sponsorL' as sponsorshipxml
+        '<sponsorL>' || listagg( '<sponsor>' || 
+        iff(prcd is not null,'<prcd>' || prcd || '</prcd>','') ||
+        iff(prgrcd is not null,'<prgrcd>' || prgrcd || '</prgrcd>','') ||
+        iff(spn is not null,'<spn>' || spn || '</spn>','') ||
+        iff(clctrl is not null,'<clCtrL>' || clctrl || '</clCtrL>','') ||
+        iff(dispL is not null,'<dispL>' || dispL || '</dispL>','')
+        || '</sponsor>','') || '</sponsorL>' as sponsorshipxml
     from cte_sponsorship
     group by 
         facilitycode
@@ -1387,29 +1404,31 @@ cte_solr_facility as (
         sxml.servicexml
     from
         mid.facility as fac
-        join cte_facility_address_detail as fad on fad.facilityid = fac.facilityid
-        join cte_facility_hours_xml as fhxml on fhxml.facilityid = fac.facilityid
-        join cte_address_xml as axml on axml.facilityid = fac.facilityid
-        join cte_award_xml as awxml on awxml.facilityid = fac.facilityid
-        join cte_service_line_xml as slxml on slxml.facilityid = fac.legacykey
-        join cte_patient_satisfaction_xml as psxml on psxml.facilityid = fac.legacykey
-        join cte_distinction_xml as dxml on dxml.facilityid = fac.legacykey
-        join cte_readmission_rate_xml as rxml on rxml.facilityid = fac.legacykey
-        join cte_effective_care_xml as ecxml on ecxml.facilityid = fac.legacykey
-        join cte_patient_safety_xml as psfxml on psfxml.facilityid = fac.legacykey
-        join cte_trauma_level_xml as tlxml on tlxml.facilitycode = fac.facilitycode
-        join cte_sponsorship_xml as spxml on spxml.facilitycode = fac.facilitycode
-        join cte_affiliation_xml as afxml on afxml.facilityid = fac.legacykey
-        join cte_leadership_xml as lxml on lxml.facilityid = fac.legacykey
-        join cte_award_achievement_xml as aaxml on aaxml.facilityid = fac.legacykey
-        join cte_survey as sur on sur.facilityid = fac.legacykey
-        join cte_language_xml as laxml on laxml.facilityid = fac.facilityid
-        join cte_service_xml as sxml on sxml.facilityid = fac.facilityid
-)
+        left join cte_facility_address_detail as fad on fad.facilityid = fac.facilityid
+        left join cte_facility_hours_xml as fhxml on fhxml.facilityid = fac.facilityid
+        left join cte_address_xml as axml on axml.facilityid = fac.facilityid
+        left join cte_award_xml as awxml on awxml.facilityid = fac.facilityid
+        left join cte_service_line_xml as slxml on slxml.facilityid = fac.legacykey
+        left join cte_patient_satisfaction_xml as psxml on psxml.facilityid = fac.legacykey
+        left join cte_distinction_xml as dxml on dxml.facilityid = fac.legacykey
+        left join cte_readmission_rate_xml as rxml on rxml.facilityid = fac.legacykey
+        left join cte_effective_care_xml as ecxml on ecxml.facilityid = fac.legacykey
+        left join cte_patient_safety_xml as psfxml on psfxml.facilityid = fac.legacykey
+        left join cte_trauma_level_xml as tlxml on tlxml.facilitycode = fac.facilitycode
+        left join cte_sponsorship_xml as spxml on spxml.facilitycode = fac.facilitycode
+        left join cte_affiliation_xml as afxml on afxml.facilityid = fac.legacykey
+        left join cte_leadership_xml as lxml on lxml.facilityid = fac.facilityid
+        left join cte_award_achievement_xml as aaxml on aaxml.facilityid = fac.facilityid
+        left join cte_survey as sur on sur.facilityid = fac.legacykey
+        left join cte_language_xml as laxml on laxml.facilitycode = fac.facilitycode
+        left join cte_service_xml as sxml on sxml.facilitycode = fac.facilitycode
+) 
 select 
     facilityid,
     legacykey,
+    legacykey8,
     facilitycode,
+    facilityname,
     facilitytype,
     facilitytypecode,
     facilitysearchtype,
@@ -1476,21 +1495,21 @@ select
     visitinghourssunday,
     website,
     foreignobjectleftpercent,
-    to_variant(addressxml) as addressxml,
-    to_variant(awardxml) as awardxml,
-    to_variant(servicelinexml) as servicelinexml,
-    to_variant(patientsatisfactionxml) as patientsatisfactionxml,
-    to_variant(toptenprocedurexml) as toptenprocedurexml,
-    to_variant(distinctionxml) as distinctionxml,
-    to_variant(patientcarexml) as patientcarexml,
-    to_variant(readmissionratexml) as readmissionratexml,
-    to_variant(timelyandeffectivecarexml) as timelyandeffectivecarexml,
-    to_variant(patientsafetyxml) as patientsafetyxml,
-    to_variant(traumalevelxml) as traumalevelxml,
-    to_variant(sponsorshipxml) as sponsorshipxml,
-    to_variant(affiliationxml) as affiliationxml,
-    to_variant(leadershipxml) as leadershipxml,
-    to_variant(awardachievementxml) as awardachievementxml,
+    to_variant(parse_xml(addressxml)) as addressxml,
+    to_variant(parse_xml(awardxml)) as awardxml,
+    to_variant(parse_xml(servicelinexml)) as servicelinexml,
+    to_variant(parse_xml(patientsatisfactionxml)) as patientsatisfactionxml,
+    to_variant(parse_xml(toptenprocedurexml)) as toptenprocedurexml,
+    to_variant(parse_xml(distinctionxml)) as distinctionxml,
+    to_variant(parse_xml(patientcarexml)) as patientcarexml,
+    to_variant(parse_xml(readmissionratexml)) as readmissionratexml,
+    to_variant(parse_xml(timelyandeffectivecarexml)) as timelyandeffectivecarexml,
+    to_variant(parse_xml(patientsafetyxml)) as patientsafetyxml,
+    to_variant(parse_xml(traumalevelxml)) as traumalevelxml,
+    to_variant(parse_xml(sponsorshipxml)) as sponsorshipxml,
+    to_variant(parse_xml(affiliationxml)) as affiliationxml,
+    to_variant(parse_xml(leadershipxml)) as leadershipxml,
+    to_variant(parse_xml(awardachievementxml)) as awardachievementxml,
     facilityurl,
     facilityimagepath,
     patientsatisfaction,
@@ -1498,15 +1517,17 @@ select
     overallpatientsafety,
     updateddate,
     updatedsource,
-    to_variant(languagexml) as languagexml,
-    to_variant(servicexml) as servicexml
+    to_variant(parse_xml(languagexml)) as languagexml,
+    to_variant(parse_xml(servicexml)) as servicexml
 from cte_solr_facility $$;
 
 
 --- Insert Statement
 insert_statement := '  insert  ( facilityid,
                                 legacykey,
+                                legacykey8,
                                 facilitycode,
+                                facilityname,
                                 facilitytype,
                                 facilitytypecode,
                                 facilitysearchtype,
@@ -1600,7 +1621,9 @@ insert_statement := '  insert  ( facilityid,
                                 
                       values (  source.facilityid,
                                 source.legacykey,
+                                source.legacykey8,
                                 source.facilitycode,
+                                source.facilityname,
                                 source.facilitytype,
                                 source.facilitytypecode,
                                 source.facilitysearchtype,
@@ -1692,6 +1715,106 @@ insert_statement := '  insert  ( facilityid,
                                 source.languagexml,
                                 source.servicexml )';
 
+--- update statement                                 
+update_statement := ' 
+    update
+    set
+        target.legacykey = source.legacykey,
+        target.legacykey8 = source.legacykey8,
+        target.facilitycode = source.facilitycode,
+        target.facilityname = source.facilityname,
+        target.facilitytype = source.facilitytype,
+        target.facilitytypecode = source.facilitytypecode,
+        target.facilitysearchtype = source.facilitysearchtype,
+        target.accreditation = source.accreditation,
+        target.accreditationdescription = source.accreditationdescription,
+        target.treatmentschedules = source.treatmentschedules,
+        target.phonenumber = source.phonenumber,
+        target.additionaltransportationinformation = source.additionaltransportationinformation,
+        target.afterhoursphonenumber = source.afterhoursphonenumber,
+        target.closedholidaysinformation = source.closedholidaysinformation,
+        target.communityactivitiesinformation = source.communityactivitiesinformation,
+        target.communityoutreachprograminformation = source.communityoutreachprograminformation,
+        target.communitysupportinformation = source.communitysupportinformation,
+        target.facilitydescription = source.facilitydescription,
+        target.emergencyafterhoursphonenumber = source.emergencyafterhoursphonenumber,
+        target.foundationinformation = source.foundationinformation,
+        target.healthplaninformation = source.healthplaninformation,
+        target.ismedicaidaccepted = source.ismedicaidaccepted,
+        target.ismedicareaccepted = source.ismedicareaccepted,
+        target.isteaching = source.isteaching,
+        target.languageinformation = source.languageinformation,
+        target.medicalservicesinformation = source.medicalservicesinformation,
+        target.missionstatement = source.missionstatement,
+        target.officeclosetime = source.officeclosetime,
+        target.officeopentime = source.officeopentime,
+        target.facilityhoursxml = source.facilityhoursxml,
+        target.onsiteguestservicesinformation = source.onsiteguestservicesinformation,
+        target.othereducationandtraininginformation = source.othereducationandtraininginformation,
+        target.otherservicesinformation = source.otherservicesinformation,
+        target.ownershiptype = source.ownershiptype,
+        target.parkinginstructionsinformation = source.parkinginstructionsinformation,
+        target.paymentpolicyinformation = source.paymentpolicyinformation,
+        target.professionalaffiliationinformation = source.professionalaffiliationinformation,
+        target.publictransportationinformation = source.publictransportationinformation,
+        target.regionalrelationshipinformation = source.regionalrelationshipinformation,
+        target.religiousaffiliationinformation = source.religiousaffiliationinformation,
+        target.specialprogramsinformation = source.specialprogramsinformation,
+        target.surroundingareainformation = source.surroundingareainformation,
+        target.teachingprogramsinformation = source.teachingprogramsinformation,
+        target.tollfreephonenumber = source.tollfreephonenumber,
+        target.transplantcapabilitiesinformation = source.transplantcapabilitiesinformation,
+        target.visitinghoursinformation = source.visitinghoursinformation,
+        target.volunteerinformation = source.volunteerinformation,
+        target.yearestablished = source.yearestablished,
+        target.hospitalaffiliationinformation = source.hospitalaffiliationinformation,
+        target.physiciancallcenterphonenumber = source.physiciancallcenterphonenumber,
+        target.overallhospitalstar = source.overallhospitalstar,
+        target.clientcode = source.clientcode,
+        target.productcode = source.productcode,
+        target.providercount = source.providercount,
+        target.awardsinformation = source.awardsinformation,
+        target.awardcount = source.awardcount,
+        target.procedurecount = source.procedurecount,
+        target.fivestarprocedurecount = source.fivestarprocedurecount,
+        target.residencyprogapproval = source.residencyprogapproval,
+        target.miscellaneousinformation = source.miscellaneousinformation,
+        target.appointmentinformation = source.appointmentinformation,
+        target.visitinghoursmonday = source.visitinghoursmonday,
+        target.visitinghourstuesday = source.visitinghourstuesday,
+        target.visitinghourswednesday = source.visitinghourswednesday,
+        target.visitinghoursthursday = source.visitinghoursthursday,
+        target.visitinghoursfriday = source.visitinghoursfriday,
+        target.visitinghourssaturday = source.visitinghourssaturday,
+        target.visitinghourssunday = source.visitinghourssunday,
+        target.website = source.website,
+        target.foreignobjectleftpercent = source.foreignobjectleftpercent,
+        target.addressxml = source.addressxml,
+        target.awardxml = source.awardxml,
+        target.servicelinexml = source.servicelinexml,
+        target.patientsatisfactionxml = source.patientsatisfactionxml,
+        target.toptenprocedurexml = source.toptenprocedurexml,
+        target.distinctionxml = source.distinctionxml,
+        target.PatientCareXML = source.patientcarexml,
+        target.ReadmissionRateXML = source.readmissionratexml,
+        target.TimelyAndEffectiveCareXML = source.timelyandeffectivecarexml,
+        target.PatientSafetyXML = source.patientsafetyxml,
+        target.TraumaLevelXML = source.traumalevelxml,
+        target.SponsorshipXML = source.sponsorshipxml,
+        target.AffiliationXML = source.affiliationxml,
+        target.LeadershipXML = source.leadershipxml,
+        target.AwardAchievementXML = source.awardachievementxml,
+        target.FacilityURL = source.facilityurl,
+        target.FacilityImagePath = source.facilityimagepath,
+        target.PatientSatisfaction = source.patientsatisfaction,
+        target.IsPDC = source.ispdc,
+        target.OverallPatientSafety = source.overallpatientsafety,
+        target.UpdatedDate = source.updateddate,
+        target.UpdatedSource = source.updatedsource,
+        target.LanguageXML = source.languagexml,
+        target.ServiceXML = source.servicexml';
+
+
 ---------------------------------------------------------
 --------- 4. Actions (Inserts and Updates) --------------
 ---------------------------------------------------------  
@@ -1699,7 +1822,8 @@ insert_statement := '  insert  ( facilityid,
 
 merge_statement := ' merge into show.solrfacility as target using 
                    ('||select_statement||') as source 
-                   on source.facilityid = target.facilityid and source.facilitycode = target.facilitycode
+                   on source.facilityid = target.facilityid 
+                   when matched then ' || update_statement || '
                    when not matched then  '||insert_statement;
                    
         
