@@ -197,13 +197,15 @@ begin
 select_statement_2 :=  $$ with cte_batch_process as (
                             	select distinct
                                 -- select top 1000
-                    					p.providerid
+                    					p.providerid,
+                                        p.providercode
                     			from base.provider as p 
                     			where 	p.npi is not null
                     			union 
                     			select distinct
                                 -- select top 1000
-                    					p.providerid
+                    					p.providerid,
+                                        p.providercode
                     			from    $$ || mdm_db || $$.mst.provider_profile_processing as ppp 
                     			inner join base.provider as p on p.providercode = ppp.ref_PROVIDER_CODE
                     			where 	p.npi is not null
@@ -430,7 +432,7 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                 from
                                     (
                                         select
-                                            bpsa.providerid,
+                                            bpsa.providercode,
                                             bpsa.provideraveragescore,
                                             row_number() over(
                                                 partition by bpsa.providerid
@@ -439,7 +441,9 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                             ) as RN1
                                         from
                                             base.providersurveyaggregate as BPSA
-                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            -- originally was like this but the IDs in BPSA are from SQL Server, join on ProviderCode
+                                            -- inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providercode = bpsa.providercode
                                         where
                                             QuestionID = 231
                                     )
@@ -986,7 +990,9 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     left join cte_years_since_medical_school_graduation as CTE_YSMSG on CTE_ysmsg.providerid = p.providerid
                                     left join cte_provider_image as CTE_PI on CTE_pi.providerid = p.providerid
                                     left join cte_patient_experience_survey_overall_score as CTE_PESOS on CTE_pesos.providerid = p.providerid
-                                    left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providerid = p.providerid
+                                    -- originally was like this but the IDs in BPSA are from SQL Server, join on ProviderCode
+                                    -- left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providercode = p.providercode
                                     left join cte_patient_experience_survey_overall_count as CTE_PESOC on CTE_pesoc.providerid = p.providerid
                                     left join cte_display_status_code as CTE_DSC on CTE_dsc.providerid = p.providerid
                                     left join cte_sub_status_code as CTE_SSC on CTE_ssc.providerid = p.providerid
