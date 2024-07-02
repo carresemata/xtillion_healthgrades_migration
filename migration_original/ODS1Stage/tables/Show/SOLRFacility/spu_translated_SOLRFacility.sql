@@ -113,21 +113,34 @@ select_statement :=  $$ with cte_facility_address_detail as (
         join base.address a on a.addressid = fa.addressid
         join base.citystatepostalcode cspc on cspc.citystatepostalcodeid = a.citystatepostalcodeid 
 ),
-cte_parent_child as (
-    select
-        fpc.facilityidparent,
-        fpc.facilityidchild,
-        f.name as childfacilityname,
-        case
-            when fpc.ismaxyear = 1
-            and f.isclosed = 0 then 1
-            when fpc.ismaxyear = 0
-            and f.isclosed = 0 then 0
-        end as currentmerge
-    from
-        ermart1.facility_facilityparentchild fpc
-        join ermart1.facility_facility f on fpc.facilityidchild = f.facilityid
-),
+cte_address as (
+select  
+    fad.facilityid,
+    fad.address as ad1,
+    fad.city as city,
+    fad.state as st,
+    fad.zipcode as zip,
+    cast(fad.latitude as decimal(9, 6)) as lat,
+    cast(fad.longitude as decimal(9, 6)) as lng,
+    fad.timezone as tzn
+from 
+    cte_facility_address_detail fad
+) ,
+cte_address_xml as (
+select 
+    facilityid,
+    '<addrL>' || listagg( '<addr>' || 
+    iff(ad1 is not null,'<ad1>' || ad1 || '</ad1>','') ||
+    iff(city is not null,'<city>' || city || '</city>','') ||
+    iff(st is not null,'<st>' || st || '</st>','') ||
+    iff(zip is not null,'<zip>' || zip || '</zip>','') ||
+    iff(lat is not null,'<lat>' || lat || '</lat>','') ||
+    iff(lng is not null,'<lng>' || lng || '</lng>','') ||
+    iff(tzn is not null,'<tzn>' || tzn || '</tzn>','')  || '</addr>','') || '</addrL>' as addressxml
+from cte_address
+group by facilityid
+) ,
+
 cte_facility_hours as ( -- this is empty because the json facility hours is empty from the mdm 
 select 
     f.facilityid,
@@ -156,33 +169,21 @@ from cte_facility_hours
 group by facilityid
 ),
 
-cte_address as (
-select  
-    fad.facilityid,
-    fad.address as ad1,
-    fad.city as city,
-    fad.state as st,
-    fad.zipcode as zip,
-    cast(fad.latitude as decimal(9, 6)) as lat,
-    cast(fad.longitude as decimal(9, 6)) as lng,
-    fad.timezone as tzn
-from 
-    cte_facility_address_detail fad
-) ,
-cte_address_xml as (
-select 
-    facilityid,
-    '<addrL>' || listagg( '<addr>' || 
-    iff(ad1 is not null,'<ad1>' || ad1 || '</ad1>','') ||
-    iff(city is not null,'<city>' || city || '</city>','') ||
-    iff(st is not null,'<st>' || st || '</st>','') ||
-    iff(zip is not null,'<zip>' || zip || '</zip>','') ||
-    iff(lat is not null,'<lat>' || lat || '</lat>','') ||
-    iff(lng is not null,'<lng>' || lng || '</lng>','') ||
-    iff(tzn is not null,'<tzn>' || tzn || '</tzn>','')  || '</addr>','') || '</addrL>' as addressxml
-from cte_address
-group by facilityid
-) ,
+cte_parent_child as (
+    select
+        fpc.facilityidparent,
+        fpc.facilityidchild,
+        f.name as childfacilityname,
+        case
+            when fpc.ismaxyear = 1
+            and f.isclosed = 0 then 1
+            when fpc.ismaxyear = 0
+            and f.isclosed = 0 then 0
+        end as currentmerge
+    from
+        ermart1.facility_facilityparentchild fpc
+        join ermart1.facility_facility f on fpc.facilityidchild = f.facilityid
+),
 
 cte_related_spec as (
 select distinct
@@ -1407,7 +1408,7 @@ cte_solr_facility as (
         left join cte_facility_address_detail as fad on fad.facilityid = fac.facilityid
         left join cte_facility_hours_xml as fhxml on fhxml.facilityid = fac.facilityid
         left join cte_address_xml as axml on axml.facilityid = fac.facilityid
-        left join cte_award_xml as awxml on awxml.facilityid = fac.facilityid
+        left join cte_award_xml as awxml on awxml.facilityid = fac.legacykey
         left join cte_service_line_xml as slxml on slxml.facilityid = fac.legacykey
         left join cte_patient_satisfaction_xml as psxml on psxml.facilityid = fac.legacykey
         left join cte_distinction_xml as dxml on dxml.facilityid = fac.legacykey
