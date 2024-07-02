@@ -2461,52 +2461,69 @@ cte_survey_xml as (
 
 ------------------------ClinicalFocusDCPXML------------------------
 
-cte_mtcode as (
-    SELECT
-        ProviderId,
-        refMedicalTermCode AS MTCode,
-        NationalRankingB AS NRankB,
-        ClinicalFocusShortDescription
-    FROM
-        Base.ClinicalFocusDCP 
+Cte_medical_procedure as (
+    select distinct 
+    m.entityid as providerid,
+    m.medicaltermid 
+from base.entitytomedicalterm m 
+    qualify row_number() over(partition by entityid order by m.lastupdatedate desc ) = 1
 ),
 
+cte_clinical as 
+    (select 
+        c.medicaltermid,
+        c.refMedicalTermCode AS MTCode,
+        c.NationalRankingB AS NRankB,
+        c.ClinicalFocusShortDescription as ClFdesc
+    from base.ClinicalFocusDCP as c
+    qualify row_number() over(partition by medicaltermid order by providerid) = 1
+),
+cte_mtcode as (
+select distinct
+    m.providerid,
+    c.MTCode,
+    c.NRankB,
+    c.ClFdesc
+from cte_clinical c 
+    join cte_medical_procedure m on c.medicaltermid = m.medicaltermid
+),
 cte_mtcode_xml as (
     SELECT
-        ProviderId,
-       '<MTCodeL>' || listagg('<MTCode>' || 
+        providerid,
+        listagg('<MTCode>' || 
         iff(MTCode is not null,'<MTCode>' || MTCode || '</MTCode>','') ||
         iff(NRankB is not null,'<NRankB>' || NRankB || '</NRankB>','') || 
-        '</MTCode>', '') || '</MTCodeL>'
+        '</MTCode>', '') 
  AS XMLValue
     FROM
         cte_mtcode
     GROUP BY
-        ProviderId
-),
+        providerid
+) ,
 
 cte_clinical_focus_dcp as (
     SELECT
-        C.providerid,
-        C.ClinicalFocusShortDescription AS CLFdesc,
-        cte.xmlvalue
+        c.providerid,
+        C.CLFdesc,
+        cte.xmlvalue as mtcode
     FROM
-        Base.ClinicalFocusDCP C
+        cte_mtcode as C
         JOIN cte_mtcode_xml cte ON cte.providerid = C.providerid
-),
+) ,
 
 cte_clinical_focus_dcp_xml as (
     SELECT
         providerid,
         '<CLFdescL>' || listagg('<CLFdesc>' || 
         iff(CLFdesc is not null,'<CLFdesc>' || CLFdesc || '</CLFdesc>','') || 
+        iff(mtcode is not null, '<MTCodeL>' || mtcode || '</MTCodeL>' , '') ||
         '</CLFdesc>', '') || '</CLFdescL>'
  AS XMLValue
     FROM
         cte_clinical_focus_dcp
     GROUP BY
         providerid
-) ,
+),
 
 ------------------------CLinicalFocusXML------------------------
 
@@ -2864,7 +2881,7 @@ update_statement_cond_mapped := $$ update show.solrprovider as target
                                     where target.ProviderID = source.ProviderID $$;
 
 ------------------------FacilityXML------------------------
-select_statement_facility := $$ with CTE_ProviderProceduresq AS (
+select_statement_facility := $$ CTE_ProviderProceduresq AS (
     SELECT
         a.ProviderID,
         a.ProcedureCode,
@@ -3102,7 +3119,7 @@ cte_award_xml AS (
         cte_award
     GROUP BY
         facilityid
-),
+) ,
 
 cte_related_spec2 as (
     SELECT DISTINCT
@@ -3296,14 +3313,14 @@ SELECT distinct
     pf.FacilityName AS fNm,
     pf.ImageFilePath AS fLogo,
     pf.HasAward AS awrd,
-    pf.AddressXML AS addrL,
-    pf.PDCPhoneXML AS pdcPhoneL,
+    to_variant(pf.AddressXML) AS addrL,
+    to_variant(pf.PDCPhoneXML) AS pdcPhoneL,
     pf.FacilityURL AS fUrl,
     pf.FacilityType AS fType,
     pf.FacilityTypeCode AS fTypeCd,
     pf.FacilitySearchType AS fSearchTyp,
     pf.FiveStarProcedureCount AS fiveStrCnt,
-    f.ImageXML AS imageL,
+    to_variant(f.ImageXML) AS imageL,
     f.AwardCount AS awCnt,
     f.MedicalServicesInformation AS medSvc,
     fs.AnswerPercent AS patientSatis,
@@ -3314,8 +3331,8 @@ SELECT distinct
     END AS isPDC,
     pf.qualityScore,
     f.MissionStatement AS misson,
-    aw.xmlvalue as awardxml,
-    rat.xmlvalue as ratingsxml 
+    to_variant(aw.xmlvalue) as awardxml,
+    to_variant(rat.xmlvalue) as ratingsxml 
 FROM Mid.ProviderFacility AS pf
     JOIN Mid.Facility f ON pf.FacilityID = f.FacilityID
     JOIN Mid.Provider p ON p.ProviderID = pf.ProviderID
@@ -3323,7 +3340,7 @@ FROM Mid.ProviderFacility AS pf
     JOIN Cte_award_xml as aw on aw.facilityid = pf.legacykey
     JOIN Cte_ratings_xml as rat on rat.facilityid = pf.legacykey
     left join ERMART1.Facility_FacilityToSurvey fs on fs.FacilityID = f.LegacyKey and fs.SurveyID = 1 AND fs.QuestionID = 10
-),
+) ,
 
 Cte_Facility_XML AS (
 SELECT
