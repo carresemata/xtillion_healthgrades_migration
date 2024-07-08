@@ -74,7 +74,7 @@ insert_statement := ' insert
                         ProviderSubTypeRankCalculated,
                         LastUpdateDate)
                       values 
-                        (uuid_string(),
+                        (utils.generate_uuid(source.providerid || source.providersubtypeid), -- done
                         source.providerid,
                         source.providersubtypeid,
                         source.sourcecode,

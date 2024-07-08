@@ -202,7 +202,7 @@ insert_statement := $$
                          )
                     values 
                         (
-                        uuid_string(),
+                        utils.generate_uuid(source.relationshiptypeid || source.parentid || source.childid), -- done
                         source.relationshiptypeid,
                         source.parentid,
                         source.childid,

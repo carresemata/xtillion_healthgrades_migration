@@ -773,7 +773,7 @@ cte_tmp_phones as (
                             SourceCode,
                             LastUpdateDate)
                          values (
-                            uuid_string(),
+                            utils.generate_uuid(source.phonenumber), -- done
                             source.phonenumber,
                             source.sourcecode,
                             source.lastupdatedate)';

@@ -66,7 +66,7 @@ insert_statement := ' insert
                         SourceCode, 
                         LastUpdateDate)
                     values 
-                        (uuid_string(), 
+                        (utils.generate_uuid(source.providerid || source.facilityid), -- done 
                         source.providerid, 
                         source.facilityid, 
                         --source.providerroleid, 

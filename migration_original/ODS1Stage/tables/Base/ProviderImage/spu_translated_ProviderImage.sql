@@ -94,7 +94,7 @@ insert_statement := ' insert
                         ExternalIdentifier,
                         ImagePath)
                     values
-                        (uuid_string(),
+                        (utils.generate_uuid(source.providerid || source.mediaimagetypeid || source.mediasizeid || source.mediareviewlevelid || source.mediacontexttypeid || source.mediaimagehostid), -- done
                         source.providerid,
                         source.mediaimagetypeid,
                         source.filename,

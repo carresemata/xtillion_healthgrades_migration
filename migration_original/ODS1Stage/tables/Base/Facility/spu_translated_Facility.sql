@@ -64,7 +64,7 @@ insert_statement := ' insert
     )
 values
     (
-        uuid_string(), 
+        utils.generate_uuid(source.FacilityCode), -- done
         source.FacilityCode,
         source.FacilityName, 
         source.SourceCode, 

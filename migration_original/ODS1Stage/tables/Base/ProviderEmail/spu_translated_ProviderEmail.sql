@@ -68,7 +68,7 @@ insert_statement := ' insert
                             EmailTypeID,
                             LastUpdateDate)
                       values 
-                        (   uuid_string(),
+                        (   utils.generate_uuid(source.providerid || source.EmailTypeID),
                             source.providerid,
                             source.emailaddress,
                             source.emailrank,

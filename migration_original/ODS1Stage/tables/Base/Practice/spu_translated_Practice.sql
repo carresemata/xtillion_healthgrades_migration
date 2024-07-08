@@ -75,7 +75,7 @@ insert_statement := ' insert
                             )
                         values
                             (
-                            uuid_string(),
+                            utils.generate_uuid(source.practicecode), -- done
                             source.lastupdatedate,
                             source.npi,
                             source.practicecode,

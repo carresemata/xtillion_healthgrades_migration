@@ -219,7 +219,7 @@ where rowrank = 1
                 LastUpdateDate
             )
         values(
-                uuid_string(),
+                utils.generate_uuid(source.clienttoproductid || source.entitytypeid || source.entityid), -- done
                 source.clienttoproductid,
                 source.entitytypeid,
                 source.entityid,

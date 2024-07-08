@@ -91,7 +91,7 @@ insert_statement := $$ insert
                             InsertedOn
                         )
                         values (
-                            uuid_string(),
+                            utils.generate_uuid(source.providerid || source.clinicalfocusid), -- done
                             source.providerid,
                             source.clinicalfocusid,
                             source.clinicalfocusdcpcount,

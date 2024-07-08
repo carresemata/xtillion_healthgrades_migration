@@ -68,7 +68,7 @@ insert_statement := $$
                         )
                       values 
                         (   
-                        uuid_string(),
+                        utils.generate_uuid(source.degreeabbreviation), -- done
                         source.degreeabbreviation,
                         source.refrank,
                         source.lastupdatedate

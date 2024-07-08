@@ -100,7 +100,7 @@ insert_statement := ' insert (
                         MOCPathwayID, 
                         MOCLevelID)
                      values (
-                       uuid_string(),
+                       utils.generate_uuid(source.providerid || source.certificationspecialtyid || source.certificationboardid || source.certificationagencyid || source.certificationstatusid), -- done
                        source.providerid, 
                        source.certificationspecialtyid, 
                        source.sourcecode, 

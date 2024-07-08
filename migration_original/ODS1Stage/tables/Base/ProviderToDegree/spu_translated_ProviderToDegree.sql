@@ -68,7 +68,7 @@ insert_statement := $$
                         )
                       values 
                         (   
-                        uuid_string(),
+                        utils.generate_uuid(source.providerid || source.degreeid), -- done
                         source.providerid,
                         source.degreeid,
                         source.degreepriority,
