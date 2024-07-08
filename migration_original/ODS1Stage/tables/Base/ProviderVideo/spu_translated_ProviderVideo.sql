@@ -76,7 +76,7 @@ insert_statement := 'insert
                          lastupdatedate, 
                          mediacontexttypeid)
                     values 
-                        (utils.generate_uuid(source.providerid || source.mediareviewlevelid || source.mediavideohostid || source.mediacontexttypeid), -- done
+                        (utils.generate_uuid(source.providerid || source.mediareviewlevelid || source.mediavideohostid || source.mediacontexttypeid), 
                         source.providerid, 
                         source.externalidentifier, 
                         source.mediavideohostid, 

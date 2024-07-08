@@ -649,7 +649,7 @@ insert_statement := ' insert
         LastUpdateDate
     )
     values 
-    (   utils.generate_uuid(source.entitytypeid || source.clientfeatureid || source.clientfeaturetoclientfeaturevalueid || source.entityid), -- done
+    (   utils.generate_uuid(source.entitytypeid || source.clientfeatureid || source.clientfeaturetoclientfeaturevalueid || source.entityid), 
         source.entitytypeid, 
         source.clientfeatureid, 
         source.clientfeaturetoclientfeaturevalueid, 

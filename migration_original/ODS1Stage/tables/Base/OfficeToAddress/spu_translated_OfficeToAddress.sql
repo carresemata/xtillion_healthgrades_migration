@@ -90,7 +90,7 @@ insert_statement := ' insert
                             SourceCode,
                             LastUpdateDate)
                     values 
-                          (utils.generate_uuid(source.addresstypeid || source.officeid || source.addressID), -- done
+                          (utils.generate_uuid(source.addresstypeid || source.officeid || source.addressID), 
                             source.addresstypeid,
                             source.officeid,
                             source.addressID,

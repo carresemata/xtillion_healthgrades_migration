@@ -76,7 +76,7 @@ insert_statement := ' insert
                          FacilityIsOpen24Hours, 
                          LastUpdateDate)
                       values 
-                        (utils.generate_uuid(source.facilityid || source.daysofweekid), -- done
+                        (utils.generate_uuid(source.facilityid || source.daysofweekid), 
                          source.facilityid, 
                          source.sourcecode, 
                          source.daysofweekid, 

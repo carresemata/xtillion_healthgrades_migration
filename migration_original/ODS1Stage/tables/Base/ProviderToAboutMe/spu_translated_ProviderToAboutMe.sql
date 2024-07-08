@@ -68,7 +68,7 @@ insert_statement := ' insert
                         CustomDisplayOrder,
                         LastUpdatedDate)
                       values 
-                        (utils.generate_uuid(source.providerid || source.aboutmeid), -- done
+                        (utils.generate_uuid(source.providerid || source.aboutmeid), 
                         source.providerid,
                         source.sourcecode,
                         source.aboutmeid,

@@ -116,7 +116,7 @@ insert_statement := ' insert
                         ProviderRawSpecialtyScore,
                         ScaledSpecialtyBoost)
                       values 
-                        (utils.generate_uuid(source.providerid || source.specialtyid), -- done
+                        (utils.generate_uuid(source.providerid || source.specialtyid), 
                         source.providerid,
                         source.specialtyid,
                         source.sourcecode,

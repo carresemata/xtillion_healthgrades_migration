@@ -70,7 +70,7 @@ insert_statement := ' insert
                             LastUpdateDate,
                             PhoneRank)
                     values 
-                          (utils.generate_uuid(source.phonetypeid || source.phoneid || source.officeid), -- done
+                          (utils.generate_uuid(source.phonetypeid || source.phoneid || source.officeid), 
                             source.phonetypeid,
                             source.phoneid,
                             source.officeid,

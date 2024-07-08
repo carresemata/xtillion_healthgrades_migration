@@ -85,7 +85,7 @@ insert_statement := 'insert
                         providerid,
                         specialtyid)
                      values
-                        (utils.generate_uuid(source.providerid || source.specialtyid), -- done
+                        (utils.generate_uuid(source.providerid || source.specialtyid), 
                         source.providerid,
                         source.specialtyid)';
                         

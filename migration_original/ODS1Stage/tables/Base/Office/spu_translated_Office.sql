@@ -103,7 +103,7 @@ insert_statement := ' insert
                             SourceCode,
                             LastUpdateDate)
                       values 
-                            (utils.generate_uuid(source.officecode), -- done
+                            (utils.generate_uuid(source.officecode), 
                             source.officecode,
                             source.practiceid,
                             source.parkinginformation,

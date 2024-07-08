@@ -75,7 +75,7 @@ insert_statement := ' insert
                           LastUpdateDate
                         )
                         values (
-                          utils.generate_uuid(source.providerid || source.trainingid), -- done
+                          utils.generate_uuid(source.providerid || source.trainingid), 
                           source.providerid,
                           source.trainingid,
                           source.traininglink,

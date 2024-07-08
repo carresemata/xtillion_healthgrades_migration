@@ -89,7 +89,7 @@ insert_statement := ' insert
                         SourceCode,
                         LastUpdateDate)
                       values 
-                        (utils.generate_uuid(source.providercode), -- done
+                        (utils.generate_uuid(source.providercode), 
                         source.providerid,
                         source.providercode,
                         source.url,

@@ -78,7 +78,7 @@ insert_statement := ' insert
                         LastUpdateDate,
                         LicenseType)
                       values 
-                        (utils.generate_uuid(source.providerid || source.stateid || source.licensenumber || source.licensetype), -- done
+                        (utils.generate_uuid(source.providerid || source.stateid || source.licensenumber || source.licensetype), 
                         source.providerid,
                         source.stateid,
                         source.licensenumber,

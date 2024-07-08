@@ -76,7 +76,7 @@ insert_statement := '       insert
                                     SourceCode,
                                     LastUpdateDate)         
                              values 
-                                    (utils.generate_uuid(source.providerid || source.mediatypeid), -- done
+                                    (utils.generate_uuid(source.providerid || source.mediatypeid), 
                                     source.providerid,
                                     source.mediatypeid,
                                     source.mediadate,

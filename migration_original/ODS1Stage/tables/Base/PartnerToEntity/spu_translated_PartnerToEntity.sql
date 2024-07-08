@@ -99,7 +99,7 @@ insert_statement := ' insert (PartnerToEntityId,
                             OASURL, 
                             sourcecode,
                             LastUpdateDate)
-                    values (utils.generate_uuid(source.partnerid || source.primaryentityid || source.primaryentitytypeid || source.secondaryentityid || source.secondaryentitytypeid || source.partnersecondaryentityid),  -- done
+                    values (utils.generate_uuid(source.partnerid || source.primaryentityid || source.primaryentitytypeid || source.secondaryentityid || source.secondaryentitytypeid || source.partnersecondaryentityid),  
                             source.partnerid, 
                             source.primaryentityid, 
                             source.primaryentitytypeid, 

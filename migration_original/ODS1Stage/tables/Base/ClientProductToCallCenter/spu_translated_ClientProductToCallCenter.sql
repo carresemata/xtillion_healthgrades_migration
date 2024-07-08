@@ -49,7 +49,7 @@ select_statement := $$
 
 --- insert Statement
 insert_statement := ' insert (ClientProductToCallCenterID,ClientToProductID, CallCenterID, ActiveFlag, SourceCode, LastUpdateDate)
-    values (utils.generate_uuid(source.clienttoproductid || source.callcenterid),source.clienttoproductid, source.callcenterid, source.activeflag, source.sourcecode, source.lastupdatedate)'; -- done
+    values (utils.generate_uuid(source.clienttoproductid || source.callcenterid),source.clienttoproductid, source.callcenterid, source.activeflag, source.sourcecode, source.lastupdatedate)'; 
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------

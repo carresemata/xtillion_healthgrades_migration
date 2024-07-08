@@ -59,7 +59,7 @@ insert_statement := ' insert
                         SurveySuppressionReasonID, 
                         SourceCode)
                       values 
-                        (utils.generate_uuid(source.providerid || source.surveysuppressionreasonid), -- done 
+                        (utils.generate_uuid(source.providerid || source.surveysuppressionreasonid),  
                         source.providerid, 
                         source.surveysuppressionreasonid, 
                         source.sourcecode)';

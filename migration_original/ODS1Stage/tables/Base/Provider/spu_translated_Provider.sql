@@ -120,7 +120,7 @@ insert_statement_1 := ' insert
                             SurviveResidentialAddresses,
                             IsPatientFavorite)
                       values 
-                          ( utils.generate_uuid(source.providercode), -- done
+                          ( utils.generate_uuid(source.providercode), 
                             source.providercode,
                             source.firstname,
                             source.middlename,

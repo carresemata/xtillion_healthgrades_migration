@@ -133,7 +133,7 @@ insert_statement := $$ insert (
                                 lastupdatedate
                         )
                         values (
-                                utils.generate_uuid(source.addressline1 || source.addressline2 || source.suite || source.citystatepostalcodeid), -- done
+                                utils.generate_uuid(source.addressline1 || source.addressline2 || source.suite || source.citystatepostalcodeid), 
                                 source.nationid,
                                 source.addressline1, 
                                 source.addressline2,

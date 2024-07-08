@@ -55,7 +55,7 @@ insert_statement := ' insert
                         SourceCode, 
                         LastUpdatedDate)
                       values (
-                        utils.generate_uuid(source.providerid || source.appointmentavailabilityid), -- done
+                        utils.generate_uuid(source.providerid || source.appointmentavailabilityid), 
                         source.providerid, 
                         source.appointmentavailabilityid, 
                         source.sourcecode, 

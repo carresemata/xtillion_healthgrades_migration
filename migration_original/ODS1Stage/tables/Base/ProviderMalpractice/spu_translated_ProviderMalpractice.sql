@@ -256,7 +256,7 @@ insert_statement := ' insert
                             LicenseNumber,
                             LastUpdateDate)
                     values 
-                          ( utils.generate_uuid(source.providerid || source.providerlicenseid || source.malpracticeclaimtypeid || source.licensenumber), -- done
+                          ( utils.generate_uuid(source.providerid || source.providerlicenseid || source.malpracticeclaimtypeid || source.licensenumber), 
                             source.providerid,
                             source.providerlicenseid,
                             source.malpracticeclaimtypeid,

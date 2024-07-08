@@ -637,7 +637,7 @@ insert_statement := '  insert (
                             SourceCode, 
                             LastUpdateDate)
                         values (
-                            utils.generate_uuid(source.clientfeatureid || source.clientfeaturevalueid), -- done
+                            utils.generate_uuid(source.clientfeatureid || source.clientfeaturevalueid), 
                             source.clientfeatureid, 
                             source.clientfeaturevalueid, 
                             source.sourcecode, 

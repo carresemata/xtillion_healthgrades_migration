@@ -58,7 +58,7 @@ insert_statement := ' insert
     )
 values
     (
-        utils.generate_uuid(source.clientcode), -- done
+        utils.generate_uuid(source.clientcode), 
         source.clientcode,
         source.clientname,
         source.sourcecode,

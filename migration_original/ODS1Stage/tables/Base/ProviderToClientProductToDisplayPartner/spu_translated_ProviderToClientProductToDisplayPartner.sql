@@ -68,7 +68,7 @@ insert_statement := ' insert (
                         SourceCode,
                         LastUpdateDate)
                      values (
-                        utils.generate_uuid(source.providerid || source.clienttoproductid || source.syndicationpartnerid), -- done
+                        utils.generate_uuid(source.providerid || source.clienttoproductid || source.syndicationpartnerid), 
                         source.providerid,
                         source.clienttoproductid,
                         source.syndicationpartnerid,

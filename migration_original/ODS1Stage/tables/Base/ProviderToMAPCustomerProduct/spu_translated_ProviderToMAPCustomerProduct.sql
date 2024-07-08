@@ -206,7 +206,7 @@ insert_statement_1 := 'insert (ProviderToMapCustomerProductId,
                             ClientToProductID, 
                             PhoneXML, 
                             DisplayPhoneNumber)
-                    values (utils.generate_uuid(source.providerid || source.officeid), -- done
+                    values (utils.generate_uuid(source.providerid || source.officeid), 
                             source.providerid, 
                             source.officeid, 
                             source.clienttoproductid, 
@@ -219,7 +219,7 @@ insert_statement_2 := 'insert (ProviderToMapCustomerProductId,
                             ClientToProductID, 
                             PhoneXML, 
                             DisplayPartnerCode)
-                    values (utils.generate_uuid(source.providerid || source.officeid), -- done
+                    values (utils.generate_uuid(source.providerid || source.officeid), 
                             source.providerid, 
                             source.officeid, 
                             source.clienttoproductid, 

@@ -93,7 +93,7 @@ insert_statement := ' insert (
                             LastUpdateDate
                         )
                         values (
-                            utils.generate_uuid(source.providerid || source.statereportingagencyid || source.sanctiontypeid || source.sanctioncategoryid || source.sanctionactionid), -- done
+                            utils.generate_uuid(source.providerid || source.statereportingagencyid || source.sanctiontypeid || source.sanctioncategoryid || source.sanctionactionid), 
                             source.providerid,
                             source.sanctionlicense,
                             source.statereportingagencyid,

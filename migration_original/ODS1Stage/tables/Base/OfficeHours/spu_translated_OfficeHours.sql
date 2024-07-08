@@ -129,7 +129,7 @@ insert_statement := 'insert (
 	LastUpdateDate)
 
 values (
-    utils.generate_uuid(source.officeid || source.daysofweekid), -- done
+    utils.generate_uuid(source.officeid || source.daysofweekid), 
     source.officeid, 
 	source.sourcecode, 
 	source.daysofweekid, 

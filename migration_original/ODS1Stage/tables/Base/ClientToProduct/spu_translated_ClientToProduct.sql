@@ -60,7 +60,7 @@ insert_statement := $$
                          QueueSize
                          )
                     values 
-                        (utils.generate_uuid(source.clienttoproductcode), -- done
+                        (utils.generate_uuid(source.clienttoproductcode), 
                         source.clienttoproductcode,
                         source.clientid,
                         source.productid,

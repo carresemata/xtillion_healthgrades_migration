@@ -687,7 +687,7 @@ select_statement_2:= $$     with cte_swimlane as (
     --- insert Statement
     insert_statement:= ' 
                 insert(clientproductentitytodisplaypartnerphoneid,ClientProductToEntityID,DisplayPartnerCode,PhoneTypeID,PhoneNumber,SourceCode,LastUpdateDate)
-                values(utils.generate_uuid(ClientProductToEntityID || DisplayPartnerCode || PhoneTypeID || PhoneNumber),ClientProductToEntityID,DisplayPartnerCode,PhoneTypeID,PhoneNumber,SourceCode,LastUpdateDate)'; -- done
+                values(utils.generate_uuid(ClientProductToEntityID || DisplayPartnerCode || PhoneTypeID || PhoneNumber),ClientProductToEntityID,DisplayPartnerCode,PhoneTypeID,PhoneNumber,SourceCode,LastUpdateDate)'; 
     ---------------------------------------------------------
     --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------

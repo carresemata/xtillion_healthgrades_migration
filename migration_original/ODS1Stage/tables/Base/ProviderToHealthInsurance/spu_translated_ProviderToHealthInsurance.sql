@@ -62,7 +62,7 @@ insert_statement := ' insert
                         SourceCode, 
                         LastUpdateDate)
                       values 
-                        (utils.generate_uuid(source.providerid || source.healthinsuranceplantoplantypeid), -- done
+                        (utils.generate_uuid(source.providerid || source.healthinsuranceplantoplantypeid), 
                         source.providerid, 
                         source.healthinsuranceplantoplantypeid, 
                         source.sourcecode, 
