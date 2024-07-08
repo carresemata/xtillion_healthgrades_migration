@@ -278,6 +278,7 @@ select_statement := $$ with cte_practice_batch as (
                                 join Base.Office as o on p.OfficeID = o.OfficeID
                                 join Base.ProviderToOffice as po on o.OfficeID = po.OfficeID
                                 -- join Show.vwuProviderIndex as vpi on po.ProviderID = vpi.ProviderID
+                             qualify row_number() over(partition by o.practiceid order by o.lastupdatedate desc) = 1
                         ) 
                         ,
                         cte_hours_xml as (
