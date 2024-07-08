@@ -791,6 +791,23 @@ cte_provider_count as (
     group by
         a.facilityid
 ),
+cte_num_hosp as (
+            SELECT COUNT (DISTINCT FacilityID) as numhosp
+			FROM	ERMART1.Facility_FacilityToRating a
+					JOIN ERMART1.Facility_Rating b ON a.RatingID = b.RatingID
+			WHERE	b.RatingCategoryId = 2
+					AND a.IsMaxYear = 1
+					AND a.RatingID = 25
+					AND EventCount > 0
+),
+cte_total_number_hosp as
+			(SELECT COUNT (DISTINCT FacilityID) as totalnumhosp
+			FROM	ERMART1.Facility_FacilityToRating a
+					JOIN ERMART1.Facility_Rating b ON a.RatingID = b.RatingID
+			WHERE	b.RatingCategoryId = 2
+					AND a.IsMaxYear = 1
+),
+                
 cte_facility_update_2 as (
     select
         f.facilityid,
@@ -875,15 +892,14 @@ cte_facility_update_2 as (
         ac.awardcount,
         pc.procedurecount,
         fsc.fivestarprocedurecount,
-        pvc.providercount
+        pvc.providercount,
+        round(DIV0((select numhosp from cte_num_hosp ), (select totalnumhosp from cte_total_number_hosp)) * 100, 1) as foreignobjectleftpercent
     from cte_facility_update_1 as f
         left join cte_award_count as ac on f.legacykey = ac.facilityid
         left join cte_procedure_count as pc on f.legacykey = pc.facilityid
         left join cte_fivestar_count as fsc on f.legacykey = fsc.facilityid
         left join cte_provider_count as pvc on f.facilityid = pvc.facilityid 
-)
--- select * from cte_facility_update_2;
-,
+) ,
 
 cte_facility_update_3 as (
 select
@@ -970,98 +986,98 @@ select
     f.procedurecount,
     f.fivestarprocedurecount,
     f.providercount,
-    0 as actioncode
+    f.foreignobjectleftpercent
 from cte_facility_update_2 as f
     left join base.client as c on c.clientcode = f.clientcode
     left join show.clientcontract as cc on cc.clientid = c.clientid
 )
--- SELECT * from cte_facility_update_3;
 
 select distinct
-    a0.facilityid,
-    a0.legacykey,
-    a0.facilitycode,
-    a0.facilityname,
-    a0.facilitytype,
-    a0.facilitytypecode,
-    a0.facilitysearchtype,
-    a0.accreditation,
-    a0.accreditationdescription,
-    a0.treatmentschedules,
-    a0.phonenumber,
-    a0.additionaltransportationinformation,
-    a0.afterhoursphonenumber,
-    a0.awardsinformation,
-    a0.closedholidaysinformation,
-    a0.communityactivitiesinformation,
-    a0.communityoutreachprograminformation,
-    a0.communitysupportinformation,
-    a0.emergencyafterhoursphonenumber,
-    a0.facilitydescription,
-    a0.foundationinformation,
-    a0.healthplaninformation,
-    a0.ismedicaidaccepted,
-    a0.ismedicareaccepted,
-    a0.isteaching,
-    a0.languageinformation,
-    a0.medicalservicesinformation,
-    a0.missionstatement,
-    a0.officeclosetime,
-    a0.officeopentime,
-    a0.onsiteguestservicesinformation,
-    a0.othereducationandtraininginformation,
-    a0.otherservicesinformation,
-    a0.ownershiptype,
-    a0.parkinginstructionsinformation,
-    a0.paymentpolicyinformation,
-    a0.professionalaffiliationinformation,
-    a0.publictransportationinformation,
-    a0.regionalrelationshipinformation,
-    a0.religiousaffiliationinformation,
-    a0.specialprogramsinformation,
-    a0.surroundingareainformation,
-    a0.teachingprogramsinformation,
-    a0.tollfreephonenumber,
-    a0.transplantcapabilitiesinformation,
-    a0.visitinghoursinformation,
-    a0.volunteerinformation,
-    a0.yearestablished,
-    a0.hospitalaffiliationinformation,
-    a0.physiciancallcenterphonenumber,
-    a0.overallhospitalstar,
-    a0.adulttraumalevel,
-    a0.pediatrictraumalevel,
-    a0.respgmapprama,
-    a0.respgmappraoa,
-    a0.respgmapprada,
-    a0.miscellaneousinformation,
-    a0.appointmentinformation,
-    a0.website,
-    a0.visitinghoursmonday,
-    a0.visitinghourstuesday,
-    a0.visitinghourswednesday,
-    a0.visitinghoursthursday,
-    a0.visitinghoursfriday,
-    a0.visitinghourssaturday,
-    a0.visitinghourssunday,
-    a0.facilityimagepath,
-    a0.clienttoproductid,
-    a0.clientcode,
-    a0.clientname,
-    a0.productcode,
-    a0.productgroupcode,
-    to_variant(a0.phonexml) as phonexml,
-    to_variant(a0.mobilephonexml) as mobilephonexml,
-    to_variant(a0.desktopphonexml) as desktopphonexml,
-    to_variant(a0.tabletphonexml) as tabletphonexml,
-    to_variant(a0.urlxml) as urlxml,
-    to_variant(a0.imagexml) as imagexml,
-    a0.facilityurl,
-    a0.awardcount,
-    a0.procedurecount,
-    a0.fivestarprocedurecount,
-    a0.providercount,
-from cte_facility_update_3 as a0 
+    facilityid,
+    legacykey,
+    facilitycode,
+    facilityname,
+    facilitytype,
+    facilitytypecode,
+    facilitysearchtype,
+    accreditation,
+    accreditationdescription,
+    treatmentschedules,
+    phonenumber,
+    additionaltransportationinformation,
+    afterhoursphonenumber,
+    awardsinformation,
+    closedholidaysinformation,
+    communityactivitiesinformation,
+    communityoutreachprograminformation,
+    communitysupportinformation,
+    emergencyafterhoursphonenumber,
+    facilitydescription,
+    foundationinformation,
+    healthplaninformation,
+    ismedicaidaccepted,
+    ismedicareaccepted,
+    isteaching,
+    languageinformation,
+    medicalservicesinformation,
+    missionstatement,
+    officeclosetime,
+    officeopentime,
+    onsiteguestservicesinformation,
+    othereducationandtraininginformation,
+    otherservicesinformation,
+    ownershiptype,
+    parkinginstructionsinformation,
+    paymentpolicyinformation,
+    professionalaffiliationinformation,
+    publictransportationinformation,
+    regionalrelationshipinformation,
+    religiousaffiliationinformation,
+    specialprogramsinformation,
+    surroundingareainformation,
+    teachingprogramsinformation,
+    tollfreephonenumber,
+    transplantcapabilitiesinformation,
+    visitinghoursinformation,
+    volunteerinformation,
+    yearestablished,
+    hospitalaffiliationinformation,
+    physiciancallcenterphonenumber,
+    overallhospitalstar,
+    adulttraumalevel,
+    pediatrictraumalevel,
+    respgmapprama,
+    respgmappraoa,
+    respgmapprada,
+    miscellaneousinformation,
+    appointmentinformation,
+    website,
+    visitinghoursmonday,
+    visitinghourstuesday,
+    visitinghourswednesday,
+    visitinghoursthursday,
+    visitinghoursfriday,
+    visitinghourssaturday,
+    visitinghourssunday,
+    facilityimagepath,
+    clienttoproductid,
+    clientcode,
+    clientname,
+    productcode,
+    productgroupcode,
+    to_variant(phonexml) as phonexml,
+    to_variant(mobilephonexml) as mobilephonexml,
+    to_variant(desktopphonexml) as desktopphonexml,
+    to_variant(tabletphonexml) as tabletphonexml,
+    to_variant(urlxml) as urlxml,
+    to_variant(imagexml) as imagexml,
+    facilityurl,
+    awardcount,
+    procedurecount,
+    fivestarprocedurecount,
+    providercount,
+    foreignobjectleftpercent
+from cte_facility_update_3 
  $$;
 
 --- Update Statement
@@ -1149,7 +1165,8 @@ update_statement := ' update
                         target.awardcount = source.awardcount,
                         target.procedurecount = source.procedurecount,
                         target.fivestarprocedurecount = source.fivestarprocedurecount,
-                        target.providercount = source.providercount ';
+                        target.providercount = source.providercount,
+                        target.foreignobjectleftpercent = source.foreignobjectleftpercent';
 
 --- Insert Statement
 insert_statement := ' insert  ( facilityid,
@@ -1234,7 +1251,8 @@ insert_statement := ' insert  ( facilityid,
                                 awardcount,
                                 procedurecount,
                                 fivestarprocedurecount,
-                                providercount )
+                                providercount,
+                                foreignobjectleftpercent)
                                 
                       values (  source.facilityid,
                                 source.legacykey,
@@ -1318,8 +1336,8 @@ insert_statement := ' insert  ( facilityid,
                                 source.awardcount,
                                 source.procedurecount,
                                 source.fivestarprocedurecount,
-                                source.providercount
-                        
+                                source.providercount,
+                                source.foreignobjectleftpercent
                         )';
 
 ---------------------------------------------------------
@@ -1362,3 +1380,4 @@ status := 'completed successfully';
 
             return status;
 end;
+
