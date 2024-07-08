@@ -870,13 +870,13 @@ cte_swimlane as (
     
     merge_statement_1:= '     merge into base.clientproductentitytodisplaypartnerphone as target using 
                    (' || select_statement_1 || ') as source on 
-                   source.clientproducttoentityid = target.clientproducttoentityid and  source.phonetypeid = target.phonetypeid 
+                   source.clientproducttoentityid = target.clientproducttoentityid and  source.phonetypeid = target.phonetypeid and source.phonenumber = target.phonenumber and source.displaypartnercode = target.displaypartnercode
                     when matched then' || update_statement || '
                     when not matched then' || insert_statement;
                     
     merge_statement_2:= '     merge into base.clientproductentitytodisplaypartnerphone as target using 
                    (' || select_statement_2 || ') as source on 
-                    source.clientproducttoentityid = target.clientproducttoentityid and  source.phonetypeid = target.phonetypeid
+                    source.clientproducttoentityid = target.clientproducttoentityid and  source.phonetypeid = target.phonetypeid and source.phonenumber = target.phonenumber and source.displaypartnercode = target.displaypartnercode
                     when matched then' || update_statement || '
                     when not matched then' || insert_statement;
                     
