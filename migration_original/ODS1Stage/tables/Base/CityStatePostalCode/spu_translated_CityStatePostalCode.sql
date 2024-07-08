@@ -112,7 +112,7 @@ insert_statement := $$ insert (
                                 nationid
                         )
                         values (
-                                uuid_string(),
+                                utils.generate_uuid(source.city || source.state || source.postalcode), 
                                 source.city,
                                 source.state,
                                 source.postalcode,

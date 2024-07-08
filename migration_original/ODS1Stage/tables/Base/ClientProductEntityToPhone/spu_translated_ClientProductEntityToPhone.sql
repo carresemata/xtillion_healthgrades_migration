@@ -830,7 +830,7 @@ select_statement_3 := $$  with Cte_office as (
         )
         values
         (
-            uuid_string(),
+            utils.generate_uuid(ClientProductToEntityID || PhoneTypeID || PhoneID), 
             ClientProductToEntityID,
             PhoneTypeID,
             PhoneID,

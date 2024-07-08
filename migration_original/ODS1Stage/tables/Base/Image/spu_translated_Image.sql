@@ -104,7 +104,7 @@ insert_statement := ' insert
                         sourcecode,
                         LastUpdateDate)
                       values
-                        (uuid_string(),
+                        (utils.generate_uuid(source.imagefilepath), 
                         source.imagefilepath,
                         source.sourcecode,
                         source.lastupdatedate)';

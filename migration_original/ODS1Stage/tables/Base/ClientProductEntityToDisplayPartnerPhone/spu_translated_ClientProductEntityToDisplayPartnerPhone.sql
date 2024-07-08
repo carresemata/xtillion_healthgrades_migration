@@ -854,16 +854,17 @@ cte_swimlane as (
                     PhoneTypeID,
                     PhoneNumber,
                     SourceCode,
-                    LastUpdateDate)
+                    LastUpdateDate
+                )
                 values(
-                    uuid_string(),
+                    utils.generate_uuid(ClientProductToEntityID || DisplayPartnerCode || PhoneTypeID || PhoneNumber),
                     ClientProductToEntityID,
                     DisplayPartnerCode,
                     PhoneTypeID,
                     PhoneNumber,
                     SourceCode,
-                    LastUpdateDate)';
-                    
+                    LastUpdateDate
+                )'; 
     ---------------------------------------------------------
     --------- 4. actions (inserts and updates) --------------
     ---------------------------------------------------------

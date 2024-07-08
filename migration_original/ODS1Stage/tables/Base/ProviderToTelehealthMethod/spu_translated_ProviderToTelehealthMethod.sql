@@ -77,7 +77,7 @@ insert_statement := ' insert
                             SourceCode,
                             LastUpdatedDate)
                       values 
-                            (uuid_string(),
+                            (utils.generate_uuid(source.providerid || source.telehealthmethodid), 
                             source.providerid,
                             source.telehealthmethodid,
                             source.sourcecode,
