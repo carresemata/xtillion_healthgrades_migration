@@ -7,6 +7,7 @@ CASE
     WHEN name IS NOT NULL THEN
         -- Snowflake provides this function for v5 UUID generation. The resulting ids are deterministic and depend on the two arguments: namespace (a uuid string) and name (any string)
         -- Passing the same arguments will always return the same UUID
+        -- The namespace used here is just a random UUID, since passing a namespace is required for v5 UUIDs
         UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274e', name)
     ELSE
         -- Snowflake provides this function for v4 UUID generation. No arguments are passed and the resulting ids are random
