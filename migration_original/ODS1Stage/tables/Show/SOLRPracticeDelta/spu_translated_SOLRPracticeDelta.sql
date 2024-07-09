@@ -19,6 +19,9 @@ declare
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
+    select_statement_1 string;
+    insert_statement_1 string;
+    update_statement_1 string;
     merge_statement_1 string; -- merge statement to final table
     merge_statement_2 string;
     status string; -- status monitoring
@@ -29,61 +32,65 @@ declare
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
- begin                               
+begin   
+
+select_statement_1 := $$ select distinct
+                            pr.practiceid,
+                            spd.solrdeltatypecode, 
+                            spd.middeltaprocesscomplete, 
+                            spd.startdeltaprocessdate,
+                            spd.enddeltaprocessdate,
+                            spd.startmovedate,
+                            spd.endmovedate
+                        from	$$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                                join base.provider as P on p.providercode = ppp.ref_provider_code
+                                join	base.providertooffice po on p.providerid = po.providerid
+                                join	base.office o on po.officeid = o.officeid
+                                join	base.practice pr on o.practiceid = pr.practiceid		
+                                left join	show.solrpracticedelta spd on pr.practiceid = spd.practiceid $$;
+
+ update_statement_1 := ' update 
+                            SET
+                            target.enddeltaprocessdate = null,
+                            target.startmovedate = null,
+                            target.endmovedate = null ' ; 
+                            
+insert_statement_1 := 'insert ( PracticeID,
+                                SolrDeltaTypeCode,
+                                StartDeltaProcessDate,
+                                MidDeltaProcessComplete
+                                )
+                                values (
+                                source.practiceid,
+                                source.solrdeltatypecode,
+                                source.startdeltaprocessdate,
+                                source.middeltaprocesscomplete
+                                );';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 merge_statement_1 := 'merge into show.solrpracticedelta as target using 
-                                           (select distinct
-                                                pr.practiceid,
-                                                spd.solrdeltatypecode, 
-                                                spd.middeltaprocesscomplete, 
-                                                spd.startdeltaprocessdate,
-                                                spd.enddeltaprocessdate,
-                                                spd.startmovedate,
-                                                spd.endmovedate
-                                            from	$$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                                                    join base.provider as P on p.providercode = ppp.ref_provider_code
-                                            		join	base.providertooffice po on p.providerid = po.providerid
-                                            		join	base.office o on po.officeid = o.officeid
-                                            		join	base.practice pr on o.practiceid = pr.practiceid		
-                                            		left join	show.solrpracticedelta spd on pr.practiceid = spd.practiceid) as source 
-                                           
-                                on source.practiceid = target.practiceid
-                                WHEN MATCHED then 
-                                            update 
-                                                SET
-                                                target.enddeltaprocessdate = null,
-                                				target.startmovedate = null,
-                                				target.endmovedate = null
-                                when not matched and source.startdeltaprocessdate is not null and source.enddeltaprocessdate is null and source.practiceid is null then 
-                                            insert (
-                                            PracticeID,
-                                            SolrDeltaTypeCode,
-                                            StartDeltaProcessDate,
-                                            MidDeltaProcessComplete
-                                            )
-                                            values (
-                                            source.practiceid,
-                                            source.solrdeltatypecode,
-                                            source.startdeltaprocessdate,
-                                            source.middeltaprocesscomplete
-                                            );';
--- Merge statement 
+                       (' || select_statement_1 || ') as source 
+                        on source.practiceid = target.practiceid
+                        when matched then ' || update_statement_1 || '
+                        when not matched 
+                            and source.startdeltaprocessdate is not null and source.enddeltaprocessdate is null and source.practiceid is null then 
+                            '|| insert_statement_1 ;
+                                            
+
 merge_statement_2 := 'merge into show.solrpracticedelta as target using 
                    (select distinct
                         PracticeId,
                         StartDeltaProcessDate,
                         EndDeltaProcessDate
                    from show.solrpracticedelta
-                   where StartDeltaProcessDate is not null and EndDeltaProcessDate is null) as source 
+                   where 
+                        StartDeltaProcessDate is not null and EndDeltaProcessDate is null) as source 
                    on source.practiceid = target.practiceid
-                   WHEN MATCHED then
-                    update
-                    SET 
-                        target.enddeltaprocessdate  = current_timestamp()';
+                   when matched then
+                        update SET target.enddeltaprocessdate  = current_timestamp()';
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
