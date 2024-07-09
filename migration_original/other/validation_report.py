@@ -235,9 +235,9 @@ if __name__ == "__main__":
                                                     warehouse=snowflake_warehouse, database=snowflake_db, role=snowflake_role, arrow_number_to_decimal=True)
 
     ############################### Example Usage ###############################
-    table_name_sql_server = "BASE.FACILITY"  
-    table_name_snowflake = "BASE.FACILITY"  # in case it's a different schema or has different naming convention 
-    match_ids = ["FACILITYCODE"] # we should remember to never use IDs since we are creating them in runtime
+    table_name_sql_server = "BASE.PROVIDERTOMAPCUSTOMERPRODUCT"  
+    table_name_snowflake = "BASE.PROVIDERTOMAPCUSTOMERPRODUCT"  # in case it's a different schema or has different naming convention 
+    match_ids = ["PROVIDERTOMAPCUSTOMERPRODUCTID"] # we should remember to never use IDs since we are creating them in runtime
     sample_size = 10 # rows for sample validation
     snowflake_validator = SnowflakeTableValidator(sql_server_connector, snowflake_connector)
     snowflake_validator.generate_report_markdown(table_name_sql_server, table_name_snowflake, match_ids, sample_size)

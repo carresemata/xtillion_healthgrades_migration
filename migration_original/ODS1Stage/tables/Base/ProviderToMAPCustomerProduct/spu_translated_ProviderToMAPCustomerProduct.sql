@@ -193,6 +193,7 @@ CTE_insert_1 as (
         and pcp.productcode = 'MAP'
         and LENGTH(xml.phonexml) >= LENGTH('<phone><phTyp>PTODS</phTyp></phone>')
 )
+-- SELECT * FROM CTE_insert_1;
 ,
 CTE_Phone2 as (
     select 
@@ -202,6 +203,7 @@ CTE_Phone2 as (
     from base.phone as PH
         left join base.officetophone as OPH on ph.phoneid = oph.phoneid
 )
+-- select * from CTE_Phone2;
 ,
 
 CTE_PhoneXML2 as (
@@ -212,6 +214,7 @@ iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','')  || '</phone>','') as
     from CTE_Phone2
     group by OfficeId
 )
+-- select * from CTE_PhoneXML2;
 ,
 
 CTE_Insert_2 as (
@@ -221,11 +224,12 @@ CTE_Insert_2 as (
         lcp.clienttoproductid,
 		TO_VARIANT(xml.phonexml) as PhoneXML,
 		'HG' as DisplayPartnerCode
-	    from	base.provider P
+        from	base.provider P
     	    inner join	base.providertooffice PO on po.providerid = p.providerid
     	    inner join	base.officetophone OPH on oph.officeid = po.officeid 
     	    inner join	base.phone PH on ph.phoneid = oph.phoneid
-    	    inner join  base.phonetype PT on pt.phonetypeid = oph.phonetypeid and pt.phonetypecode = 'SERVICE'
+    	    inner join  base.phonetype PT on pt.phonetypeid = oph.phonetypeid 
+            and pt.phonetypecode = 'SERVICE'
     	    inner join	base.office O on o.officeid = po.officeid
     	    inner join	base.officetoaddress OA on oa.officeid = o.officeid
     	    inner join	base.address A on a.addressid = oa.addressid
@@ -235,10 +239,13 @@ CTE_Insert_2 as (
     	    inner join	base.clienttoproduct lCP on lcp.clienttoproductid = lcpe.clienttoproductid
     	    inner join	base.client dC on lcp.clientid = dc.clientid
     	    inner join	base.product dP on dp.productid = lcp.productid
-            inner join CTE_PhoneXML2 as XML on xml.officeid = p.providerid
-	    where		dp.productcode = 'MAP'
-                    and LENGTH(xml.phonexml) >= LENGTH('<phone><phTyp>PTODS</phTyp></phone>')
+            inner join CTE_PhoneXML2 as XML on xml.officeid = o.officeid
+	    where		
+            dp.productcode = 'MAP'and 
+            LENGTH(xml.phonexml) >= LENGTH('<phone><phTyp>PTODS</phTyp></phone>')
 )
+
+-- select * from cte_insert_2;
 $$;
 
 
@@ -292,7 +299,7 @@ if (is_full) then
     truncate table Base.ProviderToMAPCustomerProduct;
 end if; 
 execute immediate merge_statement_1 ;
-execute immediate merge_statement_2 ;
+-- execute immediate merge_statement_2 ;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------

@@ -18,9 +18,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 491464
-- Snowflake: 53002
-- Rows Margin (%): 89.21548679048719
+- SQL Server: 487136
+- Snowflake: 51472
+- Rows Margin (%): 89.43375156013926
 
 ### 2.3 Nulls per Column
 |    | Column_Name                    |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -33,24 +33,24 @@ The example below shows a sample row where values are not identical. Important t
 |  5 | HasOAR                         |                       0 |                       0 |          0   |
 |  6 | InsertedOn                     |                       0 |                       0 |          0   |
 |  7 | InsertedBy                     |                       0 |                       0 |          0   |
-|  8 | DisplayPartnerCode             |                       0 |                   53002 |        inf   |
-|  9 | RingToNumberType               |                       0 |                   53002 |        inf   |
+|  8 | DisplayPartnerCode             |                       0 |                   51472 |        inf   |
+|  9 | RingToNumberType               |                       0 |                   51472 |        inf   |
 | 10 | DisplayPhoneNumber             |                       0 |                       0 |          0   |
-| 11 | RingToNumber                   |                       0 |                   53002 |        inf   |
-| 12 | TrackingNumber                 |                  412824 |                   53002 |         87.2 |
+| 11 | RingToNumber                   |                       0 |                   51472 |        inf   |
+| 12 | TrackingNumber                 |                  408502 |                   51472 |         87.4 |
 
 ### 2.4 Distincts per Column
 |    | Column_Name                    |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
 |---:|:-------------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | ProviderToMAPCustomerProductID |                      491464 |                       53002 |         89.2 |
-|  1 | ProviderID                     |                       67393 |                       40830 |         39.4 |
+|  0 | ProviderToMAPCustomerProductID |                      487136 |                       51472 |         89.4 |
+|  1 | ProviderID                     |                       67432 |                       39651 |         41.2 |
 |  2 | OfficeID                       |                       29659 |                       24276 |         18.1 |
 |  3 | ClientToProductID              |                          92 |                          87 |          5.4 |
 |  4 | HasOAR                         |                           1 |                           1 |          0   |
-|  5 | InsertedOn                     |                          37 |                           1 |         97.3 |
+|  5 | InsertedOn                     |                          43 |                           1 |         97.7 |
 |  6 | InsertedBy                     |                           2 |                           1 |         50   |
 |  7 | DisplayPartnerCode             |                           4 |                           0 |        100   |
 |  8 | RingToNumberType               |                           3 |                           0 |        100   |
-|  9 | DisplayPhoneNumber             |                       87258 |                       15710 |         82   |
-| 10 | RingToNumber                   |                       18211 |                           0 |        100   |
-| 11 | TrackingNumber                 |                       78628 |                           0 |        100   |
+|  9 | DisplayPhoneNumber             |                       87247 |                       15710 |         82   |
+| 10 | RingToNumber                   |                       18200 |                           0 |        100   |
+| 11 | TrackingNumber                 |                       78622 |                           0 |        100   |
