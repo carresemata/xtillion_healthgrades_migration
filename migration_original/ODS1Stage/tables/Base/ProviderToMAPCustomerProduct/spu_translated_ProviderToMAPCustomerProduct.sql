@@ -255,7 +255,7 @@ insert_statement_1 := 'insert (ProviderToMapCustomerProductId,
                             ClientToProductID, 
                             PhoneXML, 
                             DisplayPhoneNumber)
-                    values (uuid_string(),
+                    values (utils.generate_uuid(source.providerid || source.officeid || source.clienttoproductid),
                             source.providerid, 
                             source.officeid, 
                             source.clienttoproductid, 
@@ -268,7 +268,7 @@ insert_statement_2 := 'insert (ProviderToMapCustomerProductId,
                             ClientToProductID, 
                             PhoneXML, 
                             DisplayPartnerCode)
-                    values (uuid_string(),
+                    values (utils.generate_uuid(source.providerid || source.officeid || source.clienttoproductid),
                             source.providerid, 
                             source.officeid, 
                             source.clienttoproductid, 
@@ -281,13 +281,13 @@ insert_statement_2 := 'insert (ProviderToMapCustomerProductId,
 
 merge_statement_1 := ' merge into base.providertomapcustomerproduct as target using 
                    ('||select_statement ||' select * from CTE_insert_1) as source 
-                   on target.providerid = source.providerid and target.officeid = source.officeid
+                   on target.providerid = source.providerid and target.officeid = source.officeid and target.clienttoproductid = source.clienttoproductid
                    when not matched then ' || insert_statement_1;
 
                     
 merge_statement_2 := ' merge into base.providertomapcustomerproduct as target using 
                    ('||select_statement || ' select * from CTE_insert_2) as source 
-                   on target.providerid = source.providerid and target.officeid = source.officeid
+                   on target.providerid = source.providerid and target.officeid = source.officeid and target.clienttoproductid = source.clienttoproductid
                    when not matched then ' || insert_statement_2;
                     
  
