@@ -4631,7 +4631,15 @@ SELECT DISTINCT
     sanctionxml.xmlvalue AS sanctionxml,
     baction.xmlvalue AS boardactionxml,
     adxml.xmlvalue AS natladvertisingxml,
-    synd.xmlvalue AS syndicationxml
+    synd.xmlvalue AS syndicationxml,
+    CASE WHEN poffice.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasAddressXML,
+    CASE WHEN spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasSpecialtyXML,
+    CASE WHEN pract_spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasPracticingSpecialtyXML,
+    CASE WHEN cert.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasCertificationXML,
+    CASE WHEN mal.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasMalpracticeXML,
+    CASE WHEN sanctionxml.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasSanctionXML,
+    CASE WHEN baction.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasBoardActionXML,
+    -- CASE WHEN org.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasProfessionalOrganizationXML
 FROM Show.SolrProvider as P
     LEFT JOIN CTE_TelehealthXML AS tele ON tele.providerid = p.providerid -- 1
     LEFT JOIN CTE_ProviderTypeXML AS ptype ON ptype.providerid = p.providerid -- 2
@@ -5455,7 +5463,13 @@ SELECT
     to_variant(parse_xml(video2.xmlvalue)) as videoxml2,
     to_variant(parse_xml(image.xmlvalue)) as imagexml,
     case when image.xmlvalue is not null then 1 else 0 end as hasdisplayimage,
-    to_variant(parse_xml(aboutme.xmlvalue)) as aboutmexml
+    to_variant(parse_xml(aboutme.xmlvalue)) as aboutmexml,
+    CASE WHEN media.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasMediaXML,
+    CASE WHEN aboutme.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasAboutMeXML,
+    CASE WHEN video2.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasVideoXML2,
+    CASE WHEN fstar.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasProviderSpecialtyFacility5StarXML,
+    CASE WHEN proc.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasProcedureXML,
+    CASE WHEN cond.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasConditionXML
 FROM Show.SolrProvider as P
     LEFT JOIN cte_procedure_xml as proc on proc.providerid = p.providerid
     LEFT JOIN Cte_condition_xml as  cond on cond.providerid = p.providerid
@@ -5509,7 +5523,14 @@ update_statement_xml_load_2 := $$ update show.solrprovider as target
                                         target.sanctionxml = source.sanctionxml,
                                         target.boardactionxml = source.boardactionxml,
                                         target.natladvertisingxml = source.natladvertisingxml,
-                                        target.syndicationxml = source.syndicationxml
+                                        target.syndicationxml = source.syndicationxml,
+                                        target.HasAddressXML = source.HasAddressXML,
+                                        target.HasSpecialtyXML = source.HasSpecialtyXML,
+                                        target.HasPracticingSpecialtyXML = source.HasPracticingSpecialtyXML,
+                                        target.HasCertificationXML = source.HasCertificationXML,
+                                        target.HasMalpracticeXML = source.HasMalpracticeXML,
+                                        target.HasSanctionXML = source.HasSanctionXML,
+                                        target.HasBoardActionXML = source.HasBoardActionXML
                                     from ($$ || select_statement_xml_load_2 || $$) as source
                                         where target.providerid = source.providerid $$;
 
@@ -5532,7 +5553,8 @@ update_statement_xml_load_3 :=
                                         target.HasVideoXML2 = source.HasVideoXML2,
                                         target.HasProviderSpecialtyFacility5StarXML = source.HasProviderSpecialtyFacility5StarXML,
                                         target.HasProcedureXML = source.HasProcedureXML,
-                                        target.HasConditionXML = source.HasConditionXML
+                                        target.HasConditionXML = source.HasConditionXML,
+                                        target.HasAboutMeXML = source.HasAboutMeXML
                                     from ($$ || select_statement_xml_load_3 || $$) as source
                                        where target.providerid = source.providerid $$;
                                                                         
