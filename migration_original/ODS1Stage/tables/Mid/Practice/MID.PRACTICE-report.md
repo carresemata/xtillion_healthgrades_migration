@@ -3,12 +3,32 @@
 ## 1. Sample Validation
 
 Percentage of Identical Columns: 0.00% (0/47).
-Percentage of Different Columns: 0.00% (0/47).
+Percentage of Different Columns: 42.55% (20/47).
 
 The example below shows a sample row where values are not identical. Important to remember that fields like IDs are never expected to match. Long outputs are truncated since they will be hard to visualize.
 
-| Column Name   | Match ID   | SQL Server Value   | Snowflake Value   |
-|---------------|------------|--------------------|-------------------|
+|    | Column Name           | Match ID   | SQL Server Value                                        | Snowflake Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|---:|:----------------------|:-----------|:--------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|  0 | PRACTICEID            | UQNC2V     | 434e5155-5632-0000-0000-000000000000                    | 5bc6ff12-a257-4611-be51-b6202b705cfc                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|  1 | PRACTICECODE          | DVVRIBB631 | DVVRIBB631                                              | 10IWDDPE17                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|  2 | PRACTICENAME          | DVVRIBB631 | Practice                                                | Aspen Dental                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|  3 | OFFICEID              | UQNC2V     | 4a345258-5038-0000-0000-000000000000                    | c338b833-ff67-4afa-9046-590c08759fc6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|  4 | OFFICECODE            | DVVRIBB631 | XSJQLQ                                                  | X7R2SF                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|  5 | OFFICENAME            | UQNC2V     | None                                                    | MISSION REGIONAL MEDICAL CENTER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|  6 | ADDRESSLINE1          | DVVRIBB631 | 1800 E Florence Blvd                                    | 762 59th St                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|  7 | CITY                  | DVVRIBB631 | Casa Grande                                             | Brooklyn                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|  8 | STATE                 | DVVRIBB631 | AZ                                                      | NY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|  9 | ZIPCODE               | DVVRIBB631 | 85122                                                   | 11220                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 10 | COUNTY                | UQNC2V     | Hidalgo                                                 | None                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 11 | LATITUDE              | UQNC2V     | 26.1959                                                 | 26.196392                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 12 | LONGITUDE             | UQNC2V     | -98.31319                                               | -98.314232                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 13 | FULLPHONE             | DVVRIBB631 | (520) 381-6300                                          | (718) 765-0383                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 14 | FULLFAX               | UQNC2V     | (903) 389-1606                                          | None                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 15 | PHYSICIANCOUNT        | DVVRIBB631 | 843                                                     | 20310                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 16 | CITYSTATEPOSTALCODEID | UQNC2V     | bf253e36-2c79-43e0-8e75-2fa738ccf04c                    | 30a35f4a-aa44-4cf1-b884-0eb1059f724b                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 17 | HASDENTIST            | DVVRIBB631 | 1                                                       | 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 18 | GOOGLESCRIPTBLOCK     | UQNC2V     | None                                                    | '{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"/group-directory/tx-texas/mission/rio-grande-valley-emergency-phy-xr4j8p","name":"Rio Grande Valley Emergency Phy","address": {"@@type": "PostalAddress","streetAddress":"900 S Bryan Rd","addressLocality":"Mission","addressRegion":"TX","postalCode":"78572","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"26.196392","longitude":"-98.314232"},"telephone":"(956) 580-9000","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/XR4J8P","url":"/groupgoogleform"}}' |
+| 19 | OFFICEURL             | DVVRIBB631 | /group-directory/az-arizona/casa-grande/practice-xsjqlq | /group-directory/ny-new-york/brooklyn/practice-x7r2sf                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ## 2. Aggregate Validation
 
@@ -18,9 +38,9 @@ The example below shows a sample row where values are not identical. Important t
 - Columns Margin (%): 0.0
 
 ### 2.2 Total Rows
-- SQL Server: 449428
-- Snowflake: 55959
-- Rows Margin (%): 87.54883985866479
+- SQL Server: 458602
+- Snowflake: 454175
+- Rows Margin (%): 0.9653250530961487
 
 ### 2.3 Nulls per Column
 |    | Column_Name               |   Total_Nulls_SQLServer |   Total_Nulls_Snowflake |   Margin (%) |
@@ -28,98 +48,98 @@ The example below shows a sample row where values are not identical. Important t
 |  0 | PracticeID                |                       0 |                       0 |          0   |
 |  1 | PracticeCode              |                       0 |                       0 |          0   |
 |  2 | PracticeName              |                       0 |                       0 |          0   |
-|  3 | YearPracticeEstablished   |                  443226 |                   55923 |         87.4 |
-|  4 | NPI                       |                  449428 |                   55959 |         87.5 |
-|  5 | PracticeWebsite           |                  447799 |                   55959 |         87.5 |
-|  6 | PracticeDescription       |                  449428 |                   55959 |         87.5 |
-|  7 | PracticeLogo              |                  447021 |                   55956 |         87.5 |
-|  8 | PracticeMedicalDirector   |                  445720 |                   55953 |         87.4 |
-|  9 | PracticeSoftware          |                  449428 |                   55959 |         87.5 |
-| 10 | PracticeTIN               |                  449428 |                   55959 |         87.5 |
+|  3 | YearPracticeEstablished   |                  452402 |                  450521 |          0.4 |
+|  4 | NPI                       |                  458602 |                  454175 |          1   |
+|  5 | PracticeWebsite           |                  455840 |                  454175 |          0.4 |
+|  6 | PracticeDescription       |                  458602 |                  454175 |          1   |
+|  7 | PracticeLogo              |                  456201 |                  453099 |          0.7 |
+|  8 | PracticeMedicalDirector   |                  454902 |                  452475 |          0.5 |
+|  9 | PracticeSoftware          |                  458602 |                  454175 |          1   |
+| 10 | PracticeTIN               |                  458602 |                  454175 |          1   |
 | 11 | OfficeID                  |                       0 |                       0 |          0   |
 | 12 | OfficeCode                |                       0 |                       0 |          0   |
-| 13 | OfficeName                |                  449418 |                    2000 |         99.6 |
+| 13 | OfficeName                |                  458591 |                   78851 |         82.8 |
 | 14 | AddressTypeCode           |                       0 |                       0 |          0   |
 | 15 | AddressLine1              |                       0 |                       0 |          0   |
-| 16 | AddressLine2              |                  443853 |                   54897 |         87.6 |
-| 17 | AddressLine3              |                  449428 |                   55959 |         87.5 |
-| 18 | AddressLine4              |                  449428 |                   55959 |         87.5 |
+| 16 | AddressLine2              |                  452792 |                  441802 |          2.4 |
+| 17 | AddressLine3              |                  458602 |                  454175 |          1   |
+| 18 | AddressLine4              |                  458602 |                  454175 |          1   |
 | 19 | City                      |                       0 |                       0 |          0   |
 | 20 | State                     |                       0 |                       0 |          0   |
 | 21 | ZipCode                   |                       0 |                       0 |          0   |
-| 22 | County                    |                   75087 |                   55959 |         25.5 |
+| 22 | County                    |                   76640 |                  454175 |        492.6 |
 | 23 | Nation                    |                       0 |                       0 |          0   |
 | 24 | Latitude                  |                       6 |                       0 |        100   |
 | 25 | Longitude                 |                       6 |                       0 |        100   |
-| 26 | FullPhone                 |                     600 |                   14785 |       2364.2 |
-| 27 | FullFax                   |                   94794 |                   28978 |         69.4 |
-| 28 | HasBillingStaff           |                  449428 |                   55959 |         87.5 |
-| 29 | HasHandicapAccess         |                  449428 |                   55959 |         87.5 |
-| 30 | HasLabServicesOnSite      |                  449428 |                   55959 |         87.5 |
-| 31 | HasPharmacyOnSite         |                  449428 |                   55959 |         87.5 |
-| 32 | HasXrayOnSite             |                  449428 |                   55959 |         87.5 |
-| 33 | IsSurgeryCenter           |                  449428 |                   55959 |         87.5 |
-| 34 | HasSurgeryOnSite          |                  449428 |                   55959 |         87.5 |
-| 35 | AverageDailyPatientVolume |                  449428 |                   55959 |         87.5 |
+| 26 | FullPhone                 |                     611 |                  110930 |      18055.5 |
+| 27 | FullFax                   |                  100344 |                  243366 |        142.5 |
+| 28 | HasBillingStaff           |                  458602 |                  454175 |          1   |
+| 29 | HasHandicapAccess         |                  458602 |                  454175 |          1   |
+| 30 | HasLabServicesOnSite      |                  458602 |                  454175 |          1   |
+| 31 | HasPharmacyOnSite         |                  458602 |                  454175 |          1   |
+| 32 | HasXrayOnSite             |                  458602 |                  454175 |          1   |
+| 33 | IsSurgeryCenter           |                  458602 |                  454175 |          1   |
+| 34 | HasSurgeryOnSite          |                  458602 |                  454175 |          1   |
+| 35 | AverageDailyPatientVolume |                  458602 |                  454175 |          1   |
 | 36 | PhysicianCount            |                       0 |                       0 |          0   |
-| 37 | OfficeCoordinatorName     |                  449428 |                   55959 |         87.5 |
-| 38 | ParkingInformation        |                  449428 |                   55956 |         87.5 |
-| 39 | PaymentPolicy             |                  449428 |                   55959 |         87.5 |
-| 40 | LegacyKeyOffice           |                  449428 |                   55959 |         87.5 |
-| 41 | LegacyKeyPractice         |                  449428 |                   55959 |         87.5 |
-| 42 | OfficeRank                |                  449428 |                   55959 |         87.5 |
+| 37 | OfficeCoordinatorName     |                  458602 |                  454175 |          1   |
+| 38 | ParkingInformation        |                  458602 |                  453959 |          1   |
+| 39 | PaymentPolicy             |                  458602 |                  454175 |          1   |
+| 40 | LegacyKeyOffice           |                  458602 |                  454175 |          1   |
+| 41 | LegacyKeyPractice         |                  458602 |                  454175 |          1   |
+| 42 | OfficeRank                |                  458602 |                  454175 |          1   |
 | 43 | CityStatePostalCodeID     |                       0 |                       0 |          0   |
 | 44 | HasDentist                |                       0 |                       0 |          0   |
-| 45 | GoogleScriptBlock         |                  400151 |                       0 |        100   |
+| 45 | GoogleScriptBlock         |                  407309 |                       0 |        100   |
 | 46 | OfficeURL                 |                       0 |                       0 |          0   |
 
 ### 2.4 Distincts per Column
-|    | Column_Name               |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |   Margin (%) |
-|---:|:--------------------------|----------------------------:|----------------------------:|-------------:|
-|  0 | PracticeID                |                      342144 |                       31842 |         90.7 |
-|  1 | PracticeCode              |                      342144 |                       31842 |         90.7 |
-|  2 | PracticeName              |                      263331 |                       24552 |         90.7 |
-|  3 | YearPracticeEstablished   |                          95 |                          18 |         81.1 |
-|  4 | NPI                       |                           0 |                           0 |          0   |
-|  5 | PracticeWebsite           |                         165 |                           0 |        100   |
-|  6 | PracticeDescription       |                           0 |                           0 |          0   |
-|  7 | PracticeLogo              |                        2025 |                           3 |         99.9 |
-|  8 | PracticeMedicalDirector   |                        3083 |                           5 |         99.8 |
-|  9 | PracticeSoftware          |                           0 |                           0 |          0   |
-| 10 | PracticeTIN               |                           0 |                           0 |          0   |
-| 11 | OfficeID                  |                      449383 |                       55744 |         87.6 |
-| 12 | OfficeCode                |                      449383 |                       55744 |         87.6 |
-| 13 | OfficeName                |                          10 |                       35301 |     352910   |
-| 14 | AddressTypeCode           |                           1 |                           1 |          0   |
-| 15 | AddressLine1              |                      321429 |                       41954 |         86.9 |
-| 16 | AddressLine2              |                        2123 |                         457 |         78.5 |
-| 17 | AddressLine3              |                           0 |                           0 |          0   |
-| 18 | AddressLine4              |                           0 |                           0 |          0   |
-| 19 | City                      |                        8786 |                        4050 |         53.9 |
-| 20 | State                     |                          53 |                          52 |          1.9 |
-| 21 | ZipCode                   |                       16341 |                        7764 |         52.5 |
-| 22 | County                    |                        1565 |                           0 |        100   |
-| 23 | Nation                    |                           1 |                           1 |          0   |
-| 24 | Latitude                  |                      240480 |                       32684 |         86.4 |
-| 25 | Longitude                 |                      244289 |                       32558 |         86.7 |
-| 26 | FullPhone                 |                      335199 |                       31624 |         90.6 |
-| 27 | FullFax                   |                      281012 |                       22370 |         92   |
-| 28 | HasBillingStaff           |                           0 |                           0 |          0   |
-| 29 | HasHandicapAccess         |                           0 |                           0 |          0   |
-| 30 | HasLabServicesOnSite      |                           0 |                           0 |          0   |
-| 31 | HasPharmacyOnSite         |                           0 |                           0 |          0   |
-| 32 | HasXrayOnSite             |                           0 |                           0 |          0   |
-| 33 | IsSurgeryCenter           |                           0 |                           0 |          0   |
-| 34 | HasSurgeryOnSite          |                           0 |                           0 |          0   |
-| 35 | AverageDailyPatientVolume |                           0 |                           0 |          0   |
-| 36 | PhysicianCount            |                         692 |                         543 |         21.5 |
-| 37 | OfficeCoordinatorName     |                           0 |                           0 |          0   |
-| 38 | ParkingInformation        |                           0 |                           3 |        inf   |
-| 39 | PaymentPolicy             |                           0 |                           0 |          0   |
-| 40 | LegacyKeyOffice           |                           0 |                           0 |          0   |
-| 41 | LegacyKeyPractice         |                           0 |                           0 |          0   |
-| 42 | OfficeRank                |                           0 |                           0 |          0   |
-| 43 | CityStatePostalCodeID     |                       18092 |                        8308 |         54.1 |
-| 44 | HasDentist                |                           2 |                           2 |          0   |
-| 45 | GoogleScriptBlock         |                       49277 |                       55959 |         13.6 |
-| 46 | OfficeURL                 |                      449428 |                       55744 |         87.6 |
+|    | Column_Name               |   Total_Distincts_SQLServer |   Total_Distincts_Snowflake |    Margin (%) |
+|---:|:--------------------------|----------------------------:|----------------------------:|--------------:|
+|  0 | PracticeID                |                      344442 |                      268384 |  22.1         |
+|  1 | PracticeCode              |                      344442 |                      268384 |  22.1         |
+|  2 | PracticeName              |                      263912 |                      205604 |  22.1         |
+|  3 | YearPracticeEstablished   |                          95 |                          84 |  11.6         |
+|  4 | NPI                       |                           0 |                           0 |   0           |
+|  5 | PracticeWebsite           |                         170 |                           0 | 100           |
+|  6 | PracticeDescription       |                           0 |                           0 |   0           |
+|  7 | PracticeLogo              |                        2022 |                         883 |  56.3         |
+|  8 | PracticeMedicalDirector   |                        3078 |                        1384 |  55           |
+|  9 | PracticeSoftware          |                           0 |                           0 |   0           |
+| 10 | PracticeTIN               |                           0 |                           0 |   0           |
+| 11 | OfficeID                  |                      457474 |                      454175 |   0.7         |
+| 12 | OfficeCode                |                      457474 |                      454175 |   0.7         |
+| 13 | OfficeName                |                          11 |                      239230 |   2.17472e+06 |
+| 14 | AddressTypeCode           |                           1 |                           1 |   0           |
+| 15 | AddressLine1              |                      324380 |                      295170 |   9           |
+| 16 | AddressLine2              |                        2171 |                        4338 |  99.8         |
+| 17 | AddressLine3              |                           0 |                           0 |   0           |
+| 18 | AddressLine4              |                           0 |                           0 |   0           |
+| 19 | City                      |                        8804 |                        8567 |   2.7         |
+| 20 | State                     |                          53 |                          53 |   0           |
+| 21 | ZipCode                   |                       16373 |                       15824 |   3.4         |
+| 22 | County                    |                        1567 |                           0 | 100           |
+| 23 | Nation                    |                           1 |                           1 |   0           |
+| 24 | Latitude                  |                      242565 |                      196066 |  19.2         |
+| 25 | Longitude                 |                      246455 |                      194435 |  21.1         |
+| 26 | FullPhone                 |                      338007 |                      305752 |   9.5         |
+| 27 | FullFax                   |                      282089 |                      186706 |  33.8         |
+| 28 | HasBillingStaff           |                           0 |                           0 |   0           |
+| 29 | HasHandicapAccess         |                           0 |                           0 |   0           |
+| 30 | HasLabServicesOnSite      |                           0 |                           0 |   0           |
+| 31 | HasPharmacyOnSite         |                           0 |                           0 |   0           |
+| 32 | HasXrayOnSite             |                           0 |                           0 |   0           |
+| 33 | IsSurgeryCenter           |                           0 |                           0 |   0           |
+| 34 | HasSurgeryOnSite          |                           0 |                           0 |   0           |
+| 35 | AverageDailyPatientVolume |                           0 |                           0 |   0           |
+| 36 | PhysicianCount            |                         702 |                         689 |   1.9         |
+| 37 | OfficeCoordinatorName     |                           0 |                           0 |   0           |
+| 38 | ParkingInformation        |                           0 |                         165 | inf           |
+| 39 | PaymentPolicy             |                           0 |                           0 |   0           |
+| 40 | LegacyKeyOffice           |                           0 |                           0 |   0           |
+| 41 | LegacyKeyPractice         |                           0 |                           0 |   0           |
+| 42 | OfficeRank                |                           0 |                           0 |   0           |
+| 43 | CityStatePostalCodeID     |                       18128 |                       17613 |   2.8         |
+| 44 | HasDentist                |                           2 |                           2 |   0           |
+| 45 | GoogleScriptBlock         |                       51228 |                      454175 | 786.6         |
+| 46 | OfficeURL                 |                      457842 |                      454175 |   0.8         |

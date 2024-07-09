@@ -77,7 +77,7 @@ insert_statement := $$ insert (
                             SourceCode, 
                             LastUpdateDate)
                        values (
-                            uuid_string(), 
+                            utils.generate_uuid(source.facilityid || source.addressid || source.addresstypeid), 
                             source.facilityid, 
                             source.addressid, 
                             source.addresstypeid,

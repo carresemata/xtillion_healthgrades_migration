@@ -81,7 +81,7 @@ insert_statement := $$
         LastUpdateDate
     )
     values
-        (uuid_string(),
+        (utils.generate_uuid(source.providerid || source.officeid), 
         source.providerid,
         source.officeid,
         source.officename,

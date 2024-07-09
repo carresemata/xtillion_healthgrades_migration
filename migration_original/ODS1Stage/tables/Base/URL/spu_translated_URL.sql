@@ -58,7 +58,7 @@ insert_statement := ' insert
                         URL,
                         LastUpdateDate)
                     values
-                        (uuid_string(),
+                        (utils.generate_uuid(source.url), 
                         source.url,
                         source.lastupdatedate)';
 

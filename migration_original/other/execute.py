@@ -33,7 +33,7 @@ def execute_sql_files(snowflake_cursor, directory) -> None:
 if __name__ == "__main__":
 
     snowflake_account = "OPA66287.us-east-1"  # HG-01 account
-    snowflake_username = "CARRESE@RVOHEALTH.COM"
+    snowflake_username = "OJIMENEZ@RVOHEALTH.COM"
     snowflake_warehouse = "MDM_XSMALL"
     snowflake_db = "ODS1_STAGE_TEAM"
     snowflake_role = "APP-SNOWFLAKE-HG-MDM-POWERUSER"

@@ -190,7 +190,7 @@ insert_statement := $$
                          )
                     values 
                         (
-                        uuid_string(),                        
+                        utils.generate_uuid(source.clienttoproductid || source.partnerid), 
                         source.clienttoproductid,
                         source.partnerid,
                         source.sourcecode,

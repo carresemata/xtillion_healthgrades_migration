@@ -288,6 +288,7 @@ select_statement := $$ with CTE_PracticeBatch as (
                             left join CTE_Service as  CTE_S on CTE_s.officeid = o.officeid
                             left join CTE_Fax as CTE_F  on CTE_f.officeid = o.officeid
                             left join CTE_PhysicianCount as CTE_PC on CTE_pc.practiceid = p.practiceid
+                        qualify row_number() over(partition by o.officecode order by o.lastupdatedate desc ) = 1
                     )
                     select distinct
                             p.practiceid,
@@ -338,7 +339,7 @@ select_statement := $$ with CTE_PracticeBatch as (
                     '''{"@@context": "http://schema.org","@@type" : "MedicalClinic","@@id":"' || p.officeurl || '","name":"' || p.practicename || '","address": {"@@type": "PostalAddress","streetAddress":"' || p.addressline1 || '","addressLocality":"' || p.city || '","addressRegion":"' || p.state || '","postalCode":"' || p.zipcode || '","addressCountry": "US"},"geo": {"@@type":"GeoCoordinates","latitude":"' || to_varchar(p.latitude) || '","longitude":"' || to_varchar(p.longitude) || '"},"telephone":"' || ifnull(p.fullphone,'') || '","potentialAction":{"@@type":"ReserveAction","@@id":"/groupgoogleform/' || p.officecode || '","url":"/groupgoogleform"}}''' as GoogleScriptBlock,
                             p.officeurl
                     from cte_practice as P
-                        join cte_union as offices on offices.officecode = p.officecode
+                        left join cte_union as offices on offices.officecode = p.officecode
                     $$;
 
 --- update Statement

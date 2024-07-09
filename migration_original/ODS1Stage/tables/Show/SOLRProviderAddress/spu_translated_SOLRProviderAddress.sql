@@ -1,6 +1,4 @@
--- sp_load_solrprovideraddress
-
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.Show.SP_LOAD_SOLRPROVIDERADDRESS(is_full BOOLEAN)
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERADDRESS(is_full BOOLEAN)
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
@@ -25,7 +23,7 @@ as
     insert_statement string; -- insert statements
     update_statement string; -- update statements
     delete_statement string; -- delete statements
-    merge_statement string; -- merge statement combining everything
+    merge_statement string; -- merge statement 
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrprovideraddress');
     execution_start datetime default getdate();
@@ -39,13 +37,12 @@ as
     
     select_statement := '
                 with CTE_ProviderID as (
-    
-                select ProviderID
-                from Mid.ProviderPracticeOffice
-                group by
-                    ProviderID,
-                    City,
-                    State
+                    select ProviderID
+                    from Mid.ProviderPracticeOffice
+                    group by
+                        ProviderID,
+                        City,
+                        State
                 ),
                 
                 CTE_MultipleLocations as (
@@ -53,6 +50,24 @@ as
                     from CTE_ProviderID
                     group by ProviderID
                     having COUNT(*) > 1
+                ),
+
+                -- this is a workaround for the weird function assigning this column in 
+                -- SQL Server which has unsupported subqueries in Snowflake
+                CTE_CityStateAlternatives as (
+                    SELECT 
+                        ProviderID,
+                        LISTAGG(CityState, ''; '') WITHIN GROUP (ORDER BY CityState) as CityStateAlternative
+                    FROM (
+                        SELECT 
+                            ProviderID,
+                            City || '', '' || State as CityState,
+                            ROW_NUMBER() OVER (PARTITION BY ProviderID ORDER BY City, State) as rn
+                        FROM Mid.ProviderPracticeOffice
+                        GROUP BY ProviderID, City, State
+                    )
+                    WHERE rn > 1 
+                    GROUP BY ProviderID
                 ),
                 
                 CTE_Source as (
@@ -67,8 +82,8 @@ as
                         ppo.ZipCode,
                         ppo.Latitude,
                         ppo.Longitude,
-                        CONCAT(ppo.City, '''', '''', ppo.State) as CityState,
-                        CAST(null as varchar(1000)) as CityStateAlternative,
+                        ppo.City || '', '' || ppo.State as CityState,
+                        COALESCE(csa.CityStateAlternative, NULL) as CityStateAlternative,
                         ppo.OfficeCode,
                         ppo.IsPrimaryOffice,
                         ppo.FullPhone,
@@ -83,9 +98,10 @@ as
                         Mid.Provider p
                         inner join Mid.ProviderPracticeOffice ppo on p.ProviderID = ppo.ProviderID
                         left join CTE_MultipleLocations ml on p.ProviderID = ml.ProviderID
+                        left join CTE_CityStateAlternatives csa ON p.ProviderID = csa.ProviderID
                 )
                 
-                select
+                select distinct
                     ProviderToOfficeID,
                     ProviderID,
                     ProviderCode,
@@ -112,6 +128,7 @@ as
 
 insert_statement := '
                   insert (
+                            SOLRProviderAddressID,
                             ProviderToOfficeID,
                             ProviderID,
                             ProviderCode,
@@ -130,57 +147,59 @@ insert_statement := '
                             AddressGeoPoint
                             )
                     values (
-                            s.ProviderToOfficeID,
-                            s.ProviderID,
-                            s.ProviderCode,
-                            s.AddressLine1,
-                            s.AddressLine2,
-                            s.City,
-                            s.State,
-                            s.ZipCode,
-                            s.Latitude,
-                            s.Longitude,
-                            s.CityState,
-                            s.CityStateAlternative,
-                            s.OfficeCode,
-                            s.IsPrimaryOffice,
-                            s.FullPhone,
-                            s.AddressGeoPoint
+                            uuid_string(),
+                            source.ProviderToOfficeID,
+                            source.ProviderID,
+                            source.ProviderCode,
+                            source.AddressLine1,
+                            source.AddressLine2,
+                            source.City,
+                            source.State,
+                            source.ZipCode,
+                            source.Latitude,
+                            source.Longitude,
+                            source.CityState,
+                            source.CityStateAlternative,
+                            source.OfficeCode,
+                            source.IsPrimaryOffice,
+                            source.FullPhone,
+                            source.AddressGeoPoint
                             ) 
                     ';
 
 update_statement := '
                     update 
                     SET
-                      ProviderID = s.ProviderID,
-                      ProviderCode = s.ProviderCode,
-                      AddressLine1 = s.AddressLine1,
-                      AddressLine2 = s.AddressLine2,
-                      City = s.City,
-                      State = LEFT(s.State, 2),
-                      ZipCode = s.ZipCode,
-                      Latitude = s.Latitude,
-                      Longitude = s.Longitude,
-                      CityState = s.CityState,
-                      CityStateAlternative = s.CityStateAlternative,
-                      OfficeCode = s.OfficeCode,
-                      IsPrimaryOffice = s.IsPrimaryOffice,
-                      FullPhone = s.FullPhone,
+                      ProviderID = source.ProviderID,
+                      ProviderCode = source.ProviderCode,
+                      AddressLine1 = source.AddressLine1,
+                      AddressLine2 = source.AddressLine2,
+                      City = source.City,
+                      State = LEFT(source.State, 2),
+                      ZipCode = source.ZipCode,
+                      Latitude = source.Latitude,
+                      Longitude = source.Longitude,
+                      CityState = source.CityState,
+                      CityStateAlternative = source.CityStateAlternative,
+                      OfficeCode = source.OfficeCode,
+                      IsPrimaryOffice = source.IsPrimaryOffice,
+                      FullPhone = source.FullPhone,
                       RefreshDate = current_timestamp()
                     ';
 
 -- This is the merge statement from logic of show.spuSOLRProviderAddressGenerateFromMid                     
 merge_statement := '
-                   merge into DEV.SOLRProviderAddress using 
-                   ('||select_statement||') as s 
-                   on DEV.SOLRPROVIDERADDRESS.ProviderToOfficeID = s.ProviderToOfficeID
-                   WHEN MATCHED then '||update_statement||'
+                   merge into show.solrprovideraddress as target
+                   using ('||select_statement||') as source
+                    on target.ProviderID = source.ProviderID
+                    and target.ProviderToOfficeID = source.ProviderToOfficeID
+                   when matched then '||update_statement||'
                    when not matched then '||insert_statement||'
                    ';
 
 -- This delete comes from hack.spuRemoveSuspecProviders
 delete_statement := '
-                    delete from DEV.SOLRProviderAddress spa
+                    delete from show.solrprovideraddress spa
                     using Base.ProviderRemoval pr, Show.SOLRProvider sp
                     where sp.ProviderCode = pr.ProviderCode
                     and sp.ProviderID = spa.ProviderID
@@ -193,8 +212,8 @@ delete_statement := '
 if (is_full) then
     truncate table Show.SOLRProviderAddress;
 end if; 
-execute immediate delete_statement; 
 execute immediate merge_statement;
+execute immediate delete_statement; 
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------

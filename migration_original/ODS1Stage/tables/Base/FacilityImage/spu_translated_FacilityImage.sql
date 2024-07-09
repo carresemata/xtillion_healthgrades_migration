@@ -83,7 +83,7 @@ insert_statement := ' insert
                         SourceCode, 
                         LastUpdateDate)
                       values 
-                        (uuid_string(), 
+                        (utils.generate_uuid(source.facilityid || source.mediaimagetypeid || source.mediasizeid || source.mediareviewlevelid), 
                         source.facilityid, 
                         source.filename, 
                         source.imagepath, 
