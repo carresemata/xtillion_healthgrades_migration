@@ -183,6 +183,11 @@ declare
     -------------- xml load ----------------
     select_statement_xml_load_1 string;
     update_statement_xml_load_1 string;
+    select_statement_xml_load_2 string;
+    update_statement_xml_load_2 string;
+    select_statement_xml_load_3 string;
+    update_statement_xml_load_3 string;
+    
     select_statement_facility string;
     update_statement_facility string;
     select_statement_condition_hierarchy string;
@@ -417,7 +422,7 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                 from
                                     (
                                         select
-                                            bpsa.providerid,
+                                            bpsa.providercode,
                                             (ProviderAverageScore / 5) * 100 as PatientExperienceSurveyOverallScore,
                                             row_number() over(
                                                 partition by bpsa.providerid
@@ -426,7 +431,9 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                             ) as RN1
                                         from
                                             base.providersurveyaggregate as BPSA
-                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            -- originally was like this but the IDs in BPSA are from SQL Server, join on ProviderCode
+                                            -- inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providercode = bpsa.providercode
                                         where
                                             QuestionID = 231
                                     )
@@ -463,7 +470,7 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                 from
                                     (
                                         select
-                                            bpsa.providerid,
+                                            bpsa.providercode,
                                             bpsa.questioncount,
                                             row_number() over(
                                                 partition by bpsa.providerid
@@ -472,7 +479,9 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                             ) as RN1
                                         from
                                             base.providersurveyaggregate as BPSA
-                                            inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            -- originally was like this but the IDs in BPSA are from SQL Server, join on ProviderCode
+                                            -- inner join cte_batch_process CTE_BP on CTE_bp.providerid = bpsa.providerid
+                                            inner join cte_batch_process CTE_BP on CTE_bp.providercode = bpsa.providercode
                                         where
                                             QuestionID = 231
                                     )
@@ -996,11 +1005,13 @@ select_statement_2 :=  $$ with cte_batch_process as (
                                     left join cte_media_school_nation as CTE_MSN on CTE_msn.providerid = p.providerid
                                     left join cte_years_since_medical_school_graduation as CTE_YSMSG on CTE_ysmsg.providerid = p.providerid
                                     left join cte_provider_image as CTE_PI on CTE_pi.providerid = p.providerid
-                                    left join cte_patient_experience_survey_overall_score as CTE_PESOS on CTE_pesos.providerid = p.providerid
-                                    -- originally was like this but the IDs in BPSA are from SQL Server, join on ProviderCode
+                                    -- originally was like this but these IDs in BPSA are from SQL Server, join on ProviderCode
+                                    -- left join cte_patient_experience_survey_overall_score as CTE_PESOS on CTE_pesos.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_score as CTE_PESOS on CTE_pesos.providercode = p.providercode
                                     -- left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providerid = p.providerid
                                     left join cte_patient_experience_survey_overall_star_value as CTE_PESOSV on CTE_pesosv.providercode = p.providercode
-                                    left join cte_patient_experience_survey_overall_count as CTE_PESOC on CTE_pesoc.providerid = p.providerid
+                                    -- left join cte_patient_experience_survey_overall_count as CTE_PESOC on CTE_pesoc.providerid = p.providerid
+                                    left join cte_patient_experience_survey_overall_count as CTE_PESOC on CTE_pesoc.providercode = p.providercode
                                     left join cte_display_status_code as CTE_DSC on CTE_dsc.providerid = p.providerid
                                     left join cte_sub_status_code as CTE_SSC on CTE_ssc.providerid = p.providerid
                                     left join cte_product_group_code as CTE_PGC on CTE_pgc.providerid = p.providerid
@@ -2461,7 +2472,7 @@ cte_survey_xml as (
         cte_survey
     GROUP BY
         ProviderID
-) ,
+),
 
 ------------------------ClinicalFocusDCPXML------------------------
 
@@ -2743,6 +2754,2723 @@ FROM Show.SolrProvider as P
     LEFT JOIN cte_smart_referral_xml  AS smart ON smart.providerid = p.providerid $$;
 
 
+select_statement_xml_load_2 := 
+$$ 
+
+WITH CTE_Provider_Batch AS (
+    SELECT ProviderID
+    FROM mdm_team.mst.provider_profile_processing ppp
+    INNER JOIN base.provider bp ON ppp.ref_provider_code = bp.providercode
+),
+
+------------------------ProviderProcedureXMLLoads------------------------
+CTE_ProviderProceduresq AS (
+    SELECT
+        a.ProviderID,
+        a.ProcedureCode,
+        0 AS IsMapped
+    FROM
+        Mid.ProviderProcedure a
+        INNER JOIN CTE_Provider_Batch pr ON a.ProviderID = pr.ProviderId
+    UNION ALL
+    SELECT
+        a.ProviderID,
+        mt.MedicalTermCode AS ProcedureCode,
+        1 AS IsMapped
+    FROM
+        Base.ProviderToSpecialty a
+        INNER JOIN Base.Specialty b ON b.SpecialtyID = a.SpecialtyID
+        INNER JOIN Base.SpecialtyToProcedureMedical spm ON b.SpecialtyID = spm.SpecialtyID
+        INNER JOIN Base.MedicalTerm mt ON mt.MedicalTermID = spm.ProcedureMedicalID
+        INNER JOIN Base.MedicalTermType mtt ON mt.MedicalTermTypeID = mtt.MedicalTermTypeID
+            AND mtt.MedicalTermTypeCode = 'Procedure'
+        INNER JOIN CTE_Provider_Batch pr ON a.ProviderID = pr.ProviderId
+    WHERE
+        a.SpecialtyIsRedundant = 0
+        AND a.IsSearchableCalculated = 1
+),
+
+CTE_ProviderProcedureXMLLoads AS (
+    SELECT
+        ProviderID,
+        ProcedureCode,
+        IsMapped
+    FROM
+        CTE_ProviderProceduresq
+),
+------------------------ProviderConditionXMLLoads------------------------
+CTE_ProviderConditionsq AS (
+    SELECT
+        a.ProviderID,
+        a.ConditionCode,
+        0 AS IsMapped
+    FROM
+        Mid.ProviderCondition a
+        INNER JOIN CTE_Provider_Batch pr ON a.ProviderID = pr.ProviderId
+    UNION ALL
+    SELECT
+        a.ProviderID,
+        mt.MedicalTermCode AS ConditionCode,
+        1 AS IsMapped
+    FROM
+        Base.ProviderToSpecialty a
+        INNER JOIN Base.Specialty b ON b.SpecialtyID = a.SpecialtyID
+        INNER JOIN Base.SpecialtyToCondition spm ON b.SpecialtyID = spm.SpecialtyID
+        INNER JOIN Base.MedicalTerm mt ON mt.MedicalTermID = spm.ConditionID
+        INNER JOIN Base.MedicalTermType mtt ON mt.MedicalTermTypeID = mtt.MedicalTermTypeID
+            AND mtt.MedicalTermTypeCode = 'Condition'
+        INNER JOIN CTE_Provider_Batch pr ON a.ProviderID = pr.ProviderId
+    WHERE
+        a.SpecialtyIsRedundant = 0
+        AND a.IsSearchableCalculated = 1
+),
+
+CTE_ProviderConditionXMLLoads AS (
+    SELECT
+        ProviderID,
+        ConditionCode,
+        IsMapped
+    FROM
+        CTE_ProviderConditionsq
+),
+
+-----------------------------TeleHealthXML-----------------------------
+---- validated: ~700k XMLs in SQL Server and here (not null)
+CTE_Services AS (
+    SELECT DISTINCT 
+        PTM.ProviderId,
+        MT.MethodTypeCode AS type,
+        M.TelehealthMethod AS method,
+        M.ServiceName AS servicename
+    FROM Base.ProviderToTelehealthMethod PTM
+    INNER JOIN Base.TelehealthMethod M ON M.TelehealthMethodId = PTM.TelehealthMethodId
+    INNER JOIN Base.TelehealthMethodType MT ON MT.TelehealthMethodTypeId = M.TelehealthMethodTypeId
+    WHERE MT.MethodTypeCode IN ('URL', 'PHONE')
+),
+
+CTE_ServicesXML AS (
+    SELECT 
+        ProviderId,
+        LISTAGG(
+            '<service>' ||
+            '<type>' || type || '</type>' ||
+            '<method>' || method || '</method>' ||
+            '<servicename>' || servicename || '</servicename>' ||
+            '</service>'
+        ) AS service_xml
+    FROM CTE_Services
+    GROUP BY ProviderId
+),
+
+CTE_TelehealthXML AS (
+    SELECT 
+        T.ProviderId,
+        CASE 
+            WHEN P.ProviderId IS NOT NULL THEN
+                to_variant(parse_xml('<Telehealth>' ||
+                '<hasTelehealth>true</hasTelehealth>' ||
+                '<_serviceL>' ||
+                '<serviceL>' || COALESCE(S.service_xml, '') || '</serviceL>' ||
+                '</_serviceL>' ||
+                '</Telehealth>'))
+            ELSE NULL
+        END AS XMLValue
+    FROM CTE_Provider_Batch T
+    INNER JOIN (SELECT DISTINCT ProviderId FROM Base.ProviderToTelehealthMethod) P 
+        ON P.ProviderId = T.ProviderId
+    LEFT JOIN CTE_ServicesXML S ON S.ProviderId = T.ProviderId
+),
+
+------------------------ProviderTypeXML------------------------
+---- validated: all ~6.5M providers should have this xml 
+CTE_ProviderType AS (
+    SELECT
+        bptpt.ProviderID,
+        bpt.ProviderTypeCode AS ptCd,
+        bpt.ProviderTypeDescription AS ptD,
+        bptpt.ProviderTypeRank AS ptRank
+    FROM
+        Base.ProviderToProviderType bptpt
+        INNER JOIN Base.ProviderType bpt ON bptpt.ProviderTypeID = bpt.ProviderTypeID
+    WHERE
+        ProviderTypeRank = CASE
+            WHEN ProviderTypeCode = 'ALT' THEN 1
+            ELSE ProviderTypeRank
+        END
+    ORDER BY
+        IFNULL(bptpt.ProviderTypeRank, 2147483647)
+),
+
+CTE_ProviderTypeXML AS (
+    SELECT
+        T.ProviderID,
+        to_variant(parse_xml('<ptL>' || 
+        LISTAGG(
+            '<pt>' ||
+            IFF(cte_pt.ptCd IS NOT NULL, '<ptCd>' || cte_pt.ptCd || '</ptCd>', '') ||
+            IFF(cte_pt.ptD IS NOT NULL, '<ptD>' || cte_pt.ptD || '</ptD>', '') ||
+            IFF(cte_pt.ptRank IS NOT NULL, '<ptRank>' || cte_pt.ptRank || '</ptRank>', '') ||
+            '</pt>'
+        ) ||
+        '</ptL>')) AS XMLValue
+    FROM
+        CTE_Provider_Batch T
+        LEFT JOIN CTE_ProviderType cte_pt ON cte_pt.ProviderId = T.ProviderID
+    GROUP BY
+        T.ProviderID
+),
+
+------------------------PracticeOfficeXML------------------------
+---- validated: ~5.7M providers have this xml in both sides
+CTE_PracticeOfficeHoursBase AS (
+    SELECT
+        dow.DaysOfWeekDescription AS _day,
+        dow.SortOrder AS dispOrder,
+        CAST(oh.OfficeHoursOpeningTime AS VARCHAR) AS _start,
+        CAST(oh.OfficeHoursClosingTime AS VARCHAR) AS _end,
+        oh.OfficeIsClosed AS closed,
+        oh.OfficeIsOpen24Hours AS open24Hrs,
+        ppo.ProviderId,
+        ppo.OfficeID
+    FROM
+        Mid.ProviderPracticeOffice ppo
+        INNER JOIN base.OfficeHours oh ON oh.OfficeID = ppo.OfficeID
+        INNER JOIN base.DaysOfWeek dow ON dow.DaysOfWeekID = oh.DaysOfWeekID
+        INNER JOIN CTE_Provider_Batch p ON ppo.ProviderID = p.ProviderID
+    ORDER BY
+        dow.SortOrder
+),
+CTE_PracticeOfficephFullBase AS (
+    SELECT
+        DISTINCT ppo.FullPhone AS phFull,
+        ppo.ProviderId,
+        ppo.OfficeID
+    FROM
+        Mid.ProviderPracticeOffice ppo
+        INNER JOIN CTE_Provider_Batch p ON ppo.ProviderID = p.ProviderID
+),
+CTE_PracticeOfficefaxFullBase AS (
+    SELECT
+        DISTINCT ppo.FullFax AS faxFull,
+        ppo.ProviderId,
+        ppo.OfficeID
+    FROM
+        Mid.ProviderPracticeOffice ppo
+        INNER JOIN CTE_Provider_Batch p ON ppo.ProviderID = p.ProviderID
+),
+CTE_PracticeOfficeBase AS (
+    SELECT
+        ppo.OfficeID AS oGUID,
+        ppo.OfficeCode AS oID,
+        ppo.OfficeName AS oNm,
+        ppo.IsPrimaryOffice AS prmryO,
+        ppo.ProviderOfficeRank AS oRank,
+        ppo.AddressTypeCode AS addTp,
+        ppo.AddressCode AS addCd,
+        ppo.AddressLine1 AS ad1,
+        ppo.AddressLine2 AS ad2,
+        ppo.AddressLine3 AS ad3,
+        ppo.AddressLine4 AS ad4,
+        ppo.City AS city,
+        ppo.State AS st,
+        ppo.ZipCode AS zip,
+        ppo.Latitude AS lat,
+        ppo.Longitude AS lng,
+        a.TimeZone AS tzn,
+        ppo.HasBillingStaff AS isBStf,
+        ppo.HasHandicapAccess isHcap,
+        ppo.HasLabServicesOnSite isLab,
+        ppo.HasPharmacyOnSite AS isPhrm,
+        ppo.HasXrayOnSite isXray,
+        ppo.IsSurgeryCenter AS isSrg,
+        ppo.HasSurgeryOnSite hasSrg,
+        ppo.AverageDailyPatientVolume AS avVol,
+        ppo.OfficeCoordinatorName AS ocNm,
+        ppo.ParkingInformation AS prkInf,
+        ppo.PaymentPolicy AS payPol,
+        a.AddressLine1 AS ast,
+        a.Suite AS ste,
+        ppo.LegacyKeyOffice AS oLegacyID,
+        REPLACE(
+            '/group-directory/' || LOWER(cspc.State) || '-' || LOWER(REPLACE(s.StateName, ' ', '-')) || '/' || LOWER(
+                REPLACE(
+                    REPLACE(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(
+                                    REPLACE(REPLACE(cspc.City, ' - ', ' '), '&', '-'),
+                                    ' ',
+                                    '-'
+                                ),
+                                '/',
+                                '-'
+                            ),
+                            '''',
+                            ''
+                        ),
+                        '.',
+                        ''
+                    ),
+                    '--',
+                    '-'
+                )
+            ) || '/' || LOWER(
+                REPLACE(
+                    REPLACE(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(
+                                    REPLACE(
+                                        REPLACE(
+                                            REPLACE(
+                                                REPLACE(
+                                                    REPLACE(
+                                                        REPLACE(
+                                                            REPLACE(
+                                                                REPLACE(
+                                                                    REPLACE(
+                                                                        REPLACE(
+                                                                            REPLACE(
+                                                                                REPLACE(
+                                                                                    REPLACE(
+                                                                                        REPLACE(
+                                                                                            REPLACE(
+                                                                                                REPLACE(
+                                                                                                    REPLACE(
+                                                                                                        REPLACE(
+                                                                                                            REPLACE(
+                                                                                                                REPLACE(
+                                                                                                                    REPLACE(
+                                                                                                                        REPLACE(
+                                                                                                                            REPLACE(
+                                                                                                                                REPLACE(
+                                                                                                                                    REPLACE(
+                                                                                                                                        REPLACE(
+                                                                                                                                            REPLACE(
+                                                                                                                                                REPLACE(
+                                                                                                                                                    REPLACE(
+                                                                                                                                                        REPLACE(
+                                                                                                                                                            REPLACE(
+                                                                                                                                                                REPLACE(
+                                                                                                                                                                    REPLACE(
+                                                                                                                                                                        REPLACE(LTRIM(RTRIM(pr.PracticeName)), ' - ', ' '),
+                                                                                                                                                                        '&',
+                                                                                                                                                                        '-'
+                                                                                                                                                                    ),
+                                                                                                                                                                    ' ',
+                                                                                                                                                                    '-'
+                                                                                                                                                                ),
+                                                                                                                                                                '/',
+                                                                                                                                                                '-'
+                                                                                                                                                            ),
+                                                                                                                                                            '\\\\',
+                                                                                                                                                            '-'
+                                                                                                                                                        ),
+                                                                                                                                                        '''',
+                                                                                                                                                        ''
+                                                                                                                                                    ),
+                                                                                                                                                    ':',
+                                                                                                                                                    ''
+                                                                                                                                                ),
+                                                                                                                                                '~',
+                                                                                                                                                ''
+                                                                                                                                            ),
+                                                                                                                                            ';',
+                                                                                                                                            ''
+                                                                                                                                        ),
+                                                                                                                                        '|',
+                                                                                                                                        ''
+                                                                                                                                    ),
+                                                                                                                                    '<',
+                                                                                                                                    ''
+                                                                                                                                ),
+                                                                                                                                '>',
+                                                                                                                                ''
+                                                                                                                            ),
+                                                                                                                            '?',
+                                                                                                                            ''
+                                                                                                                        ),
+                                                                                                                        '?',
+                                                                                                                        ''
+                                                                                                                    ),
+                                                                                                                    '*',
+                                                                                                                    ''
+                                                                                                                ),
+                                                                                                                '?',
+                                                                                                                ''
+                                                                                                            ),
+                                                                                                            '+',
+                                                                                                            ''
+                                                                                                        ),
+                                                                                                        '?',
+                                                                                                        ''
+                                                                                                    ),
+                                                                                                    '!',
+                                                                                                    ''
+                                                                                                ),
+                                                                                                '?',
+                                                                                                ''
+                                                                                            ),
+                                                                                            '@',
+                                                                                            ''
+                                                                                        ),
+                                                                                        '{',
+                                                                                        ''
+                                                                                    ),
+                                                                                    '}',
+                                                                                    ''
+                                                                                ),
+                                                                                '[',
+                                                                                ''
+                                                                            ),
+                                                                            ']',
+                                                                            ''
+                                                                        ),
+                                                                        '(',
+                                                                        ''
+                                                                    ),
+                                                                    ')',
+                                                                    ''
+                                                                ),
+                                                                '?',
+                                                                'n'
+                                                            ),
+                                                            '?',
+                                                            'a'
+                                                        ),
+                                                        '?',
+                                                        'i'
+                                                    ),
+                                                    '"',
+                                                    ''
+                                                ),
+                                                '?',
+                                                ''
+                                            ),
+                                            ' ',
+                                            ''
+                                        ),
+                                        '`',
+                                        ''
+                                    ),
+                                    ',',
+                                    ''
+                                ),
+                                '#',
+                                ''
+                            ),
+                            '.',
+                            ''
+                        ),
+                        '---',
+                        '-'
+                    ),
+                    '--',
+                    '-'
+                )
+            ) || '-' || LOWER(pr.OfficeCode),
+            '--',
+            '-'
+        ) AS pracUrl,
+        ppo.PracticeID,
+        ppo.ProviderID
+    FROM
+        Mid.ProviderPracticeOffice ppo
+        LEFT JOIN Mid.Practice pr ON ppo.OfficeID = pr.OfficeID
+        AND ppo.PracticeID = pr.PracticeID
+        LEFT JOIN Base.CityStatePostalCode cspc ON pr.CityStatePostalCodeID = cspc.CityStatePostalCodeID
+        LEFT JOIN Base.State s ON s.state = cspc.state
+        INNER JOIN Base.Address a ON ppo.AddressID = a.AddressID
+        INNER JOIN CTE_Provider_Batch p ON ppo.ProviderID = p.ProviderID
+    WHERE
+        ppo.Latitude <> 0
+        AND ppo.Longitude <> 0
+    GROUP BY
+        ppo.ProviderID,
+        ppo.PracticeID,
+        ppo.OfficeCode,
+        ppo.OfficeName,
+        ppo.IsPrimaryOffice,
+        ppo.ProviderOfficeRank,
+        ppo.AddressTypeCode,
+        ppo.AddressCode,
+        ppo.AddressLine1,
+        ppo.AddressLine2,
+        ppo.AddressLine3,
+        ppo.AddressLine4,
+        ppo.City,
+        ppo.State,
+        ppo.ZipCode,
+        ppo.Latitude,
+        ppo.Longitude,
+        a.TimeZone,
+        ppo.HasBillingStaff,
+        ppo.HasHandicapAccess,
+        ppo.HasLabServicesOnSite,
+        ppo.HasPharmacyOnSite,
+        ppo.HasXrayOnSite,
+        ppo.IsSurgeryCenter,
+        ppo.HasSurgeryOnSite,
+        ppo.AverageDailyPatientVolume,
+        ppo.OfficeCoordinatorName,
+        ppo.ParkingInformation,
+        ppo.PaymentPolicy,
+        ppo.LegacyKeyOffice,
+        ppo.OfficeID,
+        s.StateName,
+        cspc.State,
+        cspc.City,
+        pr.PracticeName,
+        pr.LegacyKeyOffice,
+        pr.OfficeCode,
+        a.AddressLine1,
+        a.Suite
+    ORDER BY
+        ppo.ProviderOfficeRank
+),
+CTE_ProviderPracticeOffice AS (
+    SELECT
+        p.ProviderID,
+        ppo.PracticeID AS prGUID,
+        ppo.PracticeCode AS prID,
+        ppo.PracticeName AS prNm,
+        ppo.YearPracticeEstablished AS yrEst,
+        ppo.PracticeNPI AS prNpi,
+        ppo.PracticeWebsite AS prUrl,
+        ppo.PracticeDescription AS prD,
+        ppo.PracticeLogo AS prLgo,
+        ppo.PracticeMedicalDirector AS medDir,
+        ppo.PracticeSoftware AS prSft,
+        ppo.PracticeTIN AS prTin,
+        ppo.LegacyKeyPractice AS pLegacyID,
+        ppo.PhysicianCount AS pProvCnt,
+    FROM
+        Mid.ProviderPracticeOffice AS ppo
+        INNER JOIN Base.Provider p ON p.ProviderId = ppo.ProviderId
+        LEFT JOIN Mid.ProviderSponsorship ps ON p.ProviderCode = ps.ProviderCode
+        AND ppo.PracticeCode = ps.PracticeCode
+        AND ps.ProductCode IN (
+            SELECT
+                ProductCode
+            FROM
+                Base.Product
+            WHERE
+                ProductTypeCode = 'PRACTICE'
+        )
+    WHERE
+        ppo.Latitude <> 0
+        AND ppo.Longitude <> 0
+        AND CAST(ppo.Latitude AS VARCHAR) <> '0.000000'
+        AND CAST(ppo.Longitude AS VARCHAR) <> '0.000000'
+),
+CTE_PracticeOfficeBaseXML AS (
+    SELECT
+        cte_pob.ProviderID,
+        '<offL>' || 
+        LISTAGG(
+            '<off>' ||
+            IFF(cte_pob.oGUID IS NOT NULL, '<oGUID>' || cte_pob.oGUID || '</oGUID>', '') ||
+            IFF(cte_pob.oID IS NOT NULL, '<oID>' || cte_pob.oID || '</oID>', '') ||
+            IFF(cte_pob.oNm IS NOT NULL, '<oNm>' || cte_pob.oNm || '</oNm>', '') ||
+            IFF(cte_pob.prmryO IS NOT NULL, '<prmryO>' || cte_pob.prmryO || '</prmryO>', '') ||
+            IFF(cte_pob.oRank IS NOT NULL, '<oRank>' || cte_pob.oRank || '</oRank>', '') ||
+            IFF(cte_pob.addTp IS NOT NULL, '<addTp>' || cte_pob.addTp || '</addTp>', '') ||
+            IFF(cte_pob.addCd IS NOT NULL, '<addCd>' || cte_pob.addCd || '</addCd>', '') ||
+            IFF(cte_pob.ad1 IS NOT NULL, '<ad1>' || cte_pob.ad1 || '</ad1>', '') ||
+            IFF(cte_pob.ad2 IS NOT NULL, '<ad2>' || cte_pob.ad2 || '</ad2>', '') ||
+            IFF(cte_pob.ad3 IS NOT NULL, '<ad3>' || cte_pob.ad3 || '</ad3>', '') ||
+            IFF(cte_pob.ad4 IS NOT NULL, '<ad4>' || cte_pob.ad4 || '</ad4>', '') ||
+            IFF(cte_pob.city IS NOT NULL, '<city>' || cte_pob.city || '</city>', '') ||
+            IFF(cte_pob.st IS NOT NULL, '<st>' || cte_pob.st || '</st>', '') ||
+            IFF(cte_pob.zip IS NOT NULL, '<zip>' || cte_pob.zip || '</zip>', '') ||
+            IFF(cte_pob.lat IS NOT NULL, '<lat>' || cte_pob.lat || '</lat>', '') ||
+            IFF(cte_pob.lng IS NOT NULL, '<lng>' || cte_pob.lng || '</lng>', '') ||
+            IFF(cte_pob.tzn IS NOT NULL, '<tzn>' || cte_pob.tzn || '</tzn>', '') ||
+            IFF(cte_pob.isBStf IS NOT NULL, '<isBStf>' || cte_pob.isBStf || '</isBStf>', '') ||
+            IFF(cte_pob.isHcap IS NOT NULL, '<isHcap>' || cte_pob.isHcap || '</isHcap>', '') ||
+            IFF(cte_pob.isLab IS NOT NULL, '<isLab>' || cte_pob.isLab || '</isLab>', '') ||
+            IFF(cte_pob.isPhrm IS NOT NULL, '<isPhrm>' || cte_pob.isPhrm || '</isPhrm>', '') ||
+            IFF(cte_pob.isXray IS NOT NULL, '<isXray>' || cte_pob.isXray || '</isXray>', '') ||
+            IFF(cte_pob.isSrg IS NOT NULL, '<isSrg>' || cte_pob.isSrg || '</isSrg>', '') ||
+            IFF(cte_pob.hasSrg IS NOT NULL, '<hasSrg>' || cte_pob.hasSrg || '</hasSrg>', '') ||
+            IFF(cte_pob.avVol IS NOT NULL, '<avVol>' || cte_pob.avVol || '</avVol>', '') ||
+            IFF(cte_pob.ocNm IS NOT NULL, '<ocNm>' || cte_pob.ocNm || '</ocNm>', '') ||
+            IFF(cte_pob.prkInf IS NOT NULL, '<prkInf>' || cte_pob.prkInf || '</prkInf>', '') ||
+            IFF(cte_pob.payPol IS NOT NULL, '<payPol>' || cte_pob.payPol || '</payPol>', '') ||
+            IFF(cte_pob.ast IS NOT NULL, '<ast>' || cte_pob.ast || '</ast>', '') ||
+            IFF(cte_pob.ste IS NOT NULL, '<ste>' || cte_pob.ste || '</ste>', '') ||
+            '</off>'
+        ) ||
+        '</offL>' AS XMLValue
+    FROM
+        CTE_PracticeOfficeBase cte_pob
+    GROUP BY
+        cte_pob.ProviderID
+),
+
+CTE_PracticeOfficeHoursBaseXML AS (
+    SELECT
+        cte_pohb.ProviderID,
+        '<hoursL>' || 
+        LISTAGG(
+            '<hours>' ||
+            IFF(cte_pohb._day IS NOT NULL, '<day>' || cte_pohb._day || '</day>', '') ||
+            IFF(cte_pohb.dispOrder IS NOT NULL, '<dispOrder>' || cte_pohb.dispOrder || '</dispOrder>', '') ||
+            IFF(cte_pohb._start IS NOT NULL, '<start>' || cte_pohb._start || '</start>', '') ||
+            IFF(cte_pohb._end IS NOT NULL, '<end>' || cte_pohb._end || '</end>', '') ||
+            IFF(cte_pohb.closed IS NOT NULL, '<closed>' || cte_pohb.closed || '</closed>', '') ||
+            IFF(cte_pohb.open24Hrs IS NOT NULL, '<open24Hrs>' || cte_pohb.open24Hrs || '</open24Hrs>', '') ||
+            '</hours>'
+        ) ||
+        '</hoursL>' AS XMLValue
+    FROM
+        CTE_PracticeOfficeHoursBase cte_pohb
+    GROUP BY
+        cte_pohb.ProviderID
+),
+
+CTE_PracticeOfficephFullBaseXML AS (
+    SELECT
+        cte_pophfb.ProviderID,
+        '<phL>' || 
+        LISTAGG(
+            '<ph>' ||
+            IFF(cte_pophfb.phFull IS NOT NULL, '<phFull>' || cte_pophfb.phFull || '</phFull>', '') ||
+            '</ph>'
+        ) ||
+        '</phL>' AS XMLValue
+    FROM
+        CTE_PracticeOfficephFullBase cte_pophfb
+    GROUP BY
+        cte_pophfb.ProviderID
+),
+
+CTE_PracticeOfficefaxFullBaseXML AS (
+    SELECT
+        cte_poffb.ProviderID,
+        '<faxL>' || 
+        LISTAGG(
+            '<fax>' ||
+            IFF(cte_poffb.faxFull IS NOT NULL, '<faxFull>' || cte_poffb.faxFull || '</faxFull>', '') ||
+            '</fax>'
+        ) ||
+        '</faxL>' AS XMLValue
+    FROM
+        CTE_PracticeOfficefaxFullBase cte_poffb
+    GROUP BY
+        cte_poffb.ProviderID
+),
+
+CTE_PracticeUrlXML AS (
+    SELECT
+        cte_pob.ProviderID,
+        LISTAGG(
+            '<pracUrl>' ||
+            IFF(cte_pob.pracUrl IS NOT NULL, cte_pob.pracUrl, '') ||
+            '</pracUrl>'
+        ) AS XMLValue
+    FROM
+        CTE_PracticeOfficeBase cte_pob
+    GROUP BY
+        cte_pob.ProviderID
+),
+
+CTE_ProviderPracticeOfficeXML AS (
+    SELECT
+        cte_ppo.ProviderID,
+        LISTAGG(
+            '<practice>' ||
+            IFF(cte_ppo.prGUID IS NOT NULL, '<prGUID>' || cte_ppo.prGUID || '</prGUID>', '') ||
+            IFF(cte_ppo.prID IS NOT NULL, '<prID>' || cte_ppo.prID || '</prID>', '') ||
+            IFF(cte_ppo.prNm IS NOT NULL, '<prNm>' || cte_ppo.prNm || '</prNm>', '') ||
+            IFF(cte_ppo.yrEst IS NOT NULL, '<yrEst>' || cte_ppo.yrEst || '</yrEst>', '') ||
+            IFF(cte_ppo.prNpi IS NOT NULL, '<prNpi>' || cte_ppo.prNpi || '</prNpi>', '') ||
+            IFF(cte_ppo.prUrl IS NOT NULL, '<prUrl>' || REPLACE(cte_ppo.prUrl, '&', '&amp;') || '</prUrl>', '') ||
+            IFF(cte_ppo.prD IS NOT NULL, '<prD>' || cte_ppo.prD || '</prD>', '') ||
+            IFF(cte_ppo.prLgo IS NOT NULL, '<prLgo>' || cte_ppo.prLgo || '</prLgo>', '') ||
+            IFF(cte_ppo.medDir IS NOT NULL, '<medDir>' || cte_ppo.medDir || '</medDir>', '') ||
+            IFF(cte_ppo.prSft IS NOT NULL, '<prSft>' || cte_ppo.prSft || '</prSft>', '') ||
+            IFF(cte_ppo.prTin IS NOT NULL, '<prTin>' || cte_ppo.prTin || '</prTin>', '') ||
+            IFF(cte_ppo.pLegacyID IS NOT NULL, '<pLegacyID>' || cte_ppo.pLegacyID || '</pLegacyID>', '') ||
+            '</practice>'
+        ) AS XMLValue
+    FROM
+        CTE_ProviderPracticeOffice cte_ppo
+    GROUP BY
+        cte_ppo.ProviderID
+),
+
+CTE_PracticeOfficeXML AS (
+    SELECT
+        pob.ProviderID,
+        to_variant(parse_xml('<poffL><poff>' || 
+        COALESCE(REPLACE(ppo.XMLValue, '&', '/amp'), '') || 
+        '<offL><off>' || 
+        COALESCE(REPLACE(pohb.XMLValue, '&', '/amp'), '') || 
+        COALESCE(REPLACE(pofb.XMLValue, '&', '/amp'), '') || 
+        COALESCE(REPLACE(poffb.XMLValue, '&', '/amp'), '') || 
+        COALESCE(REPLACE(purl.XMLValue, '&', '/amp'), '') || 
+        '</off></offL></poff></poffL>'))
+        AS XMLValue
+    FROM
+        CTE_PracticeOfficeBaseXML pob
+        LEFT JOIN CTE_PracticeOfficeHoursBaseXML pohb ON pob.ProviderID = pohb.ProviderID
+        LEFT JOIN CTE_PracticeOfficephFullBaseXML pofb ON pob.ProviderId = pofb.ProviderID
+        LEFT JOIN CTE_PracticeOfficefaxFullBaseXML poffb ON pob.ProviderId = poffb.ProviderID
+        LEFT JOIN CTE_PracticeUrlXML purl ON pob.ProviderId = purl.ProviderID
+        LEFT JOIN CTE_ProviderPracticeOfficeXML ppo ON pob.ProviderId = ppo.ProviderID
+),
+
+------------------------AddressXML------------------------
+---- validated: ~5.6M providers have this xml in both sides
+CTE_Address AS (
+    SELECT
+        x.ProviderID,
+        x.OfficeID,
+        x.AddressCode AS addCd,
+        x.AddressLine1 AS ad1,
+        x.AddressLine2 AS ad2,
+        x.AddressLine3 AS ad3,
+        x.AddressLine4 AS ad4,
+        x.City AS city,
+        x.State AS st,
+        x.ZipCode AS zip,
+        x.Latitude AS lat,
+        x.Longitude AS lng,
+        ba.TimeZone AS tzn,
+        x.AddressTypeCode AS addTp,
+        x.OfficeCode AS offCd,
+        x.OfficeID AS oGUID,
+        x.ProviderOfficeRank AS oRank,
+        z.FullPhone AS phFull
+    FROM
+        Mid.ProviderPracticeOffice AS x
+        JOIN Base.Address ba ON ba.AddressID = x.AddressID
+        LEFT JOIN Mid.ProviderPracticeOffice z ON x.ProviderID = z.ProviderID AND x.OfficeID = z.OfficeID
+),
+
+CTE_AddressXML AS (
+    SELECT
+        s.ProviderId,
+        TO_VARIANT(PARSE_XML(
+            '<addrL>' || 
+            LISTAGG(DISTINCT
+                '<addr>' ||
+                IFF(addCd IS NOT NULL, '<addCd>' || REPLACE(addCd, '&', '/amp') || '</addCd>', '') ||
+                IFF(ad1 IS NOT NULL, '<ad1>' || REPLACE(ad1, '&', '/amp') || '</ad1>', '') ||
+                IFF(ad2 IS NOT NULL, '<ad2>' || REPLACE(ad2, '&', '/amp') || '</ad2>', '') ||
+                IFF(ad3 IS NOT NULL, '<ad3>' || REPLACE(ad3, '&', '/amp') || '</ad3>', '') ||
+                IFF(ad4 IS NOT NULL, '<ad4>' || REPLACE(ad4, '&', '/amp') || '</ad4>', '') ||
+                IFF(city IS NOT NULL, '<city>' || REPLACE(city, '&', '/amp') || '</city>', '') ||
+                IFF(st IS NOT NULL, '<st>' || REPLACE(st, '&', '/amp') || '</st>', '') ||
+                IFF(zip IS NOT NULL, '<zip>' || REPLACE(zip, '&', '/amp') || '</zip>', '') ||
+                IFF(lat IS NOT NULL, '<lat>' || REPLACE(lat, '&', '/amp') || '</lat>', '') ||
+                IFF(lng IS NOT NULL, '<lng>' || REPLACE(lng, '&', '/amp') || '</lng>', '') ||
+                IFF(tzn IS NOT NULL, '<tzn>' || REPLACE(tzn, '&', '/amp') || '</tzn>', '') ||
+                IFF(addTp IS NOT NULL, '<addTp>' || REPLACE(addTp, '&', '/amp') || '</addTp>', '') ||
+                IFF(offCd IS NOT NULL, '<offCd>' || REPLACE(offCd, '&', '/amp') || '</offCd>', '') ||
+                IFF(oGUID IS NOT NULL, '<oGUID>' || REPLACE(oGUID, '&', '/amp') || '</oGUID>', '') ||
+                IFF(oRank IS NOT NULL, '<oRank>' || REPLACE(oRank, '&', '/amp') || '</oRank>', '') ||
+                '<phL>' ||
+                (SELECT LISTAGG(DISTINCT '<phFull>' || REPLACE(phFull, '&', '/amp') || '</phFull>', '')
+                 FROM CTE_Address cte
+                 WHERE cte.ProviderID = a.ProviderID AND cte.oGUID = a.oGUID) ||
+                '</phL>' ||
+                '</addr>'
+            , '') ||
+            '</addrL>'
+        )) AS XMLValue
+    FROM CTE_Provider_Batch s
+    INNER JOIN CTE_Address a ON s.ProviderId = a.ProviderID
+    GROUP BY s.ProviderId
+),
+
+------------------------SpecialtyXML------------------------
+---- validated: ~5M providers have this xml in both sides
+CTE_Y AS (
+    SELECT
+        p.ProviderID,
+        d.SpecialtyGroupCode,
+        a.SpecialtyRankCalculated,
+        c.SpecialtyGroupRank,
+        d.SpecialtyGroupDescription,
+        d.SpecialistGroupDescription,
+        d.SpecialistsGroupDescription,
+        a.IsSearchableCalculated,
+        a.SearchBoostExperience,
+        a.SearchBoostHospitalCohortQuality,
+        a.SearchBoostHospitalServiceLineQuality,
+        d.LegacyKey,
+        ROW_NUMBER() OVER (
+            PARTITION BY d.SpecialtyGroupCode
+            ORDER BY
+                c.SpecialtyGroupRank,
+                CASE
+                    WHEN a.IsSearchableCalculated = 1 THEN 0
+                    ELSE 1
+                END,
+                a.SpecialtyRankCalculated
+        ) AS SpecialtyGroupCodeRank,
+        a.SpecialtyID
+    FROM
+        Base.ProviderToSpecialty AS a
+        INNER JOIN Base.SpecialtyGroupToSpecialty AS c ON c.SpecialtyID = a.SpecialtyID
+        INNER JOIN Base.SpecialtyGroup AS d ON d.SpecialtyGroupID = c.SpecialtyGroupID
+        INNER JOIN CTE_Provider_Batch p ON a.ProviderID = p.ProviderID
+),
+
+CTE_X AS (
+    SELECT
+        ProviderID,
+        SpecialtyGroupCode,
+        SpecialtyRankCalculated,
+        SpecialtyGroupRank,
+        SpecialtyGroupDescription,
+        SpecialistGroupDescription,
+        SpecialistsGroupDescription,
+        IsSearchableCalculated,
+        SearchBoostExperience,
+        SearchBoostHospitalCohortQuality,
+        SearchBoostHospitalServiceLineQuality,
+        LegacyKey,
+        ROW_NUMBER() OVER (
+            ORDER BY
+                SpecialtyRankCalculated,
+                SpecialtyGroupRank
+        ) AS spRank,
+        SpecialtyID
+    FROM
+        CTE_Y
+    WHERE
+        SpecialtyGroupCodeRank = 1
+),
+--- left join
+CTE_W AS (
+    SELECT
+        e.MedicalTermCode,
+        RTRIM(LTRIM(h.ProviderTypeCode)) AS ProviderTypeCode
+    FROM
+        Base.MedicalTerm AS e
+        INNER JOIN Base.ProviderTypeToMedicalTerm g ON g.MedicalTermID = e.MedicalTermID
+        INNER JOIN Base.ProviderType h ON h.ProviderTypeID = g.ProviderTypeID
+),
+CTE_Specialty AS (
+    SELECT
+        s.ProviderID,
+        cte_y.SpecialtyGroupCode AS spCd,
+        cte_y.SpecialtyRankCalculated AS spRank,
+        cte_y.SpecialtyGroupDescription AS spY,
+        cte_y.SpecialistGroupDescription AS spIst,
+        cte_y.SpecialistsGroupDescription AS spIsts,
+        cte_y.IsSearchableCalculated AS srch,
+        cte_y.SearchBoostExperience as boostExp,
+        CASE
+            WHEN cte_y.SearchBoostHospitalCohortQuality IS NOT NULL THEN cte_y.SearchBoostHospitalCohortQuality
+            ELSE cte_y.SearchBoostHospitalServiceLineQuality
+        END AS boostQual,
+        CASE
+            WHEN spRank = 1 THEN 1
+            ELSE 0
+        END AS prm,
+        CASE
+            WHEN cte_w.ProviderTypeCode IS NULL THEN 'ALT'
+            ELSE cte_w.ProviderTypeCode
+        END AS prvTypCd,
+        (
+            SELECT
+                DISTINCT z.ServiceLineCode
+        ) AS svcCd,
+        cte_y.LegacyKey
+    FROM
+        CTE_Provider_Batch s
+        INNER JOIN CTE_y ON s.ProviderID = cte_y.ProviderID
+        LEFT JOIN CTE_w ON cte_w.MedicalTermCode = cte_y.SpecialtyGroupCode
+        LEFT JOIN Base.TempSpecialtyToServiceLineGhetto z ON z.SpecialtyCode = cte_y.SpecialtyGroupCode
+),
+
+CTE_ServiceCodes AS (
+    SELECT
+        ProviderID,
+        spCd,
+        LISTAGG(
+            IFF(svcCd IS NOT NULL, '<svcLn><svcCd>' || REPLACE(svcCd, '&', '/amp') || '</svcCd></svcLn>', '')
+        , '') AS svcLnXML
+    FROM CTE_Specialty
+    GROUP BY ProviderID, spCd
+),
+
+CTE_SpecialtyXML AS (
+    SELECT
+        cte_s.ProviderID,
+        TO_VARIANT(PARSE_XML(
+            '<spcL>' ||
+            LISTAGG(
+                '<spc>' ||
+                IFF(cte_s.spCd IS NOT NULL, '<spCd>' || REPLACE(cte_s.spCd, '&', '/amp') || '</spCd>', '') ||
+                IFF(cte_s.spRank IS NOT NULL, '<spRank>' || cte_s.spRank || '</spRank>', '') ||
+                IFF(cte_s.spY IS NOT NULL, '<spY>' || REPLACE(cte_s.spY, '&', '/amp') || '</spY>', '') ||
+                IFF(cte_s.spIst IS NOT NULL, '<spIst>' || REPLACE(cte_s.spIst, '&', '/amp') || '</spIst>', '') ||
+                IFF(cte_s.spIsts IS NOT NULL, '<spIsts>' || REPLACE(cte_s.spIsts, '&', '/amp') || '</spIsts>', '') ||
+                IFF(cte_s.srch IS NOT NULL, '<srch>' || cte_s.srch || '</srch>', '') ||
+                IFF(cte_s.boostQual IS NOT NULL, '<boostQual>' || cte_s.boostQual || '</boostQual>', '') ||
+                IFF(cte_s.prm IS NOT NULL, '<prm>' || cte_s.prm || '</prm>', '') ||
+                IFF(cte_s.prvTypCd IS NOT NULL, '<prvTypCd>' || REPLACE(cte_s.prvTypCd, '&', '/amp') || '</prvTypCd>', '') ||
+                '<svcLnL>' || COALESCE(sc.svcLnXML, '') || '</svcLnL>' ||
+                IFF(cte_s.LegacyKey IS NOT NULL, '<lKey>' || REPLACE(cte_s.LegacyKey, '&', '/amp') || '</lKey>', '') ||
+                '</spc>'
+            , '') ||
+            '</spcL>'
+        )) AS XMLValue
+    FROM CTE_Specialty cte_s
+    LEFT JOIN CTE_ServiceCodes sc ON cte_s.ProviderID = sc.ProviderID AND cte_s.spCd = sc.spCd
+    GROUP BY cte_s.ProviderID
+),
+
+------------------------PracticingSpecialtyXML------------------------
+--- validated: all providers have this xml in Snowflake
+
+CTE_HGChoice AS (
+    SELECT 
+        P.ProviderID, 
+        Sp.SpecialtyID, 
+        Sp.SpecialtyCode
+    FROM Show.SOLRProvider P
+    INNER JOIN Base.ProviderToSpecialty PS ON PS.ProviderID = P.ProviderID
+    INNER JOIN Base.Specialty Sp ON Sp.SpecialtyID = PS.SpecialtyID
+    WHERE P.ProviderTypeGroup = 'DOC'
+    -- at the end the aggregate counts for XMLs look good, but in the future we should check this 'A' or 'H' where condition
+    -- since counts appear somewhat inverted compared to SQL Server
+    AND P.DisplayStatusCode = 'A'
+    AND Sp.SpecialtyCode IN ('PS780','PS962','PS863','PS324','PS534','PS574','PS645','PS127','PS548','PS1081')
+    AND P.ProviderID NOT IN (SELECT ProviderID FROM Base.ProviderToSubStatus WHERE SubStatusID IN (SELECT SubStatusID FROM Base.SubStatus WHERE SubStatusCode IN ('B', 'L', 'L5')))
+    AND P.ProviderID NOT IN (SELECT ProviderID FROM Base.NoIndexNoFollow)
+    AND P.AcceptsNewPatients != 0
+    AND (COALESCE(P.PatientExperienceSurveyOverallCount,0) >= 10 AND COALESCE(P.PatientExperienceSurveyOverallScore,0) >= 70)
+    AND NOT EXISTS (SELECT 1 FROM Base.ProviderMalpractice pm WHERE pm.ProviderID = P.ProviderID)
+    AND NOT EXISTS (SELECT 1 FROM Base.ProviderSanction psa WHERE psa.ProviderID = P.ProviderId) 
+),
+
+CTE_SpecialtyScoreWithBoost AS (
+    SELECT
+        lPtS.ProviderId,
+        lPtS.SpecialtyID,
+        CAST(SpecialtyScoreWithBoost AS NUMERIC(7, 5)) AS SpecialtyScoreWithBoost,
+        CASE WHEN H.ProviderID IS NOT NULL THEN 1 ELSE 0 END AS hgChoice
+    FROM
+        Show.SOLRProvider P
+        INNER JOIN Base.ProviderToSpecialty lPtS ON lPtS.ProviderID = P.ProviderID
+        INNER JOIN Base.ProviderToSpecialtyExperienceScore SEC ON SEC.ProviderId = lPtS.ProviderID
+            AND SEC.EligibleSpecialtyid = lPtS.Specialtyid
+        LEFT JOIN CTE_HGChoice H ON H.ProviderID = lPtS.ProviderID
+            AND H.SpecialtyID = lPtS.SpecialtyID
+),
+
+CTE_MapSpc AS (
+    SELECT 
+        c1.SpecialtyGroupID,
+        PARSE_XML(
+            '<mapSpc>' ||
+            LISTAGG(
+                '<mapPracSpcCd>' || UTILS.CLEAN_XML(a1.SpecialtyCode) || '</mapPracSpcCd>' ||
+                '<mapPracSpcDesc>' || UTILS.CLEAN_XML(a1.SpecialtyDescription) || '</mapPracSpcDesc>' ||
+                '<SpecialtyGroupRank>' || c1.SpecialtyGroupRank || '</SpecialtyGroupRank>'
+            , '') WITHIN GROUP (ORDER BY c1.SpecialtyGroupRank) ||
+            '</mapSpc>'
+        ) AS mapSpc
+    FROM Base.Specialty a1
+    JOIN Base.SpecialtyGroupToSpecialty c1 ON a1.SpecialtyID = c1.SpecialtyID
+        AND c1.SpecialtyIsRedundant = 1
+    GROUP BY c1.SpecialtyGroupID
+),
+
+CTE_SpecialtyGroupInfo AS (
+    SELECT
+        c.SpecialtyID,
+        d.SpecialtyGroupCode AS spGCd,
+        d.SpecialtyGroupDescription AS spGY,
+        ROW_NUMBER() OVER (PARTITION BY c.SpecialtyID ORDER BY c.SpecialtyGroupRank) AS spGRank,
+        d.LegacyKey AS glKey,
+        m.mapSpc
+    FROM Base.SpecialtyGroupToSpecialty c
+    JOIN Base.SpecialtyGroup d ON d.SpecialtyGroupID = c.SpecialtyGroupID
+    LEFT JOIN CTE_MapSpc m ON m.SpecialtyGroupID = c.SpecialtyGroupID
+),
+
+CTE_PracticingSpecialty AS (
+    SELECT
+        a.ProviderID,
+        b.SpecialtyCode AS spCd,
+        ROW_NUMBER() OVER (PARTITION BY a.ProviderID ORDER BY a.SpecialtyRankCalculated) AS spRank,
+        b.SpecialtyDescription AS spY,
+        b.SpecialistDescription AS spIst,
+        b.SpecialistsDescription AS spIsts,
+        a.IsSearchableCalculated AS srch,
+        SEC.hgChoice,
+        a.SearchBoostExperience AS boostExp,
+        CASE
+            WHEN a.SearchBoostHospitalCohortQuality IS NOT NULL THEN a.SearchBoostHospitalCohortQuality
+            ELSE a.SearchBoostHospitalServiceLineQuality
+        END AS boostQual,
+        sgi.spGCd,
+        sgi.spGY,
+        sgi.spGRank,
+        sgi.glKey,
+        sgi.mapSpc AS spcGL,
+        b.LegacyKey AS lKey
+    FROM Base.ProviderToSpecialty a
+    INNER JOIN Base.Specialty b ON b.SpecialtyID = a.SpecialtyID
+    LEFT JOIN Base.ProviderToProviderType e ON e.ProviderID = a.ProviderID AND e.ProviderTypeRank = 1
+    LEFT JOIN Base.ProviderTypeToSpecialty f ON f.ProviderTypeID = e.ProviderTypeID AND f.SpecialtyID = a.SpecialtyID
+    LEFT JOIN CTE_SpecialtyScoreWithBoost SEC ON SEC.Specialtyid = a.Specialtyid AND SEC.ProviderId = a.ProviderID
+    LEFT JOIN CTE_SpecialtyGroupInfo sgi ON sgi.SpecialtyID = b.SpecialtyID
+    WHERE a.SpecialtyIsRedundant = 0 AND a.IsSearchableCalculated = 1
+),
+
+CTE_PracticingSpecialtyXML AS (
+    SELECT
+        s.ProviderId,
+        TRY_CAST(PARSE_XML(
+            '<spcL>' ||
+            LISTAGG(
+                '<spc>' ||
+                '<spCd>' || COALESCE(ps.spCd, '') || '</spCd>' ||
+                '<spRank>' || COALESCE(TO_CHAR(ps.spRank), '') || '</spRank>' ||
+                '<spY>' || COALESCE(UTILS.CLEAN_XML(ps.spY), '') || '</spY>' ||
+                '<spIst>' || COALESCE(UTILS.CLEAN_XML(ps.spIst), '') || '</spIst>' ||
+                '<spIsts>' || COALESCE(UTILS.CLEAN_XML(ps.spIsts), '') || '</spIsts>' ||
+                '<srch>' || COALESCE(TO_CHAR(ps.srch), '') || '</srch>' ||
+                '<hgChoice>' || COALESCE(TO_CHAR(ps.hgChoice), '') || '</hgChoice>' ||
+                '<boostExp>' || COALESCE(TO_CHAR(ps.boostExp), '') || '</boostExp>' ||
+                '<boostQual>' || COALESCE(TO_CHAR(ps.boostQual), '') || '</boostQual>' ||
+                '<spcGL>' || COALESCE(TO_CHAR(ps.spcGL), '') || '</spcGL>' ||
+                '<lkey>' || COALESCE(UTILS.CLEAN_XML(ps.lKey), '') || '</lkey>' ||
+                '</spc>'
+            , '') ||
+            '</spcL>'
+        ) AS VARIANT) AS XMLValue
+    FROM Base.Provider s
+    LEFT JOIN CTE_PracticingSpecialty ps ON s.ProviderID = ps.ProviderID
+    GROUP BY s.ProviderId
+),
+
+
+---------------------------CertificationXML--------------------------
+---- validated: ~900k providers have this xml in both sides
+CTE_Certification AS (
+    SELECT
+        DISTINCT cs.CertificationSpecialtyCode AS cSpCd,
+        ptcs.CertificationSpecialtyRank AS cSpRank,
+        cs.CertificationSpecialtyDescription AS cSpY,
+        ptcs.IsSearchable AS cSrch,
+        ca.CertificationAgencyCode AS caCd,
+        ca.CertificationAgencyDescription AS caD,
+        cb.CertificationBoardCode AS cbCd,
+        cb.CertificationBoardDescription AS cbD,
+        cst.CertificationStatusCode AS csCd,
+        cst.CertificationStatusDescription AS csD,
+        mocl.MOCType AS mTyp,
+        mocl.MOCLevelCode AS mLvC,
+        mocl.MOCLevelDescription AS mLvD,
+        mocp.MOCPathwayNumber AS mPwNo,
+        mocp.MOCPathwaycode AS mPwCd,
+        mocp.MOCPathwayName AS mPwNm,
+        mocp.MOCPathwayBoardMessage AS mPwMsg,
+        ptcs.CertificationStatusDate AS csDt,
+        CASE
+            WHEN ptcs.CertificationEffectiveDate IS NOT NULL
+            AND ca.CertificationAgencyCode = 'ABMS' THEN NULL
+            ELSE ptcs.CertificationEffectiveDate
+        END AS ceffDt,
+        CASE
+            WHEN ptcs.CertificationExpirationDate IS NOT NULL THEN NULL
+            ELSE ptcs.CertificationExpirationDate
+        END AS ceExDt,
+        IFNULL(ptcs.CertificationSpecialtyRank, 2147483647) AS TempDistinctSort1,
+        cs.CertificationSpecialtyCode AS TempDistinctSort2,
+        p.ProviderId,
+        CASE
+            WHEN ptcs.CertificationAgencyVerified = 1 THEN ca.CertificationAgencyCode
+            ELSE 'SELF'
+        END AS caVeri
+    FROM
+        Base.ProviderToCertificationSpecialty AS ptcs
+        INNER JOIN CTE_Provider_Batch p ON p.ProviderID = ptcs.ProviderID
+        INNER JOIN Base.CertificationSpecialty AS cs ON cs.CertificationSpecialtyID = ptcs.CertificationSpecialtyID
+        INNER JOIN Base.CertificationAgency AS ca ON ca.CertificationAgencyID = ptcs.CertificationAgencyID
+        INNER JOIN Base.CertificationBoard AS cb ON cb.CertificationBoardID = ptcs.CertificationBoardID
+        INNER JOIN Base.CertificationStatus AS cst ON cst.CertificationStatusID = ptcs.CertificationStatusID
+        LEFT JOIN Base.MOCLevel mocl ON ptcs.MOCLevelID = mocl.MOCLevelID
+        LEFT JOIN Base.MOCPathway mocp ON ptcs.MOCPathwayID = mocp.MOCPathwayID
+    WHERE
+        cst.IndicatesNotCertified = 0
+),
+
+CTE_CertificationXML AS (
+    SELECT
+        cte_c.ProviderID,
+        TO_VARIANT(PARSE_XML(
+            '<cScL>' ||
+            LISTAGG(
+                '<cSc>' ||
+                NULLIF(CONCAT(
+                    IFF(cte_c.cSpCd IS NOT NULL, '<cSpCd>' || cte_c.cSpCd || '</cSpCd>', ''),
+                    IFF(cte_c.cSpRank IS NOT NULL, '<cSpRank>' || cte_c.cSpRank || '</cSpRank>', ''),
+                    IFF(cte_c.cSpY IS NOT NULL, '<cSpY>' || cte_c.cSpY || '</cSpY>', ''),
+                    IFF(cte_c.cSrch IS NOT NULL, '<cSrch>' || cte_c.cSrch || '</cSrch>', ''),
+                    IFF(cte_c.caCd IS NOT NULL, '<caCd>' || cte_c.caCd || '</caCd>', ''),
+                    IFF(cte_c.caD IS NOT NULL, '<caD>' || cte_c.caD || '</caD>', ''),
+                    IFF(cte_c.cbCd IS NOT NULL, '<cbCd>' || cte_c.cbCd || '</cbCd>', ''),
+                    IFF(cte_c.cbD IS NOT NULL, '<cbD>' || cte_c.cbD || '</cbD>', ''),
+                    IFF(cte_c.csCd IS NOT NULL, '<csCd>' || cte_c.csCd || '</csCd>', ''),
+                    IFF(cte_c.csD IS NOT NULL, '<csD>' || cte_c.csD || '</csD>', ''),
+                    IFF(cte_c.mTyp IS NOT NULL, '<mTyp>' || cte_c.mTyp || '</mTyp>', ''),
+                    IFF(cte_c.mLvC IS NOT NULL, '<mLvC>' || cte_c.mLvC || '</mLvC>', ''),
+                    IFF(cte_c.mLvD IS NOT NULL, '<mLvD>' || cte_c.mLvD || '</mLvD>', ''),
+                    IFF(cte_c.mPwNo IS NOT NULL, '<mPwNo>' || cte_c.mPwNo || '</mPwNo>', ''),
+                    IFF(cte_c.mPwCd IS NOT NULL, '<mPwCd>' || cte_c.mPwCd || '</mPwCd>', ''),
+                    IFF(cte_c.mPwNm IS NOT NULL, '<mPwNm>' || cte_c.mPwNm || '</mPwNm>', ''),
+                    IFF(cte_c.mPwMsg IS NOT NULL, '<mPwMsg>' || cte_c.mPwMsg || '</mPwMsg>', ''),
+                    IFF(cte_c.csDt IS NOT NULL, '<csDt>' || cte_c.csDt || '</csDt>', ''),
+                    IFF(cte_c.ceffDt IS NOT NULL, '<ceffDt>' || cte_c.ceffDt || '</ceffDt>', ''),
+                    IFF(cte_c.ceExDt IS NOT NULL, '<ceExDt>' || cte_c.ceExDt || '</ceExDt>', ''),
+                    IFF(cte_c.caVeri IS NOT NULL, '<caVeri>' || cte_c.caVeri || '</caVeri>', '')
+                ), '') ||
+                '</cSc>'
+            , '') ||
+            '</cScL>'
+        )) AS XMLValue
+    FROM CTE_Certification cte_c
+    GROUP BY  cte_c.ProviderID
+),
+
+---------------------------EducationXML--------------------------
+--- Validated: ~1.2M rows on both sides
+
+CTE_EducationInstitutions AS (
+    SELECT
+        z.ProviderID,
+        z.EducationInstitutionTypeCode,
+        UTILS.CLEAN_XML(z.EducationInstitutionName) AS edNm,
+        CASE
+            WHEN TRY_CAST(z.GraduationYear AS INT) = 0 THEN NULL
+            ELSE TRY_CAST(z.GraduationYear AS INT)
+        END AS yr,
+        UTILS.CLEAN_XML(z.PositionHeld) AS posH,
+        UTILS.CLEAN_XML(z.DegreeAbbreviation) AS deg,
+        UTILS.CLEAN_XML(z.City) AS city,
+        UTILS.CLEAN_XML(z.State) AS st,
+        UTILS.CLEAN_XML(z.NationName) AS natn
+    FROM Mid.ProviderEducation z
+),
+
+CTE_InstitutionXML AS (
+    SELECT
+        ProviderID,
+        EducationInstitutionTypeCode,
+        LISTAGG(
+            '<inst>' ||
+            IFF(edNm IS NOT NULL, '<edNm>' || edNm || '</edNm>', '') ||
+            IFF(yr IS NOT NULL, '<yr>' || yr || '</yr>', '') ||
+            IFF(posH IS NOT NULL, '<posH>' || posH || '</posH>', '') ||
+            IFF(deg IS NOT NULL, '<deg>' || deg || '</deg>', '') ||
+            IFF(city IS NOT NULL, '<city>' || city || '</city>', '') ||
+            IFF(st IS NOT NULL, '<st>' || st || '</st>', '') ||
+            IFF(natn IS NOT NULL, '<natn>' || natn || '</natn>', '') ||
+            '</inst>'
+        , '') AS InstXML
+    FROM CTE_EducationInstitutions
+    GROUP BY ProviderID, EducationInstitutionTypeCode
+),
+
+CTE_EducationTypeXML AS (
+    SELECT
+        a.ProviderID,
+        LISTAGG(
+            '<edu>' ||
+            '<edTypC>' || UTILS.CLEAN_XML(a.EducationInstitutionTypeCode) || '</edTypC>' ||
+            i.InstXML ||
+            '</edu>'
+        , '') AS EduXML
+    FROM
+        Mid.ProviderEducation a
+    JOIN CTE_InstitutionXML i ON a.ProviderID = i.ProviderID AND a.EducationInstitutionTypeCode = i.EducationInstitutionTypeCode
+    GROUP BY a.ProviderID
+),
+
+CTE_EducationXML AS (
+    SELECT
+        s.ProviderId,
+        CASE 
+            WHEN COALESCE(e.EduXML, '') = '' THEN NULL
+            ELSE TRY_CAST(PARSE_XML('<eduL>' || e.EduXML || '</eduL>') AS VARIANT)
+        END AS XMLValue
+    FROM CTE_Provider_Batch s
+    LEFT JOIN CTE_EducationTypeXML e ON s.ProviderId = e.ProviderID
+),
+
+------------------------ProfessionalOrganizationXML------------------------
+--- Validated: 0 non-null rows on both sides (which is why I commented it out)
+-- CTE_ProfessionalOrganization AS (
+--     SELECT
+--         pto.ProviderID,
+--         pto.OrganizationID,
+--         o.OrganizationCode AS porgCd,
+--         o.OrganizationDescription AS porgNm,
+--         o.refDefinition AS porgDesc,
+--         p.PositionCode AS porgPositCd,
+--         p.PositionDescription AS porgPositNm,
+--         pto.PositionRank AS posRk,
+--         pto.PositionStartDate AS posSt,
+--         pto.PositionEndDate AS posEnd
+--     FROM
+--         Base.ProviderToOrganization AS pto
+--         INNER JOIN Base.Organization AS o ON o.OrganizationID = pto.OrganizationID
+--         INNER JOIN Base.Position AS p ON p.PositionID = pto.PositionID
+-- ),
+
+-- CTE_OrganizationImage AS (
+--     SELECT
+--         otip.OrganizationID,
+--         ip.ImagePathText AS porgImgU,
+--         ip.ImageWidth AS porgImgW,
+--         ip.ImageHeight AS porgImgH
+--     FROM
+--         Base.OrganizationToImagePath AS otip
+--         INNER JOIN Base.ImagePath AS ip ON ip.ImagePathID = otip.ImagePathID
+-- ),
+
+-- CTE_ProfessionalOrganizationXML AS (
+--     SELECT
+--         cte_po.ProviderID,
+--         TRY_CAST(PARSE_XML(
+--             '<porgL>' ||
+--             LISTAGG(
+--                 '<porg>' ||
+--                 IFF(cte_po.porgCd IS NOT NULL, '<porgCd>' || cte_po.porgCd || '</porgCd>', '') ||
+--                 IFF(cte_po.porgNm IS NOT NULL, '<porgNm>' || cte_po.porgNm || '</porgNm>', '') ||
+--                 IFF(cte_po.porgDesc IS NOT NULL, '<porgDesc>' || cte_po.porgDesc || '</porgDesc>', '') ||
+--                 IFF(cte_po.porgPositCd IS NOT NULL, '<porgPositCd>' || cte_po.porgPositCd || '</porgPositCd>', '') ||
+--                 IFF(cte_po.porgPositNm IS NOT NULL, '<porgPositNm>' || cte_po.porgPositNm || '</porgPositNm>', '') ||
+--                 IFF(cte_po.posRk IS NOT NULL, '<posRk>' || cte_po.posRk || '</posRk>', '') ||
+--                 IFF(cte_po.posSt IS NOT NULL, '<posSt>' || cte_po.posSt || '</posSt>', '') ||
+--                 IFF(cte_po.posEnd IS NOT NULL, '<posEnd>' || cte_po.posEnd || '</posEnd>', '') ||
+--                 '<imgL>' ||
+--                 IFF(cte_oi.porgImgU IS NOT NULL, '<porgImg><porgImgU>' || cte_oi.porgImgU || '</porgImgU>', '') ||
+--                 IFF(cte_oi.porgImgW IS NOT NULL, '<porgImgW>' || cte_oi.porgImgW || '</porgImgW>', '') ||
+--                 IFF(cte_oi.porgImgH IS NOT NULL, '<porgImgH>' || cte_oi.porgImgH || '</porgImgH>', '') ||
+--                 IFF(cte_oi.porgImgU IS NOT NULL, '</porgImg>', '') ||
+--                 '</imgL>' ||
+--                 '</porg>'
+--             , '') WITHIN GROUP (ORDER BY cte_po.posRk, cte_po.porgNm) ||
+--             '</porgL>'
+--         ) AS VARIANT) AS XMLValue
+--     FROM
+--         CTE_ProfessionalOrganization cte_po
+--         LEFT JOIN CTE_OrganizationImage cte_oi ON cte_oi.OrganizationID = cte_po.OrganizationID
+--     GROUP BY
+--         cte_po.ProviderID
+-- ),
+
+------------------------LicenseXML------------------------
+--- Validated: ~5M non-null rows on both sides
+CTE_ProviderLicense AS (
+    SELECT
+        DISTINCT pl.ProviderID,
+        UTILS.CLEAN_XML(pl.State) AS licStAbr,
+        UTILS.CLEAN_XML(pl.StateName) AS licSt,
+        UTILS.CLEAN_XML(pl.LicenseType) AS licTp,
+        UTILS.CLEAN_XML(pl.LicenseNumber) AS licNr,
+        pl.LicenseEffectiveDate AS licEfDt,
+        pl.LicenseTerminationDate AS licTeDt
+    FROM
+        Mid.ProviderLicense AS pl
+),
+
+CTE_LicenseXML AS (
+    SELECT
+        cte_pl.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<licL>' ||
+            LISTAGG(
+                '<lic>' ||
+                IFF(cte_pl.licStAbr IS NOT NULL, '<licStAbr>' || cte_pl.licStAbr || '</licStAbr>', '') ||
+                IFF(cte_pl.licSt IS NOT NULL, '<licSt>' || cte_pl.licSt || '</licSt>', '') ||
+                IFF(cte_pl.licTp IS NOT NULL, '<licTp>' || cte_pl.licTp || '</licTp>', '') ||
+                IFF(cte_pl.licNr IS NOT NULL, '<licNr>' || cte_pl.licNr || '</licNr>', '') ||
+                IFF(cte_pl.licEfDt IS NOT NULL, '<licEfDt>' || cte_pl.licEfDt || '</licEfDt>', '') ||
+                IFF(cte_pl.licTeDt IS NOT NULL, '<licTeDt>' || cte_pl.licTeDt || '</licTeDt>', '') ||
+                '</lic>'
+            , '') ||
+            '</licL>'
+        ) AS VARIANT) AS XMLValue
+    FROM CTE_ProviderLicense cte_pl
+    GROUP BY cte_pl.ProviderID
+),
+
+------------------------LanguageXML------------------------
+--- Validated: ~260k non-null rows on both sides
+CTE_Language AS (
+    SELECT
+        DISTINCT pl.ProviderID,
+        UTILS.CLEAN_XML(pl.LanguageName) AS langNm,
+        UTILS.CLEAN_XML(l.LanguageCode) AS langCd
+    FROM Mid.ProviderLanguage AS pl
+    INNER JOIN Base.Language l ON pl.LanguageName = l.LanguageName
+),
+
+CTE_LanguageXML AS (
+    SELECT
+        cte_l.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<langL>' ||
+            LISTAGG(
+                '<lang>' ||
+                IFF(cte_l.langNm IS NOT NULL, '<langNm>' || cte_l.langNm || '</langNm>', '') ||
+                IFF(cte_l.langCd IS NOT NULL, '<langCd>' || cte_l.langCd || '</langCd>', '') ||
+                '</lang>'
+            , '') ||
+            '</langL>'
+        ) AS VARIANT) AS XMLValue
+    FROM CTE_Language cte_l
+    GROUP BY cte_l.ProviderID
+),
+
+------------------------MalpracticeXML------------------------
+--- Validated: ~5k non-null rows on both sides
+CTE_Malpractice AS (
+    SELECT
+        mp.ProviderID,
+        mp.MalpracticeClaimTypeCode AS malC,
+        mp.MalpracticeClaimTypeDescription AS malD,
+        mp.ClaimNumber AS clNum,
+        mp.ClaimDate AS clDt,
+        mp.ClaimYear AS clYr,
+        mp.ClaimAmount AS clAmt,
+        mp.Complaint AS cmplt,
+        mp.IncidentDate AS inDt,
+        mp.ClosedDate AS endDt,
+        mp.ClaimState AS malSt,
+        mp.ClaimStateFull AS malStFl,
+        mp.LicenseNumber AS LicNum,
+        mp.ReportDate AS reDt
+    FROM Mid.ProviderMalpractice mp
+    INNER JOIN Base.MalpracticeState ms ON mp.ClaimState = ms.State
+        AND IFNULL(ms.Active, 1) = 1
+),
+
+CTE_MalpracticeXML AS (
+    SELECT
+        cte_mp.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<malL>' ||
+            LISTAGG(
+                '<mal>' ||
+                IFF(cte_mp.malC IS NOT NULL, '<malC>' || cte_mp.malC || '</malC>', '') ||
+                IFF(cte_mp.malD IS NOT NULL, '<malD>' || cte_mp.malD || '</malD>', '') ||
+                IFF(cte_mp.clNum IS NOT NULL, '<clNum>' || cte_mp.clNum || '</clNum>', '') ||
+                IFF(cte_mp.clDt IS NOT NULL, '<clDt>' || cte_mp.clDt || '</clDt>', '') ||
+                IFF(cte_mp.clYr IS NOT NULL, '<clYr>' || cte_mp.clYr || '</clYr>', '') ||
+                IFF(cte_mp.clAmt IS NOT NULL, '<clAmt>' || cte_mp.clAmt || '</clAmt>', '') ||
+                IFF(cte_mp.cmplt IS NOT NULL, '<cmplt>' || cte_mp.cmplt || '</cmplt>', '') ||
+                IFF(cte_mp.inDt IS NOT NULL, '<inDt>' || cte_mp.inDt || '</inDt>', '') ||
+                IFF(cte_mp.endDt IS NOT NULL, '<endDt>' || cte_mp.endDt || '</endDt>', '') ||
+                IFF(cte_mp.malSt IS NOT NULL, '<malSt>' || cte_mp.malSt || '</malSt>', '') ||
+                IFF(cte_mp.malStFl IS NOT NULL, '<malStFl>' || cte_mp.malStFl || '</malStFl>', '') ||
+                IFF(cte_mp.LicNum IS NOT NULL, '<LicNum>' || cte_mp.LicNum || '</LicNum>', '') ||
+                IFF(cte_mp.reDt IS NOT NULL, '<reDt>' || cte_mp.reDt || '</reDt>', '') ||
+                '</mal>'
+            , '') ||
+            '</malL>'
+        ) AS VARIANT) AS XMLValue
+    FROM CTE_Malpractice cte_mp
+    GROUP BY cte_mp.ProviderID
+),
+
+------------------------SanctionXML------------------------
+-- this one is funky: all nulls in SQL Server but we have ~12k rows? Interesting
+CTE_ProviderSanction AS (
+    SELECT
+        ps.ProviderID,
+        CASE
+            WHEN ps.SanctionDescription LIKE 'hgpy%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%www.%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%HTTP%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%://%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%.gov%' THEN 'Please reference the following Document'
+            ELSE ps.SanctionDescription
+        END AS sancD,
+        ps.SanctionDate AS sDt,
+        ps.ReinstatementDate AS reinDt,
+        ps.SanctionTypeCode AS sTyp,
+        ps.SanctionTypeDescription AS sTypD,
+        ps.State AS lSt,
+        ps.SanctionCategoryCode AS sCat,
+        ps.SanctionCategoryDescription AS sCatD,
+        ps.SanctionActionCode AS sActC,
+        ps.SanctionActionDescription AS sActD,
+        CASE
+            WHEN ps.SanctionDescription LIKE 'hgpy%' THEN 'https://www.healthgrades.com/media/english/pdf/sanctions/' || LTRIM(RTRIM(ps.SanctionDescription)) || '.pdf'
+            WHEN ps.SanctionDescription LIKE '%www.%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%HTTP%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%://%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%.gov%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            ELSE ''
+        END AS pdfUrl,
+        ps.StateFull AS lStFl
+    FROM Mid.ProviderSanction AS ps
+),
+
+CTE_SanctionXML AS (
+    SELECT
+        cte_ps.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<sancL>' ||
+            LISTAGG(
+                '<sanc>' ||
+                IFF(cte_ps.sancD IS NOT NULL, '<sancD>' || cte_ps.sancD || '</sancD>', '') ||
+                IFF(cte_ps.sDt IS NOT NULL, '<sDt>' || cte_ps.sDt || '</sDt>', '') ||
+                IFF(cte_ps.reinDt IS NOT NULL, '<reinDt>' || cte_ps.reinDt || '</reinDt>', '') ||
+                IFF(cte_ps.sTyp IS NOT NULL, '<sTyp>' || cte_ps.sTyp || '</sTyp>', '') ||
+                IFF(cte_ps.sTypD IS NOT NULL, '<sTypD>' || cte_ps.sTypD || '</sTypD>', '') ||
+                IFF(cte_ps.lSt IS NOT NULL, '<lSt>' || cte_ps.lSt || '</lSt>', '') ||
+                IFF(cte_ps.sCat IS NOT NULL, '<sCat>' || cte_ps.sCat || '</sCat>', '') ||
+                IFF(cte_ps.sCatD IS NOT NULL, '<sCatD>' || cte_ps.sCatD || '</sCatD>', '') ||
+                IFF(cte_ps.sActC IS NOT NULL, '<sActC>' || cte_ps.sActC || '</sActC>', '') ||
+                IFF(cte_ps.sActD IS NOT NULL, '<sActD>' || cte_ps.sActD || '</sActD>', '') ||
+                IFF(cte_ps.pdfUrl IS NOT NULL, '<pdfUrl>' || cte_ps.pdfUrl || '</pdfUrl>', '') ||
+                IFF(cte_ps.lStFl IS NOT NULL, '<lStFl>' || cte_ps.lStFl || '</lStFl>', '') ||
+                '</sanc>'
+            , '') ||
+            '</sancL>'
+        ) AS VARIANT) AS XMLValue
+    FROM CTE_ProviderSanction cte_ps
+    GROUP BY cte_ps.ProviderID
+),
+
+------------------------BoardActionXML------------------------
+--- Validated: ~12k non-null rows on both sides
+CTE_BoardAction AS (
+    SELECT
+        ps.ProviderID,
+        CASE
+            WHEN ps.SanctionDescription LIKE 'hgpy%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%www.%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%HTTP%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%://%' THEN 'Please reference the following Document'
+            WHEN ps.SanctionDescription LIKE '%.gov%' THEN 'Please reference the following Document'
+            ELSE ps.SanctionDescription
+        END AS sancD,
+        ps.SanctionDate AS sDt,
+        ps.SanctionReinstatementDate AS reinDt,
+        st.SanctionTypeCode AS sTyp,
+        st.SanctionTypeDescription AS sTypD,
+        sra.State AS lSt,
+        sc.SanctionCategoryCode AS sCat,
+        sc.SanctionCategoryDescription AS sCatD,
+        sa.SanctionActionCode AS sActC,
+        sa.SanctionActionDescription AS sActD,
+        CASE
+            WHEN ps.SanctionDescription LIKE 'hgpy%' THEN 'https://www.healthgrades.com/media/english/pdf/sanctions/' || LTRIM(RTRIM(ps.SanctionDescription)) || '.pdf'
+            WHEN ps.SanctionDescription LIKE '%www.%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%HTTP%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%://%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            WHEN ps.SanctionDescription LIKE '%.gov%' THEN LTRIM(RTRIM(ps.SanctionDescription))
+            ELSE ''
+        END AS pdfUrl,
+        s.StateName AS lStFl,
+        sra.StateReportingAgencyCode AS sBrdCd,
+        sra.StateReportingAgencyDescription AS sBrdNm,
+        sra.StateReportingAgencyURL AS sBrdUrl,
+        ps.SanctionDate AS sAccDt
+    FROM
+        Base.ProviderSanction AS ps
+        INNER JOIN Base.SanctionType st ON ps.SanctionTypeID = st.SanctionTypeID
+        INNER JOIN Base.SanctionCategory sc ON ps.SanctionCategoryID = sc.SanctionCategoryID
+        INNER JOIN Base.SanctionAction sa ON ps.SanctionActionID = sa.SanctionActionID
+        INNER JOIN Base.StateReportingAgency sra ON ps.StateReportingAgencyID = sra.StateReportingAgencyID
+        INNER JOIN Base.SanctionActionType sat ON sa.SanctionActionTypeID = sat.SanctionActionTypeID
+        LEFT JOIN Base.State s ON sra.State = s.State
+),
+
+CTE_BoardActionXML AS (
+    SELECT
+        cte_ba.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<sancL>' ||
+            LISTAGG(
+                '<sanc>' ||
+                IFF(cte_ba.sancD IS NOT NULL, '<sancD>' || UTILS.CLEAN_XML(cte_ba.sancD) || '</sancD>', '') ||
+                IFF(cte_ba.sDt IS NOT NULL, '<sDt>' || cte_ba.sDt || '</sDt>', '') ||
+                IFF(cte_ba.reinDt IS NOT NULL, '<reinDt>' || cte_ba.reinDt || '</reinDt>', '') ||
+                IFF(cte_ba.sTyp IS NOT NULL, '<sTyp>' || UTILS.CLEAN_XML(cte_ba.sTyp) || '</sTyp>', '') ||
+                IFF(cte_ba.sTypD IS NOT NULL, '<sTypD>' || UTILS.CLEAN_XML(cte_ba.sTypD) || '</sTypD>', '') ||
+                IFF(cte_ba.lSt IS NOT NULL, '<lSt>' || UTILS.CLEAN_XML(cte_ba.lSt) || '</lSt>', '') ||
+                IFF(cte_ba.sCat IS NOT NULL, '<sCat>' || UTILS.CLEAN_XML(cte_ba.sCat) || '</sCat>', '') ||
+                IFF(cte_ba.sCatD IS NOT NULL, '<sCatD>' || UTILS.CLEAN_XML(cte_ba.sCatD) || '</sCatD>', '') ||
+                IFF(cte_ba.sActC IS NOT NULL, '<sActC>' || UTILS.CLEAN_XML(cte_ba.sActC) || '</sActC>', '') ||
+                IFF(cte_ba.sActD IS NOT NULL, '<sActD>' || UTILS.CLEAN_XML(cte_ba.sActD) || '</sActD>', '') ||
+                IFF(cte_ba.pdfUrl IS NOT NULL, '<pdfUrl>' || UTILS.CLEAN_XML(cte_ba.pdfUrl) || '</pdfUrl>', '') ||
+                IFF(cte_ba.lStFl IS NOT NULL, '<lStFl>' || UTILS.CLEAN_XML(cte_ba.lStFl) || '</lStFl>', '') ||
+                IFF(cte_ba.sBrdCd IS NOT NULL, '<sBrdCd>' || UTILS.CLEAN_XML(cte_ba.sBrdCd) || '</sBrdCd>', '') ||
+                IFF(cte_ba.sBrdNm IS NOT NULL, '<sBrdNm>' || UTILS.CLEAN_XML(cte_ba.sBrdNm) || '</sBrdNm>', '') ||
+                IFF(cte_ba.sBrdUrl IS NOT NULL, '<sBrdUrl>' || UTILS.CLEAN_XML(cte_ba.sBrdUrl) || '</sBrdUrl>', '') ||
+                IFF(cte_ba.sAccDt IS NOT NULL, '<sAccDt>' || cte_ba.sAccDt || '</sAccDt>', '') ||
+                '</sanc>'
+            , '') ||
+            '</sancL>'
+        ) AS VARIANT) AS XMLValue
+    FROM
+        CTE_BoardAction cte_ba
+    GROUP BY
+        cte_ba.ProviderID
+),
+
+------------------------NatlAdvertisingXML------------------------
+-- Not validated due to 0 rows: explanations below in individual CTEs
+-- this CTE gives 340 rows in SQL Server, but 20 in Snowflake...
+-- CTE_AdFeatures AS (
+--     SELECT
+--         a.EntityID,
+--         LISTAGG(
+--             '<adFeat>' ||
+--             '<featCd>' || ClientFeatureCode || '</featCd>' ||
+--             '<featDesc>' || d.ClientFeatureDescription || '</featDesc>' ||
+--             '<featValCd>' || e.ClientFeatureValueCode || '</featValCd>' ||
+--             '<featValDesc>' || e.ClientFeatureValueDescription || '</featValDesc>' ||
+--             '</adFeat>'
+--         , '') AS adFeatXML
+--     FROM
+--         Base.ClientEntityToClientFeature a
+--         JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+--         JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+--         JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+--         JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+--         JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
+--     WHERE b.EntityTypeCode = 'CLPROD'
+--     GROUP BY a.EntityID
+-- ),
+
+-- -- Now this CTE has 0 rows, which is what causes all the XMLs to be NULLs. But I don't see
+-- -- where is the error, I'm simply doing a left join to deal with the original subquery 
+-- -- which is unsupported in Snowflake.
+-- CTE_Ads AS (
+--     SELECT
+--         u.ProviderCode,
+--         u.ProductCode,
+--         u.ProductGroupCode,
+--         u.AppointmentOptionDescription,
+--         '<ad>' ||
+--         '<adCd>' || u.ClientCode || '</adCd>' ||
+--         '<adNm>' || u.ClientName || '</adNm>' ||
+--         '<caToActMsg>' || u.CallToActionMsg || '</caToActMsg>' ||
+--         '<safHarMsg>' || u.SafeHarborMsg || '</safHarMsg>' ||
+--         '<adFeatL>' || COALESCE(cte_af.adFeatXML, '') || '</adFeatL>' ||
+--         '</ad>' AS adXML
+--     FROM Mid.ProviderSponsorship u
+--     LEFT JOIN CTE_AdFeatures cte_af ON u.ClientToProductID = cte_af.EntityID
+--     WHERE u.ProductGroupCode = 'LID'
+-- ),
+
+-- CTE_NatlAdvertising AS (
+--     SELECT
+--         p.ProviderID,
+--         '<natladv>' ||
+--         '<prCd>' || a.ProductCode || '</prCd>' ||
+--         '<prGrCd>' || a.ProductGroupCode || '</prGrCd>' ||
+--         '<adL>' || LISTAGG(a.adXML, '') || '</adL>' ||
+--         '<aptOptDesc>' || MAX(a.AppointmentOptionDescription) || '</aptOptDesc>' ||
+--         '</natladv>' AS natladvXML
+--     FROM
+--         CTE_Ads a
+--     JOIN Base.Provider p on a.ProviderCode = p.ProviderCode
+--     GROUP BY
+--         p.ProviderID,
+--         a.ProductCode,
+--         a.ProductGroupCode
+-- ),
+
+-- CTE_NatlAdvertisingXML AS (
+--     SELECT
+--         p.ProviderId,
+--         TRY_CAST(PARSE_XML(
+--             '<natladvL>' ||
+--             COALESCE(LISTAGG(na.natladvXML, ''), '') ||
+--             '</natladvL>'
+--         ) AS VARIANT) AS XMLValue
+--     FROM CTE_Provider_Batch p
+--     LEFT JOIN CTE_NatlAdvertising na ON p.ProviderID = na.ProviderID
+--     GROUP BY
+--         p.ProviderId
+-- )
+CTE_AdFeatures AS (
+    SELECT
+        a.EntityID AS ClientToProductID,
+        LISTAGG(
+            '<adFeat>' ||
+            '<featCd>' || UTILS.CLEAN_XML(ClientFeatureCode) || '</featCd>' ||
+            '<featDesc>' || UTILS.CLEAN_XML(d.ClientFeatureDescription) || '</featDesc>' ||
+            '<featValCd>' || UTILS.CLEAN_XML(e.ClientFeatureValueCode) || '</featValCd>' ||
+            '<featValDesc>' || UTILS.CLEAN_XML(e.ClientFeatureValueDescription) || '</featValDesc>' ||
+            '</adFeat>'
+        , '') AS adFeatXML
+    FROM
+        Base.ClientEntityToClientFeature a
+        JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+        JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+        JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+        JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+        JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
+    WHERE
+        b.EntityTypeCode = 'CLPROD'
+    GROUP BY
+        a.EntityID
+),
+
+CTE_Ads AS (
+    SELECT
+        u.ProviderCode,
+        u.ProductCode,
+        u.ProductGroupCode,
+        LISTAGG(
+            '<ad>' ||
+            '<adCd>' || UTILS.CLEAN_XML(u.ClientCode) || '</adCd>' ||
+            '<adNm>' || UTILS.CLEAN_XML(u.ClientName) || '</adNm>' ||
+            '<caToActMsg>' || UTILS.CLEAN_XML(u.CallToActionMsg) || '</caToActMsg>' ||
+            '<safHarMsg>' || UTILS.CLEAN_XML(u.SafeHarborMsg) || '</safHarMsg>' ||
+            '<adFeatL>' || COALESCE(af.adFeatXML, '') || '</adFeatL>' ||
+            '</ad>'
+        , '') AS adXML
+    FROM
+        Mid.ProviderSponsorship u
+        LEFT JOIN CTE_AdFeatures af ON u.ClientToProductID = af.ClientToProductID
+    -- In SQL Server we have 2 distinct ProductGroupCodes: 'LID' and 'PDC' in Mid.ProviderSponsorship. HOWEVER,
+    -- in Snowflake we only have 'PDC' values.
+    -- WHERE u.ProductGroupCode = 'LID'
+       WHERE u.ProductGroupCode = 'PDC'
+    GROUP BY
+        u.ProviderCode,
+        u.ProductCode,
+        u.ProductGroupCode
+),
+
+CTE_NationalAdvertising AS (
+    SELECT
+        a.ProviderCode,
+        LISTAGG(
+            '<natladv>' ||
+            '<prCd>' || UTILS.CLEAN_XML(a.ProductCode) || '</prCd>' ||
+            '<prGrCd>' || UTILS.CLEAN_XML(a.ProductGroupCode) || '</prGrCd>' ||
+            '<adL>' || COALESCE(ca.adXML, '') || '</adL>' ||
+            '<aptOptDesc>' || UTILS.CLEAN_XML(a.AppointmentOptionDescription) || '</aptOptDesc>' ||
+            '</natladv>'
+        , '') AS natladvXML
+    FROM
+        Mid.ProviderSponsorship a
+        LEFT JOIN CTE_Ads ca ON a.ProviderCode = ca.ProviderCode
+            AND a.ProductCode = ca.ProductCode
+            AND a.ProductGroupCode = ca.ProductGroupCode
+    WHERE
+        a.ProductGroupCode = 'LID'
+    GROUP BY
+        a.ProviderCode
+),
+
+CTE_NatlAdvertisingXML AS (
+    SELECT
+        p.ProviderId,
+        TRY_CAST(PARSE_XML(
+            '<natladvL>' ||
+            COALESCE(na.natladvXML, '') ||
+            '</natladvL>'
+        ) AS VARIANT) AS XMLValue
+    FROM
+        Show.SOLRProvider s
+        INNER JOIN mid.Provider p ON s.ProviderID = p.ProviderID
+        LEFT JOIN CTE_NationalAdvertising na ON p.ProviderCode = na.ProviderCode
+),
+
+------------------------SyndicationXML------------------------
+-- for the full this CTE gave me 4k rows in Snowflake compared to 
+-- 600k in SQL Server, which most definitely propagates to having a lot 
+-- less SyndicationXML non-NULLs. For example, we are joining with Base.ClientProductToEntity
+-- which has +70% less rows in Snowflake, so things like this are obviously propagated.
+
+CTE_FacilityPhones AS (
+    SELECT
+        tp.ProviderId,
+        f.FacilityCode,
+        cptedp.PhoneNumber AS Phone,
+        cpte.ClientToProductID,
+        mps.ClientCode,
+        mps.ProductCode,
+        mps.ProductGroupCode,
+        cptedp.DisplayPartnerCode AS SyndicationPartnerCode,
+        pt.PhoneTypeCode
+    FROM
+        CTE_Provider_Batch tp
+        INNER JOIN Base.Provider p ON p.ProviderID = tp.ProviderID
+        INNER JOIN Mid.ProviderSponsorship mps ON mps.ProviderCode = p.ProviderCode
+        INNER JOIN Base.ProviderToFacility ptf ON ptf.ProviderID = p.ProviderID
+        INNER JOIN Base.Facility f ON f.FacilityID = ptf.FacilityID
+        INNER JOIN Base.ClientProductToEntity cpte ON cpte.EntityID = f.FacilityID
+        INNER JOIN Base.ClientProductEntityToDisplayPartnerPhone cptedp ON cptedp.ClientProductToEntityID = cpte.ClientProductToEntityID
+        INNER JOIN Base.PhoneType pt ON pt.PhoneTypeID = cptedp.PhoneTypeID
+    WHERE
+        mps.ProductGroupCode <> 'LID'
+        AND mps.ProductCode IN (
+            SELECT
+                ProductCode
+            FROM
+                Base.Product
+            WHERE
+                ProductTypeCode != 'PRACTICE'
+        )
+        AND mps.ProductCode IN ('PDCHSP', 'MAP')
+),
+
+CTE_ClientPhones AS (
+    SELECT
+        DISTINCT tp.ProviderID,
+        ctp.ClientToProductID,
+        cptedp.DisplayPartnerCode AS SyndicationPartnerCode,
+        cptedp.PhoneNumber,
+        pt.PhoneTypeCode,
+        mps.ClientCode,
+        mps.ProductCode,
+        mps.ProductGroupCode
+    FROM
+        CTE_Provider_Batch tp
+        INNER JOIN Base.Provider p ON p.ProviderID = tp.ProviderID
+        INNER JOIN Mid.ProviderSponsorship mps ON mps.ProviderCode = p.ProviderCode
+        INNER JOIN Base.ClientProductToEntity CPE ON cpe.EntityID = p.ProviderID
+        INNER JOIN Base.ClientToProduct ctp ON ctp.ClientToProductID = cpe.ClientToProductID
+        INNER JOIN Base.ClientProductToEntity cpte ON cpte.EntityID = ctp.ClientToProductID
+        INNER JOIN Base.ClientProductEntityToDisplayPartnerPhone cptedp ON cptedp.ClientProductToEntityID = cpte.ClientProductToEntityID
+        INNER JOIN Base.PhoneType pt ON pt.PhoneTypeID = cptedp.PhoneTypeID
+    WHERE
+        mps.ProductGroupCode <> 'LID'
+        AND mps.ProductCode IN (
+            SELECT
+                ProductCode
+            FROM
+                Base.Product
+            WHERE
+                ProductTypeCode != 'PRACTICE'
+        )
+        AND mps.ProductCode in ('PDCHSP', 'MAP')
+),
+CTE_SyndicationPDCHSP AS (
+    SELECT
+        ProviderID,
+        ClientToProductID,
+        ClientCode,
+        ProductCode,
+        ProductGroupCode,
+        SyndicationPartnerCode
+    FROM
+        CTE_FacilityPhones
+    UNION
+    SELECT
+        ProviderID,
+        ClientToProductID,
+        ClientCode,
+        ProductCode,
+        ProductGroupCode,
+        SyndicationPartnerCode
+    FROM
+        CTE_ClientPhones
+),
+CTE_SP AS (
+    SELECT
+        SP.ProviderID,
+        SP.SyndicationPartnerCode AS syndSpnCd
+    FROM
+        CTE_SyndicationPDCHSP SP
+    WHERE
+        SP.ProductCode = 'PDCHSP'
+    GROUP BY
+        SP.ProviderID,
+        SP.SyndicationPartnerCode,
+        SP.CLientToProductId
+),
+CTE_SP2 AS (
+    SELECT
+        SP2.ProviderID,
+        SP2.ClientCode AS spn,
+        SP2.ProductCode AS prCd,
+        SP2.ProductGroupCode AS prGrCd
+    FROM
+        CTE_SyndicationPDCHSP SP2
+        INNER JOIN CTE_SyndicationPDCHSP SP ON SP2.ProviderID = SP.ProviderID
+    WHERE
+        SP2.ProviderID = SP.ProviderID
+        AND SP2.ClientToProductID = SP.ClientToProductID
+        AND SP2.SyndicationPartnerCode = SP.SyndicationPartnerCode
+        AND SP2.ProductCode = 'PDCHSP'
+    GROUP BY
+        SP2.ClientCode,
+        SP2.ProductCode,
+        SP2.ProductGroupCode,
+        SP2.ProviderID,
+        SP2.ClientToProductID,
+        SP2.SyndicationPartnerCode
+),
+CTE_FP AS (
+    SELECT
+        FP.ProviderID,
+        FP.FacilityCode AS fCd,
+    FROM
+        CTE_FacilityPhones FP
+        INNER JOIN CTE_SyndicationPDCHSP SP2 ON SP2.ProviderID = FP.ProviderID
+    WHERE
+        FP.ClientToProductID = SP2.ClientToProductID
+        AND FP.SyndicationPartnerCode = SP2.SyndicationPartnerCode
+        AND FP.ProductCode = 'PDCHSP'
+    GROUP BY
+        FP.ClientToProductID,
+        FP.ProviderID,
+        FP.FacilityCode
+),
+CTE_FP2 AS (
+    SELECT
+        DISTINCT FP2.ProviderID,
+        FP.FacilityCode AS fCd,
+        FP2.Phone AS ph,
+        FP2.PhoneTypeCode AS phTyp
+    FROM
+        CTE_FacilityPhones FP2
+        INNER JOIN CTE_SyndicationPDCHSP SP2 ON FP2.ProviderID = SP2.ProviderID
+        INNER JOIN CTE_FacilityPhones FP ON FP2.FacilityCode = FP.FacilityCode
+    WHERE
+        FP2.ClientToProductID = SP2.ClientToProductID
+        AND FP2.SyndicationPartnerCode = SP2.SyndicationPartnerCode
+        AND FP2.ProductCode = 'PDCHSP'
+    GROUP BY
+        fCd,
+        FP2.ClientToProductID,
+        FP2.ProviderID,
+        FP2.FacilityCode,
+        FP2.Phone,
+        FP2.PhoneTypeCode
+),
+CTE_CP AS (
+    SELECT
+        DISTINCT cp.ProviderID,
+        cp.PhoneNumber AS ph,
+        cp.PhoneTypeCode AS phTyp
+    FROM
+        CTE_ClientPhones CP
+        INNER JOIN CTE_SyndicationPDCHSP SP2 ON cp.ClientToProductID = sp2.ClientToProductID
+    WHERE
+        cp.SyndicationPartnerCode = sp2.SyndicationPartnerCode
+        AND cp.ProductCode = 'PDCHSP'
+),
+CTE_SyndicationXML AS (
+    SELECT
+        cte_s.ProviderID,
+        TRY_CAST(PARSE_XML(
+            '<syndL>' ||
+            IFF(cte_sp.syndSpnCd IS NOT NULL, '<syndSpnCd>' || cte_sp.syndSpnCd || '</syndSpnCd>', '') ||
+            '<spnL>' ||
+            LISTAGG(
+                '<spn>' ||
+                IFF(cte_sp2.spn IS NOT NULL, '<spnCd>' || cte_sp2.spn || '</spnCd>', '') ||
+                IFF(cte_sp2.prCd IS NOT NULL, '<prCd>' || cte_sp2.prCd || '</prCd>', '') ||
+                IFF(cte_sp2.prGrCd IS NOT NULL, '<prGrCd>' || cte_sp2.prGrCd || '</prGrCd>', '') ||
+                '</spn>'
+            , '') ||
+            '</spnL>' ||
+            '<fphL>' ||
+            LISTAGG(
+                '<fph>' ||
+                IFF(cte_fp2.fCd IS NOT NULL, '<fCd>' || cte_fp2.fCd || '</fCd>', '') ||
+                IFF(cte_fp2.ph IS NOT NULL, '<ph>' || cte_fp2.ph || '</ph>', '') ||
+                IFF(cte_fp2.phTyp IS NOT NULL, '<phTyp>' || cte_fp2.phTyp || '</phTyp>', '') ||
+                '</fph>'
+            , '') ||
+            '</fphL>' ||
+            '<cphL>' ||
+            LISTAGG(
+                '<cph>' ||
+                IFF(cte_cp.ph IS NOT NULL, '<ph>' || cte_cp.ph || '</ph>', '') ||
+                IFF(cte_cp.phTyp IS NOT NULL, '<phTyp>' || cte_cp.phTyp || '</phTyp>', '') ||
+                '</cph>'
+            , '') ||
+            '</cphL>' ||
+            '</syndL>'
+        ) AS VARIANT) AS XMLValue
+    FROM
+        CTE_SyndicationPDCHSP cte_s
+        LEFT JOIN CTE_SP ON cte_s.ProviderID = cte_sp.ProviderID
+        LEFT JOIN CTE_SP2 ON cte_s.ProviderID = cte_sp2.ProviderID
+        LEFT JOIN CTE_FP ON cte_s.ProviderID = cte_fp.ProviderID
+        LEFT JOIN CTE_FP2 ON cte_s.ProviderID = cte_fp2.ProviderID
+        LEFT JOIN CTE_CP ON cte_s.ProviderID = cte_cp.ProviderID
+    WHERE
+        cte_s.ProductCode = 'PDCHSP'
+    GROUP BY
+        cte_s.ProviderID,
+        cte_sp.syndSpnCd
+)
+
+SELECT DISTINCT
+    p.providerid,
+    p.providercode, 
+    tele.xmlvalue AS telehealthxml,
+    ptype.xmlvalue AS providertypexml,
+    poffice.xmlvalue AS practiceofficexml,
+    addr.xmlvalue AS addressxml,
+    spec.xmlvalue AS specialtyxml,
+    pract_spec.xmlvalue AS practicingspecialtyxml,
+    cert.xmlvalue AS certificationxml,
+    edu.xmlvalue AS educationxml,
+    -- org.xmlvalue AS professionalorganizationxml,
+    licensexml.xmlvalue AS licensexml,
+    lang.xmlvalue AS languagexml,
+    mal.xmlvalue AS malpracticexml,
+    sanctionxml.xmlvalue AS sanctionxml,
+    baction.xmlvalue AS boardactionxml,
+    adxml.xmlvalue AS natladvertisingxml,
+    synd.xmlvalue AS syndicationxml
+FROM Show.SolrProvider as P
+    LEFT JOIN CTE_TelehealthXML AS tele ON tele.providerid = p.providerid -- 1
+    LEFT JOIN CTE_ProviderTypeXML AS ptype ON ptype.providerid = p.providerid -- 2
+    LEFT JOIN CTE_PracticeOfficeXML AS poffice ON poffice.providerid = p.providerid -- 3
+    LEFT JOIN CTE_AddressXML AS addr ON addr.providerid = p.providerid -- 4
+    LEFT JOIN CTE_SpecialtyXML AS spec ON spec.providerid = p.providerid -- 5
+    LEFT JOIN CTE_PracticingSpecialtyXML AS pract_spec ON pract_spec.providerid = p.providerid -- 6
+    LEFT JOIN CTE_CertificationXML AS cert ON cert.providerid = p.providerid -- 7
+    LEFT JOIN CTE_EducationXML AS edu ON edu.providerid = p.providerid -- 8
+    -- LEFT JOIN CTE_ProfessionalOrganizationXML AS org ON org.providerid = p.providerid -- 9 (ignore, empty in SQL Server)
+    LEFT JOIN CTE_LicenseXML AS licensexml ON licensexml.providerid = p.providerid -- 10
+    LEFT JOIN CTE_LanguageXML AS lang ON lang.providerid = p.providerid -- 11
+    LEFT JOIN CTE_MalpracticeXML AS mal ON mal.providerid = p.providerid -- 12
+    LEFT JOIN CTE_SanctionXML AS sanctionxml ON sanctionxml.providerid = p.providerid -- 13
+    LEFT JOIN CTE_BoardActionXML AS baction ON baction.providerid = p.providerid -- 14
+    LEFT JOIN CTE_NatlAdvertisingXML AS adxml ON adxml.providerid = p.providerid -- 15
+    LEFT JOIN CTE_SyndicationXML AS synd ON synd.providerid = p.providerid -- 16
+$$;
+
+select_statement_xml_load_3 := 
+$$
+------------------------ProcedureXML------------------------
+
+with cte_prov_Proc AS (
+    SELECT 
+        etmt.EntityID, 
+        mt.MedicalTermCode AS prC, 
+        mt.MedicalTermDescription1 AS prD, 
+        NULL AS prGD, 
+        NULL AS lKey,
+        etmt.NationalRankingA AS nrkA, 
+        etmt.NationalRankingB AS nrkB, 
+        etmt.SearchBoostExperience AS boostExp,
+        etmt.FriendsAndFamilyDCPExperienceRatingPercent AS ffExpPscr,
+        IFF(etmt.SearchBoostHospitalCohortQuality IS NOT NULL, etmt.SearchBoostHospitalCohortQuality, etmt.SearchBoostHospitalServiceLineQuality) AS boostQual,
+        etmt.FriendsAndFamilyDCPQualityFacility AS ffQFac, 
+        etmt.FriendsAndFamilyDCPQualityFacilityList AS ffQFacLst, 
+        etmt.FriendsAndFamilyDCPQualityFacilityListLatLong AS ffQFacLatLongList,
+        etmt.FriendsAndFamilyDCPQualityFacRatingPerList AS ffQFacScrLst,
+        etmt.FriendsAndFamilyDCPQualityFacilityScoreList AS ffQFacHQList,
+        etmt.FriendsAndFamilyDCPQualityZScore AS ffQZscr,
+        etmt.FriendsAndFamilyDCPQualityRatingPercent AS ffQPscr, 
+        etmt.FriendsAndFamilyDCPQualityCode AS ffQCd,
+        CASE 
+            WHEN etmt.FriendsAndFamilyDCPQualityCode IS NOT NULL AND rcp.CohortCode IS NOT NULL THEN 1
+            WHEN etmt.FriendsAndFamilyDCPQualityCode IS NULL THEN NULL 
+            ELSE 0 
+        END AS IsCohort, 
+        etmt.PatientCount AS vol,
+        etmt.SourceSearch AS sSrch, 
+        mt.VolumeIsCredible AS vCred, 
+        mt.RefMedicalTermCode AS prRC, 
+        mt.WebArticleURL AS aUrl,
+        etmt.PatientCountIsFew, 
+        etmt.MedicalTermID, 
+        etmt.FFExpBoost, 
+        etmt.FFQualityFaciltyWeightList AS FFHQualityWList, 
+        etmt.FFHQualityWinWeight AS FFHQualityWinW
+    FROM 
+        Base.EntityToMedicalTerm etmt
+        JOIN Show.solrProvider tprov ON etmt.EntityID = tprov.ProviderID
+        JOIN Base.MedicalTerm mt ON etmt.MedicalTermID = mt.MedicalTermID
+        JOIN Base.MedicalTermType mtt ON mt.MedicalTermTypeID = mtt.MedicalTermTypeID
+        LEFT JOIN (
+            SELECT DISTINCT CohortCode, ProcedureMedicalCode
+            FROM Base.CohortToProcedure
+        ) rcp ON rcp.CohortCode = etmt.FriendsAndFamilyDCPQualityCode AND rcp.ProcedureMedicalCode = mt.RefMedicalTermCode
+    WHERE 
+        mtt.MedicalTermTypeCode = 'Procedure' 
+        AND COALESCE(etmt.IsPreview, 0) = 0
+),
+
+cte_prov_perf AS (
+    SELECT 
+        p.ProviderID, 
+        emt.MedicalTermID, 
+        MAX(to_decimal(stpm.Perform)) AS Perform
+    FROM Base.ProviderToSpecialty pts
+    JOIN cte_prov_Proc emt ON pts.ProviderID = emt.EntityID
+    JOIN Base.SpecialtyToProcedureMedical stpm ON stpm.SpecialtyID = pts.SpecialtyID AND stpm.ProcedureMedicalID = emt.MedicalTermID
+    JOIN Show.SolrProvider as p on p.providerid = pts.providerid
+    WHERE 
+        emt.PatientCountIsFew IS NOT NULL OR 
+        emt.vol IS NOT NULL
+    GROUP BY 
+        p.ProviderID, 
+        emt.MedicalTermID
+),
+
+cte_procedure as (
+    SELECT 
+        pp.providerid,
+        p.prC, 
+        p.prD, 
+        p.prGD, 
+        p.lKey,
+        p.nrkA,
+        p.nrkB, 
+        p.boostExp, 
+        p.ffExpPscr, 
+        p.boostQual, 
+        p.ffQFac,
+        p.ffQFacLst, 
+        p.ffQFacScrLst, 
+        p.ffQFacHQList, 
+        p.ffQFacLatLongList, 
+        p.ffQZscr, 
+        p.ffQPscr, 
+        p.ffQCd, 
+        p.IsCohort, 
+        p.vol, 
+        p.sSrch, 
+        p.vCred, 
+        p.prRC, 
+        p.aUrl, 
+        IFF(pp.ProviderID IS NULL, 1, pp.Perform) AS perform,
+        p.FFExpBoost, 
+        p.FFHQualityWList, 
+        p.FFHQualityWinW
+    FROM 
+        cte_prov_Proc p
+    LEFT JOIN 
+        cte_prov_Perf pp ON pp.ProviderID = p.EntityID AND pp.MedicalTermID = p.MedicalTermID
+    WHERE 
+        providerid is not null
+),
+
+cte_procedure_xml as (
+    SELECT
+        ProviderID, 
+        '<prcL>' || listagg( '<prc>' || iff(prC is not null,'<prC>' || prC || '</prC>','') ||
+        iff(prD is not null,'<prD>' || prD || '</prD>','') ||
+        iff(prGD is not null,'<prGD>' || prGD || '</prGD>','') ||
+        iff(lKey is not null,'<lKey>' || lKey || '</lKey>','') ||
+        iff(nrkA is not null,'<nrkA>' || nrkA || '</nrkA>','') ||
+        iff(nrkB is not null,'<nrkB>' || nrkB || '</nrkB>','') ||
+        iff(boostExp is not null,'<boostExp>' || boostExp || '</boostExp>','') ||
+        iff(ffExpPscr is not null,'<ffExpPscr>' || ffExpPscr || '</ffExpPscr>','') ||
+        iff(boostQual is not null,'<boostQual>' || boostQual || '</boostQual>','') ||
+        iff(ffQFac is not null,'<ffQFac>' || ffQFac || '</ffQFac>','') ||
+        iff(ffQFacLst is not null,'<ffQFacLst>' || ffQFacLst || '</ffQFacLst>','') ||
+        iff(ffQFacScrLst is not null,'<ffQFacScrLst>' || ffQFacScrLst || '</ffQFacScrLst>','') ||
+        iff(ffQFacHQList is not null,'<ffQFacHQList>' || ffQFacHQList || '</ffQFacHQList>','') ||
+        iff(ffQFacLatLongList is not null,'<ffQFacLatLongList>' || ffQFacLatLongList || '</ffQFacLatLongList>','') ||
+        iff(ffQZscr is not null,'<ffQZscr>' || ffQZscr || '</ffQZscr>','') ||
+        iff(ffQPscr is not null,'<ffQPscr>' || ffQPscr || '</ffQPscr>','') ||
+        iff(ffQCd is not null,'<ffQCd>' || ffQCd || '</ffQCd>','') ||
+        iff(IsCohort is not null,'<IsCohort>' || IsCohort || '</IsCohort>','') ||
+        iff(vol is not null,'<vol>' || vol || '</vol>','') ||
+        iff(sSrch is not null,'<sSrch>' || sSrch || '</sSrch>','') ||
+        iff(vCred is not null,'<vCred>' || vCred || '</vCred>','') ||
+        iff(prRC is not null,'<prRC>' || prRC || '</prRC>','') ||
+        iff(aurl is not null,'<aurl>' || aurl || '</aurl>','') ||
+        iff(perform is not null,'<perform>' || perform || '</perform>','') ||
+        iff(FFExpBoost is not null,'<FFExpBoost>' || FFExpBoost || '</FFExpBoost>','') ||
+        iff(FFHQualityWList is not null,'<FFHQualityWList>' || FFHQualityWList || '</FFHQualityWList>','') ||
+        iff(FFHQualityWinW is not null,'<FFHQualityWinW>' || FFHQualityWinW || '</FFHQualityWinW>','') || '</prc>' , '') || '</prcL>'
+ AS XMLValue
+    FROM
+        cte_procedure
+    GROUP BY
+        ProviderID
+),
+                
+------------------------ConditionXML------------------------
+
+ Cte_prov_Cond AS (
+    SELECT 
+        ent.EntityID, 
+        mt.MedicalTermCode AS condC,
+        mt.MedicalTermDescription1 AS conD,
+        NULL AS conGD,
+        NULL AS lKey,
+        ent.NationalRankingA AS nrkA,
+        ent.NationalRankingB AS nrkB,
+        ent.SearchBoostExperience AS boostExp,
+        ent.FriendsAndFamilyDCPExperienceRatingPercent AS ffExpPscr,
+        IFF(ent.SearchBoostHospitalCohortQuality IS NOT NULL, ent.SearchBoostHospitalCohortQuality, ent.SearchBoostHospitalServiceLineQuality) AS boostQual,
+        ent.FriendsAndFamilyDCPQualityFacility AS ffQFac,
+        ent.FriendsAndFamilyDCPQualityFacilityList AS ffQFacLst, 
+        ent.FriendsAndFamilyDCPQualityFacilityListLatLong AS ffQFacLatLongList,
+        ent.FriendsAndFamilyDCPQualityFacRatingPerList AS ffQFacScrLst,
+        ent.FriendsAndFamilyDCPQualityFacilityScoreList AS ffQFacHQList,
+        ent.FriendsAndFamilyDCPQualityZScore AS ffQZscr,
+        ent.FriendsAndFamilyDCPQualityRatingPercent AS ffQPscr,
+        ent.FriendsAndFamilyDCPQualityCode AS ffQCd,
+        IFF(ent.FriendsAndFamilyDCPQualityCode IS NOT NULL AND rcc.CohortCode IS NOT NULL, 1, IFF(ent.FriendsAndFamilyDCPQualityCode IS NULL, NULL, 0)) AS IsCohort,
+        ent.PatientCount AS vol,
+        ent.SourceSearch AS sSrch,
+        mt.VolumeIsCredible AS vCred,
+        mt.RefMedicalTermCode AS conRC,
+        mt.WebArticleURL AS aUrl,
+        ent.PatientCountIsFew, 
+        ent.MedicalTermID, 
+        ent.FFExpBoost, 
+        ent.FFQualityFaciltyWeightList AS FFHQualityWList, 
+        ent.FFHQualityWinWeight AS FFHQualityWinW
+    FROM
+        Base.EntityToMedicalTerm ent
+        JOIN Base.MedicalTerm mt ON ent.MedicalTermID = mt.MedicalTermID
+        JOIN Base.MedicalTermType mtt ON mt.MedicalTermTypeID = mtt.MedicalTermTypeID
+        LEFT JOIN (
+            SELECT DISTINCT CohortCode, ConditionCode 
+            FROM Base.CohortToCondition
+        ) rcc ON rcc.CohortCode = ent.FriendsAndFamilyDCPQualityCode 
+            AND rcc.ConditionCode = mt.RefMedicalTermCode
+    WHERE
+        mtt.MedicalTermTypeCode = 'Condition'
+        AND IFF(ent.IsPreview IS NULL, 0, ent.IsPreview) = 0
+),
+
+Cte_prov_Treat AS (
+    SELECT 
+        pts.ProviderID, 
+        emt.MedicalTermID, 
+        MAX(CAST(stpm.Treat AS INT)) AS Treat
+    FROM 
+        Base.ProviderToSpecialty pts
+    JOIN 
+        cte_prov_Cond emt ON pts.ProviderID = emt.EntityID
+    JOIN 
+        Base.SpecialtyToCondition stpm ON stpm.SpecialtyID = pts.SpecialtyID AND stpm.ConditionID = emt.MedicalTermID
+    WHERE 
+        emt.PatientCountIsFew IS NOT NULL OR emt.vol IS NOT NULL
+    GROUP BY 
+        pts.ProviderID, 
+        emt.MedicalTermID
+),
+
+cte_condition as (
+    SELECT DISTINCT
+        cond.EntityID as ProviderID,
+        cond.condC, 
+        cond.conD, 
+        cond.conGD, 
+        cond.lKey, 
+        cond.nrkA, 
+        cond.nrkB, 
+        cond.boostExp, 
+        cond.ffExpPscr, 
+        cond.boostQual, 
+        cond.ffQFac, 
+        cond.ffQFacLst,
+        cond.ffQFacScrLst, 
+        cond.ffQFacHQList, 
+        cond.ffQFacLatLongList, 
+        cond.ffQZscr, 
+        cond.ffQPscr, 
+        cond.ffQCd, 
+        cond.IsCohort, 
+        cond.vol, 
+        cond.sSrch, 
+        cond.vCred, 
+        cond.conRC,
+        cond.aUrl, 
+        IFF(treat.ProviderID IS NULL, 1, treat.Treat) AS treat,
+        cond.FFExpBoost, 
+        cond.FFHQualityWList, 
+        cond.FFHQualityWinW
+    FROM
+        show.solrprovider p 
+        JOIN cte_prov_Cond cond on p.providerid = cond.entityid
+        LEFT JOIN cte_prov_Treat treat ON treat.ProviderID = cond.EntityID AND treat.MedicalTermID = cond.MedicalTermID
+),
+
+cte_condition_xml as (
+    SELECT
+        ProviderID,
+        '<cndL>' || listagg( '<cnd>' || iff(condc is not null,'<condc>' || condc || '</condc>','') ||
+        iff(conD is not null,'<conD>' || conD || '</conD>','') ||
+        iff(conGD is not null,'<conGD>' || conGD || '</conGD>','') ||
+        iff(lKey is not null,'<lKey>' || lKey || '</lKey>','') ||
+        iff(nrkA is not null,'<nrkA>' || nrkA || '</nrkA>','') ||
+        iff(nrkB is not null,'<nrkB>' || nrkB || '</nrkB>','') ||
+        iff(boostExp is not null,'<boostExp>' || boostExp || '</boostExp>','') ||
+        iff(ffExpPscr is not null,'<ffExpPscr>' || ffExpPscr || '</ffExpPscr>','') ||
+        iff(boostQual is not null,'<boostQual>' || boostQual || '</boostQual>','') ||
+        iff(ffQFac is not null,'<ffQFac>' || ffQFac || '</ffQFac>','') ||
+        iff(ffQFacLst is not null,'<ffQFacLst>' || ffQFacLst || '</ffQFacLst>','') ||
+        iff(ffQFacScrLst is not null,'<ffQFacScrLst>' || ffQFacScrLst || '</ffQFacScrLst>','') ||
+        iff(ffQFacHQList is not null,'<ffQFacHQList>' || ffQFacHQList || '</ffQFacHQList>','') ||
+        iff(ffQFacLatLongList is not null,'<ffQFacLatLongList>' || ffQFacLatLongList || '</ffQFacLatLongList>','') ||
+        iff(ffQZscr is not null,'<ffQZscr>' || ffQZscr || '</ffQZscr>','') ||
+        iff(ffQPscr is not null,'<ffQPscr>' || ffQPscr || '</ffQPscr>','') ||
+        iff(ffQCd is not null,'<ffQCd>' || ffQCd || '</ffQCd>','') ||
+        iff(IsCohort is not null,'<IsCohort>' || IsCohort || '</IsCohort>','') ||
+        iff(vol is not null,'<vol>' || vol || '</vol>','') ||
+        iff(sSrch is not null,'<sSrch>' || sSrch || '</sSrch>','') ||
+        iff(vCred is not null,'<vCred>' || vCred || '</vCred>','') ||
+        iff(conRC is not null,'<conRC>' || conRC || '</conRC>','') ||
+        iff(aUrl is not null,'<aUrl>' || aUrl || '</aUrl>','') ||
+        iff(treat is not null,'<treat>' || treat || '</treat>','') ||
+        iff(FFExpBoost is not null,'<FFExpBoost>' || FFExpBoost || '</FFExpBoost>','') ||
+        iff(FFHQualityWList is not null,'<FFHQualityWList>' || FFHQualityWList || '</FFHQualityWList>','') ||
+        iff(FFHQualityWinW is not null,'<FFHQualityWinW>' || FFHQualityWinW || '</FFHQualityWinW>','')  || '</cnd>' ,'') || '</cndL>'
+         AS XMLValue
+    FROM
+        cte_condition
+    GROUP BY
+        ProviderID
+) ,
+
+------------------------HealthInsuranceXML_v2------------------------
+
+CTE_Health_Insurance_Product AS (
+    SELECT
+        P.ProviderID,
+        PH.PayorName,
+        replace(replace(PH.ProductName, '\'', ''), '&', '&amp;') AS prodNm,
+        PHtPT.ProductCode AS prodCd,
+        H.PlanCode AS plCd,
+        PT.PlanTypeCode AS plTpCd,
+        1 AS srch
+    FROM
+        Mid.ProviderHealthInsurance PH
+        INNER JOIN Base.HealthInsurancePlanToPlanType PHtPT ON PHtPT.HealthInsurancePlanToPlanTypeID = PH.HealthInsurancePlanToPlanTypeID
+        INNER JOIN Base.HealthInsurancePlan H ON PHtPT.HealthInsurancePlanID = H.HealthInsurancePlanID
+        INNER JOIN Base.HealthInsurancePlanType PT ON PHtPT.HealthInsurancePlanTypeID = PT.HealthInsurancePlanTypeID
+        INNER JOIN Show.SolrProvider P ON P.ProviderID = PH.ProviderID
+),
+
+CTE_Health_Insurance_Plan AS (
+    SELECT DISTINCT
+        P.ProviderID,
+        PH.PayorName,
+        replace(replace(PH.ProductName, '\'', ''), '&', '&amp;') AS prodNm,
+        PH.HealthInsurancePlanToPlanTypeID AS prodNmID,
+        PH.Searchable AS srch,
+        replace(PH.PlanDisplayName,'&', '&amp;' ) AS plNm,
+        PH.PlanTypeDisplayDescription AS plTp,
+    FROM
+        Mid.ProviderHealthInsurance PH
+    JOIN
+        Show.SolrProvider P ON P.ProviderID = PH.ProviderID
+
+),
+
+CTE_Health_Insurance_Base AS (
+    SELECT DISTINCT
+        replace(replace(ph.PayorName, '\'', ''), '&', '&amp;' ) as payorname,
+        po.PayorOrganizationName,
+        ph.Searchable,
+        ph.HealthInsurancePayorID,
+        ph.PayorCode,
+        ph.PayorProductCount,
+        hpo.InsurancePayorCode,
+        P.ProviderID
+    FROM
+        Mid.ProviderHealthInsurance ph
+    JOIN
+        (SELECT DISTINCT HealthInsurancePayorID, PayorCode, InsurancePayorCode, HealthInsurancePayorOrganizationID 
+         FROM Base.HealthInsurancePayor) hpo ON ph.PayorCode = hpo.PayorCode
+    JOIN
+        Show.SolrProvider P ON P.ProviderID = ph.ProviderID
+    LEFT JOIN
+        Base.HealthInsurancePayorOrganization po ON po.HealthInsurancePayorOrganizationID = hpo.HealthInsurancePayorOrganizationID
+),
+
+cte_plan_xml as (
+    SELECT
+        ProviderID,
+        payorname,
+        listagg( '<plan>' || iff(prodNm is not null,'<prodNm>' || prodNm || '</prodNm>','') ||
+        iff(prodNmID is not null,'<prodNmID>' || prodNmID || '</prodNmID>','') ||
+        iff(srch is not null,'<srch>' || srch || '</srch>','') ||
+        iff(plNm is not null,'<plNm>' || plNm || '</plNm>','') ||
+        iff(plTp is not null,'<plTp>' || plTp || '</plTp>','') || '</plan>' ,'') 
+ AS XMLValue
+    FROM
+        cte_health_insurance_plan
+    GROUP BY
+        ProviderID,
+        payorname
+)
+,
+
+
+cte_product_xml as (
+    SELECT
+        ProviderID,
+        payorname,
+        listagg( '<product>' || iff(prodNm is not null,'<prodNm>' || prodNm || '</prodNm>','') ||
+        iff(prodCd is not null,'<prodCd>' || prodCd || '</prodCd>','') ||
+        iff(plCd is not null,'<plCd>' || plCd || '</plCd>','') ||
+        iff(plTpCd is not null,'<plTpCd>' || plTpCd || '</plTpCd>','') ||
+        iff(srch is not null,'<srch>' || srch || '</srch>','') || '</product>' ,'')
+         AS XMLValue
+    FROM
+        Cte_Health_Insurance_Product
+    GROUP BY
+        ProviderID,
+        payorname
+),
+
+CTE_Health_Insurnace_v2 as (
+    SELECT DISTINCT
+        p.ProviderID,
+        replace(hi.PayorName, '&', '&amp;') AS paNm,
+        hi.PayorOrganizationName AS paOrgNm,
+        hi.Searchable AS srch,
+        hi.HealthInsurancePayorID AS paGUID,
+        hi.PayorCode AS paCd,
+        hi.PayorProductCount AS plCount,
+        hi.InsurancePayorCode AS paNewCd,
+        --- it is computationally more expensive to do the join so we use this function instead
+        to_varchar(SELECT LISTAGG(cte.xmlvalue, '') WITHIN GROUP (ORDER BY cte.xmlvalue) 
+        FROM cte_plan_xml cte 
+        WHERE cte.providerid = p.providerid and cte.payorname = hi.payorname) as pll,
+        to_varchar(SELECT LISTAGG(cte.xmlvalue, '') WITHIN GROUP (ORDER BY cte.xmlvalue) 
+        FROM cte_product_xml cte 
+        WHERE cte.providerid = p.providerid and cte.payorname = hi.payorname) as prl
+    
+    FROM
+        Show.solrprovider as p 
+        JOIN cte_health_insurance_base hi on p.providerid = hi.providerid
+    WHERE
+        hi.HealthInsurancePayorID IS NOT NULL
+)
+,
+
+CTE_Health_Insurnace_v2_xml as (
+    SELECT
+        ProviderID,
+        '<paL>' || 
+        listagg('<pa>' || iff(paNm is not null,'<paNm>' || paNm || '</paNm>','') ||
+        iff(paOrgNm is not null,'<paOrgNm>' || paOrgNm || '</paOrgNm>','') ||
+        iff(srch is not null,'<srch>' || srch || '</srch>','') ||
+        iff(paGUID is not null,'<paGUID>' || paGUID || '</paGUID>','') ||
+        iff(paCd is not null,'<paCd>' || paCd || '</paCd>','') ||
+        iff(plCount is not null,'<plCount>' || plCount || '</plCount>','') ||
+        iff(paNewCd is not null,'<paNewCd>' || paNewCd || '</paNewCd>','') ||
+        iff(pll is not null,'<plL>' || pll || '</plL>','') ||
+        iff(prl is not null,'<prL>' || prl || '</prL>','') || '</pa>' , '') || '</paL>'
+        AS XMLValue
+    FROM
+        CTE_Health_Insurnace_v2
+    GROUP BY
+        ProviderID
+),
+
+
+-----------------HealthInsuranceXML------------------------
+
+cte_provider_health_insurance as (
+    SELECT DISTINCT
+        p.ProviderID,
+        h.PayorName AS paNm,
+        h.Searchable AS srch,
+        h.PayorCode AS paCd
+    FROM
+        Mid.ProviderHealthInsurance h
+        JOIN Show.solrprovider as p on p.providerid = h.providerid
+),
+
+cte_health_insurance_xml as (
+    SELECT
+        ProviderID,
+        '<paL>' || listagg( '<pa>' || iff(paNm is not null,'<paNm>' || paNm || '</paNm>','') ||
+        iff(srch is not null,'<srch>' || srch || '</srch>','') ||
+        iff(paCd is not null,'<paCd>' || paCd || '</paCd>','') || '</pa>' , '') || '</paL>'
+ AS XMLValue
+    FROM
+        cte_provider_health_insurance
+    GROUP BY
+        ProviderID
+),
+
+------------------------MediaXML------------------------
+Cte_Media as (
+    SELECT
+        DISTINCT pm.providerid,
+        pm.MediaDate AS mDt,
+        utils.clean_xml(pm.MediaTitle) AS mTit,
+        utils.clean_xml(pm.MediaPublisher) AS mPub,
+        utils.clean_xml(pm.MediaSynopsis) AS mSyn,
+        utils.clean_xml(pm.MediaLink) AS mLink,
+        mt.MediaTypeCode AS mC,
+        mt.MediaTypeDescription AS mD
+    FROM
+        Base.ProviderMedia pm
+        JOIN Base.MediaType mt ON pm.MediaTypeID = mt.MediaTypeID
+),
+cte_Media_XML as (
+    SELECT
+        ProviderID,
+        '<medL>' || listagg( '<med>' || iff(mdt is not null,'<mdt>' || mdt || '</mdt>','') ||
+        iff(mTit is not null,'<mTit>' || mTit || '</mTit>','') ||
+        iff(mPub is not null,'<mPub>' || mPub || '</mPub>','') ||
+        iff(mSyn is not null,'<mSyn>' || mSyn || '</mSyn>','') ||
+        iff(mLink is not null,'<mLink>' || mLink || '</mLink>','') ||
+        iff(mC is not null,'<mC>' || mC || '</mC>','') ||
+        iff(mD is not null,'<mD>' || mD || '</mD>','') || '</med>' , '') || '</medL>'
+         AS XMLValue
+    FROM
+        CTE_Media
+    GROUP BY
+        ProviderID
+) ,
+------------------------RecognitionXML------------------------
+
+cte_recogsl as (
+SELECT DISTINCT
+    Providerid,
+    ServiceLine AS recogSl
+FROM   
+    Mid.ProviderRecognition
+),
+
+cte_recogsl_xml as (
+SELECT distinct
+        ProviderID,
+        iff(recogsl is not null,'<recogSl>' || recogsl || '</recogSl>','') AS XMLValue
+    FROM
+        cte_recogsl
+),
+
+cte_recogdl as (
+SELECT DISTINCT
+    pr.providerid,
+    pr.FacilityName AS recogHosp,
+	pr.FacilityCode as recogHospID,
+    xml.xmlvalue as recogsll
+FROM Mid.ProviderRecognition pr
+JOIN cte_recogsl_xml as xml on xml.providerid = pr.providerid
+),
+
+cte_recogdl_xml as (
+SELECT
+        ProviderID,
+        listagg( '<recogD>' || iff(recogHosp is not null,'<recogHosp>' || recogHosp || '</recogHosp>','') ||
+        iff(recogHospID is not null,'<recogHospID>' || recogHospID || '</recogHospID>','') ||
+        iff(recogsll is not null,'<recogSlL>' || recogsll || '</recogSlL>','') 
+        || '</recogD>' , '')
+ AS XMLValue
+    FROM
+        cte_recogdl
+    GROUP BY
+        ProviderID
+),
+
+cte_recognition as (
+SELECT DISTINCT
+    pr.providerid,
+    pr.RecognitionCode AS recogCd,
+	pr.RecognitionDisplayName AS recogDName,
+	xml.xmlvalue as recogdl
+FROM  Mid.ProviderRecognition pr
+JOIN cte_recogdl_xml as xml on xml.providerid = pr.providerid
+ORDER BY pr.RecognitionCode
+),
+
+cte_recognition_xml as (
+SELECT
+        ProviderID,
+        '<recogL>' || listagg( '<recog>' || 
+        iff(recogCd is not null,'<recogcd>' || recogCd || '</recogcd>','') ||
+        iff(recogDName is not null,'<recogDName>' || recogDName || '</recogDName>','') ||
+        iff(recogdl is not null,'<recogDL>' || recogdl || '</recogDL>','') 
+        || '</recog>' , '') || '</recogL>'
+ AS XMLValue
+FROM
+    cte_recognition
+GROUP BY
+    ProviderID
+) ,
+
+------------------------ProviderSpecialtyFacility5StarXML------------------------
+
+cte_spec as (
+SELECT DISTINCT
+    ProviderId,
+    LegacyKey AS lKey,
+    SpecialtyCode AS spCd 
+FROM Mid.ProviderSpecialtyFacilityServiceLineRating 
+),
+cte_spec_xml as (
+SELECT
+        ProviderID,
+        listagg(iff(lkey is not null,'<lkey>' || lkey || '</lkey>','') ||
+        iff(spcd is not null,'<spcd>' || spcd || '</spcd>',''), '') 
+ AS XMLValue
+FROM
+    cte_spec
+GROUP BY
+    ProviderID
+),
+
+cte_provider_speciality_facility_5star as (
+SELECT DISTINCT
+    pr.providerid,
+    pr.ServiceLineCode AS svcCd,
+    pr.ServiceLineDescription AS svcNm,
+    xml.xmlvalue as spec
+ FROM   Mid.ProviderSpecialtyFacilityServiceLineRating pr
+ JOIN cte_spec_xml as xml on xml.providerid = pr.providerid
+ WHERE  pr.ServiceLineStar = 5
+),
+
+cte_provider_speciality_facility_5star_xml as (
+SELECT
+        ProviderID,
+        '<provFiveStar>' || listagg( '<svcLn>' || iff(svcCd is not null,'<svcCd>' || svcCd || '</svcCd>','') ||
+        iff(svcNm is not null,'<svcNm>' || svcNm || '</svcNm>','') ||
+        iff(spec is not null,'<spec>' || spec || '</spec>','') || '</svcLn>' , '' ) || '</provFiveStar>'
+ AS XMLValue
+FROM
+    cte_provider_speciality_facility_5star
+GROUP BY
+    ProviderID
+),
+
+------------------------VideoXML------------------------
+
+cte_video_xml as (
+SELECT DISTINCT
+    pv.providerid,
+    CONCAT('<video>
+            <vidL>
+            <flash>
+                <object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"      codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,115,0"      id="i_051bb5a507614c37917aad1705f5dd93"      width="450"      height="392">
+                <param name="movie" value="http://applications.fliqz.com/',  utils.clean_xml(pv.ExternalIdentifier) , '.swf"/>
+                <param name="allowfullscreen" value="true" />
+                <param name="menu" value="false" />
+                <param name="bgcolor" value="#ffffff"/>
+                <param name="wmode" value="window"/>
+                <param name="allowscriptaccess" value="always"/>
+                <param name="flashvars" value=" file=', utils.clean_xml(pv.ExternalIdentifier) , '"/>
+                <embed name="i_f3fa611a238b4b14a65e4985373ead58"  src="http://applications.fliqz.com/', utils.clean_xml(pv.ExternalIdentifier) , '.swf" flashvars="file=',  utils.clean_xml(pv.ExternalIdentifier) , '"                 width="450"                 height="392"                 pluginspage="http://www.macromedia.com/go/getflashplayer"                 allowfullscreen="true"                 menu="false"                 bgcolor="#ffffff"                 wmode="window"                 allowscriptaccess="always"                 type="application/x-shockwave-flash"/>
+                </object>
+            </flash>
+            </vidL>
+        </video>') as xmlvalue
+FROM Base.ProviderVideo AS pv 
+JOIN Base.MediaContextType mc ON mc.MediaContextTypeID = pv.MediaContextTypeID
+JOIN Base.MediaVideoHost mh ON mh.MediaVideoHostID = pv.MediaVideoHostID AND mh.MediaVideoHostCode = 'FLIQZ' 
+) ,
+
+------------------------VideoXML2------------------------
+cte_video_xml2 as (
+SELECT DISTINCT
+    pv.providerid,
+    CONCAT('<vidL>
+                <vid>
+                    <vidHostCd>', mh.MediaVideoHostCode, '</vidHostCd>
+                    <vidContCd>', mc.MediaContextTypeCode, '</vidContCd>
+                    <vidSrc>/video/',lower(utils.clean_xml(pv.ExternalIdentifier)), '</vidSrc>
+                </vid>     
+            </vidL>') as xmlvalue
+FROM Base.ProviderVideo AS pv 
+JOIN Base.MediaContextType mc ON mc.MediaContextTypeID = pv.MediaContextTypeID
+JOIN Base.MediaVideoHost mh ON mh.MediaVideoHostID = pv.MediaVideoHostID AND mh.MediaVideoHostCode = 'BRIGHTSPOT' 
+) ,
+
+------------------------ImageXML------------------------
+
+CTE_From_Temp_UpdateDate AS (
+    SELECT 
+        PI.Providerid,
+        CASE WHEN LEFT(ExternalIdentifier, 1) = 'v'
+            THEN RIGHT(ExternalIdentifier, LENGTH(ExternalIdentifier) - 1)
+            ELSE ExternalIdentifier
+        END AS ExternalIdentifier,
+        ImagePath,
+        Filename,
+        MIN(LastUpdateDate) AS LastUpdateDate,
+        MediaContextTypeID,
+        MediaImageHostID
+    FROM Base.ProviderImage PI
+    INNER JOIN Show.SolrProvider P ON P.ProviderID = PI.ProviderID
+    WHERE ImagePath IS NOT NULL
+    GROUP BY 
+    PI.ProviderId, 
+    ExternalIdentifier, 
+    ImagePath, 
+    Filename,
+    MediaContextTypeID,
+    MediaImageHostID
+),
+
+CTE_Temp_Update_Date AS (
+    SELECT
+        ProviderId,
+        IFNULL(ExternalIdentifier, CASE WHEN POSITION('v_' IN REVERSE(FileName)) > 0
+            THEN REPLACE(SUBSTRING(FileName, LENGTH(FileName) - POSITION('v_' IN REVERSE(FileName)) + 2, LENGTH(FileName)), '.jpg', '')
+            ELSE ''
+        END) AS ExternalIdentifier,
+        CASE WHEN LEFT(TRIM(ImagePath), 1) = '/' THEN '' ELSE '/' END || ImagePath || CASE WHEN RIGHT(TRIM(ImagePath), 1) = '/' THEN '' ELSE '/' END AS ImagePath,
+        IFF(IS_INTEGER(TRY_CAST(IFNULL(ExternalIdentifier, CASE WHEN POSITION('v_' IN REVERSE(FileName)) > 0 THEN
+            REPLACE(SUBSTRING(FileName, LENGTH(FileName) - POSITION('v_' IN REVERSE(FileName)) + 2, LENGTH(FileName)), '.jpg', '')
+            ELSE '0'
+        END) AS INT)) = 1, 1, 0) AS IsLegacy,
+        MediaContextTypeID,
+        MediaImageHostID,
+        ExternalIdentifier AS OriginalExternalIdentifier,
+        ImagePath AS OriginalImagePath,
+        LastUpdateDate
+    FROM CTE_From_Temp_UpdateDate
+),
+
+CTE_Temp_Provider_Image AS (
+SELECT
+    cte.ProviderId,
+    ImagePath || CASE WHEN cte.IsLegacy = 1 THEN UPPER(P.ProviderCode) ELSE LOWER(P.ProviderCode) END || '_' || 'w60h80' || '_v' || ExternalIdentifier || '.jpg' AS imgU,
+    'small' AS imgC,
+    60 AS imgW,
+    80 AS imgH,
+    'image' AS imgA
+FROM
+    cte_temp_update_date cte
+INNER JOIN
+    Base.Provider P ON P.ProviderId = cte.ProviderID
+
+UNION ALL
+
+SELECT
+    cte.ProviderId,
+    ImagePath || CASE WHEN cte.IsLegacy = 1 THEN UPPER(P.ProviderCode) ELSE LOWER(P.ProviderCode) END || '_' || 'w90h120' || '_v' || ExternalIdentifier || '.jpg' AS imgU,
+    'medium' AS imgC,
+    90 AS imgW,
+    120 AS imgH,
+    'image' AS imgA
+FROM
+    cte_temp_update_date cte
+INNER JOIN
+    Base.Provider P ON P.ProviderId = cte.ProviderID
+WHERE
+    LENGTH(ExternalIdentifier) > 0
+
+UNION ALL
+
+SELECT
+    cte.ProviderId,
+    ImagePath || CASE WHEN cte.IsLegacy = 1 THEN UPPER(P.ProviderCode) ELSE LOWER(P.ProviderCode) END || '_' || 'w120h160' || '_v' || ExternalIdentifier || '.jpg' AS imgU,
+    'large' AS imgC,
+    120 AS imgW,
+    160 AS imgH,
+    'image' AS imgA
+FROM
+    cte_temp_update_date cte
+INNER JOIN
+    Base.Provider P ON P.ProviderId = cte.ProviderID
+WHERE
+    LENGTH(ExternalIdentifier) > 0
+
+UNION ALL
+
+SELECT
+    cte.ProviderId,
+    ImagePath || CASE WHEN cte.IsLegacy = 1 THEN UPPER(P.ProviderCode) ELSE LOWER(P.ProviderCode) END || '_' || 'w90h120.jpg' AS imgU,
+    'medium' AS imgC,
+    90 AS imgW,
+    120 AS imgH,
+    'image' AS imgA
+FROM
+    cte_temp_update_date cte
+INNER JOIN
+    Base.Provider P ON P.ProviderId = cte.ProviderID
+WHERE
+    cte.IsLegacy = 1
+    AND LENGTH(ExternalIdentifier) = 0
+),
+
+CTE_Image_XML AS (
+    SELECT
+        ProviderId,
+        '<imgL>' || listagg( '<img>' || iff(imgC is not null,'<imgC>' || imgC || '</imgC>','') ||
+        iff(imgU is not null,'<imgU>' || imgU || '</imgU>','') ||
+        iff(imgA is not null,'<imgA>' || imgA || '</imgA>','') ||
+        iff(imgW is not null,'<imgW>' || imgW || '</imgW>','') ||
+        iff(imgH is not null,'<imgH>' || imgH || '</imgH>','') || '</img>' , '') || '</imgL>'
+ AS XMLValue
+    FROM
+        CTE_Temp_Provider_Image
+    GROUP BY
+        ProviderId
+),
+
+------------------------AboutMeXML------------------------
+
+cte_aboutme as (
+    SELECT DISTINCT
+        pam.ProviderID,
+        am.AboutMeCode AS type,
+        utils.clean_xml(CASE WHEN am.DescriptionEdit = 1 AND IFNULL(pam.CustomAboutMeDescription, '') <> ''
+            THEN pam.CustomAboutMeDescription
+            ELSE IFNULL(am.AboutMeDescription, '')
+        END ) as title,
+        am.DisplayOrder AS sort,
+        -- pam.ProviderAboutMeText AS text,
+        utils.clean_xml(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(REPLACE(REPLACE(trim(REGEXP_REPLACE(pam.ProviderAboutMeText, '\\x00|\\x01|\\x02|\\x03|\\x04|\\x05|\\x06|\\x07|\\x08|\\x0B|\\x0C|\\x0E|\\x0F|\\x10|\\x11|\\x12|\\x13|\\x14|\\x15|\\x16|\\x17|\\x18|\\x19|\\x1A|\\x1B|\\x1C|\\x1D|\\x1E|\\x1F|\\&amp', '', 1, 0, 'e')),CHAR(UNICODE('\\u0060'))), ''), '[&/''''\\:\\\\~\\\\;\\\\|<>™•*?+®!–@{}\\\\[\\\\]()ñéí"’ #,\\.]', ''), '--', '-'), '\'', ''), '\"' , ''), CHAR(UNICODE('\\u0060')), ''), '{', ''), '}', '')) as text,
+        IFNULL(TO_DATE(pam.LastUpdatedDate), TO_DATE(pam.InsertedOn)) AS updDte
+    FROM
+        Base.AboutMe am
+        JOIN Base.ProviderToAboutMe pam ON am.AboutMeID = pam.AboutMeID
+),
+
+cte_aboutme_xml as (
+    SELECT
+        ProviderID,
+        '<aboutMeL>' || listagg( '<section>' || iff(type is not null,'<type>' || type || '</type>','') ||
+        iff(title is not null,'<title>' || title || '</title>','') ||
+        iff(sort is not null,'<sort>' || sort || '</sort>','') ||
+        iff(text is not null,'<text>' || text || '</text>','') ||
+        iff(updDte is not null,'<updDte>' || updDte || '</updDte>','') || '</section>', '') || '</aboutMeL>'
+ AS XMLValue
+    FROM
+        cte_aboutme
+    GROUP BY
+        ProviderID
+) 
+SELECT
+    p.providerid,
+    to_variant(parse_xml(proc.xmlvalue)) as procedurexml,
+    to_variant(parse_xml(cond.xmlvalue)) as conditionxml,
+    to_variant(parse_xml(hivw.xmlvalue)) as healthinsurancexml_v2,
+    to_variant(parse_xml(hins.xmlvalue)) as healthinsurancexml,
+    to_variant(parse_xml(media.xmlvalue)) as mediaxml,
+    to_variant(parse_xml(rec.xmlvalue)) as recognitionxml,
+    to_variant(parse_xml(fstar.xmlvalue)) as ProviderSpecialtyFacility5StarXML,
+    to_variant(parse_xml(video.xmlvalue)) as VideoXML,
+    to_variant(parse_xml(video2.xmlvalue)) as videoxml2,
+    to_variant(parse_xml(image.xmlvalue)) as imagexml,
+    case when image.xmlvalue is not null then 1 else 0 end as hasdisplayimage,
+    to_variant(parse_xml(aboutme.xmlvalue)) as aboutmexml
+FROM Show.SolrProvider as P
+    LEFT JOIN cte_procedure_xml as proc on proc.providerid = p.providerid
+    LEFT JOIN Cte_condition_xml as  cond on cond.providerid = p.providerid
+    LEFT JOIN CTE_Health_Insurnace_v2_xml as hivw on hivw.providerid = p.providerid -- bottleneck
+    LEFT JOIN cte_health_insurance_xml AS hins ON hins.providerid = p.providerid
+    LEFT JOIN cte_media_xml AS media ON media.providerid = p.providerid 
+    LEFT JOIN cte_recognition_xml AS rec ON rec.providerid = p.providerid
+    LEFT JOIN cte_provider_speciality_facility_5star_xml AS fstar ON fstar.providerid = p.providerid
+    LEFT JOIN cte_video_xml AS video ON video.providerid = p.providerid
+    LEFT JOIN cte_video_xml2 AS video2 ON   video2.providerid = p.providerid
+    LEFT JOIN cte_image_xml AS image ON image.providerid = p.providerid
+    LEFT JOIN cte_aboutme_xml AS aboutme ON aboutme.providerid = p.providerid
+$$;
+
+
 update_statement_xml_load_1 := $$ update show.solrprovider as target
                                     set target.availabilityxml = source.availabilityxml,
                                         target.procedurehierarchyxml = source.procedurehierarchyxml,
@@ -2764,7 +5492,50 @@ update_statement_xml_load_1 := $$ update show.solrprovider as target
                                         target.HasEmailAddressXML = source.HasEmailAddressXML
                                     from ($$ || select_statement_xml_load_1 || $$) as source
                                         where target.providerid = source.providerid $$;
-                                        
+
+update_statement_xml_load_2 := $$ update show.solrprovider as target
+                                    set target.telehealthxml = source.telehealthxml,
+                                        target.providertypexml = source.providertypexml,
+                                        target.practiceofficexml = source.practiceofficexml,
+                                        target.addressxml = source.addressxml,
+                                        target.specialtyxml = source.specialtyxml,
+                                        target.practicingspecialtyxml = source.practicingspecialtyxml,
+                                        target.certificationxml = source.certificationxml,
+                                        target.educationxml = source.educationxml,
+                                        -- target.professionalorganizationxml = source.professionalorganizationxml,
+                                        target.licensexml = source.licensexml,
+                                        target.languagexml = source.languagexml,
+                                        target.malpracticexml = source.malpracticexml,
+                                        target.sanctionxml = source.sanctionxml,
+                                        target.boardactionxml = source.boardactionxml,
+                                        target.natladvertisingxml = source.natladvertisingxml,
+                                        target.syndicationxml = source.syndicationxml
+                                    from ($$ || select_statement_xml_load_2 || $$) as source
+                                        where target.providerid = source.providerid $$;
+
+update_statement_xml_load_3 :=
+                                $$ update show.solrprovider as target
+                                    set
+                                        target.procedurexml = source.procedurexml,
+                                        target.conditionxml = source.conditionxml,
+                                        target.healthinsurancexml_v2 = source.healthinsurancexml_v2,
+                                        target.healthinsurancexml = source.healthinsurancexml,
+                                        target.mediaxml = source.mediaxml,
+                                        target.recognitionxml = source.recognitionxml,
+                                        target.ProviderSpecialtyFacility5StarXML = source.ProviderSpecialtyFacility5StarXML,
+                                        target.VideoXML = source.VideoXML,
+                                        target.videoxml2 = source.videoxml2,
+                                        target.imagexml = source.imagexml,
+                                        target.hasdisplayimage = source.hasdisplayimage,
+                                        target.aboutmexml = source.aboutmexml,
+                                        target.HasMediaXML = source.HasMediaXML,
+                                        target.HasVideoXML2 = source.HasVideoXML2,
+                                        target.HasProviderSpecialtyFacility5StarXML = source.HasProviderSpecialtyFacility5StarXML,
+                                        target.HasProcedureXML = source.HasProcedureXML,
+                                        target.HasConditionXML = source.HasConditionXML
+                                    from ($$ || select_statement_xml_load_3 || $$) as source
+                                       where target.providerid = source.providerid $$;
+                                                                        
 --------------------------ConditionHierarchyXML--------------------------
 -- this takes long 
 select_statement_condition_hierarchy := $$ with CTE_ProviderConditionsq AS (
@@ -2885,7 +5656,7 @@ update_statement_cond_mapped := $$ update show.solrprovider as target
                                     where target.ProviderID = source.ProviderID $$;
 
 ------------------------FacilityXML------------------------
-select_statement_facility := $$ CTE_ProviderProceduresq AS (
+select_statement_facility := $$ WITH CTE_ProviderProceduresq AS (
     SELECT
         a.ProviderID,
         a.ProcedureCode,
@@ -3559,9 +6330,11 @@ where
 end if;
 execute immediate update_statement_24;
 
----------------------  XMLLOAD --------------------------
+--------------------- XMLLOAD --------------------------
 
 execute immediate update_statement_xml_load_1;
+execute immediate update_statement_xml_load_2;
+execute immediate update_statement_xml_load_3;
 execute immediate update_statement_condition_hierarchy;
 execute immediate update_statement_cond_mapped;
 execute immediate update_statement_facility;
