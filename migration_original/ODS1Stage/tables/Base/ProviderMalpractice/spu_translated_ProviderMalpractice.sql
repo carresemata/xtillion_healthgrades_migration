@@ -20,7 +20,7 @@ declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
-update_statement string;
+delete_statement string;
 merge_statement string;
 status string;
 procedure_name varchar(50) default('sp_load_providermalpractice');
@@ -256,7 +256,7 @@ insert_statement := ' insert
                             LicenseNumber,
                             LastUpdateDate)
                     values 
-                          ( utils.generate_uuid(source.providerid || source.providerlicenseid || source.malpracticeclaimtypeid || source.licensenumber), 
+                          ( uuid_string(), 
                             source.providerid,
                             source.providerlicenseid,
                             source.malpracticeclaimtypeid,
@@ -273,24 +273,16 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.licensenumber,
                             source.lastupdatedate)';
+
                             
---- update statement
-update_statement := ' update
-                        set
-                            target.ClaimNumber = source.claimnumber,
-                            target.ClaimDate = source.claimdate,
-                            target.ClaimYear = source.claimyear,
-                            target.ClaimAmount = source.claimamount,
-                            target.ClaimState = source.claimstate,
-                            target.MalpracticeClaimRange = source.malpracticeclaimrange,
-                            target.Complaint = source.complaint,
-                            target.IncidentDate = source.incidentdate,
-                            target.ClosedDate = source.closeddate,
-                            target.ReportDate = source.reportdate,
-                            target.SourceCode = source.sourcecode,
-                            target.LicenseNumber = source.licensenumber,
-                            target.LastUpdateDate = source.lastupdatedate
-                    ';
+--- delete statement
+delete_statement := 'delete from base.providermalpractice as target
+                    using (' || select_statement || ') as source
+                    where source.providerid = target.providerid
+                        and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid
+                        and source.providerlicenseid = target.providerlicenseid 
+                        and source.licensenumber = target.licensenumber';
+        
                             
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -298,8 +290,10 @@ update_statement := ' update
 
 merge_statement := ' merge into base.providermalpractice as target 
                     using ('||select_statement||') as source
-                    on source.providerid = target.providerid and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid and source.providerlicenseid = target.providerlicenseid and source.licensenumber = target.licensenumber
-                    when matched then ' || update_statement || '
+                    on source.providerid = target.providerid 
+                        and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid 
+                        and source.providerlicenseid = target.providerlicenseid 
+                        and source.licensenumber = target.licensenumber
                     when not matched then'||insert_statement;
 
 ---------------------------------------------------------
@@ -309,6 +303,7 @@ merge_statement := ' merge into base.providermalpractice as target
 if (is_full) then
     truncate table Base.ProviderMalpractice;
 end if; 
+execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
