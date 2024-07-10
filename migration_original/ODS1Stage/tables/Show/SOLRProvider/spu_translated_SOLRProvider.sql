@@ -194,6 +194,11 @@ declare
     update_statement_condition_hierarchy string;
     select_statement_cond_mapped string;
     update_statement_cond_mapped string;
+
+    select_statement_sponsorship string;
+    update_statement_xml_load_4 string;
+
+    
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrprovider');
     execution_start datetime default getdate();
@@ -6182,6 +6187,1626 @@ update_statement_facility := $$ update show.solrprovider as target
                         from ( $$ || select_statement_facility || $$ ) as source
                         where target.ProviderID = source.ProviderID $$;
 
+                        select_statement_sponsorship := $$ 
+WITH CTE_Temp_Provider AS (
+    SELECT
+        ProviderID
+    FROM
+        mdm_team.mst.provider_profile ppp
+        JOIN base.provider bp ON ppp.ref_provider_code = bp.providercode
+),
+CTE_ProviderToClientToProduct AS (
+    SELECT
+        DISTINCT dPv.ProviderId,
+        lCP.ClientToProductID
+    FROM
+        Base.ClientProductToEntity lCPE
+        INNER JOIN Base.EntityType dE ON dE.EntityTypeId = lCPE.EntityTypeID
+        INNER JOIN Base.ClientToProduct lCP ON lCP.ClientToProductID = lCPE.ClientToProductID
+        INNER JOIN Base.Client dC ON lCP.ClientID = dC.ClientID
+        INNER JOIN Base.Product dP ON dP.ProductId = lCP.ProductID
+        INNER JOIN Base.Provider dPv ON dPv.ProviderID = lCPE.EntityID
+        INNER JOIN CTE_Temp_Provider P ON P.ProviderId = dPv.ProviderId
+),
+CTE_ProviderPracticeOfficeSponsorship AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.PracticeCode,
+        a.OfficeCode,
+        a.PracticeName,
+        a.OfficeName,
+        a.OfficeID,
+        a.PracticeID,
+        a.PhoneXML,
+        a.ImageXML,
+        a.MobilePhoneXML,
+        a.TabletPhoneXML,
+        a.DesktopPhoneXML,
+        a.URLXML,
+        CASE
+            WHEN LEN(CAST(a.PhoneXML AS VARCHAR)) - LEN(
+                REPLACE(CAST(a.PhoneXML AS VARCHAR), '<phTyp>', '123456')
+            ) > 1 THEN 1
+            ELSE 0
+        END AS compositePhone
+    FROM
+        (
+            SELECT
+                a.ProviderCode,
+                a.ProductCode,
+                a.ProductDescription,
+                a.ProductGroupCode,
+                a.ProductGroupDescription,
+                a.ClientToProductID,
+                a.ClientCode,
+                a.ClientName,
+                a.HasOAR,
+                a.QualityMessageXML,
+                a.AppointmentOptionDescription,
+                a.CallToActionMsg,
+                a.SafeHarborMsg,
+                a.PracticeCode,
+                a.OfficeCode,
+                a.PracticeName,
+                a.OfficeName,
+                a.OfficeID,
+                a.PracticeID,
+                a.PhoneXML,
+                a.ImageXML,
+                a.MobilePhoneXML,
+                a.TabletPhoneXML,
+                a.DesktopPhoneXML,
+                a.URLXML,
+                ROW_NUMBER() OVER (
+                    PARTITION BY A.ProviderCode,
+                    A.ProductCode,
+                    A.ClientCode,
+                    A.OfficeCode
+                    ORDER BY
+                        CASE
+                            WHEN PhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN URLXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN ImageXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN MobilePhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN TabletPhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN DesktopPhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END
+                ) AS RN1
+            FROM
+                CTE_Temp_Provider AS p
+                INNER JOIN Base.Provider AS p2 ON p2.ProviderID = p.ProviderID
+                INNER JOIN Mid.ProviderSponsorship AS a ON a.ProviderCode = p2.ProviderCode
+                INNER JOIN Base.Product PD ON PD.ProductCode = A.ProductCode
+            WHERE
+                ProductGroupCode != 'LID'
+                AND PD.ProductTypeCode = 'PRACTICE'
+        ) A
+    WHERE
+        RN1 = 1
+),
+CTE_ProviderPracticeOfficeSponsorshipMAP AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.PracticeCode,
+        a.OfficeCode,
+        a.PracticeName,
+        a.OfficeName,
+        a.OfficeID,
+        a.PracticeID,
+        a.PhoneXML,
+        a.ImageXML,
+        a.MobilePhoneXML,
+        a.TabletPhoneXML,
+        a.DesktopPhoneXML,
+        a.URLXML,
+        CASE
+            WHEN LEN(CAST(a.PhoneXML AS VARCHAR)) - LEN(
+                REPLACE(CAST(a.PhoneXML AS VARCHAR), '<phTyp>', '123456')
+            ) > 1 THEN 1
+            ELSE 0
+        END AS compositePhone
+    FROM
+        (
+            SELECT
+                p2.ProviderCode,
+                PD.ProductCode,
+                PD.ProductDescription,
+                PRG.ProductGroupCode,
+                PRG.ProductGroupDescription,
+                a.ClientToProductID,
+                C.ClientCode,
+                C.ClientName,
+                a.HasOAR,
+                PS.QualityMessageXML,
+                PS.AppointmentOptionDescription,
+                PS.CallToActionMsg,
+                PS.SafeHarborMsg,
+                PC.PracticeCode,
+                O.OfficeCode,
+                PC.PracticeName,
+                O.OfficeName,
+                a.OfficeID,
+                PC.PracticeID,
+                a.PhoneXML,
+                IFNULL(PS.ImageXML, PSc.ImageXML) AS ImageXML,
+                PS.MobilePhoneXML,
+                PS.TabletPhoneXML,
+                PS.DesktopPhoneXML,
+                PS.URLXML,
+                ROW_NUMBER() OVER (
+                    PARTITION BY P2.ProviderCode,
+                    PD.ProductCode,
+                    C.ClientCode,
+                    O.OfficeCode
+                    ORDER BY
+                        CASE
+                            WHEN PC.PracticeCode IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN a.PhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN PS.URLXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN PS.ImageXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN PS.MobilePhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN PS.TabletPhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN PS.DesktopPhoneXML IS NOT NULL THEN 0
+                            ELSE 1
+                        END
+                ) AS RN1
+            FROM
+                CTE_Temp_Provider AS p
+                INNER JOIN Base.Provider AS p2 ON p2.ProviderID = p.ProviderID
+                INNER JOIN base.ProviderToMAPCustomerProduct AS a ON a.ProviderID = p2.ProviderID
+                AND IFNULL(a.DisplayPartnerCode, 'HG.COM') = 'HG.COM'
+                INNER JOIN CTE_ProviderToClientToProduct PCP ON PCP.ProviderId = a.ProviderId
+                AND PCP.ClientToProductID = A.ClientToProductID
+                INNER JOIN Base.Office O ON O.OfficeId = A.OfficeID
+                LEFT JOIN base.Practice PC ON PC.PracticeID = O.PracticeID
+                INNER JOIN Base.ClientToProduct AS cp ON cp.ClientToProductID = A.ClientToProductID
+                INNER JOIN Base.Client AS c ON c.ClientID = cp.ClientID
+                INNER JOIN Base.Product AS pd ON pd.ProductID = cp.ProductID
+                INNER JOIN Base.ProductGroup AS prg ON prg.ProductGroupID = pd.ProductGroupID
+                LEFT JOIN Mid.ProviderSponsorship AS PS ON PS.ProviderCode = p2.ProviderCode
+                AND PS.OfficeCode = O.OfficeCode
+                LEFT JOIN Mid.ProviderSponsorship AS PSc ON PSc.ProviderCode = p2.ProviderCode
+            WHERE p2.ProviderCode IN (SELECT DISTINCT ProviderCode FROM Mid.ProviderSponsorship)
+        ) A
+    WHERE
+        RN1 = 1
+),
+CTE_Url AS (
+    SELECT
+        fa.FacilityCode,
+        FacilityURL AS urlVal,
+        'FCURL' AS urlTyp,
+        '<url>' || urlVal || urlTyp || '</url>' AS XML
+    FROM
+        Show.SOLRFacility fa
+        LEFT JOIN Mid.ProviderSponsorship AS a ON a.FacilityCode = fa.FacilityCode
+    ORDER BY
+        FacilityURL
+),
+CTE_A AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.FacilityCode,
+        a.FacilityName,
+        a.FacilityState,
+        a.PhoneXML,
+        a.ImageXML,
+        a.MobilePhoneXML,
+        a.TabletPhoneXML,
+        a.DesktopPhoneXML,
+        CASE
+            WHEN a.URLXML IS NOT NULL THEN a.URLXML
+            ELSE CTE_Url.XML
+        END AS URLXML
+    FROM
+        CTE_Temp_Provider AS p
+        INNER JOIN Base.Provider AS p2 ON p2.ProviderID = p.ProviderID
+        INNER JOIN Mid.ProviderSponsorship AS a ON a.ProviderCode = p2.ProviderCode
+        INNER JOIN Base.Product PD ON PD.ProductCode = A.ProductCode
+        LEFT JOIN CTE_Url ON CTE_Url.FacilityCode = a.FacilityCode
+    WHERE
+        ProductGroupCode != 'LID'
+        AND (
+            a.FacilityCode IS NOT NULL
+            OR a.ProductCode IN ('PDCWMDLITE', 'PDCWRITEMD')
+        )
+        AND (
+            PD.ProductCode IN ('MAP')
+            OR PD.ProductTypeCode = 'Hospital'
+        )
+),
+CTE_ProviderFacilitySponsorship AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.FacilityCode,
+        a.FacilityName,
+        a.FacilityState,
+        a.PhoneXML,
+        a.ImageXML,
+        a.MobilePhoneXML,
+        a.TabletPhoneXML,
+        a.DesktopPhoneXML,
+        URLXML,
+        0 AS compositePhone
+    FROM
+        CTE_A a
+),
+CTE_ProviderClientDisplayPartner AS (
+    SELECT
+        p2.ProviderCode,
+        c.ClientCode,
+        sp.SyndicationPartnerCode AS DisplayPartnerCode
+    FROM
+        CTE_Temp_Provider AS p
+        INNER JOIN Base.Provider AS p2 ON p2.ProviderID = p.ProviderID
+        INNER JOIN Base.ProviderToClientProductToDisplayPartner AS pc ON pc.ProviderID = p2.ProviderID
+        INNER JOIN Base.ClientToProduct AS cp ON cp.ClientToProductID = pc.ClientToProductID
+        INNER JOIN Base.Client AS c ON c.ClientID = cp.ClientID
+        INNER JOIN Base.Product AS prod ON prod.ProductID = cp.ProductID
+        INNER JOIN Base.SyndicationPartner AS sp ON sp.SyndicationPartnerId = pc.SyndicationPartnerID
+        INNER JOIN Mid.ProviderSponsorship AS mps ON mps.ProviderCode = p2.ProviderCode
+        AND mps.ClientCode = c.ClientCode
+        AND mps.ProductCode = prod.ProductCode
+    WHERE
+        prod.ProductCode IN ('PDCWRITEMD', 'PDCWMDLITE')
+    ORDER BY
+        p2.ProviderCode,
+        c.ClientCode,
+        sp.SyndicationPartnerCode
+),
+CTE_CompositePhonesX AS (
+    SELECT
+        s.ProviderCode,
+        GET(XMLGET(TO_VARIANT(s.PHONEXML), 'phone'), '$') AS PhoneType,
+        GET(
+            XMLGET(TO_VARIANT(s.DESKTOPPHONEXML), 'phone'),
+            '$'
+        ) AS DesktopPhoneType,
+        GET(
+            XMLGET(TO_VARIANT(s.MOBILEPHONEXML), 'phone'),
+            '$'
+        ) AS MobilePhoneType,
+        GET(
+            XMLGET(TO_VARIANT(s.TABLETPHONEXML), 'phone'),
+            '$'
+        ) AS TabletPhoneType
+    FROM
+        CTE_ProviderFacilitySponsorship S
+),
+CTE_CompositePhones AS (
+    SELECT
+        ProviderCode
+    FROM
+        CTE_CompositePhonesX
+    WHERE
+        PhoneType IN (
+            SELECT
+                PhoneTypeCode
+            FROM
+                Base.PhoneType
+            WHERE
+                PhoneTypeDescription LIKE '%PSR%'
+                OR PhoneTypeDescription LIKE '%Market Targeted%'
+        )
+        OR DesktopPhoneType IN (
+            SELECT
+                PhoneTypeCode
+            FROM
+                Base.PhoneType
+            WHERE
+                PhoneTypeDescription LIKE '%PSR%'
+                OR PhoneTypeDescription LIKE '%Market Targeted%'
+        )
+        OR MobilePhoneType IN (
+            SELECT
+                PhoneTypeCode
+            FROM
+                Base.PhoneType
+            WHERE
+                PhoneTypeDescription LIKE '%PSR%'
+                OR PhoneTypeDescription LIKE '%Market Targeted%'
+        )
+        OR TabletPhoneType IN (
+            SELECT
+                PhoneTypeCode
+            FROM
+                Base.PhoneType
+            WHERE
+                PhoneTypeDescription LIKE '%PSR%'
+                OR PhoneTypeDescription LIKE '%Market Targeted%'
+        )
+),
+CTE_ProviderSponsorship_sq1 AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.compositePhone
+    FROM
+        CTE_ProviderPracticeOfficeSponsorship A
+    UNION ALL
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.compositePhone
+    FROM
+        CTE_ProviderPracticeOfficeSponsorshipMAP A
+    UNION ALL
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        a.compositePhone
+    FROM
+        CTE_ProviderFacilitySponsorship A
+),
+CTE_ProviderSponsorship_sq2 AS (
+    SELECT
+        x.ProviderCode,
+        x.ProductCode,
+        x.ProductDescription,
+        x.ProductGroupCode,
+        x.ProductGroupDescription,
+        x.ClientToProductID,
+        x.ClientCode,
+        x.ClientName,
+        x.HasOAR,
+        x.QualityMessageXML,
+        x.AppointmentOptionDescription,
+        x.CallToActionMsg,
+        x.SafeHarborMsg,
+        x.compositePhone,
+        CASE
+            WHEN HasOAR IS NOT NULL THEN 0
+            WHEN QualityMessageXML IS NOT NULL THEN 0
+            WHEN AppointmentOptionDescription IS NOT NULL THEN 0
+            WHEN CallToActionMsg IS NOT NULL THEN 0
+            WHEN SafeHarborMsg IS NOT NULL THEN 0
+            ELSE x.RN1
+        END as rn1
+        FROM(
+        SELECT
+            a.ProviderCode,
+            a.ProductCode,
+            a.ProductDescription,
+            a.ProductGroupCode,
+            a.ProductGroupDescription,
+            a.ClientToProductID,
+            a.ClientCode,
+            a.ClientName,
+            a.HasOAR,
+            a.QualityMessageXML,
+            a.AppointmentOptionDescription,
+            a.CallToActionMsg,
+            a.SafeHarborMsg,
+            a.compositePhone,
+            ROW_NUMBER() OVER(
+                PARTITION BY 
+                a.ProviderCode,
+                a.ProductCode,
+                a.ClientCode
+                ORDER BY
+                    a.compositePhone desc
+            ) RN1
+        FROM
+            CTE_ProviderSponsorship_sq1 a
+        ) x
+),
+CTE_ProviderSponsorship AS (
+    SELECT
+        a.ProviderCode,
+        a.ProductCode,
+        a.ProductDescription,
+        a.ProductGroupCode,
+        a.ProductGroupDescription,
+        a.ClientToProductID,
+        a.ClientCode,
+        a.ClientName,
+        a.HasOAR,
+        a.QualityMessageXML,
+        a.AppointmentOptionDescription,
+        a.CallToActionMsg,
+        a.SafeHarborMsg,
+        CASE
+            WHEN (
+                SELECT COUNT(*)
+                FROM CTE_CompositePhones cp
+                WHERE cp.ProviderCode = a.ProviderCode
+            ) > 1 THEN 1
+            ELSE 0
+        END AS compositePhone
+    FROM CTE_ProviderSponsorship_sq2 a
+    WHERE RN1 = 1
+),
+
+CTE_ClientFeatureCode AS (
+    SELECT 
+         ClientFeatureCode AS featCd,
+         d.ClientFeatureDescription AS featDesc,
+         e.ClientFeatureValueCode AS featValCd,
+         e.ClientFeatureValueDescription AS featValDesc,
+         a.EntityID, 
+         CP.ClientToProductCode
+    FROM Base.ClientEntityToClientFeature a
+    INNER JOIN Base.ClientToProduct CP on CP.ClientToProductID = a.EntityID
+    INNER JOIN Base.Product P ON P.ProductId = CP.ProductID
+    INNER JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+    INNER JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+    INNER JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+    INNER JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+    INNER JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
+    WHERE b.EntityTypeCode = 'CLPROD'
+        AND CASE WHEN ClientFeatureValueCode = 'FVNO' AND ClientFeatureCode IN ('FCOOMT','FCOOPSR', 'FCDOA') THEN 'REMOVE'                 ELSE 'KEEP' END = 'KEEP'
+                AND NOT(
+                    ClientFeatureCode = 'FCBFN'
+                    AND a.EntityID IN (
+                        SELECT ClientToProductID
+                        FROM Base.ClientToProduct lCP
+                        INNER JOIN Base.Client dC ON lCP.ClientID = dC.ClientID
+                        WHERE ClientCode IN      ('HCACKS','HCACVA','HCAEFD','HCAFRFT','HCAGC','HCAHL1','HCALEW','HCAMT','HCAMW','HCANFD','HCAPASO','HCARES','HCASAM','HCASATL','HCATRI','HCAWFD','HCAWNV','STDAVD')
+                    )
+                )
+),
+
+CTE_spnFeatXML AS (
+    SELECT
+        cte_cfc.EntityID,
+            listagg(
+                '<spnFeat>' ||
+                IFF(cte_cfc.featCd IS NOT NULL, '<featCd>' || cte_cfc.featCd || '</featCd>', '') ||
+                IFF(cte_cfc.featDesc IS NOT NULL, '<featDesc>' || cte_cfc.featDesc || '</featDesc>', '') ||
+                IFF(cte_cfc.featValCd IS NOT NULL, '<featValCd>' || cte_cfc.featValCd || '</featValCd>', '') ||
+                IFF(cte_cfc.featValDesc IS NOT NULL, '<featValDesc>' || cte_cfc.featValDesc || '</featValDesc>', '')
+                || '</spnFeat>'
+            ) AS XMLValue
+    FROM CTE_ClientFeatureCode cte_cfc
+    GROUP BY cte_cfc.EntityID
+),
+
+CTE_spnFeat AS (
+    SELECT 
+       P.ProviderCode,
+       MS.ClientCode AS spnCd,
+       MS.ClientName AS spnNm,
+       MS.CallToActionMsg AS caToActMsg,
+       MS.SafeHarborMsg AS safHarMsg,
+       MS.ProductDescription AS spnD,
+       CAST(NULL AS BOOLEAN) AS isOarX,
+       CTE_spnFeatXML.XMLValue AS XMLValue
+    FROM CTE_ProviderSponsorship MS
+    INNER JOIN Base.Provider P ON P.ProviderCode = MS.ProviderCode
+    INNER JOIN CTE_Temp_Provider A ON A.Providerid = P.ProviderID
+    INNER JOIN CTE_spnFeatXML ON MS.ClientToProductID = cte_spnfeatXML.EntityID
+    GROUP BY P.ProviderCode,ClientCode,ClientName,ClientToProductID,
+             CallToActionMsg,SafeHarborMsg,ProductDescription,XMLValue
+),
+
+CTE_clCtrFeatXML AS (
+    SELECT
+       a.EntityID,
+            listagg(
+                '<clCtrFeat>' ||
+                IFF(ClientFeatureCode IS NOT NULL, '<featCd>' || ClientFeatureCode || '</featCd>', '') ||
+                IFF(d.ClientFeatureDescription IS NOT NULL, '<featDesc>' || d.ClientFeatureDescription || '</featDesc>', '') ||
+                IFF(e.ClientFeatureValueCode IS NOT NULL, '<featValCd>' || e.ClientFeatureValueCode || '</featValCd>', '') ||
+                IFF(e.ClientFeatureValueDescription IS NOT NULL, '<featValDesc>' || e.ClientFeatureValueDescription || '</featValDesc>', '')
+                || '</clCtrFeat>') AS XMLValue
+    FROM Base.ClientEntityToClientFeature a
+    INNER JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
+    INNER JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
+    INNER JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
+    INNER JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
+    INNER JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
+    WHERE f.ClientFeatureGroupCode = 'FGOAR' AND b.EntityTypeCode = 'CLCTR'
+    GROUP BY EntityID, ClientFeatureCode, d.ClientFeatureDescription, 
+            e.ClientFeatureValueCode, e.ClientFeatureValueDescription
+),
+
+CTE_clCtrL AS (
+    SELECT		
+        CallCenterCode AS clCtrCd,
+        CallCenterName AS clCtrNm,
+        ReplyDays AS aptCoffDay,
+        ApptCutOffTime AS aptCoffHr,
+        EmailAddress AS eml,
+        FaxNumber AS fxNo,
+        CTE_clCtrFeatXML.XMLValue AS XMLValue,
+        ccd.ClientToProductID
+    FROM Base.vwuCallCenterDetails ccd
+    LEFT JOIN CTE_clCtrFeatXML ON ccd.CallCenterID = CTE_clCtrFeatXML.EntityID
+    GROUP BY CallCenterCode,CallCenterName,ReplyDays,ApptCutOffTime,
+             EmailAddress,FaxNumber,CallCenterID,ccd.ClientToProductID, XMLValue
+),
+
+CTE_OfficeXML AS (
+    SELECT
+        PPOx.ProviderCode,
+        PPOx.OfficeCode,
+            listagg(
+                '<off>' ||
+                IFF(OfficeCode IS NOT NULL, '<offCd>' || OfficeCode || '</offCd>', '') ||
+                IFF(OfficeNAme IS NOT NULL, '<offNm>' || OfficeNAme || '</offNm>', '') ||
+                IFF(PhoneXML IS NOT NULL, '<phoneL>' || PhoneXML || '</phoneL>', '') ||
+                IFF(MobilePhoneXML IS NOT NULL, '<mobilePhoneL>' || MobilePhoneXML || '</mobilePhoneL>', '') ||
+                IFF(URLXML IS NOT NULL, '<urlL>' || URLXML || '</urlL>', '') ||
+                IFF(ImageXML IS NOT NULL, '<imageL>' || ImageXML || '</imageL>', '') ||
+                IFF(TabletPhoneXML IS NOT NULL, '<tabletPhoneL>' || TabletPhoneXML || '</tabletPhoneL>', '') ||
+                IFF(DesktopPhoneXML IS NOT NULL, '<desktopPhoneL>' || DesktopPhoneXML || '</desktopPhoneL>', '')
+                || '</off>'
+        ) AS XMLValue
+    FROM CTE_ProviderPracticeOfficeSponsorship PPOx
+    GROUP BY PPOx.ProviderCode, PPOx.OfficeCode, OfficeCode, OfficeNAme,
+             PhoneXML, MobilePhoneXML, URLXML, ImageXML, TabletPhoneXML, DesktopPhoneXML
+),
+
+CTE_PracticePDCPRAC AS (
+    SELECT
+        PPO.PracticeCode AS pracCd,
+        PPO.PracticeName AS pracName,
+        CTE_OfficeXML.XMLValue AS offL,
+        PPO.ProviderCode
+    FROM CTE_ProviderPracticeOfficeSponsorship PPO
+    INNER JOIN CTE_OfficeXML ON PPO.ProviderCode = CTE_OfficeXML.ProviderCode AND PPO.OfficeCode = CTE_OfficeXML.OfficeCode
+    INNER JOIN Base.Provider P ON P.ProviderCode = PPO.ProviderCode
+    INNER JOIN CTE_Temp_Provider Pt ON Pt.ProviderID = P.ProviderID
+    WHERE PPO.ProviderCode = p.ProviderCode
+    GROUP BY PPO.PracticeCode, PPO.PracticeName, PPO.ProviderCode, PPO.OfficeCode, CTE_OfficeXML.XMLValue
+),
+
+CTE_OfficeXMLMAP AS (
+    SELECT
+        PPO.ProviderCode,
+        PPO.OfficeCode,
+            listagg(
+                '<off>' ||
+                IFF(PPO.OfficeCode IS NOT NULL, '<cd>' || PPO.OfficeCode || '</cd>', '') ||
+                IFF(PPO.OfficeName IS NOT NULL, '<nm>' || PPO.OfficeName || '</nm>', '') ||
+                IFF(PPO.PhoneXML IS NOT NULL, '<phoneL>' || PPO.PhoneXML || '</phoneL>', '') ||
+                IFF(PPO.MobilePhoneXML IS NOT NULL, '<mobilePhoneL>' || PPO.MobilePhoneXML || '</mobilePhoneL>', '') ||
+                IFF(PPO.URLXML IS NOT NULL, '<urlL>' || PPO.URLXML || '</urlL>', '') ||
+                IFF(PPO.TabletPhoneXML IS NOT NULL, '<tabletPhoneL>' || PPO.TabletPhoneXML || '</tabletPhoneL>', '') ||
+                IFF(PPO.DesktopPhoneXML IS NOT NULL, '<desktopPhoneL>' || PPO.DesktopPhoneXML || '</desktopPhoneL>', '')
+                || '</off>'
+        ) AS XMLValue
+    FROM CTE_ProviderPracticeOfficeSponsorshipMAP PPO
+    GROUP BY PPO.ProviderCode, PPO.OfficeCode, PPO.OfficeName, PPO.PhoneXML, 
+             PPO.MobilePhoneXML, PPO.URLXML, PPO.TabletPhoneXML, PPO.DesktopPhoneXML
+),
+
+CTE_MAPX AS (
+    SELECT DISTINCT
+        ProviderCode,
+        PracticeCode,
+        PracticeName,
+        OfficeCode,
+        OfficeName,
+        CAST(PhoneXML AS VARCHAR()) AS PhoneXML,
+        CAST(MobilePhoneXML AS VARCHAR()) AS MobilePhoneXML,
+        CAST(URLXML AS VARCHAR()) AS URLXML,
+        CAST(ImageXML AS VARCHAR()) AS ImageXML,
+        CAST(TabletPhoneXML AS VARCHAR()) AS TabletPhoneXML,
+        CAST(DesktopPhoneXML AS VARCHAR()) AS DesktopPhoneXML
+    FROM CTE_ProviderPracticeOfficeSponsorshipMAP
+),
+
+CTE_PracticeMAP AS (
+    SELECT
+        'Practice' AS Type,
+        X.PracticeCode AS cd,
+        X.PracticeName AS nm,
+        CAST(NULL AS OBJECT) AS st,
+        CAST(NULL AS OBJECT) AS phoneL,
+        CAST(NULL AS OBJECT) AS mobilePhoneL,
+        CAST(NULL AS OBJECT) AS urlL,
+        X.ImageXML AS imageL,
+        CAST(NULL AS OBJECT) AS quaMsgL,
+        CAST(NULL AS OBJECT) AS tabletPhoneL,
+        CAST(NULL AS OBJECT) AS desktopPhoneL,
+        X.ProviderCode,
+        CTE_OfficeXMLMAP.XMLValue AS offL
+    FROM CTE_MAPX AS X
+    INNER JOIN CTE_OfficeXMLMAP ON X.ProviderCode = CTE_OfficeXMLMAP.ProviderCode AND X.OfficeCode = CTE_OfficeXMLMAP.OfficeCode
+    INNER JOIN Base.Provider P ON P.ProviderCode = X.ProviderCode
+    INNER JOIN CTE_Temp_Provider Pt ON Pt.ProviderID = P.ProviderID
+),
+
+CTE_FacilityMAP AS (
+    SELECT
+      'facility' AS Type,
+      X.FacilityCode AS cd,
+      X.FacilityName AS nm,
+      X.FacilityState AS st,
+      X.PhoneXML AS phoneL,
+      X.MobilePhoneXML AS mobilePhoneL,
+      X.URLXML AS urlL,
+      X.ImageXML AS imageL,
+      X.QualityMessageXML AS quaMsgL,
+      X.TabletPhoneXML AS tabletPhoneL,
+      X.DesktopPhoneXML AS desktopPhoneL,
+      CAST(NULL AS OBJECT ) AS offL,
+      P.ProviderCode
+    FROM
+      (
+        SELECT
+          ProviderCode,
+          FacilityCode,
+          FacilityName,
+          FacilityState,
+          PhoneXML,
+          MobilePhoneXML,
+          URLXML,
+          ImageXML,
+          QualityMessageXML,
+          TabletPhoneXML,
+          DesktopPhoneXML
+        FROM
+          (
+            SELECT
+              ProviderCode,
+              FacilityCode,
+              FacilityName,
+              FacilityState,
+              PhoneXML,
+              MobilePhoneXML,
+              URLXML,
+              ImageXML,
+              QualityMessageXML,
+              TabletPhoneXML,
+              DesktopPhoneXML,
+              ROW_NUMBER() OVER (
+                PARTITION BY ProviderCode,
+                FacilityCode
+                ORDER BY
+                  FacilityName
+              ) AS RN1
+            FROM
+              CTE_ProviderFacilitySponsorship
+          ) X
+        WHERE
+          RN1 = 1
+      ) X
+      INNER JOIN Base.Provider P ON P.ProviderCode = X.ProviderCode
+      INNER JOIN CTE_Temp_Provider Pt ON Pt.ProviderID = P.ProviderID
+    WHERE
+      X.FacilityCode IS NOT NULL
+),
+
+CTE_ClientLevelBranded AS (
+    SELECT DISTINCT 
+        t2.EntityID AS ClientToProductID, 
+        t2.ClientToProductCode, 
+        t2.featValDesc AS PhoneLevel
+    FROM CTE_ClientFeatureCode AS t1
+    INNER JOIN CTE_ClientFeatureCode AS t2 ON t2.EntityID = t1.EntityID
+    WHERE t1.featDesc = 'Branding Level' AND t1.featValCd = 'FVCLT' AND t2.featCd = 'FCCCP' 
+    ORDER BY t2.ClientToProductCode
+), 
+
+CTE_ProviderFacilitySponsorship_ClientLevelBranded AS (
+    SELECT
+        p.ProviderCode,
+        p.ClientCode,
+        p.ClientName,
+        NULL AS FacilityState,
+        p.PhoneXML,
+        p.MobilePhoneXML,
+        NULL AS URLXML,
+        p.ImageXML,
+        NULL AS QualityMessageXML,
+        p.TabletPhoneXML,
+        p.DesktopPhoneXML,
+        c.PhoneLevel,
+        ROW_NUMBER() OVER (PARTITION BY p.ProviderCode ORDER BY p.ClientCode) AS RN1
+    FROM
+        CTE_ProviderFacilitySponsorship p
+        INNER JOIN CTE_ClientLevelBranded c ON c.ClientToProductID = p.ClientToProductID
+),
+
+CTE_ProviderSponsorship_ClientLevelBranded AS (
+    SELECT
+        m.ProviderCode,
+        m.ClientCode,
+        m.ClientName,
+        NULL AS FacilityState,
+        CAST(NULL AS VARCHAR()) AS PhoneXML,
+        CAST(NULL AS VARCHAR()) AS MobilePhoneXML,
+        NULL AS URLXML,
+        CAST(NULL AS VARCHAR()) AS ImageXML,
+        NULL AS QualityMessageXML,
+        CAST(NULL AS VARCHAR()) AS TabletPhoneXML,
+        CAST(NULL AS VARCHAR()) AS DesktopPhoneXML,
+        c.PhoneLevel,
+        ROW_NUMBER() OVER (PARTITION BY m.ProviderCode ORDER BY m.ClientCode) AS RN2
+    FROM
+        Mid.ProviderSponsorship m
+        INNER JOIN CTE_ClientLevelBranded c ON c.ClientToProductID = m.ClientToProductID
+    WHERE
+        NOT EXISTS (SELECT 1 FROM CTE_ProviderFacilitySponsorship t WHERE t.ClientToProductID = c.ClientToProductID
+                    AND t.ProviderCode = m.ProviderCode) AND m.ProductGroupCode != 'LID' AND m.FacilityCode IS NULL
+),
+
+CTE_ClientType AS (
+    SELECT
+        'client' AS Type,
+        X.ClientCode AS cd,
+        X.ClientName AS nm,
+        CAST(NULL AS VARCHAR()) AS st,
+        CASE WHEN X.PhoneLevel = 'Client' THEN X.PhoneXML ELSE NULL END AS phoneL,
+        CASE WHEN X.PhoneLevel = 'Client' THEN X.MobilePhoneXML ELSE NULL END AS mobilePhoneL,
+        CAST(NULL AS VARCHAR()) AS urlL,
+        X.ImageXML AS imageL,
+        CAST(NULL AS VARCHAR()) AS quaMsgL,
+        CASE WHEN X.PhoneLevel = 'Client' THEN X.TabletPhoneXML ELSE NULL END AS tabletPhoneL,
+        CASE WHEN X.PhoneLevel = 'Client' THEN X.DesktopPhoneXML ELSE NULL END AS desktopPhoneL,
+        CAST(NULL AS VARCHAR()) AS offL,
+        P.ProviderCode,
+        X.ClientCode
+    FROM
+        (
+            SELECT
+                a.ProviderCode,
+                a.ClientCode,
+                a.ClientName,
+                a.FacilityState,
+                a.PhoneXML,
+                a.MobilePhoneXML,
+                a.URLXML,
+                a.ImageXML,
+                a.QualityMessageXML,
+                a.TabletPhoneXML,
+                a.DesktopPhoneXML,
+                a.RN1,
+                a.PhoneLevel
+            FROM
+                (
+                    SELECT 
+                    PROVIDERCODE,
+                    CLIENTCODE,
+                    CLIENTNAME,
+                    FACILITYSTATE,
+                    to_varchar(PHONEXML) as PHONEXML,
+                    to_varchar(MOBILEPHONEXML) as MOBILEPHONEXML,
+                    to_varchar(URLXML) as URLXML,
+                    to_varchar(IMAGEXML) as IMAGEXML,
+                    to_varchar(QUALITYMESSAGEXML) as QUALITYMESSAGEXML,
+                    to_varchar(TABLETPHONEXML) as TABLETPHONEXML,
+                    to_varchar(DESKTOPPHONEXML) as DESKTOPPHONEXML,
+                    PHONELEVEL,
+                    RN1 
+                    FROM CTE_ProviderFacilitySponsorship_ClientLevelBranded WHERE RN1 = 1
+                    UNION ALL
+                    SELECT PROVIDERCODE,
+                    CLIENTCODE,
+                    CLIENTNAME,
+                    FACILITYSTATE,
+                    to_varchar(PHONEXML) as PHONEXML,
+                    to_varchar(MOBILEPHONEXML) as MOBILEPHONEXML,
+                    to_varchar(URLXML) as URLXML,
+                    to_varchar(IMAGEXML) as IMAGEXML,
+                    to_varchar(QUALITYMESSAGEXML) as QUALITYMESSAGEXML,
+                    to_varchar(TABLETPHONEXML) as TABLETPHONEXML,
+                    to_varchar(DESKTOPPHONEXML) as DESKTOPPHONEXML,
+                    PHONELEVEL,
+                    RN2  FROM CTE_ProviderSponsorship_ClientLevelBranded WHERE RN2 = 1
+                ) a
+        ) X
+        INNER JOIN Base.Provider P ON P.ProviderCode = X.ProviderCode
+        INNER JOIN CTE_Temp_Provider Pt ON Pt.ProviderID = P.ProviderID
+),
+
+CTE_ProviderFacilitySponsorshipFinal AS (
+    SELECT	
+        v.ProviderCode,
+        NULL AS Type,
+        NULL AS nm,
+        v.FacilityCode AS facCd,
+        v.FacilityName AS facNm,
+        v.FacilityState AS facSt,
+        to_varchar(v.PhoneXML) AS phoneL,
+        to_varchar(v.MobilePhoneXML) AS mobilePhoneL,
+        to_varchar(v.URLXML) AS urlL,
+        to_varchar(v.ImageXML) AS imageL,
+        to_varchar(v.QualityMessageXML) AS quaMsgL,
+        to_varchar(v.TabletPhoneXML) AS tabletPhoneL,
+        to_varchar(v.DesktopPhoneXML) AS desktopPhoneL
+    FROM CTE_ProviderFacilitySponsorship v
+    INNER JOIN CTE_ProviderSponsorship a ON v.ProviderCode = a.ProviderCode AND v.ClientCode = a.ClientCode
+    UNION ALL
+    SELECT	
+        v.ProviderCode,
+        v.Type AS Type,
+        v.nm AS nm, 
+        NULL AS facCd, 
+        NULL AS facNm, 
+        NULL AS facSt, 
+        to_varchar(v.phoneL) AS phoneL, 
+        to_varchar(v.mobilePhoneL) AS mobilePhoneL,
+        to_varchar(v.urlL) AS urlL,
+        to_varchar(v.imageL) AS imageL, 
+        to_varchar(v.quaMsgL) AS quaMsgL, 
+        to_varchar(v.tabletPhoneL) AS tabletPhoneL, 
+        to_varchar(v.desktopPhoneL) AS desktopPhoneL
+    FROM CTE_ClientType v
+    INNER JOIN CTE_ProviderSponsorship a ON v.ProviderCode = a.ProviderCode AND v.cd = a.ClientCode
+),
+
+CTE_PracticeMapFacilityMapClientType AS (
+    SELECT
+        ProviderCode,
+        Type,
+        cd,
+        nm,
+        CAST(st AS VARCHAR()) AS st,
+        CAST(phoneL AS VARCHAR()) AS phoneL,
+        CAST(mobilePhoneL AS VARCHAR()) AS mobilePhoneL,
+        CAST(urlL AS VARCHAR()) AS urlL,
+        CAST(imageL AS VARCHAR()) AS imageL,
+        CAST(quaMsgL AS VARCHAR()) AS quaMsgL,
+        CAST(tabletPhoneL AS VARCHAR()) AS tabletPhoneL,
+        CAST(desktopPhoneL AS VARCHAR()) AS desktopPhoneL,
+        CAST(offL AS VARCHAR()) AS offL
+    FROM CTE_PracticeMAP
+    UNION ALL
+    SELECT
+        ProviderCode,
+        Type,
+        cd,
+        nm,
+        CAST(st AS VARCHAR()) AS st,
+        CAST(phoneL AS VARCHAR()) AS phoneL,
+        CAST(mobilePhoneL AS VARCHAR()) AS mobilePhoneL,
+        CAST(urlL AS VARCHAR()) AS urlL,
+        CAST(imageL AS VARCHAR()) AS imageL,
+        CAST(quaMsgL AS VARCHAR()) AS quaMsgL,
+        CAST(tabletPhoneL AS VARCHAR()) AS tabletPhoneL,
+        CAST(desktopPhoneL AS VARCHAR()) AS desktopPhoneL,
+        CAST(offL AS VARCHAR()) AS offL
+    FROM CTE_FacilityMAP
+    UNION ALL
+    SELECT
+        ProviderCode,
+        Type,
+        NULL AS cd,
+        nm,
+        CAST(st AS VARCHAR()) AS st,
+        CAST(phoneL AS VARCHAR()) AS phoneL,
+        CAST(mobilePhoneL AS VARCHAR()) AS mobilePhoneL,
+        CAST(urlL AS VARCHAR()) AS urlL,
+        CAST(imageL AS VARCHAR()) AS imageL,
+        CAST(quaMsgL AS VARCHAR()) AS quaMsgL,
+        CAST(tabletPhoneL AS VARCHAR()) AS tabletPhoneL,
+        CAST(desktopPhoneL AS VARCHAR()) AS desktopPhoneL,
+        CAST(offL AS VARCHAR()) AS offL
+    FROM CTE_ClientType
+),
+
+CTE_spnFeatXML AS (
+    SELECT
+        s.ProviderID,
+        XMLValue AS spnFeatL,
+            listagg(
+                '<spn>' ||
+                IFF(spnCd IS NOT NULL, '<spnCd>' || spnCd || '</spnCd>', '') ||
+                IFF(spnNm IS NOT NULL, '<spnNm>' || spnNm || '</spnNm>', '') ||
+                IFF(caToActMsg IS NOT NULL, '<caToActMsg>' || caToActMsg || '</caToActMsg>', '') ||
+                IFF(safHarMsg IS NOT NULL, '<safHarMsg>' || safHarMsg || '</safHarMsg>', '') ||
+                IFF(spnD IS NOT NULL, '<spnD>' || spnD || '</spnD>', '') ||
+                IFF(isOarX IS NOT NULL, '<isOarX>' || isOarX || '</isOarX>', '') ||
+                IFF(spnFeatL IS NOT NULL, '<spnFeatL>' || spnFeatL || '</spnFeatL>', '')
+                || '</spn>'
+        ) AS XMLValue
+    FROM CTE_spnFeat
+    INNER JOIN Show.SOLRProvider s ON s.ProviderCode = cte_spnFeat.ProviderCode
+    GROUP BY s.ProviderID, spnFeatL
+),
+
+CTE_PCDPXML AS (
+    SELECT
+        s.ProviderID,
+        '<dpcL>' ||
+            listagg(
+                IFF(DisplayPartnerCode IS NOT NULL, '<dpcd>' || DisplayPartnerCode || '</dpcd>', '')
+        ) || '</dpcL>' AS XMLValue
+    FROM CTE_ProviderClientDisplayPartner cte_pcdp
+    INNER JOIN Show.SOLRProvider s ON s.ProviderCode = cte_pcdp.ProviderCode
+    GROUP BY s.ProviderID
+),
+
+CTE_clCtrLXML AS (
+    SELECT
+        s.ProviderID,
+        XMLValue AS clCtrFeatL,
+            listagg(
+                '<clCtrL>' ||
+                IFF(clCtrCd IS NOT NULL, '<clCtrCd>' ||  clCtrCd || '</clCtrCd>', '') ||
+                IFF(clCtrNm IS NOT NULL, '<clCtrNm>' || clCtrNm || '</clCtrNm>', '') ||
+                IFF(aptCoffDay IS NOT NULL, '<aptCoffDay>' || aptCoffDay || '</aptCoffDay>', '') ||
+                IFF(aptCoffHr IS NOT NULL, '<aptCoffHr>' || aptCoffHr || '</aptCoffHr>', '') ||
+                IFF(eml IS NOT NULL, '<eml>' || eml || '</eml>', '') ||
+                IFF(fxNo IS NOT NULL, '<fxNo>' || fxNo || '</fxNo>', '') ||
+                IFF(clCtrFeatL IS NOT NULL, '<clCtrFeatL>' || clCtrFeatL || '</clCtrFeatL>', '')
+                || '</clCtrL>'
+
+        ) AS XMLValue
+    FROM CTE_clCtrL
+    LEFT JOIN CTE_ProviderSponsorship ps ON ps.ClientToProductID = CTE_clCtrL.ClientToProductID
+    INNER JOIN Show.SOLRProvider s ON ps.ProviderCode = s.ProviderCode
+    GROUP BY s.ProviderID, clCtrFeatL
+),
+
+CTE_PracticePDCPRACXML AS (
+    SELECT
+        s.ProviderID,
+        '<dispL>' ||
+            listagg(
+                '<disp>' ||
+                IFF(pracCd IS NOT NULL, '<pracCd>' || pracCd || '</pracCd>', '') ||
+                IFF(pracName IS NOT NULL, '<pracName>' || pracName || '</pracName>', '') ||
+                IFF(offL IS NOT NULL, '<offL>' || offL || '</offL>', '')
+                || '</disp>') || 
+        '</dispL>' AS XMLValue
+    FROM CTE_PracticePDCPRAC cte_pdcprac
+    INNER JOIN Show.SOLRProvider s ON s.ProviderCode = cte_pdcprac.ProviderCode
+    GROUP BY ProviderID
+),
+
+CTE_PracticeMAPXML AS (
+    SELECT
+        s.ProviderID,
+        '<dispL>' ||
+            listagg(
+                '<disp>' ||
+                IFF(Type IS NOT NULL, '<Type>' || Type || '</Type>', '') ||
+                IFF(cd IS NOT NULL, '<cd>' || cd || '</cd>', '') ||
+                IFF(nm IS NOT NULL, '<nm>' || nm || '</nm>', '') ||
+                IFF(st IS NOT NULL, '<st>' || st || '</st>', '') ||
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||
+                IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
+                IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
+                IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
+                IFF(quaMsgL IS NOT NULL, '<quaMsgL>' || quaMsgL || '</quaMsgL>', '') ||
+                IFF(tabletPhoneL IS NOT NULL, '<tabletPhoneL>' || tabletPhoneL || '</tabletPhoneL>', '') ||
+                IFF(desktopPhoneL IS NOT NULL, '<desktopPhoneL>' || desktopPhoneL || '</desktopPhoneL>', '') ||
+                IFF(offL IS NOT NULL, '<offL>' || offL || '</offL>', '')
+                || '</disp>'
+            ) || '</dispL>'
+         AS XMLValue
+    FROM CTE_PracticeMapFacilityMapClientType cte_pmfmct
+    INNER JOIN Show.SOLRProvider s ON s.ProviderCode = cte_pmfmct.ProviderCode
+    GROUP BY s.ProviderID
+),
+
+CTE_ProviderFacilitySponsorshipXML AS (
+    SELECT
+        s.ProviderID,
+        '<dispL>' ||
+            listagg(
+                '<disp>' ||
+                IFF(Type IS NOT NULL, '<Type>' || Type || '</Type>', '') ||
+                IFF(nm IS NOT NULL, '<nm>' || nm || '</nm>', '') ||
+                IFF(facCd IS NOT NULL, '<facCd>' || facCd || '</facCd>', '') ||
+                IFF(facNm IS NOT NULL, '<facNm>' || facNm || '</facNm>', '') ||
+                IFF(facSt IS NOT NULL, '<facSt>' || facSt || '</facSt>', '') ||
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||
+                IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
+                IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
+                IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
+                IFF(quaMsgL IS NOT NULL, '<quaMsgL>' || quaMsgL || '</quaMsgL>', '') ||
+                IFF(tabletPhoneL IS NOT NULL, '<tabletPhoneL>' || tabletPhoneL || '</tabletPhoneL>', '') ||
+                IFF(desktopPhoneL IS NOT NULL, '<desktopPhoneL>' || desktopPhoneL || '</desktopPhoneL>', '')
+                || '</disp>'
+            ) || '</dispL>'AS XMLValue
+    FROM CTE_ProviderFacilitySponsorshipFinal cte_pfs
+    INNER JOIN Show.SOLRProvider s ON s.ProviderCode = cte_pfs.ProviderCode
+    GROUP BY s.ProviderID
+),
+
+CTE_SponsorshipXML AS (
+    SELECT
+        s.ProviderID,
+        a.providercode,
+        '<sponsorL>' || '<sponsor>' ||
+            listagg(
+                IFF(a.ProductCode IS NOT NULL, '<prCd>' || a.ProductCode || '</prCd>', '') ||
+                IFF(a.ProductGroupCode IS NOT NULL, '<prGrCd>' || a.ProductGroupCode || '</prGrCd>', '') ||
+                IFF(a.compositePhone IS NOT NULL, '<compositePhone>' || a.compositePhone || '</compositePhone>', '')
+            ) ||
+        ifnull(spn.XMLValue,'') ||
+        ifnull(pcdp.XMLValue,'') ||
+        ifnull(clCtrL.XMLValue,'') ||
+        CASE
+            WHEN a.ProductCode IN (SELECT ProductCode FROM Base.Product WHERE ProductTypeCode = 'PRACTICE') THEN pdcprac.XMLValue
+            WHEN a.ProductCode IN (SELECT ProductCode FROM Base.Product WHERE ProductTypeCode = 'MAP') THEN map.XMLValue
+            ELSE pfs.XMLValue
+        END ||
+        '</sponsor>' || '</sponsorL>' AS XMLValue,
+        a.AppointmentOptionDescription AS aptOptDesc
+    FROM
+        CTE_ProviderSponsorship a
+        INNER JOIN mid.provider s ON a.ProviderCode = s.ProviderCode
+        LEFT JOIN CTE_spnFeatXML spn ON s.ProviderID = spn.EntityID 
+        LEFT JOIN CTE_PCDPXML pcdp ON s.ProviderID = pcdp.ProviderID 
+        LEFT JOIN CTE_clCtrLXML clCtrL ON s.ProviderID = clCtrL.ProviderID
+        LEFT JOIN CTE_PracticePDCPRACXML pdcprac ON s.ProviderID = pdcprac.ProviderID
+        LEFT JOIN CTE_PracticeMAPXML map ON s.ProviderID = map.ProviderID
+        LEFT JOIN CTE_ProviderFacilitySponsorshipXML pfs ON s.ProviderID = pfs.ProviderID
+        GROUP BY s.ProviderID, pcdp.XMLValue, clCtrL.XMLValue, pdcprac.XMLValue, spn.XMLValue,
+                 map.XMLValue, pfs.XMLValue, a.ProductCode, a.ProductGroupCode, 
+                 a.compositePhone, a.ProviderCode, a.AppointmentOptionDescription, 
+                 a.ClientToProductID, a.ClientCode
+),
+------------------------------------------------SponsorshipXML------------------------------------------------
+
+------------------------------------------------SearchSponsorshipXML------------------------------------------------
+Cte_Search_Spn_feat AS (
+    SELECT DISTINCT
+        ClientFeatureCode AS featCd,
+        cf.ClientFeatureDescription AS featDesc,
+        cfv.ClientFeatureValueCode AS featValCd,
+        cfv.ClientFeatureValueDescription AS featValDesc,
+        ce.EntityID,
+        ctp.ClientToProductCode
+    FROM Base.ClientEntityToClientFeature ce
+    INNER JOIN Base.ClientToProduct ctp ON ctp.ClientToProductID = ce.EntityID
+    INNER JOIN Base.Product p ON p.ProductId = ctp.ProductID
+    INNER JOIN Base.EntityType et ON ce.EntityTypeID = et.EntityTypeID
+    INNER JOIN Base.ClientFeatureToClientFeatureValue cfcfv ON ce.ClientFeatureToClientFeatureValueID = cfcfv.ClientFeatureToClientFeatureValueID
+    INNER JOIN Base.ClientFeature cf ON cfcfv.ClientFeatureID = cf.ClientFeatureID
+    INNER JOIN Base.ClientFeatureValue cfv ON cfv.ClientFeatureValueID = cfcfv.ClientFeatureValueID
+    INNER JOIN Base.ClientFeatureGroup cfg ON cf.ClientFeatureGroupID = cfg.ClientFeatureGroupID
+    WHERE et.EntityTypeCode = 'CLPROD'
+    AND ClientFeatureCode IN ('FCRAB', 'FCBRL')
+    AND cfv.ClientFeatureValueCode IN ('FVPSR', 'FVCLT')
+    AND CASE WHEN cfv.ClientFeatureValueCode = 'FVNO' AND ClientFeatureCode IN ('FCOOMT', 'FCOOPSR', 'FCDOA') THEN 'REMOVE' ELSE 'KEEP' END = 'KEEP'
+)
+-- select * from Cte_Search_Spn_feat;
+,
+
+Cte_spn_feat AS (
+ SELECT
+        DISTINCT 
+        entityid as clienttoproductid,
+        featCd,
+        featDesc,
+        featValCd,
+        featValDesc
+    FROM
+        cte_Search_spn_Feat
+)
+-- select * from cte_spn_feat;
+,
+
+Cte_spn_feat_xml as (
+ SELECT
+        clienttoproductid,
+            listagg(
+                '<spnFeat>' ||
+                IFF(featCd IS NOT NULL, '<featCd>' || featCd || '</featCd>', '') ||
+                IFF(featDesc IS NOT NULL, '<featDesc>' || featDesc || '</featDesc>', '') ||
+                IFF(featValCd IS NOT NULL, '<featValCd>' || featValCd || '</featValCd>', '') ||
+                IFF(featValDesc IS NOT NULL, '<featValDesc>' || featValDesc || '</featValDesc>', '')
+                || '</spnFeat>'
+        ) AS XMLValue
+    FROM
+        cte_spn_feat
+    GROUP BY
+        clienttoproductid
+)
+-- select * from Cte_spn_feat_xml;
+,
+
+Cte_search_spn as (
+    SELECT DISTINCT	
+        P.ProviderCode,
+        MS.ClientCode,
+        MS.ClientCode AS spnCd,
+        MS.ClientName AS spnNm,
+        MS.SafeHarborMsg AS safHarMsg,
+        spn.xmlvalue AS spnFeatL
+    FROM		Mid.ProviderSponsorship MS
+    INNER JOIN	Base.Provider P ON P.ProviderCode = MS.ProviderCode
+    INNER JOIN	Show.SolrProvider A ON A.Providerid = P.ProviderID
+    INNER JOIN  Cte_spn_feat_xml spn ON spn.clienttoproductid = Ms.Clienttoproductid
+    WHERE		MS.ProductGroupCode <> 'LID'
+)
+-- select * from Cte_search_spn;
+,
+
+cte_office_pdc_prac as (
+    SELECT DISTINCT
+        ProviderCode,
+        OfficeCode,
+        OfficeCode AS offCd,
+        OfficeName AS offNm,
+        PhoneXML AS phoneL,
+        MobilePhoneXML AS mobilePhoneL,
+        URLXML AS urlL,
+        ImageXML AS imageL,
+        TabletPhoneXML AS tabletPhoneL,
+        DesktopPhoneXML AS desktopPhoneL
+    FROM
+        Cte_ProviderPracticeOfficeSponsorship 
+)
+-- select * from cte_office_pdc_prac;
+,
+
+cte_office_pdc_prac_xml as (
+    SELECT
+        ProviderCode,
+        OfficeCode,
+            listagg(
+                '<off>' ||
+                IFF(offCd IS NOT NULL, '<offCd>' || offCd || '</offCd>', '') ||
+                IFF(offNm IS NOT NULL, '<offNm>' || offNm || '</offNm>', '') ||
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  -- Assuming phoneL and others are already well-formatted JSON
+                IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
+                IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
+                IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
+                IFF(tabletPhoneL IS NOT NULL, '<tabletPhoneL>' || tabletPhoneL || '</tabletPhoneL>', '') ||
+                IFF(desktopPhoneL IS NOT NULL, '<desktopPhoneL>' || desktopPhoneL || '</desktopPhoneL>', '')
+                || ' </off>'
+        ) AS XMLValue
+    FROM
+        cte_office_pdc_prac
+    GROUP BY
+        ProviderCode,
+        OfficeCode
+)
+-- select * from cte_office_pdc_prac_xml;
+,
+
+Cte_search_practice_pdc_prac as (
+        SELECT DISTINCT		
+            PPO.PracticeCode AS pracCd,
+            PPO.PracticeName AS pracName,
+            off.xmlvalue AS offl,
+            PPO.ProviderCode
+		FROM Cte_ProviderPracticeOfficeSponsorship PPO
+		INNER JOIN	Base.Provider P ON P.ProviderCode = PPO.ProviderCode
+		INNER JOIN	Show.SolrProvider Pt ON Pt.ProviderID = P.ProviderID
+        INNER JOIN cte_office_pdc_prac_xml off ON off.providercode = ppo.providercode and off.officecode = ppo.officecode
+)
+-- select * from Cte_search_practice_pdc_prac;
+,
+
+cte_providerclientdisplaypartner2 as (
+    SELECT
+        dis.providercode,
+        dis.clientcode,
+        case when dis.displaypartnercode is null then 'HG' else dis.displaypartnercode end as displaypartnercode
+    FROM cte_providerclientdisplaypartner as dis
+    JOIN cte_providersponsorship as spo on dis.providercode = spo.providercode
+    WHERE spo.productcode in ('MAP', 'PDCHSP')
+)
+-- select * from cte_providerclientdisplaypartner2;
+,
+
+-- Define the CTE for Search Spn data
+cte_spn_search as (
+    SELECT DISTINCT
+        providercode,
+        clientcode,
+        spnCd,
+        spnNm,
+        safHarMsg,
+        spnFeatL
+    FROM
+        Cte_search_spn 
+)
+-- select * from cte_spn_search;
+,
+
+cte_spn_search_xml as (
+    SELECT
+        providercode,
+        clientcode,
+            listagg(
+                '<spn>' ||
+                IFF(spnCd IS NOT NULL, '<spnCd>' || spnCd || '</spnCd>', '') ||
+                IFF(spnNm IS NOT NULL, '<spnNm>' || spnNm || '</spnNm>', '') ||
+                IFF(safHarMsg IS NOT NULL, '<safHarMsg>' || safHarMsg || '</safHarMsg>', '') ||
+                IFF(spnFeatL IS NOT NULL, '<spnFeatL>' || spnFeatL || '</spnFeatL>', '')
+                || '</spn>'
+        ) AS XMLValue
+    FROM
+        cte_spn_search
+    GROUP BY
+        providercode,
+        clientcode
+)
+-- select * from cte_spn_search_xml;
+,
+
+cte_dpc_search as (
+    SELECT DISTINCT
+        ProviderCode,
+        ClientCode,
+        DisplayPartnerCode as dpcd
+    FROM
+        cte_providerclientdisplaypartner2 
+)
+-- select * from cte_dpc_search;
+,
+
+cte_dpc_search_xml as (
+    SELECT
+        ProviderCode,
+        ClientCode,
+            '<dpcL>' || listagg(
+                IFF(dpcd IS NOT NULL, '<dpcd>' || dpcd || '</dpcd>', '')
+            ) ||
+            '</dpcL>'
+         AS XMLValue
+    FROM
+        cte_dpc_search
+    GROUP BY
+        ProviderCode,
+        ClientCode
+)
+-- select * from cte_dpc_search_xml;
+,
+
+cte_disp1_search as (
+    SELECT
+        ProviderCode,  
+        pracCd,
+        pracName,
+        offL
+    FROM
+        Cte_search_practice_pdc_prac  
+),
+
+cte_disp1_search_xml as (
+    SELECT
+        ProviderCode,
+        '<dispL>' ||
+            listagg(
+                '<disp>' ||
+                IFF(pracCd IS NOT NULL, '<pracCd>' || pracCd || '</pracCd>', '') ||
+                IFF(pracName IS NOT NULL, '<pracName>' || pracName || '</pracName>', '') ||
+                IFF(offL IS NOT NULL, '<offL>' || offL || '</offL>', '')
+                || '<disp>'
+            ) || '</dispL>' AS XMLValue
+    FROM
+        cte_disp1_search
+    GROUP BY
+        ProviderCode
+)
+-- select * from cte_disp1_search_xml;
+,
+
+cte_disp2_search as (
+    SELECT 
+        ProviderCode,
+        Type,
+        cd,
+        nm,
+        to_varchar(st) as st,
+        to_varchar(phoneL) as phonel,
+        to_varchar(mobilePhoneL) as mobilephonel,
+        to_varchar(urlL) as urll,
+        NULL as imageL,
+        to_varchar(quaMsgL) as quamsgl,
+        to_varchar(tabletPhoneL) as tabletphonel,
+        to_varchar(desktopPhoneL) as desktopphonel,
+        to_varchar(offL) as offL
+    FROM cte_practicemap 
+    UNION ALL
+    SELECT 
+        ProviderCode,
+        Type,
+        cd,
+        nm,
+        to_varchar(st),
+        to_varchar(phoneL),
+        to_varchar(mobilePhoneL),
+        to_varchar(urlL),
+        to_varchar(imageL),
+        to_varchar(quaMsgL),
+        to_varchar(tabletPhoneL),
+        to_varchar(desktopPhoneL),
+        to_varchar(offL)
+    FROM cte_facilitymap 
+    UNION ALL
+    SELECT 
+        ProviderCode,
+        Type,
+        cd,
+        nm,
+        to_varchar(st),
+        to_varchar(phoneL),
+        to_varchar(mobilePhoneL),
+        to_varchar(urlL),
+        to_varchar(imageL),
+        to_varchar(quaMsgL),
+        to_varchar(tabletPhoneL),
+        to_varchar(desktopPhoneL),
+        to_varchar(offL)
+    FROM cte_clienttype 
+)
+-- select * from cte_disp2_search;
+,
+
+cte_disp2_search_xml as (
+    SELECT
+        ProviderCode,
+                '<dispL>'||            
+                listagg(
+                '<disp>' ||
+                IFF(Type IS NOT NULL, '<Type>' || Type || '</Type>', '') ||
+                IFF(cd IS NOT NULL, '<cd>' || cd || '</cd>', '') ||
+                IFF(nm IS NOT NULL, '<nm>' || nm || '</nm>', '') ||
+                IFF(st IS NOT NULL, '<st>' || st || '</st>', '') ||
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||
+                IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
+                IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
+                IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
+                IFF(quaMsgL IS NOT NULL, '<quaMsgL>' || quaMsgL || '</quaMsgL>', '') ||
+                IFF(tabletPhoneL IS NOT NULL, '<tabletPhoneL>' || tabletPhoneL || '</tabletPhoneL>', '') ||
+                IFF(desktopPhoneL IS NOT NULL, '<desktopPhoneL>' || desktopPhoneL || '</desktopPhoneL>', '') ||
+                IFF(offL IS NOT NULL, '<offL>' || offL || '</offL>', '')
+                || '</disp>'
+            ) || '</dispL>' AS XMLValue
+    FROM
+        cte_disp2_search
+    GROUP BY
+        ProviderCode
+)
+-- select * from cte_disp2_search_xml;
+,
+
+cte_disp3_search as (
+    SELECT
+        providercode,
+        clientcode,
+        null AS Type,
+        null AS nm,
+        FacilityCode AS facCd,
+        FacilityName AS facNm,
+        FacilityState AS facSt,
+        to_varchar(PhoneXML) AS phoneL,
+        to_varchar(MobilePhoneXML) AS mobilePhoneL,
+        to_varchar(URLXML) AS urlL,
+        to_varchar(ImageXML) AS imageL,
+        to_varchar(QualityMessageXML) AS quaMsgL,
+        to_varchar(TabletPhoneXML) AS tabletPhoneL,
+        to_varchar(DesktopPhoneXML) AS desktopPhoneL
+    FROM
+        CTE_ProviderFacilitySponsorship 
+    WHERE
+        ProductGroupCode <> 'LID'
+    UNION
+    SELECT
+        ProviderCode,
+        ClientCode,
+        Type,
+        nm,
+        null AS facCd,
+        null AS facNm,
+        null AS facSt,
+        to_varchar(phoneL),
+        to_varchar(mobilePhoneL),
+        to_varchar(urlL),
+        to_varchar(imageL),
+        to_varchar(quaMsgL),
+        to_varchar(tabletPhoneL),
+        to_varchar(desktopPhoneL)
+    FROM
+        Cte_ClientType 
+)
+-- select * from cte_disp3_search;
+,
+
+cte_disp3_search_xml as (
+    SELECT
+        providercode,
+        clientcode,
+                '<dispL>' ||
+                listagg(
+                '<disp>' ||
+                IFF(Type IS NOT NULL, '<Type>' || Type || '</Type>', '') ||
+                IFF(nm IS NOT NULL, '<nm>' || nm || '</nm>', '') ||
+                IFF(facCd IS NOT NULL, '<facCd>' || facCd || '</facCd>', '') ||
+                IFF(facNm IS NOT NULL, '<facNm>' || facNm || '</facNm>', '') ||
+                IFF(facSt IS NOT NULL, '<facSt>' || facSt || '</facSt>', '') ||
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  -- Assuming XML columns are already properly formatted JSON strings
+                IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
+                IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
+                IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
+                IFF(quaMsgL IS NOT NULL, '<quaMsgL>' || quaMsgL || '</quaMsgL>', '') ||
+                IFF(tabletPhoneL IS NOT NULL, '<tabletPhoneL>' || tabletPhoneL || '</tabletPhoneL>', '') ||
+                IFF(desktopPhoneL IS NOT NULL, '<desktopPhoneL>' || desktopPhoneL || '</desktopPhoneL>', '') ||
+                '</disp>'
+            )|| '</dispL>' AS XMLValue
+    FROM
+        cte_disp3_search
+    GROUP BY
+        providercode,
+        clientcode
+)
+-- select * from cte_disp3_search_xml;
+,
+
+
+cte_search_sponsorship as (
+    SELECT DISTINCT
+        ps.providercode,
+        ps.productcode as prcd,
+        ps.productgroupcode as prgrcd,
+        ps.compositePhone,
+        CASE WHEN (SELECT COUNT(1) FROM cte_ProviderFacilitySponsorship as pfs JOIN mid.provider as p WHERE pfs.FacilityCode IS NOT NULL AND pfs.ProviderCode = p.ProviderCode) > 0 THEN 0 ELSE 1 END AS mtOfficeType,
+        spn.xmlvalue as spn,
+        dpc.xmlvalue as dpcl,
+        CASE WHEN ps.ProductCode IN (select ProductCode FROM Base.Product WHERE ProductTypeCode = 'PRACTICE') THEN disp1.xmlvalue 
+        WHEN ps.ProductCode IN (SELECT ProductCode FROM Base.Product WHERE ProductTypeCode = 'MAP') THEN disp2.xmlvalue
+        ELSE disp3.xmlvalue end as displ,
+        ps.appointmentoptiondescription as aptoptdesc
+    FROM cte_providersponsorship ps
+    LEFT JOIN cte_spn_search_xml spn on spn.providercode = ps.providercode and spn.clientcode = ps.clientcode
+    LEFT JOIN cte_dpc_search_xml dpc on dpc.providercode = ps.providercode and dpc.clientcode = ps.clientcode
+    LEFT JOIN cte_disp1_search_xml disp1 on disp1.providercode = ps.providercode
+    LEFT JOIN cte_disp2_search_xml disp2 on disp2.providercode = ps.providercode
+    LEFT JOIN cte_disp3_search_xml disp3 on disp3.providercode = ps.providercode and disp3.clientcode = ps.clientcode
+    WHERE 
+        ps.productgroupcode != 'LID'
+),
+
+cte_search_sponsorship_xml as (
+SELECT
+        s.ProviderCode, 
+        '<sponsorL>' ||
+            listagg(
+             '<sponsor>'||
+            IFF(prcd IS NOT NULL, '<prcd>' || prcd || '</prcd>', '') ||
+            IFF(prgrcd IS NOT NULL, '<prgrcd>' || prgrcd || '</prgrcd>', '') ||
+            IFF(compositePhone IS NOT NULL, '<compositePhone>' || compositePhone || '</compositePhone>', '') ||
+            IFF(mtOfficeType IS NOT NULL, '<mtOfficeType>' || mtOfficeType || '</mtOfficeType>', '') ||
+            IFF(spn IS NOT NULL, '<spn>' || spn || '</spn>', '') ||
+            IFF(dpcl IS NOT NULL, '<dpcl>' || dpcl || '</dpcl>', '') ||
+            IFF(displ IS NOT NULL, '<displ>' || displ || '</displ>', '') ||
+            IFF(aptoptdesc IS NOT NULL, '<aptoptdesc>' || aptoptdesc || '</aptoptdesc>', '')
+            ||'</sponsor>'   
+                ) || '</sponsorL>' AS XMLValue
+    FROM
+        cte_search_sponsorship a
+        INNER JOIN mid.provider s ON a.ProviderCode = s.ProviderCode
+    GROUP BY
+        s.ProviderCode
+)
+
+select 
+distinct
+    p.providerid ,
+    to_variant(parse_xml(sponsrxml.xmlvalue)) as sponsorshipxml,
+    to_variant(parse_xml(searchxml.xmlvalue)) as searchsponsorshipxml
+from show.solrprovider p
+    left join CTE_SponsorshipXML sponsrxml on p.providercode = sponsrxml.providercode
+    left join cte_search_sponsorship_xml searchxml on p.providercode = searchxml.providercode
+where sponsrxml.xmlvalue is not null or searchxml.xmlvalue is not null
+$$;
+
+update_statement_xml_load_4 := $$
+    update show.solrprovider as target
+        set 
+        target.sponsorshipxml = source.sponsorshipxml,
+        target.searchsponsorshipxml = source.searchsponsorshipxml 
+        from ($$ || select_statement_sponsorship || $$) as source
+        where target.providerid = source.providerid
+$$;
+
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -6357,6 +7982,7 @@ execute immediate update_statement_24;
 execute immediate update_statement_xml_load_1;
 execute immediate update_statement_xml_load_2;
 execute immediate update_statement_xml_load_3;
+execute immediate update_statement_xml_load_4;
 execute immediate update_statement_condition_hierarchy;
 execute immediate update_statement_cond_mapped;
 execute immediate update_statement_facility;
