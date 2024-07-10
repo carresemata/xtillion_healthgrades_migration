@@ -32,9 +32,7 @@ begin
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- select Statement
 
--- if conditionals:
 select_statement := $$ WITH CTE_CustomerProduct AS (
                                 SELECT
                                     p.ref_facility_code AS facilitycode,
@@ -53,7 +51,7 @@ select_statement := $$ WITH CTE_CustomerProduct AS (
                             from cte_customerproduct as json
                                 join base.facility as f on f.facilitycode = json.facilitycode
                                 join base.clienttoproduct as cp on cp.clienttoproductcode = json.CustomerProduct_CustomerProductCode
-                            qualify row_number() over(partition by ImageFilePath order by CustomerProduct_LastUpdateDate desc) = 1),
+                            ),
                             
                             CTE_Image AS (
                                 SELECT
@@ -63,7 +61,7 @@ select_statement := $$ WITH CTE_CustomerProduct AS (
                                     TO_VARCHAR(json.value: MEDIA_IMAGE_TYPE_CODE) AS Image_TypeCode,
                                     TO_VARCHAR(json.value: DATA_SOURCE_CODE) AS Image_SourceCode,
                                     TO_TIMESTAMP_NTZ(json.value: UPDATED_DATETIME) AS Image_LastUpdateDate
-                                FROM mdm_Team.mst.facility_profile AS p,
+                                FROM $$ || mdm_db || $$.mst.facility_profile AS p,
                                      LATERAL FLATTEN(input => p.FACILITY_PROFILE:IMAGE) AS json
                                 where TO_VARCHAR(json.value: S3_PREFIX) is not null
                                     and TO_VARCHAR(json.value: FACILITY_IMAGE_FILE_NAME) is not null
@@ -72,8 +70,8 @@ select_statement := $$ WITH CTE_CustomerProduct AS (
                                 '/' || image_path|| '/'||image_filename as imagefilepath,
                                 image_sourcecode as sourcecode,
                                 image_lastupdatedate as lastupdatedate
-                            from cte_image
-                            qualify row_number() over(partition by ImageFilePath order by LastUpdateDate desc) = 1),
+                            from cte_image)
+                            ,
                             cte_union as (
                                 select
                                     imagefilepath,
@@ -87,11 +85,12 @@ select_statement := $$ WITH CTE_CustomerProduct AS (
                                     lastupdatedate
                                 from cte_image_2
                             )
-                            select distinct
+                            select 
                                 imagefilepath,
                                 sourcecode,
                                 lastupdatedate
-                            from cte_union $$;
+                            from cte_union
+                            qualify row_number() over(partition by ImageFilePath order by LastUpdateDate desc) = 1 $$;
 
 update_statement := ' update
                         set
