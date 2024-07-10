@@ -93,7 +93,7 @@ insert_statement := ' insert (
                             LastUpdateDate
                         )
                         values (
-                            utils.generate_uuid(source.providerid || source.statereportingagencyid || source.sanctiontypeid || source.sanctioncategoryid || source.sanctionactionid), 
+                            utils.generate_uuid(source.providerid || source.statereportingagencyid || source.sanctiontypeid || source.sanctioncategoryid || source.sanctionactionid || source.sanctiondate ), 
                             source.providerid,
                             source.sanctionlicense,
                             source.statereportingagencyid,
@@ -126,11 +126,12 @@ update_statement := '
 -- Merge Statement
 merge_statement := ' merge into base.providersanction as TARGET
 using ( ' || select_statement || ') as SOURCE
-on target.providerid = source.providerid
+    on target.providerid = source.providerid
     and target.statereportingagencyid = source.statereportingagencyid
     and target.sanctiontypeid = source.sanctiontypeid
     and target.sanctioncategoryid = source.sanctioncategoryid
     and target.sanctionactionid = source.sanctionactionid
+    and target.sanctiondate = source.sanctiondate
 when matched then ' || update_statement || '
 when not matched then' || insert_statement;
 
