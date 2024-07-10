@@ -2,7 +2,7 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPRACTICE(is_full BO
 RETURNS varchar(16777216)
 LANGUAGE SQL
 EXECUTE as CALLER
-as 'declare 
+as declare 
 
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
@@ -50,30 +50,28 @@ as 'declare
     merge_statement_1 string; -- merge statement to final table
     merge_statement_2 string;
     merge_statement_3 string;
-    merge_statement_4 string;
     status string; -- status monitoring
-    procedure_name varchar(50) default(''sp_load_solrpractice'');
+    procedure_name varchar(50) default('sp_load_solrpractice');
     execution_start datetime default getdate();
-    mdm_db string default(''mdm_team'');
+    mdm_db string default('mdm_team');
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
 begin
---- select Statement
 
 select_statement := $$ with cte_practice_batch as (
-                    select distinct 
-                        BasePrac.PracticeID, 
-                        BasePrac.PracticeCode
-                    from $$ || mdm_db || $$.MST.Provider_Profile_Processing as ppp
-                    join Base.Provider as P on p.providercode = ppp.ref_provider_code
-                    inner join base.ProviderToOffice PTO on p.ProviderID = PTO.ProviderID
-                    inner join base.Office Off on PTO.OfficeID = Off.OfficeID
-                    inner join Base.Practice as BasePrac on BasePrac.PracticeID = Off.PracticeID
-                    order by BasePrac.PracticeID
-                    ),
+                        select distinct 
+                            BasePrac.PracticeID, 
+                            BasePrac.PracticeCode
+                        from $$ || mdm_db || $$.MST.Provider_Profile_Processing as ppp
+                            join Base.Provider as P on p.providercode = ppp.ref_provider_code
+                            inner join base.ProviderToOffice PTO on p.ProviderID = PTO.ProviderID
+                            inner join base.Office Off on PTO.OfficeID = Off.OfficeID
+                            inner join Base.Practice as BasePrac on BasePrac.PracticeID = Off.PracticeID
+                        order by BasePrac.PracticeID
+                        ),
                         cte_phone as (
                             select
                                 p.OfficeID,
@@ -86,7 +84,7 @@ select_statement := $$ with cte_practice_batch as (
                             group by
                                 p.OfficeID,
                                 p.FullPhone
-                        ),
+                        ) ,
                         cte_fax as (
                             select
                                 p.officeid,
@@ -99,10 +97,10 @@ select_statement := $$ with cte_practice_batch as (
                             group by
                                 p.officeid,
                                 p.FullFax
-                        )
+                        ) 
                         ,
-                        cte_specialty as (
-                            select
+                        cte_specialty as ( -- this is empty because Mid.OfficeSpecialty is empty in sql server
+                            select distinct
                                 OfficeID,
                                 SpecialtyCode as spCd,
                                 Specialty as spY,
@@ -111,16 +109,9 @@ select_statement := $$ with cte_practice_batch as (
                                 LegacyKey as lKey
                             from
                                 Mid.OfficeSpecialty
-                            group by
-                                OfficeID,
-                                SpecialtyCode,
-                                Specialty,
-                                Specialist,
-                                Specialists,
-                                LegacyKey
                         ),
                         cte_hours as (
-                            select
+                            select distinct
                                 p.OfficeID,
                                 dow.DaysOfWeekDescription as "day",
                                 dow.SortOrder as dispOrder,
@@ -133,33 +124,24 @@ select_statement := $$ with cte_practice_batch as (
                                 join cte_practice_batch as pb on p.PracticeID = pb.PracticeID
                                 join Base.OfficeHours as oh on oh.OfficeID = p.OfficeID
                                 join Base.DaysOfWeek as dow on dow.DaysOfWeekID = oh.DaysOfWeekID
-                            group by
-                                p.OfficeID,
-                                dow.DaysOfWeekDescription,
-                                dow.SortOrder,
-                                oh.OfficeHoursOpeningTime,
-                                oh.OfficeHoursClosingTime,
-                                oh.OfficeIsClosed,
-                                oh.OfficeIsOpen24Hours
-                        ),
+                        ) ,
+                        
                         cte_sponsor_stg as (
-                            select
+                            select distinct
                                 ps.PracticeID,
                                 mp.OfficeID,
+                                bp.producttypecode
                             from
                                 Mid.PracticeSponsorship as ps
                                 join cte_practice_batch as pb on pb.PracticeID = ps.PracticeID
                                 join Mid.Practice as mp on ps.PracticeID = mp.PracticeID
                                 join Base.Product as bp on ps.ProductCode = bp.ProductCode
                             where
-                                ps.ProductGroupCode = ''PDC''
-                                and bp.ProductTypeCode = ''Practice''
-                            group by
-                                ps.PracticeID,
-                                mp.officeid
-                        ),
+                                ps.ProductGroupCode = 'PDC'
+                                and bp.ProductTypeCode = 'Practice' 
+                        ) ,
                         cte_phoneL as (
-                            select
+                            select distinct
                                 mp.OfficeID,
                                 fa.DesignatedProviderPhone as ph,
                                 fa.PhoneTypeCode as phTyp
@@ -167,43 +149,35 @@ select_statement := $$ with cte_practice_batch as (
                                 Base.vwuPDCPracticeOfficeDetail as fa
                                 join cte_sponsor_stg as mp on mp.OfficeID = fa.OfficeID
                             where
-                                fa.PhoneTypeCode IN (''PTOOS'', ''PTOOSM'') -- PDC Designated - Office Specific
-                            group by
-                                mp.OfficeID,
-                                fa.DesignatedProviderPhone,
-                                fa.PhoneTypeCode
-                        ),
+                                fa.PhoneTypeCode IN ('PTOOS', 'PTOOSM') -- PDC Designated - Office Specific
+                        ) 
+                        ,
                         
                          cte_phoneL_xml as (
-                            select
+                            select distinct
                                 OfficeID,
                                 iff(ph is not null,'<ph>' || ph || '</ph>','') ||
-iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') ||
- as phoneL
+                                iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') as phoneL
                             from
                                 cte_phoneL
                             where
-                                phTyp = ''PTOOS''
-                            group by
-                                OfficeID
+                                phTyp = 'PTOOS'
                         )
                         ,
                         
                         cte_mobile_phoneL_xml as (
-                            select
+                            select distinct
                                 OfficeID,
                                 iff(ph is not null,'<ph>' || ph || '</ph>','') ||
-iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') ||
- as mobilePhoneL
+                                iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') as mobilePhoneL
                             from
                                 cte_phoneL
                             where
-                                phTyp = ''PTOOSM''
-                            group by
-                                OfficeID
+                                phTyp = 'PTOOSM'
                         ),
+
                         cte_imageL as (
-                            select
+                            select distinct
                                 mp.OfficeID,
                                 fa.ImageFilePath as img,
                                 fa.ImageTypeCode as imgTyp
@@ -211,22 +185,16 @@ iff(phTyp is not null,'<phTyp>' || phTyp || '</phTyp>','') ||
                                 Base.vwuPDCPracticeOfficeDetail as fa
                                 join cte_sponsor_stg as mp on mp.OfficeID = fa.OfficeID
                             where
-                                fa.ImageTypeCode in (''FCOLOGO'', ''FCOWALL'') -- PDC Designated - Office Specific
-                            group by
-                                mp.OfficeID,
-                                fa.ImageFilePath,
-                                fa.ImageTypeCode
-                        ),
+                                fa.ImageTypeCode in ('FCOLOGO', 'FCOWALL') -- PDC Designated - Office Specific
+                        ) 
+                        ,
                         cte_imageL_xml as (
-                            select
+                            select distinct
                                 OfficeID,
                                 iff(img is not null,'<img>' || img || '</img>','') ||
-iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','') ||
- as imageL
+                                iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','') as imageL
                             from
                                 cte_imageL
-                            group by
-                                OfficeID
                         )
                         ,
                         cte_sponsor as (
@@ -240,9 +208,9 @@ iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','') ||
                                 left join cte_phoneL_xml as p on s.OfficeID = p.OfficeID
                                 left join cte_mobile_phoneL_xml as mp on s.OfficeID = mp.OfficeID
                                 left join cte_imageL_xml as i on s.OfficeID = i.OfficeID
-                        ),
+                        ) ,
                         cte_practice_sponsorship as (
-                            select
+                            select distinct
                                 ps.ProductCode as prCd,
                                 ps.ProductGroupCode as prGrCd,
                                 ps.ClientCode as spnCd,
@@ -251,22 +219,23 @@ iff(imgTyp is not null,'<imgTyp>' || imgTyp || '</imgTyp>','') ||
                             from
                                 Mid.PracticeSponsorship as ps
                                 join cte_practice_batch as pb on pb.PracticeID = ps.PracticeID
+                            where ProductCode != 'PDCWMDLITE' and ProductCode != 'PDCWRITEMD' -- these are not practice codes
+                                
                         ),
                         cte_practice_sponsorship_xml as (
-                            select
+                            select 
                                 PracticeID,
-                                iff(prCd is not null,'<prCd>' || prCd || '</prCd>','') ||
-iff(prGrCd is not null,'<prGrCd>' || prGrCd || '</prGrCd>','') ||
-iff(spnCd is not null,'<spnCd>' || spnCd || '</spnCd>','') ||
-iff(spnNm is not null,'<spnNm>' || spnNm || '</spnNm>','') ||
- as SponsorshipXML
+                                '<sponsorL>' || listagg( '<sponsor>' || iff(prCd is not null,'<prCd>' || prCd || '</prCd>','') ||
+                                iff(prGrCd is not null,'<prGrCd>' || prGrCd || '</prGrCd>','') ||
+                                iff(spnCd is not null,'<spnCd>' || spnCd || '</spnCd>','') ||
+                                iff(spnNm is not null,'<spnNm>' || spnNm || '</spnNm>','') || '</sponsor>' , '' ) || '</sponsorL>' as SponsorshipXML
                             from
                                 cte_practice_sponsorship
                             group by
-                                PracticeID
-                        )
+                                practiceid
+                        ) 
                         ,
-                        cte_email as (
+                        cte_email as ( -- this is empty because base.practiceemail is empty
                             select
                                 pe.EmailAddress as pEmail,
                                 pe.PracticeID
@@ -278,16 +247,13 @@ iff(spnNm is not null,'<spnNm>' || spnNm || '</spnNm>','') ||
                             group by
                                 pe.EmailAddress,
                                 pe.PracticeID
-                        ),
+                        ) ,
                         cte_email_xml as (
-                            select
+                            select distinct
                                 PracticeID,
-                                iff(pEmail is not null,'<pEmail>' || pEmail || '</pEmail>','') ||
- as PracticeEmailXML
+                                iff(pEmail is not null,'<pEmail>' || pEmail || '</pEmail>','') as PracticeEmailXML
                             from
                                 cte_email
-                            group by
-                                PracticeID
                         ),
                         cte_practice_source as (
                             select
@@ -311,79 +277,67 @@ iff(spnNm is not null,'<spnNm>' || spnNm || '</spnNm>','') ||
                                 join cte_practice_batch as pb on p.PracticeID = pb.PracticeID
                                 join Base.Office as o on p.OfficeID = o.OfficeID
                                 join Base.ProviderToOffice as po on o.OfficeID = po.OfficeID
-                                join Show.vwuProviderIndex as vpi on po.ProviderID = vpi.ProviderID
-                        )
+                                -- join Show.vwuProviderIndex as vpi on po.ProviderID = vpi.ProviderID
+                             qualify row_number() over(partition by o.practiceid order by o.lastupdatedate desc) = 1
+                        ) 
                         ,
                         cte_hours_xml as (
-                            select
+                            select 
                                 OfficeID,
-                                iff(day is not null,'<day>' || day || '</day>','') ||
-iff(dispOrder is not null,'<dispOrder>' || dispOrder || '</dispOrder>','') ||
-iff(start is not null,'<start>' || start || '</start>','') ||
-iff(end is not null,'<end>' || end || '</end>','') ||
-iff(closed is not null,'<closed>' || closed || '</closed>','') ||
- as hours_xml
+                                listagg( '<hours>' || iff("day" is not null,'<day>' || "day" || '</day>','') ||
+                                iff(dispOrder is not null,'<dispOrder>' || dispOrder || '</dispOrder>','') ||
+                                iff("start" is not null,'<start>' || "start" || '</start>','') ||
+                                iff("end" is not null,'<end>' || "end" || '</end>','') ||
+                                iff("closed" is not null,'<closed>' || "closed" || '</closed>','') || '</hours>' , '') as hours_xml
                             from
                                 cte_hours
                             group by
-                                OfficeID
-                        )
+                                officeid
+                        ) 
                         ,
                         cte_phone_xml as (
-                            select
+                            select distinct
                                 OfficeID,
-                                iff(phFull is not null,'<phFull>' || phFull || '</phFull>','') ||
- as phone_xml
+                                iff(phFull is not null,'<phFull>' || phFull || '</phFull>','') as phone_xml
                             from
                                 cte_phone
-                            group by
-                                OfficeID
                         )
                         ,
                         
                         cte_fax_xml as (
-                            select
+                            select distinct
                                 OfficeID,
-                                iff(faxFull is not null,'<faxFull>' || faxFull || '</faxFull>','') ||
- as fax_xml
+                                iff(faxFull is not null,'<faxFull>' || faxFull || '</faxFull>','') as fax_xml
                             from
                                 cte_fax
-                            group by
-                                OfficeID
                         )
                         ,
                         
                         cte_specialty_xml as (
-                            select
+                            select distinct
                                 OfficeID,
                                 iff(spCd is not null,'<spCd>' || spCd || '</spCd>','') ||
-iff(spY is not null,'<spY>' || spY || '</spY>','') ||
-iff(spIst is not null,'<spIst>' || spIst || '</spIst>','') ||
-iff(spIsts is not null,'<spIsts>' || spIsts || '</spIsts>','') ||
-iff(lKey is not null,'<lKey>' || lKey || '</lKey>','') ||
- as specialty_xml
+                                iff(spY is not null,'<spY>' || spY || '</spY>','') ||
+                                iff(spIst is not null,'<spIst>' || spIst || '</spIst>','') ||
+                                iff(spIsts is not null,'<spIsts>' || spIsts || '</spIsts>','') ||
+                                iff(lKey is not null,'<lKey>' || lKey || '</lKey>','') as specialty_xml
                             from
                                 cte_specialty
-                            group by
-                                OfficeID
                         )
                         ,
                         
                         cte_sponsor_xml as (
-                            select
+                            select distinct
                                 OfficeID,
                                 iff(phoneL is not null,'<phoneL>' || phoneL || '</phoneL>','') ||
-iff(mobilePhoneL is not null,'<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>','') ||
-iff(imageL is not null,'<imageL>' || imageL || '</imageL>','') ||
- as sponsor
+                                iff(mobilePhoneL is not null,'<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>','') ||
+                                iff(imageL is not null,'<imageL>' || imageL || '</imageL>','') as sponsor
                             from
                                 cte_sponsor
-                            group by
-                                OfficeID
                         )
                         ,
                         cte_office as (
-                            select
+                            select distinct
                                 mp.OfficeID,
                                 mp.OfficeCode as oID,
                                 mp.OfficeName as oNm,
@@ -418,7 +372,7 @@ iff(imageL is not null,'<imageL>' || imageL || '</imageL>','') ||
                                 SUBSTRING(mp.LegacyKeyOffice, 5, 8) as oLegacyID2,
                                 mp.OfficeRank as oRank2,
                                 mp.OfficeUrl as PracticeURL,
-                                mp.GoogleScriptBlock as GoogleScriptBlock
+                                replace(mp.GoogleScriptBlock, '&', '&amp;') as GoogleScriptBlock
                             from
                                 Mid.Practice mp
                                 left join cte_hours_xml h on mp.OfficeID = h.OfficeID
@@ -428,138 +382,78 @@ iff(imageL is not null,'<imageL>' || imageL || '</imageL>','') ||
                                 left join cte_sponsor_xml sp on mp.OfficeID = sp.OfficeID
                                 join Base.CityStatePostalCode b on mp.CityStatePostalCodeID = b.CityStatePostalCodeID
                                 join Base.State c on c.state = b.state
-                            group by
-                                mp.OfficeID,
-                                mp.OfficeCode,
-                                OfficeName,
-                                mp.OfficeRank,
-                                mp.AddressTypeCode,
-                                mp.AddressLine1,
-                                mp.AddressLine2,
-                                mp.AddressLine3,
-                                mp.AddressLine4,
-                                mp.City,
-                                mp.State,
-                                mp.ZipCode,
-                                mp.Latitude,
-                                mp.Longitude,
-                                mp.HasBillingStaff,
-                                mp.HasHandicapAccess,
-                                mp.HasLabServicesOnSite,
-                                mp.HasPharmacyOnSite,
-                                mp.HasXrayOnSite,
-                                mp.IsSurgeryCenter,
-                                mp.HasSurgeryOnSite,
-                                mp.AverageDailyPatientVolume,
-                                mp.OfficeCoordinatorName,
-                                mp.ParkingInformation,
-                                mp.PaymentPolicy,
-                                h.hours_xml,
-                                p.phone_xml,
-                                f.fax_xml,
-                                s.specialty_xml,
-                                sp.sponsor,
-                                mp.LegacyKeyOffice,
-                                mp.OfficeID,
-                                c.StateName,
-                                b.State,
-                                b.City,
-                                mp.PracticeName,
-                                mp.OfficeUrl,
-                                GoogleScriptBlock
                             order by
                                 mp.AddressLine1,
                                 mp.State
                         )
                         ,
                         cte_office_xml as (
-                            select
+                            select 
                                 OfficeID,
-                                iff(oID is not null,'<oID>' || oID || '</oID>','') ||
-iff(onm is not null,'<oNm>' || onm || '</oNm>','') ||
-iff(oRank is not null,'<oRank>' || oRank || '</oRank>','') ||
-iff(addTp is not null,'<addTp>' || addTp || '</addTp>','') ||
-iff(city is not null,'<city>' || city || '</city>','') ||
-iff(st is not null,'<st>' || st || '</st>','') ||
-iff(zip is not null,'<zip>' || zip || '</zip>','') ||
-iff(lat is not null,'<lat>' || lat || '</lat>','') ||
-iff(lng is not null,'<lng>' || lng || '</lng>','') ||
-iff(isBStf is not null,'<isBStf>' || isBStf || '</isBStf>','') ||
-iff(isHcap is not null,'<isHcap>' || isHcap || '</isHcap>','') ||
-iff(isLab is not null,'<isLab>' || isLab || '</isLab>','') ||
-iff(isPhrm is not null,'<isPhrm>' || isPhrm || '</isPhrm>','') ||
-iff(isXray is not null,'<isXray>' || isXray || '</isXray>','') ||
-iff(isSrg is not null,'<isSrg>' || isSrg || '</isSrg>','') ||
-iff(hasSrg is not null,'<hasSrg>' || hasSrg || '</hasSrg>','') ||
-iff(avVol is not null,'<avVol>' || avVol || '</avVol>','') ||
-iff(ocNm is not null,'<ocNm>' || ocNm || '</ocNm>','') ||
-iff(prkInf is not null,'<prkInf>' || prkInf || '</prkInf>','') ||
-iff(payPol is not null,'<payPol>' || payPol || '</payPol>','') ||
-iff(hours is not null,'<hours>' || hours || '</hours>','') ||
-iff(phone is not null,'<phone>' || phone || '</phone>','') ||
-iff(fax is not null,'<fax>' || fax || '</fax>','') ||
-iff(specialty is not null,'<specialty>' || specialty || '</specialty>','') ||
-iff(sponsor is not null,'<sponsor>' || sponsor || '</sponsor>','') ||
-iff(oLegacyID is not null,'<oLegacyID>' || oLegacyID || '</oLegacyID>','') ||
-iff(PracticeURL is not null,'<PracticeURL>' || PracticeURL || '</PracticeURL>','') ||
-iff(GoogleScriptBlock is not null,'<GoogleScriptBlock>' || GoogleScriptBlock || '</GoogleScriptBlock>','') ||
- as OfficeXML
+                                '<offL>' || listagg( '<off>' || iff(oID is not null,'<oID>' || oID || '</oID>','') ||
+                                iff(onm is not null,'<oNm>' || onm || '</oNm>','') ||
+                                iff(oRank is not null,'<oRank>' || oRank || '</oRank>','') ||
+                                iff(addTp is not null,'<addTp>' || addTp || '</addTp>','') ||
+                                iff(city is not null,'<city>' || city || '</city>','') ||
+                                iff(st is not null,'<st>' || st || '</st>','') ||
+                                iff(zip is not null,'<zip>' || zip || '</zip>','') ||
+                                iff(lat is not null,'<lat>' || lat || '</lat>','') ||
+                                iff(lng is not null,'<lng>' || lng || '</lng>','') ||
+                                iff(isBStf is not null,'<isBStf>' || isBStf || '</isBStf>','') ||
+                                iff(isHcap is not null,'<isHcap>' || isHcap || '</isHcap>','') ||
+                                iff(isLab is not null,'<isLab>' || isLab || '</isLab>','') ||
+                                iff(isPhrm is not null,'<isPhrm>' || isPhrm || '</isPhrm>','') ||
+                                iff(isXray is not null,'<isXray>' || isXray || '</isXray>','') ||
+                                iff(isSrg is not null,'<isSrg>' || isSrg || '</isSrg>','') ||
+                                iff(hasSrg is not null,'<hasSrg>' || hasSrg || '</hasSrg>','') ||
+                                iff(avVol is not null,'<avVol>' || avVol || '</avVol>','') ||
+                                iff(ocNm is not null,'<ocNm>' || ocNm || '</ocNm>','') ||
+                                iff(prkInf is not null,'<prkInf>' || prkInf || '</prkInf>','') ||
+                                iff(payPol is not null,'<payPol>' || payPol || '</payPol>','') ||
+                                iff(hours is not null,'<hoursL>' || hours || '</hoursL>','') || 
+                                iff(phone is not null,'<phL>' || phone || '</phL>','') ||
+                                iff(fax is not null,'<faxL>' || fax || '</faxL>','') ||
+                                iff(specialty is not null,'<specialty>' || specialty || '</specialty>','') ||
+                                iff(sponsor is not null,'<sponsor>' || sponsor || '</sponsor>','') || -- this is always empty in sql server
+                                iff(oLegacyID is not null,'<oLegacyID>' || oLegacyID || '</oLegacyID>','') ||
+                                iff(PracticeURL is not null,'<PracticeURL>' || PracticeURL || '</PracticeURL>','') ||
+                                iff(GoogleScriptBlock is not null,'<GoogleScriptBlock>' || GoogleScriptBlock || '</GoogleScriptBlock>','') || '</off>' , '') || '</offL>' as OfficeXML
                             from
                                 cte_office
                             group by
-                                OfficeID
-                        )
+                                officeid
+                        ) 
                         
-                        select
+                        select distinct
                             p.PracticeID,
                             p.PracticeCode,
                             p.PracticeName,
                             p.YearPracticeEstablished,
                             p.NPI,
-                            TO_VARIANT(e.PracticeEmailXML) as PracticeEmailXML,
+                            TO_VARIANT(parse_xml(e.PracticeEmailXML)) as PracticeEmailXML, -- this column is empty in sql server
                             p.PracticeWebsite,
                             p.PracticeDescription,
                             p.PracticeLogo,
                             p.PracticeMedicalDirector,
                             p.PracticeSoftware,
                             p.PracticeTIN,
-                            TO_VARIANT(
-                                ) 
-                                            as OfficeXML,
-                            p.LegacyKeyPractice,
+                            TO_VARIANT(parse_xml(o.OfficeXml)) as OfficeXML,
+                            CONCAT('HGPPZ', SUBSTRING(REPLACE(p.PRACTICEID,'-',''), 1, 16)) as LegacyKeyPractice,
                             p.PhysicianCount,
                             current_timestamp() as UpdatedDate,
                             CURRENT_USER() as UpdatedSource,
                             p.HasDentist,
-                            TO_VARIANT(s.SponsorshipXML) as SponsorshipXML
+                            TO_VARIANT(parse_Xml(s.SponsorshipXML)) as SponsorshipXML
                         from
                             cte_practice_source as p
-                            left join cte_office_xml as o on p.OfficeID = o.OfficeID
+                            join cte_office_xml as o on p.OfficeID = o.OfficeID
                             left join cte_practice_sponsorship_xml as s on p.PracticeID = s.PracticeID
                             left join cte_email_xml as e on p.PracticeID = e.PracticeID
-                        where officexml is not null
-                        group by
-                            p.PracticeID,
-                            p.PracticeCode,
-                            p.PracticeName,
-                            p.YearPracticeEstablished,
-                            p.NPI,
-                            TO_VARIANT(e.PracticeEmailXML),
-                            p.PracticeWebsite,
-                            p.PracticeDescription,
-                            p.PracticeLogo,
-                            p.PracticeMedicalDirector,
-                            p.PracticeSoftware,
-                            p.PracticeTIN,
-                            p.LegacyKeyPractice,
-                            p.PhysicianCount,
-                            p.HasDentist,
-                            TO_VARIANT(s.SponsorshipXML) 
                     
                     $$;
 
 --- update Statement
-update_statement := ''update
+update_statement := 'update
                         SET
                             target.PracticeCode = source.PracticeCode,
                             target.PracticeName = source.PracticeName,
@@ -578,10 +472,10 @@ update_statement := ''update
                             target.OfficeXML = source.OfficeXML,
                             target.SponsorshipXML = source.SponsorshipXML,
                             target.UpdatedDate = source.UpdatedDate,
-                            target.UpdatedSource = source.UpdatedSource'';
+                            target.UpdatedSource = source.UpdatedSource';
 
 --- insert Statement
-insert_statement := ''insert
+insert_statement := 'insert
                             (PracticeID,
                             PracticeCode,
                             PracticeName,
@@ -620,22 +514,22 @@ insert_statement := ''insert
                             source.OfficeXML,
                             source.SponsorshipXML,
                             source.UpdatedDate,
-                            source.UpdatedSource);'';
+                            source.UpdatedSource);';
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
 
-merge_statement_1 := '' merge into Show.SOLRPractice as target using 
-                   (''||select_statement||'') as source 
+merge_statement_1 := ' merge into Show.SOLRPractice as target using 
+                   ('||select_statement||') as source 
                    on source.PracticeID = target.PracticeID
-                   WHEN MATCHED then ''||update_statement|| ''
-                   when not matched then ''||insert_statement;
+                   when matched then '||update_statement|| '
+                   when not matched then '||insert_statement;
 
                  
 -- -- Nullify the SPONSORSHIPXML column for practices with client contracts set to start in the future
-merge_statement_2 := ''merge into Show.SOLRPractice as target 
+merge_statement_2 := 'merge into Show.SOLRPractice as target 
                     using (
                         select SP.PRACTICEID
                         from SHOW.SOLRPRACTICE SP
@@ -645,23 +539,11 @@ merge_statement_2 := ''merge into Show.SOLRPractice as target
                         where CC.CONTRACTSTARTDATE > current_timestamp()
                     ) as source 
                     on source.PRACTICEID = target.PRACTICEID
-                    WHEN MATCHED then 
-                        update SET SPONSORSHIPXML = null'';
-
--- -- Nullify the SPONSORSHIPXML column for practices with client contracts set to end in the past
-merge_statement_3 := ''merge into Show.SOLRPRACTICE as target 
-                        using (select 
-                                PRACTICEID, 
-                                CONCAT(''''HGPPZ'''', SUBSTRING(REPLACE(PRACTICEID,''''-'''',''''''''), 1, 16)) as NEWLEGACYKEYPRACTICE
-                            from SHOW.SOLRPRACTICE
-                            where NEWLEGACYKEYPRACTICE is null
-                        ) as source 
-                        on source.PRACTICEID = target.PRACTICEID
-                        WHEN MATCHED then 
-                            update SET LEGACYKEYPRACTICE = source.NEWLEGACYKEYPRACTICE'';
+                    when matched then 
+                        update SET SPONSORSHIPXML = null';
 
 -- -- Remove practices with no providers and where PracticeName = Practice
-merge_statement_4 := ''merge into Show.solrpractice as target 
+merge_statement_3 := 'merge into Show.solrpractice as target 
                     using ( select solrPrac.PracticeID 
                                                 from Show.solrpractice solrPrac
                                                 left join 
@@ -674,7 +556,7 @@ merge_statement_4 := ''merge into Show.solrpractice as target
                                                 ) subQuery on solrPrac.PracticeID = subQuery.PracticeID 
                                                 where subQuery.PracticeID is null) as source
                     on target.PracticeID = source.PracticeID
-                    WHEN MATCHED then delete '';
+                    WHEN MATCHED then delete ';
 
 
 ---------------------------------------------------------
@@ -687,22 +569,23 @@ end if;
 execute immediate merge_statement_1 ;
 execute immediate merge_statement_2 ;
 execute immediate merge_statement_3 ;
-execute immediate merge_statement_4 ;
 
 ---------------------------------------------------------
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
-status := ''Completed successfully'';
-    return status;
+status := 'completed successfully';
+        insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
+                select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
+        return status;
 
-        
-exception
-    WHEN other then
-          status := ''Failed during execution. '' || ''SQL Error: '' || SQLERRM || '' Error code: '' || SQLCODE || ''. SQL State: '' || SQLSTATE;
-          return status;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
+            insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-    
-END';
+            return status;
+end;
