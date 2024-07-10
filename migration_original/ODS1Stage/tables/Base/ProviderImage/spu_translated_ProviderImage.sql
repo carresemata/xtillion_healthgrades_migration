@@ -1,9 +1,8 @@
-CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERIMAGE(is_full BOOLEAN) 
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE as CALLER
-    as  
-declare 
+CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERIMAGE("IS_FULL" BOOLEAN)
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS 'declare 
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
@@ -26,9 +25,9 @@ declare
     update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providerimage');
+    procedure_name varchar(50) default(''sp_load_providerimage'');
     execution_start datetime default getdate();
-    mdm_db string default('mdm_team');
+    mdm_db string default(''mdm_team'');
    
 begin
 
@@ -52,7 +51,7 @@ with Cte_image as (
         to_varchar(json.value:IMAGE_PATH) as Image_ImagePath,
         to_varchar(json.value:DATA_SOURCE_CODE) as Image_SourceCode,
         to_timestamp_ntz(json.value:UPDATED_DATETIME) as Image_LastUpdateDate
-    FROM $$ || mdm_db || $$.mst.provider_profile_processing as p
+    FROM $$||mdm_db||$$.mst.provider_profile_processing as p
     , lateral flatten(input => p.PROVIDER_PROFILE:IMAGE) as json
 )
 select distinct
@@ -61,7 +60,7 @@ select distinct
     json.image_ImageFileName as FileName,
     ms.mediasizeid,
     mrl.mediareviewlevelid,
-    ifnull(json.image_SourceCode, 'Profisee') as SourceCode,
+    ifnull(json.image_SourceCode, ''Profisee'') as SourceCode,
     ifnull(json.image_LastUpdateDate, current_timestamp()) as LastUpdateDate,
     mct.mediacontexttypeid,
     m.mediaimagehostid,
@@ -74,13 +73,14 @@ from
     left join base.mediaimagetype as MT on mt.mediaimagetypecode = json.image_MediaImageTypeCode
     left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
     left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
-    left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode    
+    left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode 
+    qualify row_number() over(partition by json.image_ImagePath order by json.image_LastUpdateDate desc) = 1
 
 $$;
 
 
 --- insert Statement
-insert_statement := ' insert 
+insert_statement := '' insert 
                         (ProviderImageID,
                         ProviderID,
                         MediaImageTypeID,
@@ -105,16 +105,16 @@ insert_statement := ' insert
                         source.mediacontexttypeid,
                         source.mediaimagehostid,
                         source.externalidentifier,
-                        source.imagepath)';
+                        source.imagepath)'';
 
 --- update statement
-update_statement := ' update
+update_statement := '' update
                         set
                             target.FileName = source.filename,
                             target.SourceCode = source.sourcecode,
                             target.LastUpdateDate = source.lastupdatedate,
                             target.ExternalIdentifier = source.externalidentifier,
-                            target.ImagePath = source.imagepath ';
+                            target.ImagePath = source.imagepath '';
                         
 
 ---------------------------------------------------------
@@ -122,11 +122,11 @@ update_statement := ' update
 ---------------------------------------------------------  
 
 
-merge_statement := ' merge into base.providerimage as target using 
-                   ('||select_statement||') as source 
+merge_statement := '' merge into base.providerimage as target using 
+                   (''||select_statement||'') as source 
                    on source.providerid = target.providerid and target.MediaImageTypeID = source.mediaimagetypeid and target.MediaSizeID = source.mediasizeid and target.MediaReviewLevelID = source.mediareviewlevelid and target.MediaContextTypeID = source.mediacontexttypeid and target.MediaImageHostID = source.mediaimagehostid
-                   when matched then ' || update_statement || '
-                   when not matched then '||insert_statement;
+                   when matched then '' || update_statement || ''
+                   when not matched then ''||insert_statement;
                    
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
@@ -141,7 +141,7 @@ execute immediate merge_statement ;
 --------------- 6. status monitoring --------------------
 --------------------------------------------------------- 
 
-status := 'completed successfully';
+status := ''completed successfully'';
         insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
                 select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
@@ -149,10 +149,10 @@ status := 'completed successfully';
 
         exception
         when other then
-            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
+            status := ''failed during execution. '' || ''sql error: '' || sqlerrm || '' error code: '' || sqlcode || ''. sql state: '' || sqlstate;
 
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
-                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, ''error code: ([0-9]+)''), '':'', 2)::integer, trim(split_part(split_part(:status, ''sql error:'', 2), ''error code:'', 1)), split_part(regexp_substr(:status, ''sql state: ([0-9]+)''), '':'', 2)::integer; 
 
             return status;
-end;
+end';
