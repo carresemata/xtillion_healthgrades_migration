@@ -23,10 +23,10 @@ declare
     merge_condition string; -- merge condition to final table
     update_statement string; -- update statement to final table
     insert_statement string; -- insert statement to final table
-    merge_statement string; -- merge statement
+    update_statement_1 string; -- merge statement
     delete_statement string; -- delete statement to final table
-    merge_statement_else_1 string; -- insert into statement to final table
-    merge_statement_else_2 string; -- merge statement to final table
+    merge_statement_1 string; -- insert into statement to final table
+    merge_statement_2 string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrproviderredirect');
     execution_start datetime default getdate();
@@ -217,31 +217,30 @@ update_statement := 'update
 ---------------------------------------------------------  
                      
 
-    merge_statement := 'merge into show.solrproviderredirect as target
+    merge_statement_1 := 'merge into show.solrproviderredirect as target
                         using ('  || select_statement || ') as source 
                         on source.providercodeold = target.providercodeold and source.providercodenew = target.providercodenew
                         when matched then ' || update_statement ||
                         'when not matched then ' || insert_statement;
 
     -- this gives no rows in sql server, it does not insert anything
-    merge_statement_else_1 := $$ merge into show.solrproviderredirect as target
+    merge_statement_2 := $$ merge into show.solrproviderredirect as target
                                 using ( $$  || select_statement_1 || $$  ) as source
                                 on source.providercodenew = target.providercodenew
                                 when not matched then $$ || insert_statement;
                                                                 
             
-     -- this updates the urlold column                   
-     merge_statement_else_2 := 'merge into show.solrproviderredirect as solrprovred using (
-                                 select
-                                    provurl.url,
-                                    baseprov.providercode
-                                from
-                                    base.providerurl as provurl
-                                    join base.provider as baseprov on provurl.providerid = baseprov.providerid
-                           ) as url on solrprovred.providercodeold = url.providercode
-                            and solrprovred.providerurlold is null
-                            when matched then update set
-                            solrprovred.providerurlold = url.url;';                            
+    -- this updates the urlold column                   
+    update_statement_1 := '  UPDATE show.solrproviderredirect as target 
+                                    SET target.providerurlold = source.url
+                                    FROM (select
+                                        provurl.url,
+                                        baseprov.providercode
+                                      from
+                                        base.providerurl as provurl
+                                        join base.provider as baseprov on provurl.providerid = baseprov.providerid) as source
+                                    WHERE target.providercodeold = source.providercode
+                                    and providerurlold is null; ';                            
 
                          
     delete_statement := 'delete from
@@ -261,9 +260,9 @@ update_statement := 'update
 if (is_full) then
     truncate table Show.SOLRProviderRedirect;
 end if; 
-execute immediate merge_statement;
-execute immediate merge_statement_else_1;
-execute immediate merge_statement_else_2;
+execute immediate merge_statement_1;
+execute immediate merge_statement_2;
+execute immediate update_statement_1;
 execute immediate delete_statement;
 
 ---------------------------------------------------------
