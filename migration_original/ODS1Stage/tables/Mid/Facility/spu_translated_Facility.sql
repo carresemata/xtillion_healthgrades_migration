@@ -478,7 +478,32 @@ from cte_combined_image
 group by
     clienttoproductid
 ),
-
+cte_url_xml as(
+select * from (
+select
+    fac.facilityid,
+    -- urlxml
+    case 
+        when (select count(*) from base.facilitycheckinurl fc where fc.facilitycode = fac.facilitycode) > 0 
+        then fcxml.urlxml
+        when (ifnull(to_varchar(des.clienttoproductid), '') <> '') 
+            and (select COUNT(*) from base.vwupdcfacilitydetail fa where length(fa.url) > 0 and fa.urltypecode in ('FCFURL', 'FCCIURL') and client_details.clientproducttoentityid = fa.clientproducttoentityid ) > 0
+        then fxml.urlxml
+        when (select COUNT(*) from base.vwupdcclientdetail cl where length(cl.url) > 0 and cl.urltypecode = 'FCCLURL' and client_details.clienttoproductid = cl.clienttoproductid) > 0 
+        then cxml.urlxml
+        else fuxml.urlxml end as urlxml
+    from base.facility fac
+    left join cte_client_product_details client_details on client_details.facilityid = fac.facilityid --ii
+    left join cte_description des on des.clienttoproductid = client_details.clienttoproductid --kk
+    left join cte_facility_checkin_url_xml fcxml on fcxml.facilitycode = fac.facilitycode
+    left join cte_facility_url_xml fxml on fxml.clientproducttoentityid = client_details.clientproducttoentityid
+    left join cte_client_url_xml cxml on cxml.clienttoproductid = client_details.clienttoproductid
+    left join cte_facilityurl_xml fuxml on fuxml.facilityid = fac.facilityid
+    )
+    where urlxml is not null
+    )
+-- select * from cte_url_xml;
+,
 cte_facility as (
 select
     fac.facilityid,
@@ -553,7 +578,6 @@ select
     client_details.clientname,
     client_details.productcode,
     client_details.productgroupcode,
-
         -- phonexml
     case 
         when (ifnull(to_varchar(des.ClientToProductID),'') <> '') 
@@ -561,37 +585,23 @@ select
         then pfxml.phonexml 
         when (select count(*) from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOS' and client_details.ClientToProductID = cl.ClientToProductID) > 0 
         then pcxml.phonexml end as phonexml,
-
     -- -- mobilephonexml
     case 
         when (select count(*) from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSM' and client_details.ClientToProductID = cl.ClientToProductID ) > 0 
         then mcxml.mobilephonexml
         else mfxml.mobilephonexml end as mobilephonexml,
-    
     -- -- desktopphonexml
     case 
         when (select count(*) from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOSDTP' and client_details.ClientToProductID = cl.ClientToProductID) > 0 
         then dcxml.desktopphonexml
         else dfxml.desktopphonexml end as desktopphonexml,
-    
     -- -- tabletphonexml
     case 
         when (select count(*) from Base.vwuPDCClientDetail cl where cl.PhoneTypeCode = 'PTHOST' and client_details.ClientToProductID = cl.ClientToProductID) > 0 
         then tcxml.tabletphonexml
         else tfxml.tabletphonexml end as tabletphonexml,
-    
-    
     -- urlxml
-    case 
-        when (select count(*) from base.facilitycheckinurl fc where fc.facilitycode = fac.facilitycode) > 0 
-        then fcxml.urlxml
-        when (ifnull(to_varchar(des.clienttoproductid), '') <> '') 
-            and (select COUNT(*) from base.vwupdcfacilitydetail fa where length(fa.url) > 0 and fa.urltypecode in ('FCFURL', 'FCCIURL') and client_details.clientproducttoentityid = fa.clientproducttoentityid ) > 0
-        then fxml.urlxml
-        when (select COUNT(*) from base.vwupdcclientdetail cl where length(cl.url) > 0 and cl.urltypecode = 'FCCLURL' and client_details.clienttoproductid = cl.clienttoproductid) > 0 
-        then cxml.urlxml
-        else fuxml.urlxml end as urlxml,
-        
+    cte_url.urlxml,
     -- -- imagexml
     case 
     when (ifnull(to_varchar(entity.clienttoproductid), '') <> '' )
@@ -624,10 +634,11 @@ from
     left join cte_client_desktop_xml dcxml on dcxml.clientproducttoentityid = client_details.clientproducttoentityid 
     left join cte_facility_tablet_xml tfxml on tfxml.clientproducttoentityid = client_details.clientproducttoentityid
     left join cte_client_tablet_xml tcxml on tcxml.clientproducttoentityid = client_details.clientproducttoentityid 
-    left join cte_facility_checkin_url_xml fcxml on fcxml.facilitycode = fac.facilitycode
-    left join cte_facility_url_xml fxml on fxml.clientproducttoentityid = client_details.clientproducttoentityid
-    left join cte_client_url_xml cxml on cxml.clienttoproductid = client_details.clienttoproductid
-    left join cte_facilityurl_xml fuxml on fuxml.facilityid = fac.facilityid
+    -- left join cte_facility_checkin_url_xml fcxml on fcxml.facilitycode = fac.facilitycode
+    -- left join cte_facility_url_xml fxml on fxml.clientproducttoentityid = client_details.clientproducttoentityid
+    -- left join cte_client_url_xml cxml on cxml.clienttoproductid = client_details.clienttoproductid
+    -- left join cte_facilityurl_xml fuxml on fuxml.facilityid = fac.facilityid
+    left join cte_url_xml as cte_url on cte_url.facilityid = fac.facilityid
     left join cte_client_image_xml icxml on icxml.clienttoproductid = client_details.clienttoproductid
     left join cte_facility_image_xml  ifxml on ifxml.clientproducttoentityid = client_details.clientproducttoentityid
     left join cte_combined_image_xml icoxml on icoxml.clienttoproductid = client_details.clienttoproductid
@@ -1380,4 +1391,3 @@ status := 'completed successfully';
 
             return status;
 end;
-
