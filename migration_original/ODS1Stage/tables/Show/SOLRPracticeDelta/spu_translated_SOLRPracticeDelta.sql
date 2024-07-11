@@ -10,6 +10,7 @@ declare
     
 -- show.solrpracticedelta depends on:
 --- mdm_team.mst.practice_profile_processing
+--- show.solrpractice
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
