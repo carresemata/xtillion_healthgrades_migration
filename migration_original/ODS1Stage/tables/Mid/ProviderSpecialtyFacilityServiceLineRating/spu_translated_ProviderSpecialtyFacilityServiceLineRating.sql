@@ -27,7 +27,7 @@ declare
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
-    delete_statement string; -- update statement for the merge
+    update_statement string; -- update statement for the merge
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
@@ -91,12 +91,12 @@ select_statement := $$ with CTE_ProviderBatch as (
                 order by pb.providerid
                  $$;
 
---- delete statement
-delete_statement := 'delete from mid.providerspecialtyfacilityservicelinerating as target
-                    using (' || select_statement || ') as source
-                    where source.providerid = target.providerid 
-                        and source.specialtycode = target.specialtycode 
-                        and source.servicelinecode = target.servicelinecode';
+--- Update Statement
+update_statement := ' update 
+                     set
+                        target.servicelinedescription = source.servicelinedescription,
+                        target.legacykey = source.legacykey,
+                        target.specialtyid = source.specialtyid';
 
 --- Insert Statement
 insert_statement := ' insert  (
@@ -121,11 +121,13 @@ insert_statement := ' insert  (
 ---------------------------------------------------------  
 
 
-merge_statement := 'merge into mid.providerspecialtyfacilityservicelinerating as target  
-                   using ('||select_statement||') as source 
+merge_statement := ' merge into mid.providerspecialtyfacilityservicelinerating as target using 
+                   ('||select_statement||') as source 
                    on source.providerid = target.providerid 
                     and source.specialtycode = target.specialtycode 
                     and source.servicelinecode = target.servicelinecode 
+                    and source.servicelinestar = target.servicelinestar
+                   when matched then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
         
@@ -136,7 +138,6 @@ merge_statement := 'merge into mid.providerspecialtyfacilityservicelinerating as
 if (is_full) then
     truncate table Mid.ProviderSpecialtyFacilityServiceLineRating;
 end if; 
-execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
