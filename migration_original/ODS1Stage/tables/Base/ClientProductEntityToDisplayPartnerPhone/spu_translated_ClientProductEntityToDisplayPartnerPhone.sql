@@ -40,7 +40,7 @@ CREATE or REPLACE PROCEDURE BASE.SP_LOAD_ClientProductEntityToDisplayPartnerPhon
     select_statement_1:= $$  with cte_swimlane as (
         select *
         from base.vw_swimlane_base_client 
-        qualify dense_rank() over(partition by customerproductcodeorder by LastUpdateDate) = 1
+        qualify dense_rank() over(partition by customerproductcode order by LastUpdateDate) = 1
     ),
     
     CTE_Display_Partner AS (
