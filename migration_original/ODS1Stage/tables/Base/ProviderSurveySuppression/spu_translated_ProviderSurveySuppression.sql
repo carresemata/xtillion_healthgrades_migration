@@ -50,7 +50,7 @@ select_statement := $$ with cte_surveysupression as (
                         from cte_surveysupression as JSON
                             join base.provider as P on p.providercode = json.providercode
                             join base.surveysuppressionreason as SSR on ssr.suppressioncode = json.demographics_SURVEYSUPPRESSIONREASONCODE
-                        qualify dense_rank() over (partition by ProviderId order by json.Demographics_LastUpdateDate desc)= 1 $$;
+                        qualify row_number() over (partition by ProviderId, surveysuppressionreasonid order by json.Demographics_LastUpdateDate desc)= 1 $$;
 
 --- insert Statement
 insert_statement := ' insert 
@@ -74,10 +74,10 @@ update_statement := ' update
 ---------------------------------------------------------
 
 merge_statement := ' merge into base.providersurveysuppression as target 
-using ('||select_statement||') as source
-on source.providerid = target.providerid and source.surveysuppressionreasonid = target.surveysuppressionreasonid
-when matched then ' || update_statement || '
-when not matched then'||insert_statement;
+                        using ('||select_statement||') as source
+                        on source.providerid = target.providerid and source.surveysuppressionreasonid = target.surveysuppressionreasonid
+                        when matched then ' || update_statement || '
+                        when not matched then'||insert_statement;
 
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
