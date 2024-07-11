@@ -5,159 +5,73 @@ CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.SHOW.SP_LOAD_SOLRPROVIDERDELTA(is_fu
     as  
 
 declare 
-
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
     
 -- show.solrproviderdelta depends on: 
 --- mdm_team.mst.provider_profile_processing
---- base.provider
---- base.providerswithsponsorshipissues (empty)
+--- show.solrprovider
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    merge_statement_1 string;
-    merge_statement_2 string;
-    select_statement_3 string;
-    insert_statement_3 string;
-    merge_statement_3 string;
-    update_statement string;
-    status string;
+    select_statement string;
+    insert_statement string;
+    status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrproviderdelta');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-
+   
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
----------------------------------------------------------  
+---------------------------------------------------------     
+begin   
 
-begin
-
-select_statement_3 := 'with CTE_union as (
-                                    select
-                                        distinct p.providerid,
-                                        1 as SolrDeltaTypeCode,
-                                        current_timestamp() as StartDeltaProcessDate,
-                                        1 as MidDeltaProcessComplete
-                                    from
-                                        ' || mdm_db || '.mst.Provider_Profile_Processing as PPP
-                                        inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
-                                        left join show.solrproviderdelta as SOLRProvDelta on solrprovdelta.providerid = p.providerid
-                                        left join base.providerswithsponsorshipissues as ProvIssue on provissue.providercode = p.providercode
-                                    where
-                                        solrprovdelta.providerid is null
-                                        and provissue.providercode is null
-                                ),
-                                CTE_final as (
-                                    select
-                                        cteunion.providerid,
-                                        cteunion.solrdeltatypecode,
-                                        current_timestamp() as StartDeltaProcessDate,
-                                        cteunion.middeltaprocesscomplete,
-                                        row_number() over (
-                                            partition by cteunion.providerid
-                                            order by
-                                                cteunion.solrdeltatypecode
-                                        ) as RN1
-                                    from
-                                        cte_union as cteUnion
-                                        left join show.solrproviderdelta as SOLRProvDelta on solrprovdelta.providerid = cteunion.providerid
-                                    where
-                                        solrprovdelta.solrproviderdeltaid is null
-                                )
-                                select
-                                    ProviderID,
-                                    SolrDeltaTypeCode,
-                                    StartDeltaProcessDate,
-                                    MidDeltaProcessComplete
-                                from
-                                    CTE_final
-                                where
-                                    RN1 = 1 ';
-                            
-insert_statement_3 := ' insert (
-                                        ProviderID,
-                                        SolrDeltaTypeCode,
-                                        StartDeltaProcessDate,
-                                        MidDeltaProcessComplete
-                                    )
-                                    values (
-                                        source.providerid,
-                                        source.solrdeltatypecode,
-                                        source.startdeltaprocessdate,
-                                        source.middeltaprocesscomplete
-                                    )';
-
---- update Statement
-update_statement := ' update show.solrproviderdelta 
-                        SET ENDDeltaProcessDate = current_timestamp()
-                        where StartDeltaProcessDate is not null
-                        and ENDDeltaProcessDate is null;';
-
+-- Get all the ids that are processed and get to solr table
+select_statement := $$ with cte_provider_id as (
+                        select 
+                            distinct
+                            p.providerid
+                        from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
+                            join show.solrprovider as P on p.providercode = ppp.ref_provider_code)
+                       select
+                            uuid_string() as solrproviderdeltaid,
+                            p.providerid,
+                            '1' as solrdeltatypecode,
+                            null as startdeltaprocessdate,
+                            current_timestamp() as enddeltaprocessdate,
+                            '1' as middeltaprocesscomplete
+                       from cte_provider_id as p
+                        $$;
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement_1 := 'merge into show.solrproviderdelta as target using
-                                    (select	
-                                        p.providerid, 
-                                        1 as SolrDeltaTypeCode, 
-                                        current_timestamp() as StartDeltaProcessDate
-                            		from	' || mdm_db || '.mst.Provider_Profile_Processing as PPP
-                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code
-                            		where	ProviderId not IN (select ProviderId from show.solrproviderdelta)) as source
-                                        on source.providerid = target.providerid
-                                        when not matched then
-                                            insert (
-                                                ProviderId, 
-                                                SolrDeltaTypeCode, 
-                                                StartDeltaProcessDate
-                                            )
-                                            values (
-                                                source.providerid, 
-                                                source.solrdeltatypecode, 
-                                                source.startdeltaprocessdate
-                                            );';
-
-merge_statement_2 :=  'merge into show.solrproviderdelta as target using 
-                                    (select 
-                                        p.providerid
-                                    from 
-                                        ' || mdm_db || '.mst.Provider_Profile_Processing as PPP
-                                    inner join base.provider as P on p.providercode = ppp.ref_Provider_Code    
-                                    inner join show.solrproviderdelta SOLRProvDelta
-                                    on p.providerid = solrprovdelta.providerid) as source
-                                    on source.providerid = target.providerid
-                                    WHEN MATCHED then 
-                                        update SET
-                                        target.enddeltaprocessdate = null,
-                                        target.startmovedate = null,
-                                        target.endmovedate = null;';
-
-         
-                            
-merge_statement_3 := ' merge into show.solrproviderdelta as target
-                                    using (' || select_statement_if_3 || ') as source
-                                    on target.providerid = source.providerid
-                                    when not matched then ' || insert_statement_if_3;
-
-
+insert_statement := 'insert overwrite into show.solrproviderdelta 
+                       (solrproviderdeltaid, providerid, solrdeltatypecode, startdeltaprocessdate, enddeltaprocessdate, middeltaprocesscomplete)
+                        select 
+                                solrproviderdeltaid,
+                                providerid,
+                                solrdeltatypecode,
+                                current_timestamp() as startdeltaprocessdate,
+                                enddeltaprocessdate,
+                                middeltaprocesscomplete
+                        from (' || select_statement || ') as source';
+                                            
                    
 ---------------------------------------------------------
--------------------  5. execution ------------------------
+-------------------  5. execution -----------------------
 ---------------------------------------------------------
 
 if (is_full) then
     truncate table Show.SOLRProviderDelta;
+else
+    execute immediate insert_statement;
 end if; 
-execute immediate merge_statement_1;
-    execute immediate merge_statement_2;
-    execute immediate merge_statement_3;
-    execute immediate update_statement ;
+
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------
