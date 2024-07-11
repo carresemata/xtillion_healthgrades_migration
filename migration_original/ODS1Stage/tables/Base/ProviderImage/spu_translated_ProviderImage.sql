@@ -75,6 +75,7 @@ from
     left join base.mediasize as MS on ms.mediasizecode = json.image_MediaSizeCode
     left join base.mediareviewlevel as MRL on mrl.mediareviewlevelcode = json.image_MediaReviewLevelCode
     left join base.mediacontexttype as MCT on mct.mediacontexttypecode = json.image_MediaContextTypeCode    
+    qualify row_number() over(partition by json.image_ImagePath order by json.image_LastUpdateDate desc) = 1
 
 $$;
 
