@@ -20,7 +20,7 @@ declare
 ---------------------------------------------------------
 select_statement string;
 insert_statement string;
-delete_statement string;
+update_statement string;
 merge_statement string;
 status string;
 procedure_name varchar(50) default('sp_load_providermalpractice');
@@ -75,7 +75,7 @@ CTE_Swimlane as (select
     json.malpractice_LICENSENUMBER as LicenseNumber,
     json.malpractice_LASTUPDATEDATE as LastUpdateDate,
     row_number() over(partition by p.providerid, json.malpractice_MALPRACTICECLAIMTYPECODE, json.malpractice_CLAIMDATE, json.malpractice_CLAIMYEAR, json.malpractice_CLAIMSTATE, json.malpractice_LICENSENUMBER, json.malpractice_MALPRACTICECLAIMRANGE order by CREATE_DATE desc, TO_NUMBER(json.malpractice_CLAIMAMOUNT) desc) as RowRank, 
-	row_number()over(order by p.providerid) as RN1
+	row_number() over(order by p.providerid) as RN1
 from
     Cte_malpractice as JSON
     left join base.provider as P on json.providercode = p.providercode
@@ -256,7 +256,7 @@ insert_statement := ' insert
                             LicenseNumber,
                             LastUpdateDate)
                     values 
-                          ( uuid_string(), 
+                          ( utils.generate_uuid(source.providerid || source.providerlicenseid || source.malpracticeclaimtypeid || source.licensenumber), 
                             source.providerid,
                             source.providerlicenseid,
                             source.malpracticeclaimtypeid,
@@ -273,16 +273,24 @@ insert_statement := ' insert
                             source.sourcecode,
                             source.licensenumber,
                             source.lastupdatedate)';
-
                             
---- delete statement
-delete_statement := 'delete from base.providermalpractice as target
-                    using (' || select_statement || ') as source
-                    where source.providerid = target.providerid
-                        and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid
-                        and source.providerlicenseid = target.providerlicenseid 
-                        and source.licensenumber = target.licensenumber';
-        
+--- update statement
+update_statement := ' update
+                        set
+                            target.ClaimNumber = source.claimnumber,
+                            target.ClaimDate = source.claimdate,
+                            target.ClaimYear = source.claimyear,
+                            target.ClaimAmount = source.claimamount,
+                            target.ClaimState = source.claimstate,
+                            target.MalpracticeClaimRange = source.malpracticeclaimrange,
+                            target.Complaint = source.complaint,
+                            target.IncidentDate = source.incidentdate,
+                            target.ClosedDate = source.closeddate,
+                            target.ReportDate = source.reportdate,
+                            target.SourceCode = source.sourcecode,
+                            target.LicenseNumber = source.licensenumber,
+                            target.LastUpdateDate = source.lastupdatedate
+                    ';
                             
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
@@ -294,6 +302,8 @@ merge_statement := ' merge into base.providermalpractice as target
                         and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid 
                         and source.providerlicenseid = target.providerlicenseid 
                         and source.licensenumber = target.licensenumber
+                        and source.claimdate = target.claimdate
+                    when matched then ' || update_statement || '
                     when not matched then'||insert_statement;
 
 ---------------------------------------------------------
@@ -303,7 +313,6 @@ merge_statement := ' merge into base.providermalpractice as target
 if (is_full) then
     truncate table Base.ProviderMalpractice;
 end if; 
-execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
