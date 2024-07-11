@@ -75,7 +75,7 @@ CTE_Swimlane as (select
     json.malpractice_LICENSENUMBER as LicenseNumber,
     json.malpractice_LASTUPDATEDATE as LastUpdateDate,
     row_number() over(partition by p.providerid, json.malpractice_MALPRACTICECLAIMTYPECODE, json.malpractice_CLAIMDATE, json.malpractice_CLAIMYEAR, json.malpractice_CLAIMSTATE, json.malpractice_LICENSENUMBER, json.malpractice_MALPRACTICECLAIMRANGE order by CREATE_DATE desc, TO_NUMBER(json.malpractice_CLAIMAMOUNT) desc) as RowRank, 
-	row_number()over(order by p.providerid) as RN1
+	row_number() over(order by p.providerid) as RN1
 from
     Cte_malpractice as JSON
     left join base.provider as P on json.providercode = p.providercode
@@ -298,7 +298,11 @@ update_statement := ' update
 
 merge_statement := ' merge into base.providermalpractice as target 
                     using ('||select_statement||') as source
-                    on source.providerid = target.providerid and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid and source.providerlicenseid = target.providerlicenseid and source.licensenumber = target.licensenumber
+                    on source.providerid = target.providerid 
+                        and source.malpracticeclaimtypeid = target.malpracticeclaimtypeid 
+                        and source.providerlicenseid = target.providerlicenseid 
+                        and source.licensenumber = target.licensenumber
+                        and source.claimdate = target.claimdate
                     when matched then ' || update_statement || '
                     when not matched then'||insert_statement;
 
