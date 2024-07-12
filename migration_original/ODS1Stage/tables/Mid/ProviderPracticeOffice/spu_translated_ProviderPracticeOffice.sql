@@ -31,6 +31,7 @@ declare
     update_statement string; -- main update statement for the merge
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
+    update_statement_2 string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providerpracticeoffice');
     execution_start datetime default getdate();
@@ -41,8 +42,7 @@ declare
 ---------------------------------------------------------     
 
 begin
-select_statement := 
-                $$ 
+select_statement := $$ 
                 with CTE_ProviderBatch as (
                             select p.providerid
                             from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
@@ -92,7 +92,7 @@ select_statement :=
                     from base.practiceemail
                     where EmailAddress is not null
                 )
-                    select distinct
+                select 
                         pto.providertoofficeid, 
                         pto.providerid,  
                         p.practiceid, 
@@ -154,18 +154,19 @@ select_statement :=
                         o.legacykey as LegacyKeyOffice, 
                         p.legacykey as LegacyKeyPractice
                     from CTE_ProviderBatch pb 
-                    inner join base.providertooffice as pto on pb.providerid = pto.providerid
-                    inner join base.office as o on o.officeid = pto.officeid
-                    inner join base.officetoaddress as ota on o.officeid = ota.officeid
-                    inner join base.address as a on a.addressid = ota.addressid	
-                    left join CTE_MainNumbers as cte_mn on cte_mn.officeid = o.officeid and cte_mn.sequenceid1 = 1
-                    left join CTE_ServiceNumbers as cte_sn on cte_sn.officeid = o.officeid and cte_sn.sequenceid1 = 1
-                    left join CTE_FaxNumbers as cte_fn on cte_fn.officeid = o.officeid and cte_fn.sequenceid1 = 1
-                    left join base.citystatepostalcode as cspc on a.citystatepostalcodeid = cspc.citystatepostalcodeid
-                    left join base.nation as n on cspc.nationid = n.nationid
-                    left join base.practice as p on o.practiceid = p.practiceid
-                    left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
-                    left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
+                        inner join base.providertooffice as pto on pb.providerid = pto.providerid
+                        inner join base.office as o on o.officeid = pto.officeid
+                        inner join base.officetoaddress as ota on o.officeid = ota.officeid
+                        inner join base.address as a on a.addressid = ota.addressid	
+                        left join CTE_MainNumbers as cte_mn on cte_mn.officeid = o.officeid and cte_mn.sequenceid1 = 1
+                        left join CTE_ServiceNumbers as cte_sn on cte_sn.officeid = o.officeid and cte_sn.sequenceid1 = 1
+                        left join CTE_FaxNumbers as cte_fn on cte_fn.officeid = o.officeid and cte_fn.sequenceid1 = 1
+                        left join base.citystatepostalcode as cspc on a.citystatepostalcodeid = cspc.citystatepostalcodeid
+                        left join base.nation as n on cspc.nationid = n.nationid
+                        left join base.practice as p on o.practiceid = p.practiceid
+                        left join CTE_ProviderOfficeRank as cte_por on pto.providerid = cte_por.providerid and pto.providerofficerank = cte_por.providerofficerank
+                        left join CTE_PracticeEmails cte_pe on cte_pe.practiceid = o.practiceid and cte_pe.emailrank = 1
+                    qualify row_number() over(partition by pto.providertoofficeid order by pto.lastupdatedate desc) = 1
                 $$;
                         
 
@@ -174,8 +175,8 @@ select_statement :=
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------
 
-update_statement := $$
-                     update SET 
+update_statement := $$ update 
+                        SET 
                         target.addresscode = source.addresscode,
                         target.addressid = source.addressid,
                         target.addressline1 = source.addressline1,
@@ -235,8 +236,7 @@ update_statement := $$
 
 --- insert Statement
 insert_statement :=   $$
-                      insert  (
-                                AddressCode,
+                      insert  ( AddressCode,
                                 AddressID,
                                 AddressLine1,
                                 AddressLine2,
@@ -349,9 +349,20 @@ insert_statement :=   $$
 
 merge_statement :=  $$
                     merge into mid.providerpracticeoffice as target using ($$|| select_statement ||$$) as source 
-                    on source.providerid = target.providerid
+                    on source.providertoofficeid = target.providertoofficeid
                     when matched then $$|| update_statement ||$$
                     when not matched then $$ || insert_statement;
+
+update_statement_2 := $$ UPDATE mid.providerpracticeoffice as target 
+                            SET target.physiciancount = source.physiciancount
+                            FROM (select PracticeID, COUNT(*) as PhysicianCount
+                        					from
+                        						(select distinct ProviderID, PracticeID
+                        							from mid.ProviderPracticeOffice
+                        							where PracticeID is not null
+                        						)a	
+                        					group by PracticeID	) as source
+                            WHERE target.practiceid = source.practiceid $$;                    
 
                 
 ---------------------------------------------------------
@@ -362,6 +373,7 @@ if (is_full) then
     truncate table Mid.ProviderPracticeOffice;
 end if; 
 execute immediate merge_statement;
+execute immediate update_statement_2;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------
