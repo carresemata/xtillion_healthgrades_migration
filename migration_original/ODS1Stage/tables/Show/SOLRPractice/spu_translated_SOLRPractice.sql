@@ -340,7 +340,7 @@ select_statement := $$ with cte_practice_batch as (
                             select distinct
                                 mp.OfficeID,
                                 mp.OfficeCode as oID,
-                                mp.OfficeName as oNm,
+                                utils.clean_xml(mp.OfficeName) as oNm,
                                 mp.OfficeRank as oRank,
                                 mp.AddressTypeCode as addTp,
                                 mp.AddressLine1 as ad1,
