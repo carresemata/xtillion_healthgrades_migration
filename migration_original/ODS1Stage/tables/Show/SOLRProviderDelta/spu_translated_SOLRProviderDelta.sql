@@ -11,7 +11,7 @@ declare
     
 -- show.solrproviderdelta depends on: 
 --- mdm_team.mst.provider_profile_processing
---- show.solrprovider
+--- mid.provider
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
@@ -35,7 +35,7 @@ select_statement := $$ with cte_provider_id as (
                             distinct
                             p.providerid
                         from $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                            join show.solrprovider as P on p.providercode = ppp.ref_provider_code)
+                            join mid.provider as P on p.providercode = ppp.ref_provider_code)
                        select
                             uuid_string() as solrproviderdeltaid,
                             p.providerid,
