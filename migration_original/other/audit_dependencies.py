@@ -5,7 +5,7 @@ import json
 def table_dependencies():
     table_dependencies = {}
     base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')]
-    prefixes = ['base.', 'mid.', 'show.', 'hosp.', 'ermart1.']
+    prefixes = ['base.', 'mid.', 'show.', 'hosp_directory.', 'ermart1.']
 
     # Load view dependencies
     view_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/views_dependencies.json')
@@ -80,6 +80,9 @@ def table_dependencies():
     static_tables = sorted(list(set(static_tables)))
     # save to static_tables.txt
     static_tables_path = os.path.join(os.path.dirname(os.getcwd()), 'other/static_tables.txt')
+    # remove the file if it exists and create a new one
+    if os.path.exists(static_tables_path):
+        os.remove(static_tables_path)
     with open(static_tables_path, 'w') as f:
         for table in static_tables:
             f.write(f'{table}\n')
