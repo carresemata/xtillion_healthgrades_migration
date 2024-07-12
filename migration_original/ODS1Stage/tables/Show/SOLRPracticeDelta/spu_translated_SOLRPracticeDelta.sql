@@ -9,18 +9,15 @@ declare
 ---------------------------------------------------------
     
 -- show.solrpracticedelta depends on:
---- mdm_team.mst.provider_profile_processing
---- base.practice
---- base.providertooffice
---- base.office
---- base.provider
+--- mdm_team.mst.practice_profile_processing
+--- show.solrpractice
 
 ---------------------------------------------------------
 --------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
-    merge_statement_1 string; -- merge statement to final table
-    merge_statement_2 string;
+    select_statement string;
+    insert_statement string;
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_solrpracticedelta');
     execution_start datetime default getdate();
@@ -29,71 +26,50 @@ declare
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
- begin                               
+begin   
+
+-- Get all the ids that are processed and get to solr table
+select_statement := $$ with cte_practice_id as (
+                        select 
+                            distinct
+                            p.practiceid
+                        from $$ || mdm_db || $$.mst.Practice_Profile_Processing as ppp
+                            join show.solrpractice as P on p.practicecode = ppp.ref_practice_code)
+                       select
+                            uuid_string() as solrpracticedeltaid,
+                            p.practiceid,
+                            '1' as solrdeltatypecode,
+                            null as startdeltaprocessdate,
+                            current_timestamp() as enddeltaprocessdate,
+                            '1' as middeltaprocesscomplete
+                       from cte_practice_id as p
+                        $$;
 
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-merge_statement_1 := 'merge into show.solrpracticedelta as target using 
-                                           (select distinct
-                                                pr.practiceid,
-                                                spd.solrdeltatypecode, 
-                                                spd.middeltaprocesscomplete, 
-                                                spd.startdeltaprocessdate,
-                                                spd.enddeltaprocessdate,
-                                                spd.startmovedate,
-                                                spd.endmovedate
-                                            from	$$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                                                    join base.provider as P on p.providercode = ppp.ref_provider_code
-                                            		join	base.providertooffice po on p.providerid = po.providerid
-                                            		join	base.office o on po.officeid = o.officeid
-                                            		join	base.practice pr on o.practiceid = pr.practiceid		
-                                            		left join	show.solrpracticedelta spd on pr.practiceid = spd.practiceid) as source 
-                                           
-                                on source.practiceid = target.practiceid
-                                WHEN MATCHED then 
-                                            update 
-                                                SET
-                                                target.enddeltaprocessdate = null,
-                                				target.startmovedate = null,
-                                				target.endmovedate = null
-                                when not matched and source.startdeltaprocessdate is not null and source.enddeltaprocessdate is null and source.practiceid is null then 
-                                            insert (
-                                            PracticeID,
-                                            SolrDeltaTypeCode,
-                                            StartDeltaProcessDate,
-                                            MidDeltaProcessComplete
-                                            )
-                                            values (
-                                            source.practiceid,
-                                            source.solrdeltatypecode,
-                                            source.startdeltaprocessdate,
-                                            source.middeltaprocesscomplete
-                                            );';
--- Merge statement 
-merge_statement_2 := 'merge into show.solrpracticedelta as target using 
-                   (select distinct
-                        PracticeId,
-                        StartDeltaProcessDate,
-                        EndDeltaProcessDate
-                   from show.solrpracticedelta
-                   where StartDeltaProcessDate is not null and EndDeltaProcessDate is null) as source 
-                   on source.practiceid = target.practiceid
-                   WHEN MATCHED then
-                    update
-                    SET 
-                        target.enddeltaprocessdate  = current_timestamp()';
+insert_statement := 'insert overwrite into show.solrpracticedelta 
+                       (solrpracticedeltaid, practiceid, solrdeltatypecode, startdeltaprocessdate, enddeltaprocessdate, middeltaprocesscomplete)
+                        select 
+                                solrpracticedeltaid,
+                                practiceid,
+                                solrdeltatypecode,
+                                current_timestamp() as startdeltaprocessdate,
+                                enddeltaprocessdate,
+                                middeltaprocesscomplete
+                        from (' || select_statement || ') as source';
+                                            
                    
 ---------------------------------------------------------
--------------------  5. execution ------------------------
+-------------------  5. execution -----------------------
 ---------------------------------------------------------
 
 if (is_full) then
     truncate table Show.SOLRPracticeDelta;
+else
+    execute immediate insert_statement;
 end if; 
-execute immediate merge_statement_1;
-        execute immediate merge_statement_2;
 
 
 ---------------------------------------------------------
