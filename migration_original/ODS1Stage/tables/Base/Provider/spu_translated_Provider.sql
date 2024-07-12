@@ -17,7 +17,6 @@ AS declare
 
     select_statement_1 string; -- cte and select statement for the merge
     update_statement_1 string; -- update statement for the merge
-    update_clause_1 string; -- where condition for update
     insert_statement_1 string; -- insert statement for the merge
     merge_statement_1 string; -- merge statement to final table
 
@@ -84,23 +83,7 @@ update_statement_1 := ' update
                             target.sourceid = source.sourceid,
                             target.lastupdatedate = source.lastupdatedate,
                             target.surviveresidentialaddresses = source.surviveresidentialaddresses,
-                            target.ispatientfavorite = source.ispatientfavorite';
-                            
--- update Clause
-update_clause_1 := $$ ifnull(target.providercode, '') != ifnull(source.providercode, '')
-        or ifnull(target.firstname, '') != ifnull(source.firstname, '')
-        or ifnull(target.middlename, '') != ifnull(source.middlename, '')
-        or ifnull(target.lastname, '') != ifnull(source.lastname, '')
-        or ifnull(target.suffix, '') != ifnull(source.suffix, '')
-        or ifnull(target.gender, '') != ifnull(source.gender, '')
-        or ifnull(target.npi, '') != ifnull(source.npi, '')
-        or ifnull(target.dateofbirth, '1900-01-01') != ifnull(source.dateofbirth,'1900-01-01')
-        or ifnull(target.acceptsnewpatients, 0) != ifnull(source.acceptsnewpatients, 0)
-        or ifnull(target.sourcecode, '') != ifnull(source.sourcecode, '')
-        or ifnull(target.sourceid, '00000000-0000-0000-0000-000000000000') != ifnull(source.sourceid,'00000000-0000-0000-0000-000000000000')
-        or ifnull(target.lastupdatedate, '1900-01-01') != ifnull(source.lastupdatedate, '1900-01-01')
-        or ifnull(target.surviveresidentialaddresses, 0) != ifnull(source.surviveresidentialaddresses, 0)
-        or ifnull(target.ispatientfavorite, 0) != ifnull(source.ispatientfavorite, 0) $$;                        
+                            target.ispatientfavorite = source.ispatientfavorite';       
         
 --- insert Statement
 insert_statement_1 := ' insert  
@@ -157,7 +140,7 @@ update_statement_2 := $$ update base.provider as target
 merge_statement_1 := ' merge into base.provider as target using 
                    ('||select_statement_1||') as source 
                    on source.providercode = target.providercode
-                   WHEN MATCHED and' || update_clause_1 || 'then '||update_statement_1|| '
+                   when matched then '||update_statement_1|| '
                    when not matched then '||insert_statement_1;
                    
 ---------------------------------------------------------
