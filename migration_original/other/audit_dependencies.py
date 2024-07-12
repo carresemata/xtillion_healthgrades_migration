@@ -11,7 +11,8 @@ def table_dependencies():
     view_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/views_dependencies.json')
     with open(view_dependencies_path, 'r') as f:
         view_dependencies = json.load(f)
-
+    
+    # test for one table Show.SolrProvider only
     for base_dir in base_dirs:
         os.chdir(base_dir)
         for schema in os.listdir():
@@ -20,7 +21,7 @@ def table_dependencies():
                 os.chdir(table)
                 with open(f'spu_translated_{table}.sql', 'r') as f:
                     content = f.read()
-                    match = re.search(r'declare(.*?)actions', content, re.DOTALL | re.IGNORECASE)
+                    match = re.search(r'statements(.*?)actions', content.lower(), re.DOTALL | re.IGNORECASE)
                     if match:
                         dependencies_section = match.group(1)
                         dependencies = []
@@ -62,10 +63,27 @@ def table_dependencies():
     sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
     # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
     sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
-    os.chdir('..')
-    audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_sp_dependencies.json')
-    with open('audit_sp_dependencies.json', 'w') as f:
-        json.dump(sp_dependencies, f, indent=4)
+    audit_sp_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_sp_dependencies.json')
+    # Save to audit_sp_dependencies.json in audit_dependencies_path location
+    with open(audit_sp_path, 'w') as audit_file:
+        json.dump(sp_dependencies, audit_file, indent=4)
+
+    # Find static tables which are those in dependencies but not in keys
+    # for each table in dependencies, check if it is in keys
+    # if not, add it to static_tables
+    static_tables = []
+    for table, deps in table_dependencies.items():
+        for dep in deps:
+            if dep not in table_dependencies.keys():
+                static_tables.append(dep)
+    # order the static tables
+    static_tables = sorted(list(set(static_tables)))
+    # save to static_tables.txt
+    static_tables_path = os.path.join(os.path.dirname(os.getcwd()), 'other/static_tables.txt')
+    with open(static_tables_path, 'w') as f:
+        for table in static_tables:
+            f.write(f'{table}\n')
+
 
 table_dependencies()
 
