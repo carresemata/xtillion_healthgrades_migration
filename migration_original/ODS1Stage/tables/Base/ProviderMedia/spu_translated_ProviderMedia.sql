@@ -1,144 +1,121 @@
-CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.MID.SP_LOAD_PROVIDERSPECIALTYFACILITYSERVICELINERATING(is_full BOOLEAN)
-    RETURNS STRING
-    LANGUAGE SQL
-    EXECUTE AS CALLER
-    AS  
-declare 
+CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PROVIDERMEDIA(is_full BOOLEAN)
+RETURNS STRING
+LANGUAGE SQL
+EXECUTE as CALLER
+as  
+declare
+    
 ---------------------------------------------------------
 --------------- 1. table dependencies -------------------
 ---------------------------------------------------------
-
--- mid.providerspecialtyfacilityservicelinerating depends on:
+-- base.providermedia depends on the following tables:
 --- mdm_team.mst.provider_profile_processing
 --- base.provider
---- base.providertofacility
---- base.facility
---- base.providertospecialty
---- base.specialtygrouptospecialty
---- base.specialtygroup
---- base.tempspecialtytoservicelineghetto
---- ermart1.facility_facilitytoservicelinerating (external dependency)
---- ermart1.facility_serviceline (external dependency)
---- ermart1.facility_facilitytoprocedurerating (external dependency)
---- ermart1.facility_proceduretoserviceline (external dependency)
+--- base.mediatype
 
 ---------------------------------------------------------
---------------- 2. Declaring variables ------------------
+--------------- 2. declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
-    update_statement string; -- update statement for the merge
     insert_statement string; -- insert statement for the merge
+    update_statement string; -- update
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
-    procedure_name varchar(50) default('sp_load_providerspecialtyfacilityservicelinerating');
+    procedure_name varchar(50) default('sp_load_providermedia');
     execution_start datetime default getdate();
     mdm_db string default('mdm_team');
-   
+
+begin
+
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
 ---------------------------------------------------------     
 
---- Select Statement
+--- select Statement
+select_statement := $$ with Cte_media as (
+SELECT
+    p.ref_provider_code as providercode,
+    to_varchar(json.value:MEDIA_TYPE_CODE) as Media_MediaTypeCode,
+    to_varchar(json.value:MEDIA_DATE) as Media_MediaDate,
+    to_varchar(json.value:MEDIA_TITLE) as Media_MediaTitle,
+    to_varchar(json.value:MEDIA_PUBLISHER) as Media_MediaPublisher,
+    to_varchar(json.value:MEDIA_SYNOPSIS) as Media_MediaSynopsis,
+    to_varchar(json.value:MEDIA_LINK) as Media_MediaLink,
+    to_varchar(json.value:DATA_SOURCE_CODE) as Media_SourceCode,
+    to_timestamp_ntz(json.value:UPDATED_DATETIME) as Media_LastUpdateDate
+FROM $$||mdm_db||$$.mst.provider_profile_processing as p
+, lateral flatten(input => p.PROVIDER_PROFILE:MEDIA) as json
+)
+select
+    p.providerid,
+    mt.mediatypeid,
+    json.media_MEDIADATE as MediaDate,
+    json.media_MEDIATITLE as MediaTitle,
+    json.media_MEDIAPUBLISHER as MediaPublisher,
+    json.media_MEDIASYNOPSIS as MediaSynopsis,
+    json.media_MEDIALINK as MediaLink,
+    ifnull(json.media_SOURCECODE, 'Profisee') as SourceCode,
+    ifnull(json.media_LASTUPDATEDATE, current_timestamp()) as LastUpdateDate
 
-begin
-select_statement := $$ with CTE_ProviderBatch as (
-                select
-                    p.providerid
-                from
-                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
-                    join base.provider as P on p.providercode = ppp.ref_provider_code),
-                cte_union as (
-                select
-                    fsl.facilityid,
-                    fsl.servicelineid,
-                    sl.servicelinedescription,
-                    fsl.survivalstar as servicelinestar
-                from
-                    ermart1.facility_facilitytoservicelinerating as fsl
-                    join ermart1.facility_serviceline as sl on fsl.servicelineid = sl.servicelineid
-                where
-                    fsl.ismaxyear = 1
-                union all
-                select
-                    fpr.facilityid,
-                    sl.servicelineid,
-                    sl.servicelinedescription,
-                    fpr.overallsurvivalstar as servicelinestar
-                from
-                    ermart1.facility_facilitytoprocedurerating as fpr
-                    join ermart1.facility_proceduretoserviceline as psl on fpr.procedureid = psl.procedureid
-                    join ermart1.facility_serviceline as sl on psl.servicelineid = sl.servicelineid
-                where
-                    fpr.ismaxyear = 1
-                    and fpr.procedureid = 'ob1')
-                select distinct 
-                    pb.providerid, 
-                    tstslg.servicelinecode, 
-                    e.servicelinestar, 
-                    e.servicelinedescription, 
-                    sg.legacykey, 
-                    tstslg.specialtyid, 
-                    tstslg.specialtycode
-                from cte_providerbatch as pb
-                    inner join base.providertofacility as pf on pf.providerid = pb.providerid
-                    join base.facility as b on pf.facilityid = b.facilityid
-                    join base.providertospecialty as ps on pf.providerid = ps.providerid
-                    join base.specialtygrouptospecialty as sgs on sgs.specialtyid = ps.specialtyid
-                    join base.specialtygroup as sg on sg.specialtygroupid = sgs.specialtygroupid
-                    join base.tempspecialtytoservicelineghetto as tstslg on sg.specialtygroupcode = tstslg.specialtycode
-                    join cte_union as e on b.legacykey = e.facilityid and tstslg.servicelinecode = 'SL' || e.servicelineid
-                order by pb.providerid
-                 $$;
+from cte_media as JSON
+    join base.provider as P on p.providercode = json.providercode
+    join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE 
+qualify row_number() over(partition by ProviderID, media_mediatypecode, media_mediadate, media_MediaLink, media_MediaPublisher, media_MediaSynopsis, media_MediaTitle order by json.media_lastupdatedate desc) = 1 $$;
 
---- Update Statement
-update_statement := ' update 
-                     set
-                        target.servicelinedescription = source.servicelinedescription,
-                        target.legacykey = source.legacykey,
-                        target.specialtyid = source.specialtyid';
-
---- Insert Statement
-insert_statement := ' insert  (
-                        providerid, 
-                        servicelinecode, 
-                        servicelinestar, 
-                        servicelinedescription, 
-                        legacykey, 
-                        specialtyid, 
-                        specialtycode)
-                      values (
-                        source.providerid,
-                        source.servicelinecode,
-                        source.servicelinestar,
-                        source.servicelinedescription,
-                        source.legacykey,
-                        source.specialtyid,
-                        source.specialtycode)';
-
+--- insert Statement
+insert_statement := '       insert  
+                                    (ProviderMediaId, 
+                                    ProviderID,
+                                    MediaTypeID,
+                                    MediaDate,
+                                    MediaTitle,
+                                    MediaPublisher,
+                                    MediaSynopsis,
+                                    MediaLink,
+                                    SourceCode,
+                                    LastUpdateDate)         
+                             values 
+                                    (utils.generate_uuid(source.providerid || source.mediatypeid), 
+                                    source.providerid,
+                                    source.mediatypeid,
+                                    source.mediadate,
+                                    source.mediatitle,
+                                    source.mediapublisher,
+                                    source.mediasynopsis,
+                                    source.medialink,
+                                    source.sourcecode,
+                                    source.lastupdatedate)';
+--- update statement
+update_statement := ' 
+    update
+    set
+        target.MediaDate = source.mediadate,
+        target.MediaTitle = source.mediatitle,
+        target.MediaPublisher = source.mediapublisher,
+        target.MediaSynopsis = source.mediasynopsis,
+        target.MediaLink = source.medialink,
+        target.SourceCode = source.sourcecode,
+        target.LastUpdateDate = source.lastupdatedate';
+        
 ---------------------------------------------------------
---------- 4. Actions (Inserts and Updates) --------------
+--------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
-
-merge_statement := ' merge into mid.providerspecialtyfacilityservicelinerating as target using 
-                   ('||select_statement||') as source 
-                   on source.providerid = target.providerid 
-                    and source.specialtycode = target.specialtycode 
-                    and source.servicelinecode = target.servicelinecode 
-                    and source.servicelinestar = target.servicelinestar
-                   when matched then '||update_statement|| '
+merge_statement := ' merge into base.providermedia as target 
+                    using (' || select_statement || ') as source
+                   on source.providerid = target.providerid and source.mediatypeid = target.mediatypeid
+                   when matched then ' || update_statement || '
                    when not matched then '||insert_statement;
-                   
-        
+
 ---------------------------------------------------------
 -------------------  5. execution ------------------------
 ---------------------------------------------------------
 
 if (is_full) then
-    truncate table Mid.ProviderSpecialtyFacilityServiceLineRating;
+    truncate table Base.ProviderMedia;
 end if; 
-execute immediate merge_statement;
+execute immediate merge_statement ;
 
 ---------------------------------------------------------
 --------------- 6. status monitoring --------------------
