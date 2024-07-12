@@ -123,7 +123,10 @@ insert_statement := ' insert  (
 
 merge_statement := ' merge into mid.providerspecialtyfacilityservicelinerating as target using 
                    ('||select_statement||') as source 
-                   on source.providerid = target.providerid and source.specialtycode = target.specialtycode and source.servicelinecode = target.servicelinecode 
+                   on source.providerid = target.providerid 
+                    and source.specialtycode = target.specialtycode 
+                    and source.servicelinecode = target.servicelinecode 
+                    and source.servicelinestar = target.servicelinestar
                    when matched then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
