@@ -74,11 +74,11 @@ begin
 
 --- Select Statement
 
-select_statement := $$with CTE_ProviderBatch as (
+select_statement := $$ with CTE_ProviderBatch as (
                 select
                     p.providerid
                 from
-                    mdm_team.mst.Provider_Profile_Processing as ppp
+                    $$ || mdm_db || $$.mst.Provider_Profile_Processing as ppp
                     join base.provider as P on p.providercode = ppp.ref_provider_code),
                     cte_servicelinespecialty as (
     select 
@@ -114,9 +114,7 @@ cte_parentchild as (
     where
         fpc.ismaxyear = 0
         and f.isclosed = 0
-)
--- select * from cte_parentchild;
-,
+),
 cte_serviceline as (
 select 
     mt.medicaltermcode as servicelinecode, 
@@ -127,10 +125,7 @@ from
     join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
 where 
     mtt.medicaltermtypecode = 'SERVICELINE'
-    )
-    -- select * from cte_serviceline;
-    -- select * from base.medicaltermtype;
-    ,
+),
 
 cte_ermartfacility as (
 select
@@ -150,10 +145,8 @@ from
     join cte_serviceline as sl on ('SL' + fsl.servicelineid = sl.legacykey)
 where
     fpr.ismaxyear = 1
-)
--- select * from cte_ermartfacility;
--- select * from ermart1.facility_facilitytoprocedurerating;
-,
+),
+
 cte_cohort as (
 select
             mt.medicaltermcode as procedurecode,
@@ -164,9 +157,8 @@ select
             join base.medicaltermtype mtt on mt.medicaltermtypeid = mtt.medicaltermtypeid
         where
             mtt.medicaltermtypecode = 'COHORT'
-)
--- select * from cte_cohort;
-,
+),
+
 cte_ratingsortvalue as (
 select
     avg(
@@ -185,9 +177,7 @@ from
     and 'SL' || y.servicelineid = erfa.legacykey
     and fpr.ratingsourceid = erfa.ratingsourceid
     and (fpr.overallsurvivalstar is not null or fpr.overallrecovery30star is not null)
-)
-
-,
+),
 
 cte_tempqualityscoretable as (
 select distinct 
@@ -197,6 +187,7 @@ select distinct
     (select average_score from cte_ratingsortvalue) as ratingssortvalue
 from cte_ermartfacility as erfa
 ),
+
 cte_tempproviderspecialtyserviceline as (
 select
     vw.providerid,
@@ -206,6 +197,7 @@ from base.vwuproviderspecialty as vw -- this is empty in sql server, remove
 inner join cte_servicelinespecialty as cte on cte.medicaltermcode = vw.specialtycode
 where specialtyrank = 1
 ),
+
 cte_specl as (
 select
     ermart.servicelineid,
@@ -214,6 +206,7 @@ select
 from cte_servicelinespecialty as cte
 join ermart1.facility_facilitytoservicelinerating as ermart on ermart.servicelineid = cte.servicelinecode
 ),
+
 cte_speclxml as (
 select 
     servicelineid,
@@ -221,7 +214,8 @@ select
 iff(spcd is not null,'<spcd>' || spcd || '</spcd>','')  || '</spec>','') as specl
     
 from cte_specl
-group by servicelineid),
+group by servicelineid
+),
 
 cte_union as (
 select
@@ -316,7 +310,8 @@ iff(lat is not null,'<lat>' || lat || '</lat>','') ||
 iff(lng is not null,'<lng>' || lng || '</lng>','')  || '</addr>','') as addressxml
 from cte_address 
 group by
-    facilityid),
+    facilityid
+),
 
 cte_child as (
 select distinct
@@ -534,8 +529,7 @@ select
     mf.FacilityTypeCode,
     mf.FacilitySearchType,
     mf.FiveStarProcedureCount,
-    (avg(cteprov.ratingsSortValue) + count(cteprov.ServiceLineCode)*0.25) as qualityscore,
-    0 as actioncode
+    (avg(cteprov.ratingsSortValue) + count(cteprov.ServiceLineCode)*0.25) as qualityscore
 from cte_providerbatch as pb
     join base.providertofacility as ptf on ptf.providerid = pb.providerid
     join base.facility as f on f.facilityid = ptf.facilityid
@@ -578,34 +572,34 @@ group by
     addxml.addressxml,
     awxml.awardxml,
     phxml.pdcphonexml,
-    ppxml.pdcphonexml
-    
+    ppxml.pdcphonexml,
+    ptf.lastupdatedate
+qualify row_number() over(partition by ptf.providertofacilityid order by ptf.lastupdatedate desc) = 1
 )
 select distinct
-    a0.providertofacilityid,
-    a0.providerid, 
-    a0.facilityid,
-    a0.facilitycode,
-    a0.facilityname,
-    a0.isclosed, 
-    a0.imagefilepath, 
-    a0.rolecode,
-    a0.roledescription,
-    a0.legacykey,
-    a0.fivestarxml,
-    a0.hasaward,
-    a0.servicelineaward,
-    a0.addressxml, 
-    a0.awardxml,
-    a0.pdcphonexml,
-    a0.facilityurl,
-    a0.facilitytype,
-    a0.facilitytypecode,
-    a0.facilitysearchtype,
-    a0.fivestarprocedurecount,
-    a0.qualityscore,
-    a0.actioncode as ActionCode 
-from cte_providerfacility as a0 
+    providertofacilityid,
+    providerid, 
+    facilityid,
+    facilitycode,
+    facilityname,
+    isclosed, 
+    imagefilepath, 
+    rolecode,
+    roledescription,
+    legacykey,
+    fivestarxml,
+    hasaward,
+    servicelineaward,
+    addressxml, 
+    awardxml,
+    pdcphonexml,
+    facilityurl,
+    facilitytype,
+    facilitytypecode,
+    facilitysearchtype,
+    fivestarprocedurecount,
+    qualityscore
+from cte_providerfacility
  $$;
 
 --- Update Statement
