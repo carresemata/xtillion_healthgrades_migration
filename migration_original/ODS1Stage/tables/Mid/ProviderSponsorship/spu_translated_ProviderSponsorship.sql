@@ -59,7 +59,7 @@ declare
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
-    update_statement string; -- update statement for the merge
+    delete_statement string;
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
@@ -1217,37 +1217,10 @@ select
 from cte_providersponsorship ps
  $$;
 
---- Update Statement
-update_statement := ' update 
-                     set
-                        target.providercode = source.providercode,
-                        target.productcode = source.productcode,
-                        target.productdescription = source.productdescription,
-                        target.productgroupcode = source.productgroupcode,
-                        target.productgroupdescription = source.productgroupdescription,
-                        target.clienttoproductid = source.clienttoproductid,
-                        target.clientcode = source.clientcode,
-                        target.clientname = source.clientname,
-                        target.facilitycode = source.facilitycode,
-                        target.facilityname = source.facilityname,
-                        target.phonexml = source.phonexml,
-                        target.mobilephonexml = source.mobilephonexml,
-                        target.desktopphonexml = source.desktopphonexml,
-                        target.tabletphonexml = source.tabletphonexml,
-                        target.urlxml = source.urlxml,
-                        target.imagexml = source.imagexml,
-                        target.appointmentoptiondescription = source.appointmentoptiondescription,
-                        target.calltoactionmsg = source.calltoactionmsg,
-                        target.safeharbormsg = source.safeharbormsg,
-                        target.facilitystate = source.facilitystate,
-                        target.officeid = source.officeid,
-                        target.officecode = source.officecode,
-                        target.officename = source.officename,
-                        target.practiceid = source.practiceid,
-                        target.practicecode = source.practicecode,
-                        target.practicename = source.practicename,
-                        target.hasoar = source.hasoar
-                         ';
+--- Delete Statement
+delete_statement := 'delete from mid.providersponsorship as target
+                        using ('|| select_statement ||') AS source
+                        where target.providercode = source.providercode;';
 
 --- Insert Statement
 insert_statement := '  insert  ( providercode,
@@ -1315,8 +1288,7 @@ insert_statement := '  insert  ( providercode,
 
 merge_statement := ' merge into mid.providersponsorship as target using 
                    ('||select_statement||') as source 
-                   on source.providercode = target.providercode and source.productcode = target.productcode and source.clienttoproductid = target.clienttoproductid and source.clientcode = target.clientcode and source.facilitycode = target.facilitycode and source.practicecode = target.practicecode and source.officecode = target.officecode
-                   when matched then '||update_statement|| '
+                   on source.providercode = target.providercode
                    when not matched then  '||insert_statement;
                    
         
@@ -1327,6 +1299,7 @@ merge_statement := ' merge into mid.providersponsorship as target using
 if (is_full) then
     truncate table Mid.ProviderSponsorship;
 end if; 
+execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
