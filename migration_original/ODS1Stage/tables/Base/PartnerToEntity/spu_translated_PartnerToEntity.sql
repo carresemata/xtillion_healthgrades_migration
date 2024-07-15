@@ -1,3 +1,5 @@
+
+
 CREATE or REPLACE PROCEDURE ODS1_STAGE_TEAM.BASE.SP_LOAD_PARTNERTOENTITY(is_full BOOLEAN) 
     RETURNS STRING
     LANGUAGE SQL
@@ -20,7 +22,7 @@ declare
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the insert
-    update_statement string; -- update statement
+    delete_statement string; -- update statement
     insert_statement string; -- insert statement
     merge_statement string; 
     status string; -- status monitoring
@@ -29,8 +31,6 @@ declare
     mdm_db string default('mdm_team');
    
 begin
-    
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------
@@ -58,12 +58,11 @@ CTE_SwimlaneURL as (
         json.oas_CUSTOMERPRODUCTCODE as OASCustomerProductCode,
         json.oas_URL as OasURL,
         json.oas_sourcecode as sourcecode,
-        row_number() over(partition by json.providercode, json.oas_CUSTOMERPRODUCTCODE order by CREATE_DATE desc) as RowRank
+        json.create_date
     from cte_oas as JSON
         inner join base.provider as P on p.providercode = json.providercode
 )
     select 
-        distinct
         par.partnerid,
         prov.providerid as PrimaryEntityId,
         (select entitytypeid from base.entitytype where entitytypecode = 'PROV') as PrimaryEntityTypeId,
@@ -74,19 +73,13 @@ CTE_SwimlaneURL as (
         cte.sourcecode,
         current_timestamp() as LastUpdateDate
     from CTE_swimlaneUrl as cte
-    inner join base.partner as Par on par.partnercode = cte.partnercode
-    inner join base.provider as Prov on prov.providercode = cte.providercode
-    inner join base.providertooffice as ProvOff on provoff.providerid = cte.providerid
-    where RowRank = 1 
+        inner join base.partner as Par on par.partnercode = cte.partnercode
+        inner join base.provider as Prov on prov.providercode = cte.providercode
+        inner join base.providertooffice as ProvOff on provoff.providerid = cte.providerid
+    qualify row_number() over(partition by cte.providercode order by create_date desc) = 1
 $$;
 
 
--- update statement
-update_statement := ' update 
-                        set
-                            target.oasurl = source.oasurl,
-                            target.sourcecode = source.sourcecode,
-                            target.lastupdatedate = source.lastupdatedate';
 
 -- insert statement
 insert_statement := ' insert (PartnerToEntityId,
@@ -99,7 +92,7 @@ insert_statement := ' insert (PartnerToEntityId,
                             OASURL, 
                             sourcecode,
                             LastUpdateDate)
-                    values (utils.generate_uuid(source.partnerid || source.primaryentityid || source.primaryentitytypeid || source.secondaryentityid || source.secondaryentitytypeid || source.partnersecondaryentityid),  
+                    values (uuid_string(),  
                             source.partnerid, 
                             source.primaryentityid, 
                             source.primaryentitytypeid, 
@@ -115,10 +108,14 @@ insert_statement := ' insert (PartnerToEntityId,
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
 
+-- Remove the providers and insert them again to avoid duplicate records
+delete_statement := 'delete from base.partnertoentity as target
+                        using ('|| select_statement ||') AS source
+                        where target.primaryentityid = source.primaryentityid';
+                        
 merge_statement := ' merge into base.partnertoentity as target using 
                    ('||select_statement ||') as source 
-                   on target.partnerid = source.partnerid and target.primaryentityid = source.primaryentityid and target.primaryentitytypeid = source.primaryentitytypeid and target.secondaryentityid = source.secondaryentityid and target.secondaryentitytypeid = source.secondaryentitytypeid and target.partnersecondaryentityid = source.partnersecondaryentityid
-                   when matched then '|| update_statement || '
+                   on target.primaryentityid = source.primaryentityid 
                    when not matched then ' || insert_statement;
                     
  
@@ -129,6 +126,7 @@ merge_statement := ' merge into base.partnertoentity as target using
 if (is_full) then
     truncate table Base.PartnerToEntity;
 end if; 
+execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
@@ -149,4 +147,4 @@ status := 'completed successfully';
                 select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
             return status;
-end;
+end;      
