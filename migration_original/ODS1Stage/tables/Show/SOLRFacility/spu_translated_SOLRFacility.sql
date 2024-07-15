@@ -1423,6 +1423,7 @@ cte_solr_facility as (
         left join cte_survey as sur on sur.facilityid = fac.legacykey
         left join cte_language_xml as laxml on laxml.facilitycode = fac.facilitycode
         left join cte_service_xml as sxml on sxml.facilitycode = fac.facilitycode
+    qualify row_number() over(partition by fac.facilityid order by fac.facilityid) = 1
 ) 
 select 
     facilityid,
