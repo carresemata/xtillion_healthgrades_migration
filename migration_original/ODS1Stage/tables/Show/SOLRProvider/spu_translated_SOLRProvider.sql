@@ -2761,10 +2761,9 @@ FROM Show.SolrProvider as P
 
 select_statement_xml_load_2 := 
 $$ 
-
 WITH CTE_Provider_Batch AS (
     SELECT ProviderID
-    FROM mdm_team.mst.provider_profile_processing ppp
+    FROM $$ || mdm_db || $$.mst.provider_profile_processing ppp
     INNER JOIN base.provider bp ON ppp.ref_provider_code = bp.providercode
 ),
 
@@ -2859,7 +2858,7 @@ CTE_ServicesXML AS (
         LISTAGG(
             '<service>' ||
             '<type>' || type || '</type>' ||
-            '<method>' || method || '</method>' ||
+            '<method>' || utils.clean_xml(method) || '</method>' ||
             '<servicename>' || servicename || '</servicename>' ||
             '</service>'
         ) AS service_xml
@@ -2872,12 +2871,12 @@ CTE_TelehealthXML AS (
         T.ProviderId,
         CASE 
             WHEN P.ProviderId IS NOT NULL THEN
-                to_variant(parse_xml('<Telehealth>' ||
+                '<Telehealth>' ||
                 '<hasTelehealth>true</hasTelehealth>' ||
                 '<_serviceL>' ||
                 '<serviceL>' || COALESCE(S.service_xml, '') || '</serviceL>' ||
                 '</_serviceL>' ||
-                '</Telehealth>'))
+                '</Telehealth>'
             ELSE NULL
         END AS XMLValue
     FROM CTE_Provider_Batch T
@@ -2909,7 +2908,7 @@ CTE_ProviderType AS (
 CTE_ProviderTypeXML AS (
     SELECT
         T.ProviderID,
-        to_variant(parse_xml('<ptL>' || 
+        '<ptL>' || 
         LISTAGG(
             '<pt>' ||
             IFF(cte_pt.ptCd IS NOT NULL, '<ptCd>' || cte_pt.ptCd || '</ptCd>', '') ||
@@ -2917,7 +2916,7 @@ CTE_ProviderTypeXML AS (
             IFF(cte_pt.ptRank IS NOT NULL, '<ptRank>' || cte_pt.ptRank || '</ptRank>', '') ||
             '</pt>'
         ) ||
-        '</ptL>')) AS XMLValue
+        '</ptL>' AS XMLValue
     FROM
         CTE_Provider_Batch T
         LEFT JOIN CTE_ProviderType cte_pt ON cte_pt.ProviderId = T.ProviderID
@@ -3408,14 +3407,14 @@ CTE_ProviderPracticeOfficeXML AS (
 CTE_PracticeOfficeXML AS (
     SELECT
         pob.ProviderID,
-        to_variant(parse_xml('<poffL><poff>' || 
+        '<poffL><poff>' || 
         COALESCE(REPLACE(ppo.XMLValue, '&', '/amp'), '') || 
         '<offL><off>' || 
         COALESCE(REPLACE(pohb.XMLValue, '&', '/amp'), '') || 
         COALESCE(REPLACE(pofb.XMLValue, '&', '/amp'), '') || 
         COALESCE(REPLACE(poffb.XMLValue, '&', '/amp'), '') || 
         COALESCE(REPLACE(purl.XMLValue, '&', '/amp'), '') || 
-        '</off></offL></poff></poffL>'))
+        '</off></offL></poff></poffL>'
         AS XMLValue
     FROM
         CTE_PracticeOfficeBaseXML pob
@@ -3457,7 +3456,6 @@ CTE_Address AS (
 CTE_AddressXML AS (
     SELECT
         s.ProviderId,
-        TO_VARIANT(PARSE_XML(
             '<addrL>' || 
             LISTAGG(DISTINCT
                 '<addr>' ||
@@ -3484,7 +3482,7 @@ CTE_AddressXML AS (
                 '</addr>'
             , '') ||
             '</addrL>'
-        )) AS XMLValue
+         AS XMLValue
     FROM CTE_Provider_Batch s
     INNER JOIN CTE_Address a ON s.ProviderId = a.ProviderID
     GROUP BY s.ProviderId
@@ -3607,7 +3605,6 @@ CTE_ServiceCodes AS (
 CTE_SpecialtyXML AS (
     SELECT
         cte_s.ProviderID,
-        TO_VARIANT(PARSE_XML(
             '<spcL>' ||
             LISTAGG(
                 '<spc>' ||
@@ -3625,7 +3622,7 @@ CTE_SpecialtyXML AS (
                 '</spc>'
             , '') ||
             '</spcL>'
-        )) AS XMLValue
+         AS XMLValue
     FROM CTE_Specialty cte_s
     LEFT JOIN CTE_ServiceCodes sc ON cte_s.ProviderID = sc.ProviderID AND cte_s.spCd = sc.spCd
     GROUP BY cte_s.ProviderID
@@ -3673,7 +3670,6 @@ CTE_SpecialtyScoreWithBoost AS (
 CTE_MapSpc AS (
     SELECT 
         c1.SpecialtyGroupID,
-        PARSE_XML(
             '<mapSpc>' ||
             LISTAGG(
                 '<mapPracSpcCd>' || UTILS.CLEAN_XML(a1.SpecialtyCode) || '</mapPracSpcCd>' ||
@@ -3681,7 +3677,7 @@ CTE_MapSpc AS (
                 '<SpecialtyGroupRank>' || c1.SpecialtyGroupRank || '</SpecialtyGroupRank>'
             , '') WITHIN GROUP (ORDER BY c1.SpecialtyGroupRank) ||
             '</mapSpc>'
-        ) AS mapSpc
+         AS mapSpc
     FROM Base.Specialty a1
     JOIN Base.SpecialtyGroupToSpecialty c1 ON a1.SpecialtyID = c1.SpecialtyID
         AND c1.SpecialtyIsRedundant = 1
@@ -3734,7 +3730,6 @@ CTE_PracticingSpecialty AS (
 CTE_PracticingSpecialtyXML AS (
     SELECT
         s.ProviderId,
-        TRY_CAST(PARSE_XML(
             '<spcL>' ||
             LISTAGG(
                 '<spc>' ||
@@ -3751,8 +3746,7 @@ CTE_PracticingSpecialtyXML AS (
                 '<lkey>' || COALESCE(UTILS.CLEAN_XML(ps.lKey), '') || '</lkey>' ||
                 '</spc>'
             , '') ||
-            '</spcL>'
-        ) AS VARIANT) AS XMLValue
+            '</spcL>'  AS XMLValue
     FROM Base.Provider s
     LEFT JOIN CTE_PracticingSpecialty ps ON s.ProviderID = ps.ProviderID
     GROUP BY s.ProviderId
@@ -3813,7 +3807,6 @@ CTE_Certification AS (
 CTE_CertificationXML AS (
     SELECT
         cte_c.ProviderID,
-        TO_VARIANT(PARSE_XML(
             '<cScL>' ||
             LISTAGG(
                 '<cSc>' ||
@@ -3843,7 +3836,7 @@ CTE_CertificationXML AS (
                 '</cSc>'
             , '') ||
             '</cScL>'
-        )) AS XMLValue
+         AS XMLValue
     FROM CTE_Certification cte_c
     GROUP BY  cte_c.ProviderID
 ),
@@ -3907,74 +3900,14 @@ CTE_EducationXML AS (
         s.ProviderId,
         CASE 
             WHEN COALESCE(e.EduXML, '') = '' THEN NULL
-            ELSE TRY_CAST(PARSE_XML('<eduL>' || e.EduXML || '</eduL>') AS VARIANT)
+            ELSE '<eduL>' || e.EduXML || '</eduL>'
         END AS XMLValue
     FROM CTE_Provider_Batch s
     LEFT JOIN CTE_EducationTypeXML e ON s.ProviderId = e.ProviderID
 ),
 
 ------------------------ProfessionalOrganizationXML------------------------
---- Validated: 0 non-null rows on both sides (which is why I commented it out)
--- CTE_ProfessionalOrganization AS (
---     SELECT
---         pto.ProviderID,
---         pto.OrganizationID,
---         o.OrganizationCode AS porgCd,
---         o.OrganizationDescription AS porgNm,
---         o.refDefinition AS porgDesc,
---         p.PositionCode AS porgPositCd,
---         p.PositionDescription AS porgPositNm,
---         pto.PositionRank AS posRk,
---         pto.PositionStartDate AS posSt,
---         pto.PositionEndDate AS posEnd
---     FROM
---         Base.ProviderToOrganization AS pto
---         INNER JOIN Base.Organization AS o ON o.OrganizationID = pto.OrganizationID
---         INNER JOIN Base.Position AS p ON p.PositionID = pto.PositionID
--- ),
-
--- CTE_OrganizationImage AS (
---     SELECT
---         otip.OrganizationID,
---         ip.ImagePathText AS porgImgU,
---         ip.ImageWidth AS porgImgW,
---         ip.ImageHeight AS porgImgH
---     FROM
---         Base.OrganizationToImagePath AS otip
---         INNER JOIN Base.ImagePath AS ip ON ip.ImagePathID = otip.ImagePathID
--- ),
-
--- CTE_ProfessionalOrganizationXML AS (
---     SELECT
---         cte_po.ProviderID,
---         TRY_CAST(PARSE_XML(
---             '<porgL>' ||
---             LISTAGG(
---                 '<porg>' ||
---                 IFF(cte_po.porgCd IS NOT NULL, '<porgCd>' || cte_po.porgCd || '</porgCd>', '') ||
---                 IFF(cte_po.porgNm IS NOT NULL, '<porgNm>' || cte_po.porgNm || '</porgNm>', '') ||
---                 IFF(cte_po.porgDesc IS NOT NULL, '<porgDesc>' || cte_po.porgDesc || '</porgDesc>', '') ||
---                 IFF(cte_po.porgPositCd IS NOT NULL, '<porgPositCd>' || cte_po.porgPositCd || '</porgPositCd>', '') ||
---                 IFF(cte_po.porgPositNm IS NOT NULL, '<porgPositNm>' || cte_po.porgPositNm || '</porgPositNm>', '') ||
---                 IFF(cte_po.posRk IS NOT NULL, '<posRk>' || cte_po.posRk || '</posRk>', '') ||
---                 IFF(cte_po.posSt IS NOT NULL, '<posSt>' || cte_po.posSt || '</posSt>', '') ||
---                 IFF(cte_po.posEnd IS NOT NULL, '<posEnd>' || cte_po.posEnd || '</posEnd>', '') ||
---                 '<imgL>' ||
---                 IFF(cte_oi.porgImgU IS NOT NULL, '<porgImg><porgImgU>' || cte_oi.porgImgU || '</porgImgU>', '') ||
---                 IFF(cte_oi.porgImgW IS NOT NULL, '<porgImgW>' || cte_oi.porgImgW || '</porgImgW>', '') ||
---                 IFF(cte_oi.porgImgH IS NOT NULL, '<porgImgH>' || cte_oi.porgImgH || '</porgImgH>', '') ||
---                 IFF(cte_oi.porgImgU IS NOT NULL, '</porgImg>', '') ||
---                 '</imgL>' ||
---                 '</porg>'
---             , '') WITHIN GROUP (ORDER BY cte_po.posRk, cte_po.porgNm) ||
---             '</porgL>'
---         ) AS VARIANT) AS XMLValue
---     FROM
---         CTE_ProfessionalOrganization cte_po
---         LEFT JOIN CTE_OrganizationImage cte_oi ON cte_oi.OrganizationID = cte_po.OrganizationID
---     GROUP BY
---         cte_po.ProviderID
--- ),
+-- Deprecated due to providertoorganization table being deprecated
 
 ------------------------LicenseXML------------------------
 --- Validated: ~5M non-null rows on both sides
@@ -3994,7 +3927,6 @@ CTE_ProviderLicense AS (
 CTE_LicenseXML AS (
     SELECT
         cte_pl.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<licL>' ||
             LISTAGG(
                 '<lic>' ||
@@ -4006,8 +3938,7 @@ CTE_LicenseXML AS (
                 IFF(cte_pl.licTeDt IS NOT NULL, '<licTeDt>' || cte_pl.licTeDt || '</licTeDt>', '') ||
                 '</lic>'
             , '') ||
-            '</licL>'
-        ) AS VARIANT) AS XMLValue
+            '</licL>' AS XMLValue
     FROM CTE_ProviderLicense cte_pl
     GROUP BY cte_pl.ProviderID
 ),
@@ -4026,7 +3957,6 @@ CTE_Language AS (
 CTE_LanguageXML AS (
     SELECT
         cte_l.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<langL>' ||
             LISTAGG(
                 '<lang>' ||
@@ -4034,8 +3964,7 @@ CTE_LanguageXML AS (
                 IFF(cte_l.langCd IS NOT NULL, '<langCd>' || cte_l.langCd || '</langCd>', '') ||
                 '</lang>'
             , '') ||
-            '</langL>'
-        ) AS VARIANT) AS XMLValue
+            '</langL>' AS XMLValue
     FROM CTE_Language cte_l
     GROUP BY cte_l.ProviderID
 ),
@@ -4066,7 +3995,6 @@ CTE_Malpractice AS (
 CTE_MalpracticeXML AS (
     SELECT
         cte_mp.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<malL>' ||
             LISTAGG(
                 '<mal>' ||
@@ -4085,8 +4013,7 @@ CTE_MalpracticeXML AS (
                 IFF(cte_mp.reDt IS NOT NULL, '<reDt>' || cte_mp.reDt || '</reDt>', '') ||
                 '</mal>'
             , '') ||
-            '</malL>'
-        ) AS VARIANT) AS XMLValue
+            '</malL>' AS XMLValue
     FROM CTE_Malpractice cte_mp
     GROUP BY cte_mp.ProviderID
 ),
@@ -4128,7 +4055,6 @@ CTE_ProviderSanction AS (
 CTE_SanctionXML AS (
     SELECT
         cte_ps.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<sancL>' ||
             LISTAGG(
                 '<sanc>' ||
@@ -4146,8 +4072,7 @@ CTE_SanctionXML AS (
                 IFF(cte_ps.lStFl IS NOT NULL, '<lStFl>' || cte_ps.lStFl || '</lStFl>', '') ||
                 '</sanc>'
             , '') ||
-            '</sancL>'
-        ) AS VARIANT) AS XMLValue
+            '</sancL>' AS XMLValue
     FROM CTE_ProviderSanction cte_ps
     GROUP BY cte_ps.ProviderID
 ),
@@ -4200,7 +4125,6 @@ CTE_BoardAction AS (
 CTE_BoardActionXML AS (
     SELECT
         cte_ba.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<sancL>' ||
             LISTAGG(
                 '<sanc>' ||
@@ -4222,8 +4146,7 @@ CTE_BoardActionXML AS (
                 IFF(cte_ba.sAccDt IS NOT NULL, '<sAccDt>' || cte_ba.sAccDt || '</sAccDt>', '') ||
                 '</sanc>'
             , '') ||
-            '</sancL>'
-        ) AS VARIANT) AS XMLValue
+            '</sancL>' AS XMLValue
     FROM
         CTE_BoardAction cte_ba
     GROUP BY
@@ -4233,80 +4156,7 @@ CTE_BoardActionXML AS (
 ------------------------NatlAdvertisingXML------------------------
 -- Not validated due to 0 rows: explanations below in individual CTEs
 -- this CTE gives 340 rows in SQL Server, but 20 in Snowflake...
--- CTE_AdFeatures AS (
---     SELECT
---         a.EntityID,
---         LISTAGG(
---             '<adFeat>' ||
---             '<featCd>' || ClientFeatureCode || '</featCd>' ||
---             '<featDesc>' || d.ClientFeatureDescription || '</featDesc>' ||
---             '<featValCd>' || e.ClientFeatureValueCode || '</featValCd>' ||
---             '<featValDesc>' || e.ClientFeatureValueDescription || '</featValDesc>' ||
---             '</adFeat>'
---         , '') AS adFeatXML
---     FROM
---         Base.ClientEntityToClientFeature a
---         JOIN Base.EntityType b ON a.EntityTypeID = b.EntityTypeID
---         JOIN Base.ClientFeatureToClientFeatureValue c ON a.ClientFeatureToClientFeatureValueID = c.ClientFeatureToClientFeatureValueID
---         JOIN Base.ClientFeature d ON c.ClientFeatureID = d.ClientFeatureID
---         JOIN Base.ClientFeatureValue e ON e.ClientFeatureValueID = c.ClientFeatureValueID
---         JOIN Base.ClientFeatureGroup f ON d.ClientFeatureGroupID = f.ClientFeatureGroupID
---     WHERE b.EntityTypeCode = 'CLPROD'
---     GROUP BY a.EntityID
--- ),
 
--- -- Now this CTE has 0 rows, which is what causes all the XMLs to be NULLs. But I don't see
--- -- where is the error, I'm simply doing a left join to deal with the original subquery 
--- -- which is unsupported in Snowflake.
--- CTE_Ads AS (
---     SELECT
---         u.ProviderCode,
---         u.ProductCode,
---         u.ProductGroupCode,
---         u.AppointmentOptionDescription,
---         '<ad>' ||
---         '<adCd>' || u.ClientCode || '</adCd>' ||
---         '<adNm>' || u.ClientName || '</adNm>' ||
---         '<caToActMsg>' || u.CallToActionMsg || '</caToActMsg>' ||
---         '<safHarMsg>' || u.SafeHarborMsg || '</safHarMsg>' ||
---         '<adFeatL>' || COALESCE(cte_af.adFeatXML, '') || '</adFeatL>' ||
---         '</ad>' AS adXML
---     FROM Mid.ProviderSponsorship u
---     LEFT JOIN CTE_AdFeatures cte_af ON u.ClientToProductID = cte_af.EntityID
---     WHERE u.ProductGroupCode = 'LID'
--- ),
-
--- CTE_NatlAdvertising AS (
---     SELECT
---         p.ProviderID,
---         '<natladv>' ||
---         '<prCd>' || a.ProductCode || '</prCd>' ||
---         '<prGrCd>' || a.ProductGroupCode || '</prGrCd>' ||
---         '<adL>' || LISTAGG(a.adXML, '') || '</adL>' ||
---         '<aptOptDesc>' || MAX(a.AppointmentOptionDescription) || '</aptOptDesc>' ||
---         '</natladv>' AS natladvXML
---     FROM
---         CTE_Ads a
---     JOIN Base.Provider p on a.ProviderCode = p.ProviderCode
---     GROUP BY
---         p.ProviderID,
---         a.ProductCode,
---         a.ProductGroupCode
--- ),
-
--- CTE_NatlAdvertisingXML AS (
---     SELECT
---         p.ProviderId,
---         TRY_CAST(PARSE_XML(
---             '<natladvL>' ||
---             COALESCE(LISTAGG(na.natladvXML, ''), '') ||
---             '</natladvL>'
---         ) AS VARIANT) AS XMLValue
---     FROM CTE_Provider_Batch p
---     LEFT JOIN CTE_NatlAdvertising na ON p.ProviderID = na.ProviderID
---     GROUP BY
---         p.ProviderId
--- )
 CTE_AdFeatures AS (
     SELECT
         a.EntityID AS ClientToProductID,
@@ -4383,11 +4233,9 @@ CTE_NationalAdvertising AS (
 CTE_NatlAdvertisingXML AS (
     SELECT
         p.ProviderId,
-        TRY_CAST(PARSE_XML(
             '<natladvL>' ||
             COALESCE(na.natladvXML, '') ||
-            '</natladvL>'
-        ) AS VARIANT) AS XMLValue
+            '</natladvL>' AS XMLValue
     FROM
         Show.SOLRProvider s
         INNER JOIN mid.Provider p ON s.ProviderID = p.ProviderID
@@ -4573,7 +4421,6 @@ CTE_CP AS (
 CTE_SyndicationXML AS (
     SELECT
         cte_s.ProviderID,
-        TRY_CAST(PARSE_XML(
             '<syndL>' ||
             IFF(cte_sp.syndSpnCd IS NOT NULL, '<syndSpnCd>' || cte_sp.syndSpnCd || '</syndSpnCd>', '') ||
             '<spnL>' ||
@@ -4602,8 +4449,7 @@ CTE_SyndicationXML AS (
                 '</cph>'
             , '') ||
             '</cphL>' ||
-            '</syndL>'
-        ) AS VARIANT) AS XMLValue
+            '</syndL>' AS XMLValue
     FROM
         CTE_SyndicationPDCHSP cte_s
         LEFT JOIN CTE_SP ON cte_s.ProviderID = cte_sp.ProviderID
@@ -4618,33 +4464,31 @@ CTE_SyndicationXML AS (
         cte_sp.syndSpnCd
 )
 
-SELECT DISTINCT
+select distinct
     p.providerid,
     p.providercode, 
-    tele.xmlvalue AS telehealthxml,
-    ptype.xmlvalue AS providertypexml,
-    poffice.xmlvalue AS practiceofficexml,
-    addr.xmlvalue AS addressxml,
-    spec.xmlvalue AS specialtyxml,
-    pract_spec.xmlvalue AS practicingspecialtyxml,
-    cert.xmlvalue AS certificationxml,
-    edu.xmlvalue AS educationxml,
-    -- org.xmlvalue AS professionalorganizationxml,
-    licensexml.xmlvalue AS licensexml,
-    lang.xmlvalue AS languagexml,
-    mal.xmlvalue AS malpracticexml,
-    sanctionxml.xmlvalue AS sanctionxml,
-    baction.xmlvalue AS boardactionxml,
-    adxml.xmlvalue AS natladvertisingxml,
-    synd.xmlvalue AS syndicationxml,
-    CASE WHEN poffice.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasAddressXML,
+    to_variant(parse_xml(tele.xmlvalue)) as telehealthxml,
+    to_variant(parse_xml(ptype.xmlvalue)) as providertypexml,
+    to_variant(parse_xml(poffice.xmlvalue)) as practiceofficexml,
+    to_variant(parse_xml(addr.xmlvalue)) as addressxml,
+    to_variant(parse_xml(spec.xmlvalue)) as specialtyxml,
+    to_variant(parse_xml(pract_spec.xmlvalue)) as practicingspecialtyxml,
+    to_variant(parse_xml(cert.xmlvalue)) as certificationxml,
+    to_variant(parse_xml(edu.xmlvalue)) as educationxml,
+    to_variant(parse_xml(licensexml.xmlvalue)) as licensexml,
+    to_variant(parse_xml(lang.xmlvalue)) as languagexml,
+    to_variant(parse_xml(mal.xmlvalue)) as malpracticexml,
+    to_variant(parse_xml(sanctionxml.xmlvalue)) as sanctionxml,
+    to_variant(parse_xml(baction.xmlvalue)) as boardactionxml,
+    to_variant(parse_xml(adxml.xmlvalue)) as natladvertisingxml,
+    to_variant(parse_xml(synd.xmlvalue)) as syndicationxml
+    CASE WHEN poffice.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasPracticeOfficeXML,
     CASE WHEN spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasSpecialtyXML,
     CASE WHEN pract_spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasPracticingSpecialtyXML,
     CASE WHEN cert.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasCertificationXML,
     CASE WHEN mal.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasMalpracticeXML,
     CASE WHEN sanctionxml.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasSanctionXML,
-    CASE WHEN baction.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasBoardActionXML,
-    -- CASE WHEN org.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasProfessionalOrganizationXML
+    CASE WHEN baction.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasBoardActionXML
 FROM Show.SolrProvider as P
     LEFT JOIN CTE_TelehealthXML AS tele ON tele.providerid = p.providerid -- 1
     LEFT JOIN CTE_ProviderTypeXML AS ptype ON ptype.providerid = p.providerid -- 2
@@ -4654,7 +4498,6 @@ FROM Show.SolrProvider as P
     LEFT JOIN CTE_PracticingSpecialtyXML AS pract_spec ON pract_spec.providerid = p.providerid -- 6
     LEFT JOIN CTE_CertificationXML AS cert ON cert.providerid = p.providerid -- 7
     LEFT JOIN CTE_EducationXML AS edu ON edu.providerid = p.providerid -- 8
-    -- LEFT JOIN CTE_ProfessionalOrganizationXML AS org ON org.providerid = p.providerid -- 9 (ignore, empty in SQL Server)
     LEFT JOIN CTE_LicenseXML AS licensexml ON licensexml.providerid = p.providerid -- 10
     LEFT JOIN CTE_LanguageXML AS lang ON lang.providerid = p.providerid -- 11
     LEFT JOIN CTE_MalpracticeXML AS mal ON mal.providerid = p.providerid -- 12
@@ -6187,12 +6030,12 @@ update_statement_facility := $$ update show.solrprovider as target
                         from ( $$ || select_statement_facility || $$ ) as source
                         where target.ProviderID = source.ProviderID $$;
 
-                        select_statement_sponsorship := $$ 
+select_statement_sponsorship := $$ 
 WITH CTE_Temp_Provider AS (
     SELECT
         ProviderID
     FROM
-        mdm_team.mst.provider_profile ppp
+        $$ || mdm_db || $$.mst.provider_profile ppp
         JOIN base.provider bp ON ppp.ref_provider_code = bp.providercode
 ),
 CTE_ProviderToClientToProduct AS (
