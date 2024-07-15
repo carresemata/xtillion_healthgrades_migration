@@ -19,7 +19,6 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
-    update_statement string; -- update
     delete_statement string;
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
@@ -86,17 +85,6 @@ insert_statement := '       insert
                                     source.medialink,
                                     source.sourcecode,
                                     source.lastupdatedate)';
---- update statement
-update_statement := ' 
-    update
-    set
-        target.MediaDate = source.mediadate,
-        target.MediaTitle = source.mediatitle,
-        target.MediaPublisher = source.mediapublisher,
-        target.MediaSynopsis = source.mediasynopsis,
-        target.MediaLink = source.medialink,
-        target.SourceCode = source.sourcecode,
-        target.LastUpdateDate = source.lastupdatedate';
         
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
