@@ -19,7 +19,7 @@ declare
 
     select_statement string; -- cte and select statement for the merge
     insert_statement string; -- insert statement for the merge
-    update_statement string; -- update
+    delete_statement string;
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_providermedia');
@@ -57,7 +57,6 @@ select
     json.media_MEDIALINK as MediaLink,
     ifnull(json.media_SOURCECODE, 'Profisee') as SourceCode,
     ifnull(json.media_LASTUPDATEDATE, current_timestamp()) as LastUpdateDate
-
 from cte_media as JSON
     join base.provider as P on p.providercode = json.providercode
     join base.mediatype as MT on mt.mediatypecode = json.media_MEDIATYPECODE 
@@ -76,7 +75,7 @@ insert_statement := '       insert
                                     SourceCode,
                                     LastUpdateDate)         
                              values 
-                                    (utils.generate_uuid(source.providerid || source.mediatypeid), 
+                                    (uuid_string(), 
                                     source.providerid,
                                     source.mediatypeid,
                                     source.mediadate,
@@ -86,26 +85,18 @@ insert_statement := '       insert
                                     source.medialink,
                                     source.sourcecode,
                                     source.lastupdatedate)';
---- update statement
-update_statement := ' 
-    update
-    set
-        target.MediaDate = source.mediadate,
-        target.MediaTitle = source.mediatitle,
-        target.MediaPublisher = source.mediapublisher,
-        target.MediaSynopsis = source.mediasynopsis,
-        target.MediaLink = source.medialink,
-        target.SourceCode = source.sourcecode,
-        target.LastUpdateDate = source.lastupdatedate';
         
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
+-- Remove the providers and insert them again to avoid duplicate records
+delete_statement := 'delete from base.providermedia as target
+                        using ('|| select_statement ||') AS source
+                        where target.providerid = source.providerid;';
 
-merge_statement := ' merge into base.providermedia as target 
+merge_statement := 'merge into base.providermedia as target 
                     using (' || select_statement || ') as source
-                   on source.providerid = target.providerid and source.mediatypeid = target.mediatypeid
-                   when matched then ' || update_statement || '
+                   on source.providerid = target.providerid 
                    when not matched then '||insert_statement;
 
 ---------------------------------------------------------
@@ -115,6 +106,7 @@ merge_statement := ' merge into base.providermedia as target
 if (is_full) then
     truncate table Base.ProviderMedia;
 end if; 
+execute immediate delete_statement ;
 execute immediate merge_statement ;
 
 ---------------------------------------------------------
