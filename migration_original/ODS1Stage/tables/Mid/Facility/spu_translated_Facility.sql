@@ -48,7 +48,7 @@ declare
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
-    update_statement string; -- update statement for the merge
+    delete_statement string; 
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
@@ -1091,93 +1091,9 @@ select distinct
 from cte_facility_update_3 
  $$;
 
---- Update Statement
-update_statement := ' update 
-                     set
-                        target.facilityid = source.facilityid,
-                        target.legacykey = source.legacykey,
-                        target.facilitycode = source.facilitycode,
-                        target.facilityname = source.facilityname,
-                        target.facilitytype = source.facilitytype,
-                        target.facilitytypecode = source.facilitytypecode,
-                        target.facilitysearchtype = source.facilitysearchtype,
-                        target.accreditation = source.accreditation,
-                        target.accreditationdescription = source.accreditationdescription,
-                        target.treatmentschedules = source.treatmentschedules,
-                        target.phonenumber = source.phonenumber,
-                        target.additionaltransportationinformation = source.additionaltransportationinformation,
-                        target.afterhoursphonenumber = source.afterhoursphonenumber,
-                        target.awardsinformation = source.awardsinformation,
-                        target.closedholidaysinformation = source.closedholidaysinformation,
-                        target.communityactivitiesinformation = source.communityactivitiesinformation,
-                        target.communityoutreachprograminformation = source.communityoutreachprograminformation,
-                        target.communitysupportinformation = source.communitysupportinformation,
-                        target.emergencyafterhoursphonenumber = source.emergencyafterhoursphonenumber,
-                        target.facilitydescription = source.facilitydescription,
-                        target.foundationinformation = source.foundationinformation,
-                        target.healthplaninformation = source.healthplaninformation,
-                        target.ismedicaidaccepted = source.ismedicaidaccepted,
-                        target.ismedicareaccepted = source.ismedicareaccepted,
-                        target.isteaching = source.isteaching,
-                        target.languageinformation = source.languageinformation,
-                        target.medicalservicesinformation = source.medicalservicesinformation,
-                        target.missionstatement = source.missionstatement,
-                        target.officeclosetime = source.officeclosetime,
-                        target.officeopentime = source.officeopentime,
-                        target.onsiteguestservicesinformation = source.onsiteguestservicesinformation,
-                        target.othereducationandtraininginformation = source.othereducationandtraininginformation,
-                        target.otherservicesinformation = source.otherservicesinformation,
-                        target.ownershiptype = source.ownershiptype,
-                        target.parkinginstructionsinformation = source.parkinginstructionsinformation,
-                        target.paymentpolicyinformation = source.paymentpolicyinformation,
-                        target.professionalaffiliationinformation = source.professionalaffiliationinformation,
-                        target.publictransportationinformation = source.publictransportationinformation,
-                        target.regionalrelationshipinformation = source.regionalrelationshipinformation,
-                        target.religiousaffiliationinformation = source.religiousaffiliationinformation,
-                        target.specialprogramsinformation = source.specialprogramsinformation,
-                        target.surroundingareainformation = source.surroundingareainformation,
-                        target.teachingprogramsinformation = source.teachingprogramsinformation,
-                        target.tollfreephonenumber = source.tollfreephonenumber,
-                        target.transplantcapabilitiesinformation = source.transplantcapabilitiesinformation,
-                        target.visitinghoursinformation = source.visitinghoursinformation,
-                        target.volunteerinformation = source.volunteerinformation,
-                        target.yearestablished = source.yearestablished,
-                        target.hospitalaffiliationinformation = source.hospitalaffiliationinformation,
-                        target.physiciancallcenterphonenumber = source.physiciancallcenterphonenumber,
-                        target.overallhospitalstar = source.overallhospitalstar,
-                        target.adulttraumalevel = source.adulttraumalevel,
-                        target.pediatrictraumalevel = source.pediatrictraumalevel,
-                        target.respgmapprama = source.respgmapprama,
-                        target.respgmappraoa = source.respgmappraoa,
-                        target.respgmapprada = source.respgmapprada,
-                        target.miscellaneousinformation = source.miscellaneousinformation,
-                        target.appointmentinformation = source.appointmentinformation,
-                        target.website = source.website,
-                        target.visitinghoursmonday = source.visitinghoursmonday,
-                        target.visitinghourstuesday = source.visitinghourstuesday,
-                        target.visitinghourswednesday = source.visitinghourswednesday,
-                        target.visitinghoursthursday = source.visitinghoursthursday,
-                        target.visitinghoursfriday = source.visitinghoursfriday,
-                        target.visitinghourssaturday = source.visitinghourssaturday,
-                        target.visitinghourssunday = source.visitinghourssunday,
-                        target.facilityimagepath = source.facilityimagepath,
-                        target.clienttoproductid = source.clienttoproductid,
-                        target.clientcode = source.clientcode,
-                        target.clientname = source.clientname,
-                        target.productcode = source.productcode,
-                        target.productgroupcode = source.productgroupcode,
-                        target.phonexml = source.phonexml,
-                        target.mobilephonexml = source.mobilephonexml,
-                        target.desktopphonexml = source.desktopphonexml,
-                        target.tabletphonexml = source.tabletphonexml,
-                        target.urlxml = source.urlxml,
-                        target.imagexml = source.imagexml,
-                        target.facilityurl = source.facilityurl,
-                        target.awardcount = source.awardcount,
-                        target.procedurecount = source.procedurecount,
-                        target.fivestarprocedurecount = source.fivestarprocedurecount,
-                        target.providercount = source.providercount,
-                        target.foreignobjectleftpercent = source.foreignobjectleftpercent';
+delete_statement := 'delete from mid.facility as target
+                        using ('|| select_statement ||') AS source
+                        where target.facilityid = source.facilityid;';
 
 --- Insert Statement
 insert_statement := ' insert  ( facilityid,
@@ -1358,8 +1274,7 @@ insert_statement := ' insert  ( facilityid,
 
 merge_statement := ' merge into mid.facility as target using 
                    ('||select_statement||') as source 
-                   on source.facilitycode = target.facilitycode
-                   when matched  then '||update_statement|| '
+                   on source.facilityid = target.facilityid
                    when not matched then '||insert_statement;
                    
         
@@ -1370,6 +1285,7 @@ merge_statement := ' merge into mid.facility as target using
 if (is_full) then
     truncate table Mid.Facility;
 end if; 
+execute immediate delete_statement;
 execute immediate merge_statement;
 
 ---------------------------------------------------------
