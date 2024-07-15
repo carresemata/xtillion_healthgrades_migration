@@ -19,7 +19,7 @@ declare
 ---------------------------------------------------------
 
     select_statement string; -- cte and select statement for the merge
-    update_statement string; -- update statement for the merge
+    delete_statement string;
     insert_statement string; -- insert statement for the merge
     merge_statement string; -- merge statement to final table
     status string; -- status monitoring
@@ -55,16 +55,6 @@ select_statement :=
                     join base.state as st on st.stateid = pl.stateid
                     $$;
 
---- update Statement
-update_statement := ' update 
-                      set 
-                        ProviderID = source.providerid,
-                        LicenseNumber = source.licensenumber,
-                        LicenseEffectiveDate = source.licenseeffectivedate,
-                        LicenseTerminationDate = source.licenseterminationdate,
-                        State = source.state,
-                        StateName = source.statename,
-                        LicenseType = source.licensetype';
 
 --- insert Statement
 insert_statement := ' insert (
@@ -84,6 +74,11 @@ insert_statement := ' insert (
                             source.statename,
                             source.licensetype)';
 
+--- delete statement
+delete_statement := 'delete from mid.providerlicense as target
+                        using ('|| select_statement ||') AS source
+                        where target.providerid = source.providerid;';
+
 ---------------------------------------------------------
 --------- 4. actions (inserts and updates) --------------
 ---------------------------------------------------------  
@@ -92,9 +87,6 @@ insert_statement := ' insert (
 merge_statement := ' merge into mid.providerlicense as target using 
                    ('||select_statement||') as source 
                    on source.providerid = target.providerid 
-                        and source.licensenumber = target.licensenumber 
-                        and source.licensetype = target.licensetype
-                   when matched then '||update_statement|| '
                    when not matched then '||insert_statement;
                    
 ---------------------------------------------------------
@@ -104,6 +96,7 @@ merge_statement := ' merge into mid.providerlicense as target using
 if (is_full) then
     truncate table Mid.ProviderLicense;
 end if; 
+execute immediate delete_statement;
 execute immediate merge_statement ;
 
 ---------------------------------------------------------
