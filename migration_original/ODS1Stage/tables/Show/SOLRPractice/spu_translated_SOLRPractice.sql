@@ -271,14 +271,14 @@ select_statement := $$ with cte_practice_batch as (
                                 p.PracticeTIN,
                                 p.LegacyKeyPractice,
                                 p.PhysicianCount,
-                                p.HasDentist
+                                p.HasDentist,
+                                o.lastupdatedate
                             from
                                 Mid.Practice as p
                                 join cte_practice_batch as pb on p.PracticeID = pb.PracticeID
                                 join Base.Office as o on p.OfficeID = o.OfficeID
                                 join Base.ProviderToOffice as po on o.OfficeID = po.OfficeID
                                 -- join Show.vwuProviderIndex as vpi on po.ProviderID = vpi.ProviderID
-                             qualify row_number() over(partition by o.practiceid order by o.lastupdatedate desc) = 1
                         ) 
                         ,
                         cte_hours_xml as (
@@ -340,7 +340,7 @@ select_statement := $$ with cte_practice_batch as (
                             select distinct
                                 mp.OfficeID,
                                 mp.OfficeCode as oID,
-                                mp.OfficeName as oNm,
+                                utils.clean_xml(mp.OfficeName) as oNm,
                                 mp.OfficeRank as oRank,
                                 mp.AddressTypeCode as addTp,
                                 mp.AddressLine1 as ad1,
@@ -449,7 +449,7 @@ select_statement := $$ with cte_practice_batch as (
                             join cte_office_xml as o on p.OfficeID = o.OfficeID
                             left join cte_practice_sponsorship_xml as s on p.PracticeID = s.PracticeID
                             left join cte_email_xml as e on p.PracticeID = e.PracticeID
-                    
+                        qualify row_number() over(partition by p.practiceid order by p.lastupdatedate desc) = 1 -- Because mid.practice has a relationship many-to-many between practice and office
                     $$;
 
 --- update Statement
@@ -528,7 +528,7 @@ merge_statement_1 := ' merge into Show.SOLRPractice as target using
                    when not matched then '||insert_statement;
 
                  
--- -- Nullify the SPONSORSHIPXML column for practices with client contracts set to start in the future
+-- Nullify the SPONSORSHIPXML column for practices with client contracts set to start in the future
 merge_statement_2 := 'merge into Show.SOLRPractice as target 
                     using (
                         select SP.PRACTICEID
@@ -542,7 +542,7 @@ merge_statement_2 := 'merge into Show.SOLRPractice as target
                     when matched then 
                         update SET SPONSORSHIPXML = null';
 
--- -- Remove practices with no providers and where PracticeName = Practice
+-- Remove practices with no providers and where PracticeName = Practice
 merge_statement_3 := 'merge into Show.solrpractice as target 
                     using ( select solrPrac.PracticeID 
                                                 from Show.solrpractice solrPrac
@@ -556,7 +556,7 @@ merge_statement_3 := 'merge into Show.solrpractice as target
                                                 ) subQuery on solrPrac.PracticeID = subQuery.PracticeID 
                                                 where subQuery.PracticeID is null) as source
                     on target.PracticeID = source.PracticeID
-                    WHEN MATCHED then delete ';
+                    when matched then delete ';
 
 
 ---------------------------------------------------------
