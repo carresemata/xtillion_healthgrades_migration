@@ -56,6 +56,7 @@ declare
     status string; -- status monitoring
     procedure_name varchar(50) default('sp_load_facility');
     execution_start datetime default getdate();
+    mdm_db string default('mdm_team');
    
    
 begin
@@ -68,7 +69,12 @@ begin
 
 --- Select Statement
 
-select_statement := $$ with cte_facilityurl as (
+select_statement := $$ with cte_temp_facility as (
+    select f.*
+    from base.facility f 
+    inner join $$||mdm_db||$$.mst.facility_profile_processing proc on f.facilitycode = proc.ref_facility_code
+),
+cte_facilityurl as (
     select distinct
         f.facilityid,
         case
@@ -125,7 +131,7 @@ select_statement := $$ with cte_facilityurl as (
                     '-'
                 )
         end as facilityurl
-    from base.facility f
+    from cte_temp_facility f
     inner join base.facilitytofacilitytype ftft on ftft.facilityid = f.facilityid
     inner join base.facilitytype ft on ft.facilitytypeid = ftft.facilitytypeid
     left join base.facilitytoaddress fa on fa.facilityid = f.facilityid
@@ -156,7 +162,7 @@ cte_client_product_details as (
         join base.productgroup pg on c.productgroupid = pg.productgroupid
         join base.clientproducttoentity d on a.clienttoproductid = d.clienttoproductid
         join base.entitytype e on d.entitytypeid = e.entitytypeid and e.entitytypecode = 'FAC'
-        join base.facility f on d.entityid = f.facilityid
+        join cte_temp_facility f on d.entityid = f.facilityid
     where
         a.activeflag = 1
         and pg.productgroupcode = 'PDC'
@@ -287,7 +293,7 @@ select
     client_details.productgroupcode,
     furl.facilityurl as facilityurl
 from
-    base.facility fac
+    cte_temp_facility fac
     left join cte_facilityurl furl on furl.facilityid = fac.facilityid
     join ermart1.facility_facility f on fac.legacykey = f.facilityid
     join ermart1.facility_facilityaddressdetail fad on f.facilityid = fad.facilityid
@@ -318,7 +324,7 @@ from
     join base.productgroup pg on c.productgroupid = pg.productgroupid
     join base.clientproducttoentity d on a.clienttoproductid = d.clienttoproductid
     join base.entitytype e on d.entitytypeid = e.entitytypeid and e.entitytypecode = 'FAC'
-    join base.facility f on d.entityid = f.facilityid
+    join cte_temp_facility f on d.entityid = f.facilityid
 where 
     a.activeflag = 1
     and pg.productgroupcode = 'PDC'
@@ -451,7 +457,7 @@ cte_provider_count as (
         count(a.providerid) as providercount
     from
         base.providertofacility a
-        join base.facility b on a.facilityid = b.facilityid
+        join cte_temp_facility b on a.facilityid = b.facilityid
     group by
         a.facilityid
 ),
@@ -728,7 +734,16 @@ qualify row_number() over(partition by facilityid order by facilityid desc) = 1
  $$;
 
 
- select_statement_xml := $$ with cte_facilityurl as (
+ select_statement_xml := $$ 
+
+with cte_temp_facility as (
+    select f.*
+    from base.facility f 
+    inner join $$||mdm_db||$$.mst.facility_profile_processing proc on f.facilitycode = proc.ref_facility_code
+),
+
+
+cte_facilityurl as (
     select distinct
         f.facilityid,
         case
@@ -785,7 +800,7 @@ qualify row_number() over(partition by facilityid order by facilityid desc) = 1
                     '-'
                 )
         end as facilityurl
-    from base.facility f
+    from cte_temp_facility f
     inner join base.facilitytofacilitytype ftft on ftft.facilityid = f.facilityid
     inner join base.facilitytype ft on ft.facilitytypeid = ftft.facilitytypeid
     left join base.facilitytoaddress fa on fa.facilityid = f.facilityid
@@ -851,7 +866,7 @@ cte_client_product_details as (
         join base.productgroup pg on c.productgroupid = pg.productgroupid
         join base.clientproducttoentity d on a.clienttoproductid = d.clienttoproductid
         join base.entitytype e on d.entitytypeid = e.entitytypeid and e.entitytypecode = 'FAC'
-        join base.facility f on d.entityid = f.facilityid
+        join cte_temp_facility f on d.entityid = f.facilityid
     where
         a.activeflag = 1
         and pg.productgroupcode = 'PDC'
