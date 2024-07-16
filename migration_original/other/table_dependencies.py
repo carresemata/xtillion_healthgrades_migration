@@ -8,8 +8,7 @@ def table_dependencies():
 
     # Define the base directories
     
-    base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')]
-                    # os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')]
+    base_dirs = [os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')]
 
     for base_dir in base_dirs:
         # Navigate to the directory
@@ -27,7 +26,7 @@ def table_dependencies():
                     with open(f'spu_translated_{table}.sql', 'r') as f:
                         content = f.read()
                         # Check if the section exists
-                        match = re.search(r'1. table dependencies(.*?)2. ', content, re.DOTALL | re.IGNORECASE)
+                        match = re.search(r'0. table dependencies(.*?)1. ', content, re.DOTALL | re.IGNORECASE)
                         if match:
                             dependencies_section = match.group(1)
                             # Remove words inside brackets
@@ -68,15 +67,15 @@ def table_dependencies():
 
     # ------ CHECK: ADD ORIGIN TABLES
     # Check if there is a table inside the list of dependencies that is not in the items of the dictionary
-    origin_tables = {} # Dictionary to store the tables with no dependencies
-    for table_name, source_tables in table_dependencies.items():
-        for source_table in source_tables:
-            if source_table not in table_dependencies.keys() and 'VW' not in source_table : # remove views
-                # Add source_table to dictionary
-                origin_tables[source_table] = []
+    # origin_tables = {} # Dictionary to store the tables with no dependencies
+    # for table_name, source_tables in table_dependencies.items():
+    #     for source_table in source_tables:
+    #         if source_table not in table_dependencies.keys() and 'VW' not in source_table : # remove views
+    #             # Add source_table to dictionary
+    #             origin_tables[source_table] = []
     
     # Add the origin_tables to the table_dependencies dictionary
-    table_dependencies.update(origin_tables)
+    # table_dependencies.update(origin_tables)
 
     # Order the table dependencies json by table_name
     table_dependencies = dict(sorted(table_dependencies.items()))
@@ -101,17 +100,17 @@ def table_dependencies():
     os.chdir(os.path.join(os.path.dirname(os.getcwd()), 'other'))
 
     # Write the table dependencies to a JSON file
-    with open('table_dependencies.json', 'w') as f:
+    with open('views_dependencies.json', 'w') as f:
         json.dump(table_dependencies, f, indent=4)
 
     # Create sp_dependencies.json where the empty dependencies are removed
-    sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
-    # remove all items that are not in keys
-    sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
-    # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
-    sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
-    with open('sp_dependencies.json', 'w') as f:
-        json.dump(sp_dependencies, f, indent=4)
+    # sp_dependencies = {table: deps for table, deps in table_dependencies.items() if deps}
+    # # remove all items that are not in keys
+    # sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
+    # # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
+    # sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
+    # with open('sp_dependencies.json', 'w') as f:
+    #     json.dump(sp_dependencies, f, indent=4)
 
 
 

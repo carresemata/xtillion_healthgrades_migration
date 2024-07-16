@@ -7,7 +7,7 @@ CREATE OR REPLACE PROCEDURE SP_LOAD_TABLE_NAME(ParameterName ParameterType) -- P
 DECLARE 
 
 ---------------------------------------------------------
---------------- 0. Table dependencies -------------------
+--------------- 1. Table dependencies -------------------
 ---------------------------------------------------------
     
 -- #TABLE NAME# depends on: 
@@ -16,7 +16,7 @@ DECLARE
 --- #Table Dependency 3#
 
 ---------------------------------------------------------
---------------- 1. Declaring variables ------------------
+--------------- 2. Declaring variables ------------------
 ---------------------------------------------------------
 
     select_statement STRING; -- CTE and Select statement for the Merge
@@ -25,21 +25,6 @@ DECLARE
     merge_statement STRING; -- Merge statement to final table
     status STRING; -- Status monitoring
    
----------------------------------------------------------
---------------- 2.Conditionals if any -------------------
----------------------------------------------------------   
-   
-BEGIN
-    -- IF (ParameterName) THEN
-    --        select_statement := '
-    --        WITH CTE_Conditional1 AS (...),
-    --        ';
-    -- ELSE
-    --        select_statement := '
-    --        WITH CTE_Conditional2 AS (...),
-    --       ';
-    -- END IF;
-
 
 ---------------------------------------------------------
 ----------------- 3. SQL Statements ---------------------

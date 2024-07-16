@@ -1,3 +1,5 @@
+-- Purpose: This script is used to pull the latest changes from the github repository
+
 CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.PUBLIC.FETCH_GITHUB(table_path STRING)
 RETURNS STRING
 LANGUAGE SQL

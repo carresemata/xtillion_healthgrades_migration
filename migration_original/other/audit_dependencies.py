@@ -1,3 +1,5 @@
+# This script is used to audit the dependencies of the tables in the ODS1Stage database and generate the audit_table_dependencies.json, audit_sp_dependencies.json, and static_tables.txt files.
+
 import os
 import re
 import json
