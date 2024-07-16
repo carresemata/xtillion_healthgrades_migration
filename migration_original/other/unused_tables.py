@@ -14,7 +14,7 @@ def drop_unused_tables(snowflake_connector) -> None:
     snowflake_cursor = snowflake_connector.cursor()
 
     # Read the list of dependencies (JSON) that are part of the Xtillion project
-    with open("table_dependencies.json") as file:
+    with open("audit_table_dependencies.json") as file:
         xtillion_dependencies = json.load(file)
 
     unique_keys = list(xtillion_dependencies.keys())
