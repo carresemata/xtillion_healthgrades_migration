@@ -3661,8 +3661,7 @@ CTE_SpecialtyScoreWithBoost AS (
     FROM
         Show.SOLRProvider P
         INNER JOIN Base.ProviderToSpecialty lPtS ON lPtS.ProviderID = P.ProviderID
-        INNER JOIN Base.ProviderToSpecialtyExperienceScore SEC ON SEC.ProviderId = lPtS.ProviderID
-            AND SEC.EligibleSpecialtyid = lPtS.Specialtyid
+        INNER JOIN Base.ProviderToSpecialtyExperienceScore SEC ON SEC.EligibleSpecialtyid = lPtS.Specialtyid
         LEFT JOIN CTE_HGChoice H ON H.ProviderID = lPtS.ProviderID
             AND H.SpecialtyID = lPtS.SpecialtyID
 ),
@@ -4481,7 +4480,8 @@ select distinct
     to_variant(parse_xml(sanctionxml.xmlvalue)) as sanctionxml,
     to_variant(parse_xml(baction.xmlvalue)) as boardactionxml,
     to_variant(parse_xml(adxml.xmlvalue)) as natladvertisingxml,
-    to_variant(parse_xml(synd.xmlvalue)) as syndicationxml
+    to_variant(parse_xml(synd.xmlvalue)) as syndicationxml,
+    CASE WHEN addr.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasAddressXML,
     CASE WHEN poffice.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasPracticeOfficeXML,
     CASE WHEN spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasSpecialtyXML,
     CASE WHEN pract_spec.xmlvalue IS NULL THEN 0 ELSE 1 END AS HasPracticingSpecialtyXML,
