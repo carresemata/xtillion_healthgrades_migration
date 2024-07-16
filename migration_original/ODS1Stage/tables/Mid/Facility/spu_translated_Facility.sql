@@ -739,7 +739,7 @@ qualify row_number() over(partition by facilityid order by facilityid desc) = 1
 with cte_temp_facility as (
     select f.*
     from base.facility f 
-    inner join mdm_team.mst.facility_profile_processing proc on f.facilitycode = proc.ref_facility_code 
+    inner join $$||mdm_db||$$.mst.facility_profile_processing proc on f.facilitycode = proc.ref_facility_code
 ),
 
 
