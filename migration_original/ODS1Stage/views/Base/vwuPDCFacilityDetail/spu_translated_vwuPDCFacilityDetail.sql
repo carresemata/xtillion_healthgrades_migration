@@ -19,23 +19,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUPDCFACILITYDETAIL as
 --- Base.PhoneType (base.vwuclientproductentitytophone)
 --- Base.Phone (base.vwuclientproductentitytophone)
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
-
--- ClientToProductID
--- ClientProductToEntityID
--- FacilityID
--- FacilityCode
--- FacilityName
--- ImageFilePath
--- MediaImageTypeCode
--- URL
--- URLTypeCode
--- DesignatedProviderPhone
--- PhoneTypeCode
--- hgid
-
 
 WITH CTE_Image AS (
     SELECT  FacilityImage.FacilityID,

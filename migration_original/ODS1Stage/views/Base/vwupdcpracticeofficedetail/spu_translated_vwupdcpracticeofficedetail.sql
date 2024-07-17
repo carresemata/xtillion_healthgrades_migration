@@ -1,21 +1,4 @@
-create or replace view ODS1_STAGE_TEAM.BASE.VWUPDCPRACTICEOFFICEDETAIL(
-	CLIENTTOPRODUCTID,
-	CLIENTCODE,
-	CLIENTPRODUCTTOENTITYID,
-	OFFICEID,
-	OFFICECODE,
-	OFFICENAME,
-	PRACTICEID,
-	PRACTICECODE,
-	PRACTICENAME,
-	IMAGEFILEPATH,
-	IMAGETYPECODE,
-	URL,
-	URLTYPECODE,
-	DESIGNATEDPROVIDERPHONE,
-	PHONETYPECODE,
-	HGID
-) as
+create or replace view ODS1_STAGE_TEAM.BASE.VWUPDCPRACTICEOFFICEDETAIL AS 
 
 
 ---------------------------------------------------------
@@ -40,26 +23,6 @@ create or replace view ODS1_STAGE_TEAM.BASE.VWUPDCPRACTICEOFFICEDETAIL(
 --- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 --- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
-
--- ClientToProductID
--- ClientCode
--- ClientProductToEntityID
--- OfficeID
--- OfficeCode
--- OfficeName
--- PracticeID
--- PracticeCode
--- PracticeName
--- ImageFilePath
--- ImageTypeCode
--- URL
--- URLTypeCode
--- DesignatedProviderPhone
--- PhoneTypeCode
--- hgid
 
 
 SELECT

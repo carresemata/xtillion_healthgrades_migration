@@ -1,19 +1,4 @@
-CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICEINDEX(
-    PRACTICEID,
-    PRACTICECODE,
-    PRACTICEHGID,
-    PRACTICENAME,
-    YEARPRACTICEESTABLISHED,
-    PRACTICEEMAILXML,
-    PRACTICEWEBSITE,
-    PRACTICEDESCRIPTION,
-    PRACTICELOGO,
-    PRACTICEMEDICALDIRECTOR,
-    PHYSICIANCOUNT,
-    HASDENTIST,
-    OFFICEXML,
-    SPONSORSHIPXML
-) AS
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICEINDEX AS
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
@@ -21,25 +6,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICEINDEX(
 
 -- Show.vwuPracticeIndex depends on: 
 --- Show.SOLRPractice
-
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
-
--- PracticeID
--- PracticeCode
--- PracticeHGID
--- PracticeName
--- YearPracticeEstablished
--- PracticeEmailXML
--- PracticeWebsite
--- PracticeDescription
--- PracticeLogo
--- PracticeMedicalDirector
--- PhysicianCount
--- HasDentist
--- OfficeXML
--- SponsorshipXML
 
 SELECT
   p.PracticeID,

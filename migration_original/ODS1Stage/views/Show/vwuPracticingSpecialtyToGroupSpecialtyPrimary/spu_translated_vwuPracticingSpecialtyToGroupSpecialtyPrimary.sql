@@ -1,14 +1,4 @@
-CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICINGSPECIALTYTOGROUPSPECIALTYPRIMARY(
-    PRACTICINGSPECIALTYCODE,
-    PRACTICINGSPECIALTYDESCRIPTION,
-    ROLLEDUPSPECIALTYCODE,
-    ROLLEDUPSPECIALTYDESCRIPTION,
-    ROLLEDUPLEGACYID,
-    ROLLEDUPSPECIALTYRANK,
-    DIRECTORYNAME,
-    DIRECTORYURL,
-    DIRECTORYNAMESUFFIX
-) AS
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICINGSPECIALTYTOGROUPSPECIALTYPRIMARY  AS
 
 ---------------------------------------------------------
 --------------- 0. Table dependencies -------------------
@@ -19,19 +9,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPRACTICINGSPECIALTYTOGROUPSPECIAL
 --- Base.SpecialtyGroupToSpecialty
 --- Show.SOLRSpecialty
 --- Base.Specialty
-
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
--- PracticingSpecialtyCode
--- PracticingSpecialtyDescription
--- RolledUpSpecialtyCode
--- RolledUpSpecialtyDescription
--- RolledUpLegacyID
--- RolledUpSpecialtyRank
--- DirectoryName
--- DirectoryUrl
--- DirectoryNameSuffix
 
 SELECT	b.SpecialtyCode AS PracticingSpecialtyCode,
 		LTRIM(RTRIM(b.SpecialtyDescription)) AS PracticingSpecialtyDescription,

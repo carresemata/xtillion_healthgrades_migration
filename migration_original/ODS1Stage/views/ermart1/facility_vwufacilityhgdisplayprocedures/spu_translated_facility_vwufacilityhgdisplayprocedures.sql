@@ -6,11 +6,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.ERMART1.FACILITY_VWUFACILITYHGDISPLAYPROC
 -- ermart1.facility_vwufacilityhgdisplayprocedures depends on:
 -- hosp_directory.dbo_hosp_cohort
 
----------------------------------------------------------
---------------------- 1. columns ------------------------
----------------------------------------------------------
--- procedureid
--- ratingsourceid
 
 SELECT 
 	proc_code AS ProcedureID,
