@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW ODS1_STAGE.BASE.VWUPROVIDERSPECIALTY
+CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUPROVIDERSPECIALTY
 
 ---------------------------------------------------------
 --------------- 0. table dependencies -------------------
