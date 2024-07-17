@@ -2,7 +2,7 @@ CREATE OR REPLACE PROCEDURE ODS1_STAGE_TEAM.UTILS.SP_ARCHIVE_PROCESSING()
 RETURNS VARCHAR(16777216)
 LANGUAGE SQL
 EXECUTE AS CALLER
-AS 'DECLARE 
+AS DECLARE 
 ---------------------------------------------------------
 --------------- 1. Table dependencies -------------------
 ---------------------------------------------------------
@@ -29,6 +29,7 @@ AS 'DECLARE
     office_truncate STRING;
     practice_truncate STRING;
     provider_truncate STRING;
+    mdm_db string default('mdm_team');   
    
    
 BEGIN
@@ -44,19 +45,19 @@ BEGIN
 ---------------------------------------------------------  
 
 customer_product_insert := $$ INSERT INTO UTILS.CUSTOMER_PRODUCT_PROFILE_PROCESSED 
-                                SELECT *, current_timestamp() as InsertedOn  FROM MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING $$;
+                                SELECT *, current_timestamp() as InsertedOn  FROM $$ || mdm_db || $$.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING $$;
 
 facility_insert := $$ INSERT INTO UTILS.FACILITY_PROFILE_PROCESSED 
-                     SELECT *, current_timestamp() as InsertedOn  FROM MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING $$;
+                     SELECT *, current_timestamp() as InsertedOn  FROM $$ || mdm_db || $$.MST.FACILITY_PROFILE_PROCESSING $$;
 
 office_insert := $$ INSERT INTO UTILS.OFFICE_PROFILE_PROCESSED 
-                   SELECT *, current_timestamp() as InsertedOn  FROM MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING $$;
+                   SELECT *, current_timestamp() as InsertedOn  FROM $$ || mdm_db || $$.MST.OFFICE_PROFILE_PROCESSING $$;
 
 practice_insert := $$ INSERT INTO UTILS.PRACTICE_PROFILE_PROCESSED 
-                     SELECT *, current_timestamp() as InsertedOn  FROM MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING $$;
+                     SELECT *, current_timestamp() as InsertedOn  FROM $$ || mdm_db || $$.MST.PRACTICE_PROFILE_PROCESSING $$;
 
 provider_insert := $$ INSERT INTO UTILS.PROVIDER_PROFILE_PROCESSED 
-                     SELECT *, current_timestamp() as InsertedOn  FROM MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING $$;
+                     SELECT *, current_timestamp() as InsertedOn  FROM $$ || mdm_db || $$.MST.PROVIDER_PROFILE_PROCESSING $$;
 
 customer_product_delete := $$DELETE FROM UTILS.CUSTOMER_PRODUCT_PROFILE_PROCESSED WHERE InsertedOn < DATEADD(day, -7, CURRENT_DATE)$$;
 
@@ -72,15 +73,15 @@ practice_delete := $$DELETE FROM UTILS.PRACTICE_PROFILE_PROCESSED WHERE Inserted
 
 provider_delete := $$DELETE FROM UTILS.PROVIDER_PROFILE_PROCESSED WHERE InsertedOn < DATEADD(day, -7, CURRENT_DATE)$$;
 
-customer_product_truncate := $$ TRUNCATE TABLE MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING $$;
+customer_product_truncate := $$ TRUNCATE TABLE $$ || mdm_db || $$.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING $$;
 
-facility_truncate := $$ TRUNCATE TABLE MDM_TEAM.MST.FACILITY_PROFILE_PROCESSING $$;
+facility_truncate := $$ TRUNCATE TABLE $$ || mdm_db || $$.MST.FACILITY_PROFILE_PROCESSING $$;
 
-office_truncate := $$ TRUNCATE TABLE MDM_TEAM.MST.OFFICE_PROFILE_PROCESSING $$;
+office_truncate := $$ TRUNCATE TABLE $$ || mdm_db || $$.MST.OFFICE_PROFILE_PROCESSING $$;
 
-practice_truncate := $$ TRUNCATE TABLE MDM_TEAM.MST.PRACTICE_PROFILE_PROCESSING $$;
+practice_truncate := $$ TRUNCATE TABLE $$ || mdm_db || $$.MST.PRACTICE_PROFILE_PROCESSING $$;
 
-provider_truncate := $$ TRUNCATE TABLE MDM_TEAM.MST.PROVIDER_PROFILE_PROCESSING $$;
+provider_truncate := $$ TRUNCATE TABLE $$ || mdm_db || $$.MST.PROVIDER_PROFILE_PROCESSING $$;
 
                    
 ---------------------------------------------------------
@@ -107,15 +108,18 @@ EXECUTE IMMEDIATE provider_truncate;
 --------------- 6. Status monitoring --------------------
 --------------------------------------------------------- 
 
-status := ''Completed successfully'';
-    RETURN status;
+status := 'completed successfully';
+        insert into utils.procedure_execution_log (database_name, procedure_schema, procedure_name, status, execution_start, execution_complete) 
+                select current_database(), current_schema() , :procedure_name, :status, :execution_start, getdate(); 
 
+        return status;
 
-        
-EXCEPTION
-    WHEN OTHER THEN
-          status := ''Failed during execution. '' || ''SQL Error: '' || SQLERRM || '' Error code: '' || SQLCODE || ''. SQL State: '' || SQLSTATE;
-          RETURN status;
+        exception
+        when other then
+            status := 'failed during execution. ' || 'sql error: ' || sqlerrm || ' error code: ' || sqlcode || '. sql state: ' || sqlstate;
 
-    
-END';
+            insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
+                select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
+
+            return status;
+end;
