@@ -9,15 +9,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUCLIENTPRODUCTENTITYTOPHONE AS
 --- Base.PhoneType
 --- Base.Phone
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
--- ClientProductToEntityID
--- AreaCode
--- PhoneNumber
--- PhoneID
--- PhoneTypeID
--- PhoneTypeCode
 
 SELECT	cpetp.ClientProductToEntityID, 
         p.AreaCode, 

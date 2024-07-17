@@ -8,9 +8,7 @@ as
 -- Base.vw_Swimlane_Base_Client depends on: 
 --- MDM_TEAM.MST.CUSTOMER_PRODUCT_PROFILE_PROCESSING 
 
----------------------------------------------------------
--------------------- 1. Columns -------------------------
----------------------------------------------------------
+
 
 with cte_processing as (
     SELECT

@@ -9,12 +9,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.SHOW.VWUPROVIDERINDEX AS
 --- Show.ConsolidatedProviders
 --- Show.DelayClient
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
-
-
-
 SELECT
     SOLRProviderID,
     p.ProviderID AS ProviderID,

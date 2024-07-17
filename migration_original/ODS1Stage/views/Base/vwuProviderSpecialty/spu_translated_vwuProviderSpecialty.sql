@@ -9,18 +9,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUPROVIDERSPECIALTY
 -- Base.MedicalTermType
 -- Base.EntityType
 
----------------------------------------------------------
---------------------- 1. columns ------------------------
----------------------------------------------------------
--- ProviderToSpecialtyID
--- ProviderID
--- MedicalTermID
--- SpecialtyCode
--- Specialty
--- SpecialtyRank
--- Searchable
--- SourceCode
-
 AS
 SELECT
   EntityToMedicalTermID ProviderToSpecialtyID,

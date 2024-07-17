@@ -21,18 +21,6 @@ AS
 --- Base.Product
 
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
--- clienttoproductid
--- callcenterid
--- callcentercode
--- callcentername
--- replydays
--- apptcutofftime
--- emailaddress
--- faxnumber
-
     select distinct
         cctc.clienttoproductid,
         cc.callcenterid,

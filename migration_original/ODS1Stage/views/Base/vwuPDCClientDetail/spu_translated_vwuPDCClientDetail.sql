@@ -19,18 +19,6 @@ AS
 --- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 --- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
--- ClientToProductID
--- ClientProductToEntityID
--- ImageFilePath
--- MediaImageTypeCode
--- URL
--- URLTypeCode
--- DesignatedProviderPhone
--- PhoneTypeCode
-
 
 WITH CTE_images AS (
     SELECT

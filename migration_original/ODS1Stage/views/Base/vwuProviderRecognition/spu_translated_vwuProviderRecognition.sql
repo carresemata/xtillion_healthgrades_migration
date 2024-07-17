@@ -13,12 +13,6 @@ CREATE OR REPLACE VIEW ODS1_STAGE_TEAM.BASE.VWUPROVIDERRECOGNITION AS
 --- Base.ProviderToCertificationSpecialty
 --- Base.CertificationStatus
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
--- ProviderID
--- AwardID
-
 
 WITH CTE_ProviderSanctions AS (
     SELECT DISTINCT ps.ProviderID

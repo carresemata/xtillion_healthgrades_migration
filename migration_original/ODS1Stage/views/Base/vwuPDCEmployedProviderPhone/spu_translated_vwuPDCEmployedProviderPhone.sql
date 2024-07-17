@@ -12,14 +12,6 @@ AS
 --- BASE.PHONETYPE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 --- BASE.PHONE (BASE.VWUCLIENTPRODUCTENTITYTOPHONE)
 
----------------------------------------------------------
---------------------- 1. Columns ------------------------
----------------------------------------------------------
-
--- ClientToProductID
--- ClientProductToEntityID
--- EmployedProviderPhone
--- PhoneTypeCode
 
 SELECT
   cpte.ClientToProductID,
