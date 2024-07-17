@@ -54,8 +54,14 @@ def table_dependencies():
             os.chdir('..')
         os.chdir('..')
 
+    # sort the table_dependencies
+    table_dependencies = {k: v for k, v in sorted(table_dependencies.items(), key=lambda item: item[0])}
+    # sort the dependencies
+    for table, deps in table_dependencies.items():
+        table_dependencies[table] = sorted(deps)
+
     # Save to audit_dependencies.json
-    audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_table_dependencies.json')
+    audit_dependencies_path = os.path.join(os.path.dirname(os.getcwd()), 'other/table_dependencies.json')
     with open(audit_dependencies_path, 'w') as audit_file:
         json.dump(table_dependencies, audit_file, indent=4)
 
@@ -65,7 +71,7 @@ def table_dependencies():
     sp_dependencies = {table: [dep for dep in deps if dep in sp_dependencies.keys()] for table, deps in sp_dependencies.items()}
     # I want to modify the table names to be schema.SP_LOAD_{table}, first split the table name by '.' and then join the parts
     sp_dependencies = {f'{table.split(".")[0]}.SP_LOAD_{table.split(".")[1]}' : [f'{dep.split(".")[0]}.SP_LOAD_{dep.split(".")[1]}' for dep in deps] for table, deps in sp_dependencies.items() }
-    audit_sp_path = os.path.join(os.path.dirname(os.getcwd()), 'other/audit_sp_dependencies.json')
+    audit_sp_path = os.path.join(os.path.dirname(os.getcwd()), 'other/sp_dependencies.json')
     # Save to audit_sp_dependencies.json in audit_dependencies_path location
     with open(audit_sp_path, 'w') as audit_file:
         json.dump(sp_dependencies, audit_file, indent=4)
@@ -92,17 +98,4 @@ def table_dependencies():
 
 table_dependencies()
 
-    # Compare with json
-    # path = os.path.join(os.path.dirname(os.getcwd()), 'other/table_dependencies.json')
-    # with open(path, 'r') as f:
-    #     table_dependencies_json = json.load(f)
-    #     for table, deps in table_dependencies.items():
-    #         if table in table_dependencies_json:
-    #             json_deps = [dep for dep in table_dependencies_json[table] if not dep.startswith('MDM_TEAM')]
-    #             if set(deps) != set(json_deps):
-    #                 print(f'* {table} has different dependencies')
-    #                 diff = set(deps).symmetric_difference(set(json_deps))
-    #                 if diff:
-    #                     print(diff)
-    #             print()
 

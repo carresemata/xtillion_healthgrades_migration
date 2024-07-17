@@ -3,6 +3,7 @@
 import os
 import shutil
 
+
 # Path to the folder containing the tables
 def create_final_folder():
     base_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/tables')
@@ -22,6 +23,31 @@ def create_final_folder():
         os.chdir('..')  # Go back to the parent directory before moving to the next schema
     os.chdir('..')  # Go back to the initial directory
 
+    views_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')
+    os.chdir('ODS1_STAGE') # insert the views into the ODS1_STAGE folder
+    for schema in os.listdir(views_dir):
+        schema_path = os.path.join(views_dir, schema)
+        os.makedirs(schema.upper(), exist_ok=True)
+        os.chdir(schema)
+        for view in os.listdir(schema_path):
+            view_path = os.path.join(schema_path, view)
+            file_path = os.path.join(view_path, f'spu_translated_{view}.sql')
+            shutil.copy(file_path, os.path.join(os.getcwd(), f'{schema.lower()}.{view.lower()}.sql'))
+        os.chdir('..')
+    os.chdir('..')
+
+    utils_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/functions')
+    os.chdir('ODS1_STAGE') # insert the utils into the ODS1_STAGE folder
+    for schema in os.listdir(utils_dir):
+        schema_path = os.path.join(utils_dir, schema)
+        os.makedirs(schema.upper(), exist_ok=True)
+        os.chdir(schema)
+        for util in os.listdir(schema_path):
+            util_path = os.path.join(schema_path, util)
+            shutil.copy(util_path, os.path.join(os.getcwd(), f'{schema.lower()}.{util.lower()}'))
+        os.chdir('..')
+    os.chdir('..')
+
     # Create a folder for the references
     os.makedirs('ODS1_STAGE_REFERENCES', exist_ok=True)
     os.chdir('ODS1_STAGE_REFERENCES')
@@ -33,11 +59,24 @@ def create_final_folder():
             table_path = os.path.join(schema_path, table)
             file_path1 = os.path.join(table_path, f'spu_check_{table}.txt')
             file_path2 = os.path.join(table_path, f'spu_original_{table}.txt')
-            file_path3 = os.path.join(table_path, f'{schema.upper()}.{table.upper()}-report.md') or os.path.join(table_path, f'{schema.upper()}.{table.upper()}-report (1).md')
+            file_path3 = os.path.join(table_path, f'{schema.lower()}.{table.lower()}_report.md') 
             shutil.copy(file_path1, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_sp_original.txt'))
             shutil.copy(file_path2, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_sp_original_code.txt'))
             if os.path.exists(file_path3):
                 shutil.copy(file_path3, os.path.join(os.getcwd(), f'{schema.lower()}.{table.lower()}_report.md'))
+        os.chdir('..')
+    os.chdir('..')
+
+    views_dir = os.path.join(os.path.dirname(os.getcwd()), 'ODS1Stage/views')
+    os.chdir('ODS1_STAGE_REFERENCES') # insert the views into the ODS1_STAGE_REFERENCES folder
+    for schema in os.listdir(views_dir):
+        schema_path = os.path.join(views_dir, schema)
+        os.makedirs(schema.upper(), exist_ok=True)
+        os.chdir(schema)
+        for view in os.listdir(schema_path):
+            view_path = os.path.join(schema_path, view)
+            file_path = os.path.join(view_path, f'spu_original_{view}.txt')
+            shutil.copy(file_path, os.path.join(os.getcwd(), f'{schema.lower()}.{view.lower()}_vw_original.txt'))
         os.chdir('..')
     os.chdir('..')
 

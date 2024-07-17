@@ -1,0 +1,5 @@
+etl_spuMergeOfficeAddress (from snowflake) --> DONE
+etl_spuMergeFacilityAddress (from snowflake)
+ODSFix_spuOfficeDuplicateSuiteAddress --> LEGACY CODE, it is not executed (Verified with client and with activity tracker tool)
+FastPass_spuMergeAddress --> LEGACY CODE, it is not executed (Verified with client and with activity tracker tool)
+RawFile_spuMergeOfficePractice --> LEGACY CODE, it is not executed (Verified with client and with activity tracker tool)

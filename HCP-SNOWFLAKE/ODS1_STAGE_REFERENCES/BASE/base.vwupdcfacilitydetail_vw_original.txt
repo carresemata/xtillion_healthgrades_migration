@@ -1,0 +1,31 @@
+SELECT	b.ClientToProductID, b.ClientProductToEntityID, a.FacilityID, a.FacilityCode, a.FacilityName,
+		img.ImageFilePath, img.MediaImageTypeCode, u.URL, u.URLTypeCode,
+		--MAX(CASE WHEN ph.AreaCode > 1000 THEN ('1-'+CAST(ph.AreaCode - 1000 AS VARCHAR(5)) +'-'+ph.PhoneNumber) ELSE  (( '('+CAST(ph.AreaCode AS VARCHAR(5)) ) +') '+ph.PhoneNumber)END ) AS  'DesignatedProviderPhone',
+		ph.PhoneNumber AS  'DesignatedProviderPhone',
+		ph.PhoneTypeCode, a.LegacyKey as hgid
+-- SELECT *  
+FROM	Base.Facility a
+		JOIN Base.ClientProductToEntity b  ON a.FacilityID = b.EntityID
+		JOIN Base.ClientToProduct m ON b.ClientToProductID = m.ClientToProductID AND m.ActiveFlag = 1
+		JOIN Base.Client n ON m.ClientID = n.ClientID 
+		JOIN Base.EntityType c ON b.EntityTypeID = c.EntityTypeID AND c.EntityTypeCode = 'FAC'
+		LEFT JOIN
+				(
+                    select d.FacilityID, d.FacilityImageID, 
+                        isnull(e.MediaRelativePath,'') + case when right(isnull(e.MediaRelativePath,''),1) <> '/' then '/' else '' end + d.FileName as ImageFilePath, 
+                        e.MediaImageTypeCode 
+                    from Base.FacilityImage d
+                    inner join Base.MediaImageType e on e.MediaImageTypeID = d.MediaImageTypeID
+				) img ON a.FacilityID = img.FacilityID
+		LEFT JOIN 
+				(
+					SELECT g.ClientProductToEntityID, i.URL,h.URLTypeCode
+					FROM Base.ClientProductEntityToURL g 
+					JOIN Base.URLType h ON h.URLTypeID = g.URLTypeID --AND h.URLTypeCode = 'HospProfile'
+					JOIN Base.URL i ON g.URLID = i.URLID
+				) u ON b.ClientProductToEntityID = u.ClientProductToEntityID 
+		LEFT JOIN 
+				(
+					SELECT j.ClientProductToEntityID, j.AreaCode, j.PhoneNumber, j.PhoneTypeCode
+					FROM [Base].[vwuClientProductEntityToPhone] j 
+				) ph ON b.ClientProductToEntityID = ph.ClientProductToEntityID

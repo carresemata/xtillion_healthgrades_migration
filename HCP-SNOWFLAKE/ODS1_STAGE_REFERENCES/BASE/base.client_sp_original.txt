@@ -1,0 +1,2 @@
+RawFile_spuClientProductToEntity
+etl_spuMergeCustomerProduct
