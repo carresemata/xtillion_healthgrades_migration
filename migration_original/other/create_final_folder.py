@@ -1,4 +1,4 @@
-# Iterate over ods1stage/tables
+# This script is used to create the final folder for hcp Github.
 
 import os
 import shutil

@@ -1,3 +1,5 @@
+# This script generates the main_proc_script.txt file which contains the list of stored procedures to be called in the main procedure
+
 import os
 import json
 
