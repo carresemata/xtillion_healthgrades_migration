@@ -6035,7 +6035,7 @@ WITH CTE_Temp_Provider AS (
     SELECT
         ProviderID
     FROM
-        $$ || mdm_db || $$.mst.provider_profile ppp
+        $$||mdm_db||$$.mst.provider_profile ppp
         JOIN base.provider bp ON ppp.ref_provider_code = bp.providercode
 ),
 CTE_ProviderToClientToProduct AS (
@@ -6967,7 +6967,7 @@ CTE_ProviderFacilitySponsorshipFinal AS (
         to_varchar(v.DesktopPhoneXML) AS desktopPhoneL
     FROM CTE_ProviderFacilitySponsorship v
     INNER JOIN CTE_ProviderSponsorship a ON v.ProviderCode = a.ProviderCode AND v.ClientCode = a.ClientCode
-    UNION ALL
+    UNION
     SELECT	
         v.ProviderCode,
         v.Type AS Type,
@@ -6984,7 +6984,8 @@ CTE_ProviderFacilitySponsorshipFinal AS (
         to_varchar(v.desktopPhoneL) AS desktopPhoneL
     FROM CTE_ClientType v
     INNER JOIN CTE_ProviderSponsorship a ON v.ProviderCode = a.ProviderCode AND v.cd = a.ClientCode
-),
+)
+,
 
 CTE_PracticeMapFacilityMapClientType AS (
     SELECT
@@ -7002,7 +7003,7 @@ CTE_PracticeMapFacilityMapClientType AS (
         CAST(desktopPhoneL AS VARCHAR()) AS desktopPhoneL,
         CAST(offL AS VARCHAR()) AS offL
     FROM CTE_PracticeMAP
-    UNION ALL
+    UNION 
     SELECT
         ProviderCode,
         Type,
@@ -7018,7 +7019,7 @@ CTE_PracticeMapFacilityMapClientType AS (
         CAST(desktopPhoneL AS VARCHAR()) AS desktopPhoneL,
         CAST(offL AS VARCHAR()) AS offL
     FROM CTE_FacilityMAP
-    UNION ALL
+    UNION 
     SELECT
         ProviderCode,
         Type,
@@ -7191,9 +7192,7 @@ CTE_SponsorshipXML AS (
                  a.compositePhone, a.ProviderCode, a.AppointmentOptionDescription, 
                  a.ClientToProductID, a.ClientCode
 ),
-------------------------------------------------SponsorshipXML------------------------------------------------
 
-------------------------------------------------SearchSponsorshipXML------------------------------------------------
 Cte_Search_Spn_feat AS (
     SELECT DISTINCT
         ClientFeatureCode AS featCd,
@@ -7214,9 +7213,7 @@ Cte_Search_Spn_feat AS (
     AND ClientFeatureCode IN ('FCRAB', 'FCBRL')
     AND cfv.ClientFeatureValueCode IN ('FVPSR', 'FVCLT')
     AND CASE WHEN cfv.ClientFeatureValueCode = 'FVNO' AND ClientFeatureCode IN ('FCOOMT', 'FCOOPSR', 'FCDOA') THEN 'REMOVE' ELSE 'KEEP' END = 'KEEP'
-)
--- select * from Cte_Search_Spn_feat;
-,
+),
 
 Cte_spn_feat AS (
  SELECT
@@ -7228,9 +7225,7 @@ Cte_spn_feat AS (
         featValDesc
     FROM
         cte_Search_spn_Feat
-)
--- select * from cte_spn_feat;
-,
+),
 
 Cte_spn_feat_xml as (
  SELECT
@@ -7247,9 +7242,7 @@ Cte_spn_feat_xml as (
         cte_spn_feat
     GROUP BY
         clienttoproductid
-)
--- select * from Cte_spn_feat_xml;
-,
+),
 
 Cte_search_spn as (
     SELECT DISTINCT	
@@ -7264,9 +7257,7 @@ Cte_search_spn as (
     INNER JOIN	Show.SolrProvider A ON A.Providerid = P.ProviderID
     INNER JOIN  Cte_spn_feat_xml spn ON spn.clienttoproductid = Ms.Clienttoproductid
     WHERE		MS.ProductGroupCode <> 'LID'
-)
--- select * from Cte_search_spn;
-,
+),
 
 cte_office_pdc_prac as (
     SELECT DISTINCT
@@ -7282,9 +7273,7 @@ cte_office_pdc_prac as (
         DesktopPhoneXML AS desktopPhoneL
     FROM
         Cte_ProviderPracticeOfficeSponsorship 
-)
--- select * from cte_office_pdc_prac;
-,
+),
 
 cte_office_pdc_prac_xml as (
     SELECT
@@ -7294,7 +7283,7 @@ cte_office_pdc_prac_xml as (
                 '<off>' ||
                 IFF(offCd IS NOT NULL, '<offCd>' || offCd || '</offCd>', '') ||
                 IFF(offNm IS NOT NULL, '<offNm>' || offNm || '</offNm>', '') ||
-                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  -- Assuming phoneL and others are already well-formatted JSON
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  
                 IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
                 IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
                 IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
@@ -7307,9 +7296,7 @@ cte_office_pdc_prac_xml as (
     GROUP BY
         ProviderCode,
         OfficeCode
-)
--- select * from cte_office_pdc_prac_xml;
-,
+),
 
 Cte_search_practice_pdc_prac as (
         SELECT DISTINCT		
@@ -7321,9 +7308,7 @@ Cte_search_practice_pdc_prac as (
 		INNER JOIN	Base.Provider P ON P.ProviderCode = PPO.ProviderCode
 		INNER JOIN	Show.SolrProvider Pt ON Pt.ProviderID = P.ProviderID
         INNER JOIN cte_office_pdc_prac_xml off ON off.providercode = ppo.providercode and off.officecode = ppo.officecode
-)
--- select * from Cte_search_practice_pdc_prac;
-,
+),
 
 cte_providerclientdisplaypartner2 as (
     SELECT
@@ -7333,11 +7318,8 @@ cte_providerclientdisplaypartner2 as (
     FROM cte_providerclientdisplaypartner as dis
     JOIN cte_providersponsorship as spo on dis.providercode = spo.providercode
     WHERE spo.productcode in ('MAP', 'PDCHSP')
-)
--- select * from cte_providerclientdisplaypartner2;
-,
+),
 
--- Define the CTE for Search Spn data
 cte_spn_search as (
     SELECT DISTINCT
         providercode,
@@ -7348,9 +7330,7 @@ cte_spn_search as (
         spnFeatL
     FROM
         Cte_search_spn 
-)
--- select * from cte_spn_search;
-,
+),
 
 cte_spn_search_xml as (
     SELECT
@@ -7369,9 +7349,7 @@ cte_spn_search_xml as (
     GROUP BY
         providercode,
         clientcode
-)
--- select * from cte_spn_search_xml;
-,
+),
 
 cte_dpc_search as (
     SELECT DISTINCT
@@ -7380,9 +7358,7 @@ cte_dpc_search as (
         DisplayPartnerCode as dpcd
     FROM
         cte_providerclientdisplaypartner2 
-)
--- select * from cte_dpc_search;
-,
+),
 
 cte_dpc_search_xml as (
     SELECT
@@ -7398,9 +7374,7 @@ cte_dpc_search_xml as (
     GROUP BY
         ProviderCode,
         ClientCode
-)
--- select * from cte_dpc_search_xml;
-,
+),
 
 cte_disp1_search as (
     SELECT
@@ -7427,9 +7401,7 @@ cte_disp1_search_xml as (
         cte_disp1_search
     GROUP BY
         ProviderCode
-)
--- select * from cte_disp1_search_xml;
-,
+),
 
 cte_disp2_search as (
     SELECT 
@@ -7479,9 +7451,7 @@ cte_disp2_search as (
         to_varchar(desktopPhoneL),
         to_varchar(offL)
     FROM cte_clienttype 
-)
--- select * from cte_disp2_search;
-,
+),
 
 cte_disp2_search_xml as (
     SELECT
@@ -7507,9 +7477,7 @@ cte_disp2_search_xml as (
         cte_disp2_search
     GROUP BY
         ProviderCode
-)
--- select * from cte_disp2_search_xml;
-,
+),
 
 cte_disp3_search as (
     SELECT
@@ -7549,9 +7517,7 @@ cte_disp3_search as (
         to_varchar(desktopPhoneL)
     FROM
         Cte_ClientType 
-)
--- select * from cte_disp3_search;
-,
+),
 
 cte_disp3_search_xml as (
     SELECT
@@ -7565,7 +7531,7 @@ cte_disp3_search_xml as (
                 IFF(facCd IS NOT NULL, '<facCd>' || facCd || '</facCd>', '') ||
                 IFF(facNm IS NOT NULL, '<facNm>' || facNm || '</facNm>', '') ||
                 IFF(facSt IS NOT NULL, '<facSt>' || facSt || '</facSt>', '') ||
-                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  -- Assuming XML columns are already properly formatted JSON strings
+                IFF(phoneL IS NOT NULL, '<phoneL>' || phoneL || '</phoneL>', '') ||  
                 IFF(mobilePhoneL IS NOT NULL, '<mobilePhoneL>' || mobilePhoneL || '</mobilePhoneL>', '') ||
                 IFF(urlL IS NOT NULL, '<urlL>' || urlL || '</urlL>', '') ||
                 IFF(imageL IS NOT NULL, '<imageL>' || imageL || '</imageL>', '') ||
@@ -7579,9 +7545,7 @@ cte_disp3_search_xml as (
     GROUP BY
         providercode,
         clientcode
-)
--- select * from cte_disp3_search_xml;
-,
+),
 
 
 cte_search_sponsorship as (
@@ -7638,7 +7602,9 @@ distinct
 from show.solrprovider p
     left join CTE_SponsorshipXML sponsrxml on p.providercode = sponsrxml.providercode
     left join cte_search_sponsorship_xml searchxml on p.providercode = searchxml.providercode
-where sponsrxml.xmlvalue is not null or searchxml.xmlvalue is not null
+where 
+sponsrxml.xmlvalue is not null or 
+searchxml.xmlvalue is not null
 $$;
 
 update_statement_xml_load_4 := $$
@@ -7847,6 +7813,6 @@ status := 'completed successfully';
             insert into utils.procedure_error_log (database_name, procedure_schema, procedure_name, status, err_snowflake_sqlcode, err_snowflake_sql_message, err_snowflake_sql_state) 
                 select current_database(), current_schema() , :procedure_name, :status, split_part(regexp_substr(:status, 'error code: ([0-9]+)'), ':', 2)::integer, trim(split_part(split_part(:status, 'sql error:', 2), 'error code:', 1)), split_part(regexp_substr(:status, 'sql state: ([0-9]+)'), ':', 2)::integer; 
 
-            return status;
+            raise;
 
 end;
